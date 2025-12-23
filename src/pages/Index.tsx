@@ -1,7 +1,11 @@
+import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { Header } from "@/components/Header";
 import { HeroSlider } from "@/components/HeroSlider";
 import { CategorySection } from "@/components/CategorySection";
 import { ProductGrid } from "@/components/ProductGrid";
+import { FlashSaleSection } from "@/components/FlashSaleSection";
+import { TrustBadges } from "@/components/TrustBadges";
+import { NewsletterSection } from "@/components/NewsletterSection";
 import { Footer } from "@/components/Footer";
 import {
   sampleProducts,
@@ -10,16 +14,26 @@ import {
   aliyaMadrasaCategories,
   qawmiMadrasaCategories,
 } from "@/data/products";
+import { Link } from "react-router-dom";
 
 const Index = () => {
+  const flashSaleProducts = sampleProducts.filter((p) => p.discount && p.discount >= 40);
+
   return (
     <div className="min-h-screen bg-background">
+      <AnnouncementBar />
       <Header />
       
       <main>
         <HeroSlider />
 
+        {/* Trust Badges */}
+        <TrustBadges />
+
         <div className="container py-8">
+          {/* Flash Sale Section */}
+          <FlashSaleSection products={flashSaleProducts.length > 0 ? flashSaleProducts : sampleProducts} />
+
           {/* Category Sections Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <CategorySection
@@ -65,7 +79,7 @@ const Index = () => {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {sampleProducts.slice(0, 5).map((product, index) => (
-                <div key={product.id} className="relative">
+                <Link key={product.id} to={`/product/${product.id}`} className="relative group">
                   <div className="absolute -top-2 -left-2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm z-10">
                     {index + 1}
                   </div>
@@ -74,11 +88,11 @@ const Index = () => {
                       <img
                         src={product.image}
                         alt={product.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
                     </div>
                     <div className="p-3">
-                      <h3 className="font-medium text-sm line-clamp-2 mb-1">
+                      <h3 className="font-medium text-sm line-clamp-2 mb-1 group-hover:text-primary transition-colors">
                         {product.title}
                       </h3>
                       <p className="text-xs text-muted-foreground mb-2">
@@ -96,7 +110,7 @@ const Index = () => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -113,12 +127,12 @@ const Index = () => {
               <p className="text-lg opacity-90 mb-6">
                 ৪৯৯+ টাকার অর্ডারে ক্যালিগ্রাফি বুকমার্ক ফ্রি! অফার শেষ হওয়ার আগেই অর্ডার করুন।
               </p>
-              <a
-                href="/shop"
+              <Link
+                to="/shop"
                 className="inline-block bg-primary-foreground text-primary font-bold px-8 py-3 rounded-lg hover:bg-primary-foreground/90 transition-colors"
               >
                 এখনই কিনুন
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -130,6 +144,9 @@ const Index = () => {
             columns={5}
           />
         </div>
+
+        {/* Newsletter Section */}
+        <NewsletterSection />
       </main>
 
       <Footer />
