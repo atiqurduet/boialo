@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { ProductCard } from "@/components/ProductCard";
 import { sampleProducts } from "@/data/products";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ const ProductDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <AnnouncementBar />
       <Header />
 
       <main className="container py-6">

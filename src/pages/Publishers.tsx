@@ -1,5 +1,6 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { Link } from "react-router-dom";
 import { Search, BookOpen } from "lucide-react";
 import { useState } from "react";
@@ -29,6 +30,7 @@ const Publishers = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <AnnouncementBar />
       <Header />
 
       <main className="container py-8">
