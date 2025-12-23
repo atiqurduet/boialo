@@ -12,6 +12,12 @@ import Authors from "./pages/Authors";
 import Publishers from "./pages/Publishers";
 import Wishlist from "./pages/Wishlist";
 import Offers from "./pages/Offers";
+import Preorder from "./pages/Preorder";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import FAQ from "./pages/FAQ";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,7 +38,12 @@ const App = () => (
           <Route path="/authors" element={<Authors />} />
           <Route path="/publishers" element={<Publishers />} />
           <Route path="/offers" element={<Offers />} />
-          <Route path="/preorder" element={<Shop />} />
+          <Route path="/preorder" element={<Preorder />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/faq" element={<FAQ />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route path="/lifestyle" element={<Shop />} />
           <Route path="/stationery" element={<Shop />} />
           <Route path="/food" element={<Shop />} />

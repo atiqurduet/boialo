@@ -1,5 +1,6 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { Link } from "react-router-dom";
 import { Search, Book } from "lucide-react";
 import { useState } from "react";
@@ -28,6 +29,7 @@ const Authors = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <AnnouncementBar />
       <Header />
 
       <main className="container py-8">

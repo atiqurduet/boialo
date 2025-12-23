@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { ProductCard } from "@/components/ProductCard";
 import { sampleProducts } from "@/data/products";
 import { Heart, Trash2 } from "lucide-react";
@@ -17,6 +18,7 @@ const Wishlist = () => {
   if (wishlistItems.length === 0) {
     return (
       <div className="min-h-screen bg-background">
+        <AnnouncementBar />
         <Header />
         <main className="container py-12">
           <div className="text-center py-16">
@@ -37,6 +39,7 @@ const Wishlist = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <AnnouncementBar />
       <Header />
 
       <main className="container py-8">

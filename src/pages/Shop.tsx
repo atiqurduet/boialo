@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { ProductCard } from "@/components/ProductCard";
 import { sampleProducts, publishers } from "@/data/products";
 import { Slider } from "@/components/ui/slider";
@@ -48,6 +49,7 @@ const Shop = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <AnnouncementBar />
       <Header />
 
       <main className="container py-6">
