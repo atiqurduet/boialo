@@ -8,6 +8,10 @@ import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import SignIn from "./pages/SignIn";
+import Authors from "./pages/Authors";
+import Publishers from "./pages/Publishers";
+import Wishlist from "./pages/Wishlist";
+import Offers from "./pages/Offers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,15 +28,14 @@ const App = () => (
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/signin" element={<SignIn />} />
-          <Route path="/wishlist" element={<Shop />} />
-          <Route path="/authors" element={<Shop />} />
-          <Route path="/publishers" element={<Shop />} />
-          <Route path="/offers" element={<Shop />} />
+          <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/authors" element={<Authors />} />
+          <Route path="/publishers" element={<Publishers />} />
+          <Route path="/offers" element={<Offers />} />
           <Route path="/preorder" element={<Shop />} />
           <Route path="/lifestyle" element={<Shop />} />
           <Route path="/stationery" element={<Shop />} />
           <Route path="/food" element={<Shop />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
