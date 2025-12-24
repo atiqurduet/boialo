@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -7,7 +7,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { sampleProducts, publishers } from "@/data/products";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, ChevronUp, Filter, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Filter, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -20,6 +20,7 @@ import {
 const Shop = () => {
   const [searchParams] = useSearchParams();
   const category = searchParams.get("category");
+  const searchQuery = searchParams.get("search") || "";
   const [priceRange, setPriceRange] = useState([0, 30000]);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
@@ -34,7 +35,36 @@ const Shop = () => {
     }));
   };
 
+  const filteredProducts = useMemo(() => {
+    let products = sampleProducts;
+
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      products = products.filter(
+        (p) =>
+          p.title.toLowerCase().includes(query) ||
+          p.author.toLowerCase().includes(query)
+      );
+    }
+
+    // Filter by category
+    if (category) {
+      products = products.filter((p) => p.category === category);
+    }
+
+    // Filter by price range
+    products = products.filter(
+      (p) => p.price >= priceRange[0] && p.price <= priceRange[1]
+    );
+
+    return products;
+  }, [searchQuery, category, priceRange]);
+
   const getCategoryTitle = () => {
+    if (searchQuery) {
+      return `"${searchQuery}" এর ফলাফল`;
+    }
     switch (category) {
       case "academic":
         return "একাডেমিক বই";
@@ -192,7 +222,7 @@ const Shop = () => {
               <div>
                 <h1 className="text-2xl font-bold">{getCategoryTitle()}</h1>
                 <p className="text-muted-foreground text-sm mt-1">
-                  {sampleProducts.length} Items Found
+                  {filteredProducts.length} Items Found
                 </p>
               </div>
               <div className="hidden lg:block">
@@ -210,11 +240,21 @@ const Shop = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {sampleProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            {filteredProducts.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                {filteredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <Search className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <h2 className="text-xl font-bold mb-2">কোনো পণ্য পাওয়া যায়নি</h2>
+                <p className="text-muted-foreground">
+                  অন্য কোনো শব্দ দিয়ে অনুসন্ধান করুন
+                </p>
+              </div>
+            )}
 
             {/* Pagination */}
             <div className="flex items-center justify-center gap-2 mt-8">

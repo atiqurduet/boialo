@@ -158,9 +158,11 @@ const Cart = () => {
                 </div>
               </div>
 
-              <Button className="w-full btn-primary mt-6">
-                চেকআউট করুন
-              </Button>
+              <Link to="/checkout">
+                <Button className="w-full btn-primary mt-6">
+                  চেকআউট করুন
+                </Button>
+              </Link>
 
               <div className="mt-4">
                 <input
