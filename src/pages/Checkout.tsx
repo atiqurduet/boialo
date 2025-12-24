@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
@@ -17,6 +17,7 @@ interface CartItem {
 }
 
 const Checkout = () => {
+  const navigate = useNavigate();
   const [cartItems] = useState<CartItem[]>([
     { product: sampleProducts[0], quantity: 1 },
     { product: sampleProducts[1], quantity: 2 },
@@ -24,6 +25,15 @@ const Checkout = () => {
 
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [deliveryArea, setDeliveryArea] = useState("inside");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handlePlaceOrder = () => {
+    setIsSubmitting(true);
+    // Simulate order processing
+    setTimeout(() => {
+      navigate("/order-confirmation");
+    }, 1000);
+  };
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
@@ -247,8 +257,12 @@ const Checkout = () => {
                 </div>
               </div>
 
-              <Button className="w-full btn-primary mt-6">
-                অর্ডার কনফার্ম করুন
+              <Button 
+                className="w-full btn-primary mt-6" 
+                onClick={handlePlaceOrder}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "প্রসেসিং..." : "অর্ডার কনফার্ম করুন"}
               </Button>
 
               <p className="text-xs text-muted-foreground text-center mt-4">
