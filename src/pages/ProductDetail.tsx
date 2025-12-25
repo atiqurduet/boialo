@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
@@ -7,7 +8,14 @@ import { ProductCard } from "@/components/ProductCard";
 import { ProductReviews } from "@/components/ProductReviews";
 import { sampleProducts } from "@/data/products";
 import { Button } from "@/components/ui/button";
-import { Heart, Share2, ChevronRight } from "lucide-react";
+import { Heart, Share2, ChevronRight, BookOpen, X, FileText } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const getCategoryName = (category?: string) => {
   switch (category) {
@@ -31,12 +39,47 @@ const getCategoryName = (category?: string) => {
 const ProductDetail = () => {
   const { id } = useParams();
   const [quantity, setQuantity] = useState(1);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
-  // Find product or use first sample product
-  const product = sampleProducts.find((p) => p.id === id) || sampleProducts[0];
+  // Fetch product from Supabase
+  const { data: dbProduct } = useQuery({
+    queryKey: ['product', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) return null;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  // Find product from sample data or use first sample product as fallback
+  const sampleProduct = sampleProducts.find((p) => p.id === id) || sampleProducts[0];
+  
+  // Use database product if available, otherwise fallback to sample
+  const product = dbProduct ? {
+    id: dbProduct.id,
+    title: dbProduct.title_bn || dbProduct.title_en,
+    author: dbProduct.author || 'অজানা লেখক',
+    price: dbProduct.price,
+    originalPrice: dbProduct.original_price,
+    discount: dbProduct.discount_percent,
+    image: Array.isArray(dbProduct.images) && dbProduct.images.length > 0 
+      ? (dbProduct.images[0] as string) 
+      : '/placeholder.svg',
+    publisher: dbProduct.publisher,
+    category: dbProduct.category_id,
+    previewUrl: dbProduct.preview_url,
+  } : sampleProduct;
+
   const relatedProducts = sampleProducts.filter((p) => p.id !== product.id).slice(0, 4);
-
   const hasDiscount = product.discount && product.discount > 0;
+  const previewUrl = (product as any).previewUrl;
+  const isPdf = previewUrl?.toLowerCase().endsWith('.pdf');
 
   return (
     <div className="min-h-screen bg-background">
@@ -102,7 +145,7 @@ const ProductDetail = () => {
                 <p>
                   <span className="text-muted-foreground">বিষয় : </span>
                   <Link to={`/shop?category=${product.category || 'islamic'}`} className="text-primary hover:underline">
-                    {getCategoryName(product.category)}
+                    {getCategoryName(product.category as string)}
                   </Link>
                 </p>
                 <p>
@@ -150,10 +193,21 @@ const ProductDetail = () => {
                 <Button className="btn-outline-primary flex-1">
                   প্রি-অর্ডার করুন
                 </Button>
-                <Button className="btn-primary flex-1 bg-accent hover:bg-accent/90">
-                  একটু পড়ে দেখুন
+                <Button 
+                  className="btn-primary flex-1 bg-accent hover:bg-accent/90"
+                  onClick={() => setPreviewOpen(true)}
+                  disabled={!previewUrl}
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  একটু পড়ুন
                 </Button>
               </div>
+
+              {!previewUrl && (
+                <p className="text-xs text-muted-foreground text-center">
+                  এই বইয়ের প্রিভিউ এখনো যোগ করা হয়নি
+                </p>
+              )}
 
               {/* Wishlist & Share */}
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -225,6 +279,54 @@ const ProductDetail = () => {
       </main>
 
       <Footer />
+
+      {/* Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5" />
+              একটু পড়ুন - {product.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="overflow-auto max-h-[70vh]">
+            {previewUrl && isPdf ? (
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <FileText className="w-8 h-8" />
+                  <span>PDF Preview</span>
+                </div>
+                <iframe 
+                  src={previewUrl} 
+                  className="w-full h-[60vh] border rounded-lg"
+                  title="Book Preview PDF"
+                />
+                <a 
+                  href={previewUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline text-sm"
+                >
+                  নতুন ট্যাবে খুলুন
+                </a>
+              </div>
+            ) : previewUrl ? (
+              <div className="flex justify-center">
+                <img 
+                  src={previewUrl} 
+                  alt="Book Preview" 
+                  className="max-w-full max-h-[65vh] object-contain rounded-lg"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <BookOpen className="w-16 h-16 mb-4 opacity-50" />
+                <p>এই বইয়ের প্রিভিউ এখনো যোগ করা হয়নি</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
