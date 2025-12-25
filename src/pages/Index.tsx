@@ -77,8 +77,8 @@ const Index = () => {
           {categorySection && categories.length > 0 && (
             <DynamicCategorySection 
               categories={categories}
+              products={products}
               title={categorySection.title_bn}
-              columns={categorySection.settings?.columns || 4}
             />
           )}
 

@@ -1,6 +1,7 @@
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
 
 interface Category {
   id: string;
@@ -11,17 +12,41 @@ interface Category {
   parent_id: string | null;
 }
 
+interface ProductWithCategory {
+  category_id: string | null;
+}
+
 interface DynamicCategorySectionProps {
   categories: Category[];
+  products?: ProductWithCategory[];
   title?: string;
-  columns?: number;
 }
 
 export const DynamicCategorySection = ({ 
   categories, 
+  products = [],
   title = "জনপ্রিয় ক্যাটাগরি",
 }: DynamicCategorySectionProps) => {
   const [selectedParent, setSelectedParent] = useState<Category | null>(null);
+
+  // Calculate product counts for each category (including subcategory products in parent count)
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    // First, count direct products for each category
+    categories.forEach(cat => {
+      counts[cat.id] = products.filter(p => p.category_id === cat.id).length;
+    });
+    
+    // Then, add subcategory counts to parent categories
+    categories.forEach(cat => {
+      if (cat.parent_id && counts[cat.parent_id] !== undefined) {
+        counts[cat.parent_id] += counts[cat.id];
+      }
+    });
+    
+    return counts;
+  }, [categories, products]);
 
   // Get parent categories only
   const parentCategories = categories.filter(c => !c.parent_id).slice(0, 8);
@@ -40,7 +65,6 @@ export const DynamicCategorySection = ({
     categories.some(c => c.parent_id === categoryId);
 
   const handleCategoryClick = (category: Category, e: React.MouseEvent) => {
-    // If it's a parent category with subcategories, show them instead of navigating
     if (!selectedParent && hasSubcategories(category.id)) {
       e.preventDefault();
       setSelectedParent(category);
@@ -105,6 +129,14 @@ export const DynamicCategorySection = ({
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                     <span className="text-3xl">📚</span>
                   </div>
+                )}
+                {categoryCounts[category.id] > 0 && (
+                  <Badge 
+                    variant="secondary" 
+                    className="absolute top-1 left-1 text-xs px-1.5 py-0.5 bg-primary text-primary-foreground"
+                  >
+                    {categoryCounts[category.id]}
+                  </Badge>
                 )}
                 {!selectedParent && hasSubcategories(category.id) && (
                   <div className="absolute bottom-1 right-1 bg-primary/80 text-primary-foreground rounded-full p-1">
