@@ -14,6 +14,8 @@ import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import OrderHistory from "./pages/OrderHistory";
 import SignIn from "./pages/SignIn";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Authors from "./pages/Authors";
 import Publishers from "./pages/Publishers";
 import Wishlist from "./pages/Wishlist";
@@ -43,6 +45,10 @@ import AdminCouriers from "./pages/admin/AdminCouriers";
 import AdminCustomers from "./pages/admin/AdminCustomers";
 import AdminFraudReview from "./pages/admin/AdminFraudReview";
 import AdminSMS from "./pages/admin/AdminSMS";
+import AdminWriters from "./pages/admin/AdminWriters";
+import AdminPublishers from "./pages/admin/AdminPublishers";
+import AdminBrands from "./pages/admin/AdminBrands";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -63,6 +69,8 @@ const App = () => (
                 <Route path="/order-confirmation" element={<OrderConfirmation />} />
                 <Route path="/orders" element={<OrderHistory />} />
                 <Route path="/signin" element={<SignIn />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/wishlist" element={<Wishlist />} />
                 <Route path="/authors" element={<Authors />} />
                 <Route path="/publishers" element={<Publishers />} />
@@ -83,6 +91,9 @@ const App = () => (
                 <Route path="/admin/homepage" element={<AdminHomepage />} />
                 <Route path="/admin/products" element={<AdminProducts />} />
                 <Route path="/admin/categories" element={<AdminCategories />} />
+                <Route path="/admin/writers" element={<AdminWriters />} />
+                <Route path="/admin/publishers" element={<AdminPublishers />} />
+                <Route path="/admin/brands" element={<AdminBrands />} />
                 <Route path="/admin/orders" element={<AdminOrders />} />
                 <Route path="/admin/banners" element={<AdminBanners />} />
                 <Route path="/admin/coupons" element={<AdminCoupons />} />

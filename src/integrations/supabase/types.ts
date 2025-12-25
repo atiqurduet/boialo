@@ -143,6 +143,54 @@ export type Database = {
         }
         Relationships: []
       }
+      brands: {
+        Row: {
+          created_at: string
+          description_bn: string | null
+          description_en: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          meta_description: string | null
+          meta_title: string | null
+          name_bn: string
+          name_en: string
+          slug: string
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          description_bn?: string | null
+          description_en?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
+          name_bn: string
+          name_en: string
+          slug: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          description_bn?: string | null
+          description_en?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
+          name_bn?: string
+          name_en?: string
+          slug?: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       cart_items: {
         Row: {
           created_at: string
@@ -641,6 +689,7 @@ export type Database = {
       products: {
         Row: {
           author: string | null
+          brand_id: string | null
           category_id: string | null
           created_at: string
           description_bn: string | null
@@ -657,6 +706,7 @@ export type Database = {
           original_price: number | null
           price: number
           publisher: string | null
+          publisher_id: string | null
           release_date: string | null
           slug: string
           stock_quantity: number | null
@@ -664,9 +714,11 @@ export type Database = {
           title_bn: string
           title_en: string
           updated_at: string
+          writer_id: string | null
         }
         Insert: {
           author?: string | null
+          brand_id?: string | null
           category_id?: string | null
           created_at?: string
           description_bn?: string | null
@@ -683,6 +735,7 @@ export type Database = {
           original_price?: number | null
           price: number
           publisher?: string | null
+          publisher_id?: string | null
           release_date?: string | null
           slug: string
           stock_quantity?: number | null
@@ -690,9 +743,11 @@ export type Database = {
           title_bn: string
           title_en: string
           updated_at?: string
+          writer_id?: string | null
         }
         Update: {
           author?: string | null
+          brand_id?: string | null
           category_id?: string | null
           created_at?: string
           description_bn?: string | null
@@ -709,6 +764,7 @@ export type Database = {
           original_price?: number | null
           price?: number
           publisher?: string | null
+          publisher_id?: string | null
           release_date?: string | null
           slug?: string
           stock_quantity?: number | null
@@ -716,13 +772,35 @@ export type Database = {
           title_bn?: string
           title_en?: string
           updated_at?: string
+          writer_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "products_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_publisher_id_fkey"
+            columns: ["publisher_id"]
+            isOneToOne: false
+            referencedRelation: "publishers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_writer_id_fkey"
+            columns: ["writer_id"]
+            isOneToOne: false
+            referencedRelation: "writers"
             referencedColumns: ["id"]
           },
         ]
@@ -775,6 +853,54 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      publishers: {
+        Row: {
+          created_at: string
+          description_bn: string | null
+          description_en: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          meta_description: string | null
+          meta_title: string | null
+          name_bn: string
+          name_en: string
+          slug: string
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          description_bn?: string | null
+          description_en?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
+          name_bn: string
+          name_en: string
+          slug: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          description_bn?: string | null
+          description_en?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
+          name_bn?: string
+          name_en?: string
+          slug?: string
+          updated_at?: string
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -925,6 +1051,51 @@ export type Database = {
           id?: string
           product_id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      writers: {
+        Row: {
+          bio_bn: string | null
+          bio_en: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          meta_description: string | null
+          meta_title: string | null
+          name_bn: string
+          name_en: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          bio_bn?: string | null
+          bio_en?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          name_bn: string
+          name_en: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          bio_bn?: string | null
+          bio_en?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          name_bn?: string
+          name_en?: string
+          slug?: string
+          updated_at?: string
         }
         Relationships: []
       }
