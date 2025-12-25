@@ -58,23 +58,40 @@ const Checkout = () => {
     }
   }, [cartItems, cartLoading, navigate]);
 
-  // Pre-fill form with profile data
+  // Pre-fill form with profile data including shipping address
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return;
       
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, phone, email")
+        .select("full_name, phone, email, address, city, postal_code, division, country")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       if (profile) {
+        // Build full address from profile fields
+        const addressParts = [
+          profile.address,
+          profile.city,
+          profile.postal_code,
+          profile.division,
+          profile.country,
+        ].filter(Boolean);
+        
+        const fullAddress = addressParts.join(", ");
+
+        // Set delivery area based on division
+        if (profile.division && profile.division !== "ঢাকা") {
+          setDeliveryArea("outside");
+        }
+
         setFormData(prev => ({
           ...prev,
           fullName: profile.full_name || "",
           phone: profile.phone || "",
           email: profile.email || user.email || "",
+          address: fullAddress || "",
         }));
       }
     };
