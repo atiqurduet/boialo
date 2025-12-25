@@ -1,6 +1,9 @@
 import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useCartContext } from "@/contexts/CartContext";
+import { useWishlistContext } from "@/contexts/WishlistContext";
+import { cn } from "@/lib/utils";
 
 export interface Product {
   id: string;
@@ -19,7 +22,21 @@ interface ProductCardProps {
 }
 
 export const ProductCard = ({ product, variant = "default" }: ProductCardProps) => {
+  const { addToCart } = useCartContext();
+  const { isInWishlist, toggleWishlist } = useWishlistContext();
   const hasDiscount = product.discount && product.discount > 0;
+  const inWishlist = isInWishlist(product.id);
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    addToCart(product.id);
+  };
+
+  const handleToggleWishlist = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWishlist(product.id);
+  };
 
   if (variant === "compact") {
     return (
@@ -63,10 +80,19 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
 
       {/* Wishlist Button */}
       <button
-        className="absolute top-2 right-2 p-2 bg-card/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-card z-10"
-        aria-label="Add to wishlist"
+        onClick={handleToggleWishlist}
+        className={cn(
+          "absolute top-2 right-2 p-2 bg-card/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-card z-10",
+          inWishlist && "opacity-100"
+        )}
+        aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
       >
-        <Heart className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />
+        <Heart
+          className={cn(
+            "w-4 h-4 transition-colors",
+            inWishlist ? "fill-primary text-primary" : "text-muted-foreground hover:text-primary"
+          )}
+        />
       </button>
 
       {/* Product Image */}
@@ -92,7 +118,7 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
             <span className="price-original">৳{product.originalPrice}</span>
           )}
         </div>
-        <Button className="w-full btn-primary text-sm" size="sm">
+        <Button onClick={handleAddToCart} className="w-full btn-primary text-sm" size="sm">
           অর্ডার করুন
         </Button>
       </div>

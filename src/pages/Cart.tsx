@@ -1,43 +1,55 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
-import { sampleProducts } from "@/data/products";
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
-
-interface CartItem {
-  product: typeof sampleProducts[0];
-  quantity: number;
-}
+import { Trash2, Plus, Minus, ShoppingBag, Loader2 } from "lucide-react";
+import { useCartContext } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Cart = () => {
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    { product: sampleProducts[0], quantity: 1 },
-    { product: sampleProducts[1], quantity: 2 },
-  ]);
-
-  const updateQuantity = (productId: string, delta: number) => {
-    setCartItems((items) =>
-      items.map((item) =>
-        item.product.id === productId
-          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item
-      )
-    );
-  };
-
-  const removeItem = (productId: string) => {
-    setCartItems((items) => items.filter((item) => item.product.id !== productId));
-  };
-
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
-    0
-  );
+  const { cartItems, loading, updateQuantity, removeFromCart, subtotal } = useCartContext();
+  const { user } = useAuth();
+  
   const shipping = subtotal >= 499 ? 0 : 60;
   const total = subtotal + shipping;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <AnnouncementBar />
+        <Header />
+        <main className="container py-12">
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <AnnouncementBar />
+        <Header />
+        <main className="container py-12">
+          <div className="text-center py-16">
+            <ShoppingBag className="w-20 h-20 mx-auto text-muted-foreground mb-6" />
+            <h1 className="text-2xl font-bold mb-4">Please sign in to view your cart</h1>
+            <p className="text-muted-foreground mb-8">
+              Sign in to add items to your cart and start shopping
+            </p>
+            <Link to="/signin">
+              <Button className="btn-primary">Sign In</Button>
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -74,10 +86,10 @@ const Cart = () => {
           <div className="lg:col-span-2 space-y-4">
             {cartItems.map((item) => (
               <div
-                key={item.product.id}
+                key={item.id}
                 className="bg-card rounded-xl p-4 shadow-sm flex gap-4"
               >
-                <Link to={`/product/${item.product.id}`} className="shrink-0">
+                <Link to={`/product/${item.productId}`} className="shrink-0">
                   <img
                     src={item.product.image}
                     alt={item.product.title}
@@ -86,7 +98,7 @@ const Cart = () => {
                 </Link>
                 <div className="flex-1 min-w-0">
                   <Link
-                    to={`/product/${item.product.id}`}
+                    to={`/product/${item.productId}`}
                     className="font-medium hover:text-primary transition-colors line-clamp-2"
                   >
                     {item.product.title}
@@ -106,21 +118,21 @@ const Cart = () => {
                   <div className="flex items-center justify-between mt-4">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => updateQuantity(item.product.id, -1)}
+                        onClick={() => updateQuantity(item.id, -1)}
                         className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors"
                       >
                         <Minus className="w-4 h-4" />
                       </button>
                       <span className="w-10 text-center font-medium">{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.product.id, 1)}
+                        onClick={() => updateQuantity(item.id, 1)}
                         className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors"
                       >
                         <Plus className="w-4 h-4" />
                       </button>
                     </div>
                     <button
-                      onClick={() => removeItem(item.product.id)}
+                      onClick={() => removeFromCart(item.id)}
                       className="text-muted-foreground hover:text-destructive transition-colors"
                     >
                       <Trash2 className="w-5 h-5" />
