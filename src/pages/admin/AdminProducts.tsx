@@ -454,12 +454,12 @@ const AdminProducts = () => {
                   <TabsContent value="relations" className="space-y-4 mt-4">
                     <div>
                       <Label>ক্যাটাগরি</Label>
-                      <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
+                      <Select value={formData.category_id || "none"} onValueChange={(value) => setFormData({ ...formData, category_id: value === "none" ? "" : value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="ক্যাটাগরি নির্বাচন করুন" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">কোন ক্যাটাগরি নেই</SelectItem>
+                          <SelectItem value="none">কোন ক্যাটাগরি নেই</SelectItem>
                           {categories.map((cat) => (
                             <SelectItem key={cat.id} value={cat.id}>{getCategoryPath(cat.id)}</SelectItem>
                           ))}
@@ -468,12 +468,12 @@ const AdminProducts = () => {
                     </div>
                     <div>
                       <Label>লেখক (ডাটাবেস থেকে)</Label>
-                      <Select value={formData.writer_id} onValueChange={(value) => setFormData({ ...formData, writer_id: value })}>
+                      <Select value={formData.writer_id || "none"} onValueChange={(value) => setFormData({ ...formData, writer_id: value === "none" ? "" : value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="লেখক নির্বাচন করুন" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">কোন লেখক নেই</SelectItem>
+                          <SelectItem value="none">কোন লেখক নেই</SelectItem>
                           {writers.map((w) => (
                             <SelectItem key={w.id} value={w.id}>{w.name_bn} ({w.name_en})</SelectItem>
                           ))}
@@ -482,12 +482,12 @@ const AdminProducts = () => {
                     </div>
                     <div>
                       <Label>প্রকাশনী (ডাটাবেস থেকে)</Label>
-                      <Select value={formData.publisher_id} onValueChange={(value) => setFormData({ ...formData, publisher_id: value })}>
+                      <Select value={formData.publisher_id || "none"} onValueChange={(value) => setFormData({ ...formData, publisher_id: value === "none" ? "" : value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="প্রকাশনী নির্বাচন করুন" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">কোন প্রকাশনী নেই</SelectItem>
+                          <SelectItem value="none">কোন প্রকাশনী নেই</SelectItem>
                           {publishers.map((p) => (
                             <SelectItem key={p.id} value={p.id}>{p.name_bn} ({p.name_en})</SelectItem>
                           ))}
@@ -496,12 +496,12 @@ const AdminProducts = () => {
                     </div>
                     <div>
                       <Label>ব্র্যান্ড</Label>
-                      <Select value={formData.brand_id} onValueChange={(value) => setFormData({ ...formData, brand_id: value })}>
+                      <Select value={formData.brand_id || "none"} onValueChange={(value) => setFormData({ ...formData, brand_id: value === "none" ? "" : value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="ব্র্যান্ড নির্বাচন করুন" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">কোন ব্র্যান্ড নেই</SelectItem>
+                          <SelectItem value="none">কোন ব্র্যান্ড নেই</SelectItem>
                           {brands.map((b) => (
                             <SelectItem key={b.id} value={b.id}>{b.name_bn} ({b.name_en})</SelectItem>
                           ))}
