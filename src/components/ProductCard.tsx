@@ -15,6 +15,8 @@ export interface Product {
   image: string;
   category?: string;
   publisher?: string;
+  isPreorder?: boolean;
+  releaseDate?: string;
 }
 
 interface ProductCardProps {
