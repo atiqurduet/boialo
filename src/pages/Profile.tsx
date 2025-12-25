@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, User, Mail, Phone, LogOut, Camera, MapPin, Lock, Calendar } from "lucide-react";
+import { Loader2, User, Mail, Phone, LogOut, Camera, MapPin, Lock, Calendar, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -69,6 +69,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
   const [profile, setProfile] = useState<Profile>({
     full_name: "",
     email: "",
@@ -88,6 +89,8 @@ const Profile = () => {
     confirmPassword: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const isEmailVerified = user?.email_confirmed_at != null;
 
   useEffect(() => {
     if (!user) {
@@ -230,6 +233,29 @@ const Profile = () => {
     await signOut();
     navigate("/");
     toast.success("সাইন আউট হয়েছে");
+  };
+
+  const handleResendVerification = async () => {
+    if (!user?.email) return;
+
+    setResendingEmail(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: user.email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (error) throw error;
+      toast.success("যাচাইকরণ ইমেইল পাঠানো হয়েছে");
+    } catch (error: any) {
+      console.error("Error resending verification:", error);
+      toast.error(error.message || "ইমেইল পাঠাতে সমস্যা হয়েছে");
+    } finally {
+      setResendingEmail(false);
+    }
   };
 
   const getInitials = (name: string | null) => {
@@ -483,6 +509,61 @@ const Profile = () => {
 
             {/* Security Tab */}
             <TabsContent value="security">
+              {/* Email Verification Status */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Mail className="w-5 h-5" />
+                    ইমেইল যাচাইকরণ
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {isEmailVerified ? (
+                        <>
+                          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">ইমেইল যাচাই হয়েছে</p>
+                            <p className="text-sm text-muted-foreground">{user?.email}</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                            <AlertCircle className="w-5 h-5 text-amber-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">ইমেইল যাচাই করা হয়নি</p>
+                            <p className="text-sm text-muted-foreground">{user?.email}</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    {!isEmailVerified && (
+                      <Button variant="outline" size="sm" onClick={handleResendVerification} disabled={resendingEmail}>
+                        {resendingEmail ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-1" />
+                            আবার পাঠান
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                  {!isEmailVerified && (
+                    <p className="text-sm text-muted-foreground mt-3 bg-muted p-3 rounded-lg">
+                      আপনার ইমেইল যাচাই করতে ইনবক্স চেক করুন। যাচাইকরণ লিঙ্ক না পেলে "আবার পাঠান" বাটনে ক্লিক করুন।
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Password Change */}
               <Card className="mb-6">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
