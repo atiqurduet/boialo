@@ -25,6 +25,8 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Search, X } from 'lucide-react';
+import { ProductImageUpload } from '@/components/admin/ProductImageUpload';
+import { ProductPreviewUpload } from '@/components/admin/ProductPreviewUpload';
 
 interface Product {
   id: string;
@@ -51,6 +53,7 @@ interface Product {
   isbn: string | null;
   description_bn: string | null;
   description_en: string | null;
+  preview_url: string | null;
 }
 
 interface Category {
@@ -114,6 +117,7 @@ const AdminProducts = () => {
     meta_description: '',
     tags: [] as string[],
     isbn: '',
+    preview_url: '',
   });
 
   useEffect(() => {
@@ -239,6 +243,7 @@ const AdminProducts = () => {
         meta_description: formData.meta_description || null,
         tags: formData.tags.length > 0 ? formData.tags : null,
         isbn: formData.isbn || null,
+        preview_url: formData.preview_url || null,
       };
 
       if (editingProduct) {
@@ -293,6 +298,7 @@ const AdminProducts = () => {
       meta_description: product.meta_description || '',
       tags: product.tags || [],
       isbn: product.isbn || '',
+      preview_url: (product as any).preview_url || '',
     });
     setDialogOpen(true);
   };
@@ -336,6 +342,7 @@ const AdminProducts = () => {
       meta_description: '',
       tags: [],
       isbn: '',
+      preview_url: '',
     });
     setTagInput('');
   };
@@ -425,6 +432,28 @@ const AdminProducts = () => {
                         <Switch checked={formData.is_featured} onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })} />
                         <Label>ফিচার্ড</Label>
                       </div>
+                    </div>
+
+                    {/* Product Images Upload */}
+                    <div>
+                      <Label className="text-base font-medium">প্রোডাক্ট ইমেজ</Label>
+                      <p className="text-sm text-muted-foreground mb-2">প্রোডাক্টের ছবি আপলোড করুন। প্রথম ইমেজটি প্রধান ইমেজ হিসেবে দেখানো হবে।</p>
+                      <ProductImageUpload
+                        images={formData.images}
+                        onImagesChange={(images) => setFormData({ ...formData, images })}
+                        productId={editingProduct?.id}
+                      />
+                    </div>
+
+                    {/* একটু পড়ুন (Read a bit) Upload */}
+                    <div>
+                      <Label className="text-base font-medium">একটু পড়ুন (প্রিভিউ)</Label>
+                      <p className="text-sm text-muted-foreground mb-2">বইয়ের কিছু পৃষ্ঠা বা স্যাম্পল চ্যাপ্টার যোগ করুন (ইমেজ বা PDF)</p>
+                      <ProductPreviewUpload
+                        previewUrl={formData.preview_url}
+                        onPreviewChange={(url) => setFormData({ ...formData, preview_url: url })}
+                        productId={editingProduct?.id}
+                      />
                     </div>
                   </TabsContent>
 
