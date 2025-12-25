@@ -10,6 +10,8 @@ export const sampleProducts: Product[] = [
     discount: 50,
     image: "https://wafilife-media.wafilife.com/uploads/2025/12/b84f686d-2d05-4673-b2d8-1ee97655218e-Muminer-Harabar-Kichu-Nei-Editable-2-192x254.jpg",
     category: "islamic",
+    isPreorder: true,
+    releaseDate: "৩০ ডিসেম্বর, ২০২৫",
   },
   {
     id: "2",
@@ -36,6 +38,8 @@ export const sampleProducts: Product[] = [
     price: 40,
     image: "https://wafilife-media.wafilife.com/uploads/2025/12/462b6ed8-c262-410d-bbb0-9708749bdeb1-Artboard-1@4x-100-2-192x254.jpg",
     category: "magazine",
+    isPreorder: true,
+    releaseDate: "১৫ জানুয়ারি, ২০২৬",
   },
   {
     id: "5",
@@ -46,6 +50,8 @@ export const sampleProducts: Product[] = [
     discount: 13,
     image: "https://wafilife-media.wafilife.com/uploads/2025/12/mogol-2-192x254.jpg",
     category: "history",
+    isPreorder: true,
+    releaseDate: "২০ জানুয়ারি, ২০২৬",
   },
   {
     id: "6",

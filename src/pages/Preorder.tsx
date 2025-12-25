@@ -6,11 +6,8 @@ import { sampleProducts } from "@/data/products";
 import { Clock, BookOpen, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const preorderProducts = sampleProducts.slice(0, 6).map((p) => ({
-  ...p,
-  isPreorder: true,
-  releaseDate: "৩০ ডিসেম্বর, ২০২৫",
-}));
+// Filter only products that are marked as preorder
+const preorderProducts = sampleProducts.filter((p) => p.isPreorder === true);
 
 const Preorder = () => {
   return (
