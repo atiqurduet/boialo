@@ -1,44 +1,190 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
-import { sampleProducts } from "@/data/products";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, CreditCard, Smartphone, Truck, MapPin, ChevronLeft } from "lucide-react";
+import { Check, CreditCard, Smartphone, Truck, MapPin, ChevronLeft, Loader2 } from "lucide-react";
+import { useCartContext } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { z } from "zod";
 
-interface CartItem {
-  product: typeof sampleProducts[0];
-  quantity: number;
-}
+const checkoutSchema = z.object({
+  fullName: z.string().trim().min(2, "নাম অন্তত ২ অক্ষরের হতে হবে").max(100, "নাম ১০০ অক্ষরের বেশি হতে পারবে না"),
+  phone: z.string().trim().regex(/^01[3-9]\d{8}$/, "সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)"),
+  email: z.string().trim().email("সঠিক ইমেইল দিন").optional().or(z.literal("")),
+  address: z.string().trim().min(10, "সম্পূর্ণ ঠিকানা দিন (অন্তত ১০ অক্ষর)").max(500, "ঠিকানা ৫০০ অক্ষরের বেশি হতে পারবে না"),
+  notes: z.string().trim().max(500, "নোট ৫০০ অক্ষরের বেশি হতে পারবে না").optional(),
+  transactionId: z.string().trim().optional(),
+});
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const [cartItems] = useState<CartItem[]>([
-    { product: sampleProducts[0], quantity: 1 },
-    { product: sampleProducts[1], quantity: 2 },
-  ]);
+  const { cartItems, subtotal, clearCart, loading: cartLoading } = useCartContext();
+  const { user, loading: authLoading } = useAuth();
 
+  const [formData, setFormData] = useState({
+    fullName: "",
+    phone: "",
+    email: "",
+    address: "",
+    notes: "",
+    transactionId: "",
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [deliveryArea, setDeliveryArea] = useState("inside");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handlePlaceOrder = () => {
-    setIsSubmitting(true);
-    // Simulate order processing
-    setTimeout(() => {
-      navigate("/order-confirmation");
-    }, 1000);
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      toast.error("অর্ডার করতে প্রথমে লগইন করুন");
+      navigate("/signin");
+    }
+  }, [user, authLoading, navigate]);
+
+  // Redirect if cart is empty
+  useEffect(() => {
+    if (!cartLoading && cartItems.length === 0) {
+      toast.error("আপনার কার্ট খালি");
+      navigate("/cart");
+    }
+  }, [cartItems, cartLoading, navigate]);
+
+  // Pre-fill form with profile data
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, phone, email")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
+        setFormData(prev => ({
+          ...prev,
+          fullName: profile.full_name || "",
+          phone: profile.phone || "",
+          email: profile.email || user.email || "",
+        }));
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: "" }));
+    }
   };
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
-    0
-  );
+  const generateOrderNumber = () => {
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `WL-${timestamp}-${random}`;
+  };
+
+  const validateForm = () => {
+    try {
+      checkoutSchema.parse(formData);
+      
+      // Additional validation for mobile banking
+      if ((paymentMethod === "bkash" || paymentMethod === "nagad") && !formData.transactionId?.trim()) {
+        setErrors({ transactionId: "ট্রান্জেকশন আইডি দিন" });
+        return false;
+      }
+      
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: Record<string, string> = {};
+        error.errors.forEach(err => {
+          if (err.path[0]) {
+            newErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setErrors(newErrors);
+      }
+      return false;
+    }
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!validateForm() || !user) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const orderNumber = generateOrderNumber();
+      const deliveryCharge = deliveryArea === "inside" ? 60 : 120;
+      const total = subtotal + deliveryCharge;
+
+      // Create order
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          user_id: user.id,
+          order_number: orderNumber,
+          status: "pending",
+          subtotal: subtotal,
+          delivery_charge: deliveryCharge,
+          total: total,
+          payment_method: paymentMethod,
+          transaction_id: formData.transactionId || null,
+          delivery_area: deliveryArea,
+          full_name: formData.fullName.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email?.trim() || null,
+          address: formData.address.trim(),
+          notes: formData.notes?.trim() || null,
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order items
+      const orderItemsData = cartItems.map(item => ({
+        order_id: order.id,
+        product_id: item.productId,
+        product_title: item.product.title,
+        product_image: item.product.image || null,
+        price: item.product.price,
+        quantity: item.quantity,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("order_items")
+        .insert(orderItemsData);
+
+      if (itemsError) throw itemsError;
+
+      // Clear cart
+      await clearCart();
+
+      toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
+      navigate("/order-confirmation", { state: { orderNumber } });
+    } catch (error: any) {
+      console.error("Order error:", error);
+      toast.error("অর্ডার করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const deliveryCharge = deliveryArea === "inside" ? 60 : 120;
   const total = subtotal + deliveryCharge;
 
@@ -69,6 +215,14 @@ const Checkout = () => {
     },
   ];
 
+  if (authLoading || cartLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <AnnouncementBar />
@@ -98,15 +252,37 @@ const Checkout = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">পূর্ণ নাম *</Label>
-                  <Input id="name" placeholder="আপনার নাম লিখুন" className="mt-1" />
+                  <Input
+                    id="name"
+                    placeholder="আপনার নাম লিখুন"
+                    className={`mt-1 ${errors.fullName ? "border-destructive" : ""}`}
+                    value={formData.fullName}
+                    onChange={(e) => handleInputChange("fullName", e.target.value)}
+                  />
+                  {errors.fullName && <p className="text-destructive text-xs mt-1">{errors.fullName}</p>}
                 </div>
                 <div>
                   <Label htmlFor="phone">মোবাইল নম্বর *</Label>
-                  <Input id="phone" placeholder="01XXXXXXXXX" className="mt-1" />
+                  <Input
+                    id="phone"
+                    placeholder="01XXXXXXXXX"
+                    className={`mt-1 ${errors.phone ? "border-destructive" : ""}`}
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
+                  />
+                  {errors.phone && <p className="text-destructive text-xs mt-1">{errors.phone}</p>}
                 </div>
                 <div>
                   <Label htmlFor="email">ইমেইল</Label>
-                  <Input id="email" type="email" placeholder="email@example.com" className="mt-1" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="email@example.com"
+                    className={`mt-1 ${errors.email ? "border-destructive" : ""}`}
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                  />
+                  {errors.email && <p className="text-destructive text-xs mt-1">{errors.email}</p>}
                 </div>
                 <div>
                   <Label>ডেলিভারি এরিয়া *</Label>
@@ -134,9 +310,12 @@ const Checkout = () => {
                   <Textarea
                     id="address"
                     placeholder="বাড়ি নং, রাস্তা, এলাকা, থানা, জেলা"
-                    className="mt-1"
+                    className={`mt-1 ${errors.address ? "border-destructive" : ""}`}
                     rows={3}
+                    value={formData.address}
+                    onChange={(e) => handleInputChange("address", e.target.value)}
                   />
+                  {errors.address && <p className="text-destructive text-xs mt-1">{errors.address}</p>}
                 </div>
                 <div className="md:col-span-2">
                   <Label htmlFor="notes">অর্ডার নোট (ঐচ্ছিক)</Label>
@@ -145,6 +324,8 @@ const Checkout = () => {
                     placeholder="অতিরিক্ত নির্দেশনা থাকলে লিখুন..."
                     className="mt-1"
                     rows={2}
+                    value={formData.notes}
+                    onChange={(e) => handleInputChange("notes", e.target.value)}
                   />
                 </div>
               </div>
@@ -191,24 +372,36 @@ const Checkout = () => {
               </RadioGroup>
 
               {paymentMethod === "bkash" && (
-                <div className="mt-4 p-4 bg-pink-50 rounded-lg border border-pink-200">
-                  <p className="text-sm text-pink-800">
+                <div className="mt-4 p-4 bg-pink-50 dark:bg-pink-950/20 rounded-lg border border-pink-200 dark:border-pink-800">
+                  <p className="text-sm text-pink-800 dark:text-pink-200">
                     বিকাশ নম্বর: <strong>01XXX-XXXXXX</strong> (মার্চেন্ট)
                     <br />
                     Send Money করে ট্রান্জেকশন আইডি দিন
                   </p>
-                  <Input placeholder="Transaction ID" className="mt-3" />
+                  <Input
+                    placeholder="Transaction ID"
+                    className={`mt-3 ${errors.transactionId ? "border-destructive" : ""}`}
+                    value={formData.transactionId}
+                    onChange={(e) => handleInputChange("transactionId", e.target.value)}
+                  />
+                  {errors.transactionId && <p className="text-destructive text-xs mt-1">{errors.transactionId}</p>}
                 </div>
               )}
 
               {paymentMethod === "nagad" && (
-                <div className="mt-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
-                  <p className="text-sm text-orange-800">
+                <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <p className="text-sm text-orange-800 dark:text-orange-200">
                     নগদ নম্বর: <strong>01XXX-XXXXXX</strong> (মার্চেন্ট)
                     <br />
                     Send Money করে ট্রান্জেকশন আইডি দিন
                   </p>
-                  <Input placeholder="Transaction ID" className="mt-3" />
+                  <Input
+                    placeholder="Transaction ID"
+                    className={`mt-3 ${errors.transactionId ? "border-destructive" : ""}`}
+                    value={formData.transactionId}
+                    onChange={(e) => handleInputChange("transactionId", e.target.value)}
+                  />
+                  {errors.transactionId && <p className="text-destructive text-xs mt-1">{errors.transactionId}</p>}
                 </div>
               )}
             </div>
@@ -219,9 +412,9 @@ const Checkout = () => {
             <div className="bg-card rounded-xl p-6 shadow-sm sticky top-24">
               <h2 className="font-bold text-lg mb-4">অর্ডার সারাংশ</h2>
 
-              <div className="space-y-3 mb-4">
+              <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
                 {cartItems.map((item) => (
-                  <div key={item.product.id} className="flex gap-3">
+                  <div key={item.id} className="flex gap-3">
                     <img
                       src={item.product.image}
                       alt={item.product.title}
@@ -257,12 +450,19 @@ const Checkout = () => {
                 </div>
               </div>
 
-              <Button 
-                className="w-full btn-primary mt-6" 
+              <Button
+                className="w-full mt-6"
                 onClick={handlePlaceOrder}
-                disabled={isSubmitting}
+                disabled={isSubmitting || cartItems.length === 0}
               >
-                {isSubmitting ? "প্রসেসিং..." : "অর্ডার কনফার্ম করুন"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    প্রসেসিং...
+                  </>
+                ) : (
+                  "অর্ডার কনফার্ম করুন"
+                )}
               </Button>
 
               <p className="text-xs text-muted-foreground text-center mt-4">
