@@ -39,7 +39,7 @@ export const DynamicCategorySection = ({
           সব দেখুন <ChevronRight className="w-4 h-4" />
         </Link>
       </div>
-      <div className={`grid grid-cols-2 md:grid-cols-${columns} gap-4`}>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {parentCategories.map((category) => (
           <Link
             key={category.id}
