@@ -1,9 +1,19 @@
 import { useState } from "react";
-import { Heart, ShoppingBag, User, Menu } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Heart, ShoppingBag, User, Menu, LogOut } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SearchDropdown } from "@/components/SearchDropdown";
 import { MobileMenu } from "@/components/MobileMenu";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCartContext } from "@/contexts/CartContext";
+import { useWishlistContext } from "@/contexts/WishlistContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 const navLinks = [
   { name: "হোম", path: "/" },
@@ -23,6 +33,16 @@ const navLinks = [
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const { user, signOut } = useAuth();
+  const { cartCount } = useCartContext();
+  const { wishlistCount } = useWishlistContext();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Logged out successfully");
+    navigate("/");
+  };
 
   return (
     <>
@@ -53,10 +73,15 @@ export const Header = () => {
             <div className="flex items-center gap-2 md:gap-4">
               <Link
                 to="/wishlist"
-                className="hidden sm:flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                className="hidden sm:flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors relative"
               >
                 <Heart className="w-5 h-5" />
                 <span className="hidden lg:inline text-sm">উইশলিস্ট</span>
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-1 lg:-top-2 lg:right-12 bg-primary text-primary-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {wishlistCount}
+                  </span>
+                )}
               </Link>
               <Link
                 to="/cart"
@@ -65,16 +90,49 @@ export const Header = () => {
                 <ShoppingBag className="w-5 h-5" />
                 <span className="hidden lg:inline text-sm">শপিং ব্যাগ</span>
                 <span className="absolute -top-1 -right-1 lg:-top-2 lg:right-8 bg-primary text-primary-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                  0
+                  {cartCount}
                 </span>
               </Link>
-              <Link
-                to="/signin"
-                className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
-              >
-                <User className="w-5 h-5" />
-                <span className="hidden lg:inline text-sm">Sign In</span>
-              </Link>
+
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors">
+                      <User className="w-5 h-5" />
+                      <span className="hidden lg:inline text-sm truncate max-w-[100px]">
+                        {user.user_metadata?.full_name || user.email?.split("@")[0]}
+                      </span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem asChild>
+                      <Link to="/wishlist" className="cursor-pointer">
+                        <Heart className="w-4 h-4 mr-2" />
+                        My Wishlist
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/cart" className="cursor-pointer">
+                        <ShoppingBag className="w-4 h-4 mr-2" />
+                        My Cart
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Link
+                  to="/signin"
+                  className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <User className="w-5 h-5" />
+                  <span className="hidden lg:inline text-sm">Sign In</span>
+                </Link>
+              )}
+
               <Button
                 variant="ghost"
                 size="icon"
