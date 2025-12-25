@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInvoiceDownload } from "@/hooks/useInvoiceDownload";
+import { InvoiceModal } from "@/components/InvoiceModal";
 
 interface OrderItem {
   id: string;
@@ -38,7 +39,7 @@ const OrderConfirmation = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const { downloadInvoice, downloading } = useInvoiceDownload();
+  const { downloadInvoice, downloading, invoiceHtml, printInvoice, saveAsPdf, downloadAsHtml, closeInvoice } = useInvoiceDownload();
 
   const orderNumberFromState = location.state?.orderNumber;
 
@@ -309,6 +310,15 @@ const OrderConfirmation = () => {
       </main>
 
       <Footer />
+
+      <InvoiceModal
+        isOpen={!!invoiceHtml}
+        onClose={closeInvoice}
+        invoiceHtml={invoiceHtml}
+        onPrint={printInvoice}
+        onSaveAsPdf={saveAsPdf}
+        onDownloadHtml={downloadAsHtml}
+      />
     </div>
   );
 };
