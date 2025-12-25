@@ -66,9 +66,6 @@ const Preorder = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
           {preorderProducts.map((product) => (
             <div key={product.id} className="relative">
-              <div className="absolute top-2 right-2 z-10 bg-accent text-accent-foreground px-2 py-1 rounded-md text-xs font-medium">
-                প্রি-অর্ডার
-              </div>
               <ProductCard product={product} />
               <div className="bg-muted/50 rounded-b-lg px-3 py-2 text-xs text-muted-foreground flex items-center gap-1 -mt-1">
                 <Clock className="w-3 h-3" />

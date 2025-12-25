@@ -78,8 +78,15 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
 
   return (
     <div className="product-card group relative">
+      {/* Preorder Badge */}
+      {product.isPreorder && (
+        <div className="absolute top-2 left-2 z-10 bg-accent text-accent-foreground px-2 py-1 rounded-md text-xs font-medium">
+          প্রি-অর্ডার
+        </div>
+      )}
+
       {/* Discount Badge */}
-      {hasDiscount && (
+      {hasDiscount && !product.isPreorder && (
         <div className="discount-badge">
           {product.discount}%
           <br />
