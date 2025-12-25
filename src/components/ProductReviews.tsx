@@ -32,10 +32,14 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [userReview, setUserReview] = useState<Review | null>(null);
+  const [hasPurchased, setHasPurchased] = useState(false);
 
   useEffect(() => {
     fetchReviews();
-  }, [productId]);
+    if (user) {
+      checkPurchaseStatus();
+    }
+  }, [productId, user]);
 
   const fetchReviews = async () => {
     try {
@@ -71,6 +75,36 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
       console.error("Error fetching reviews:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkPurchaseStatus = async () => {
+    if (!user) return;
+
+    try {
+      // Get user's orders
+      const { data: userOrders } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("user_id", user.id);
+
+      if (!userOrders || userOrders.length === 0) {
+        setHasPurchased(false);
+        return;
+      }
+
+      // Check if any order contains this product
+      const orderIds = userOrders.map(o => o.id);
+      const { data: orderItems } = await supabase
+        .from("order_items")
+        .select("id")
+        .eq("product_id", productId)
+        .in("order_id", orderIds);
+
+      setHasPurchased((orderItems?.length || 0) > 0);
+    } catch (error) {
+      console.error("Error checking purchase status:", error);
+      setHasPurchased(false);
     }
   };
 
@@ -166,8 +200,8 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
             </div>
           </div>
 
-          {/* Write Review Button */}
-          {user && !userReview && (
+          {/* Write Review Button - Only for verified purchasers */}
+          {user && !userReview && hasPurchased && (
             <div className="mt-6 pt-6 border-t border-border">
               {showForm ? (
                 <ReviewForm
@@ -183,6 +217,14 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
             </div>
           )}
 
+          {user && !userReview && !hasPurchased && (
+            <div className="mt-6 pt-6 border-t border-border">
+              <p className="text-sm text-muted-foreground">
+                শুধুমাত্র যারা এই পণ্যটি কিনেছেন তারাই রিভিউ দিতে পারবেন।
+              </p>
+            </div>
+          )}
+
           {user && userReview && (
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-sm text-muted-foreground">
@@ -194,7 +236,7 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
           {!user && (
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-sm text-muted-foreground">
-                রিভিউ লিখতে <a href="/signin" className="text-primary hover:underline">লগইন করুন</a>
+                রিভিউ দেখতে এবং লিখতে <a href="/signin" className="text-primary hover:underline">লগইন করুন</a>
               </p>
             </div>
           )}
