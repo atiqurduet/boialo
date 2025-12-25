@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useInvoiceDownload } from "@/hooks/useInvoiceDownload";
+import { InvoiceModal } from "@/components/InvoiceModal";
 
 interface Order {
   id: string;
@@ -46,7 +47,7 @@ const OrderHistory = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const { downloadInvoice, downloading } = useInvoiceDownload();
+  const { downloadInvoice, downloading, invoiceHtml, printInvoice, saveAsPdf, downloadAsHtml, closeInvoice } = useInvoiceDownload();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -249,6 +250,15 @@ const OrderHistory = () => {
       </main>
 
       <Footer />
+
+      <InvoiceModal
+        isOpen={!!invoiceHtml}
+        onClose={closeInvoice}
+        invoiceHtml={invoiceHtml}
+        onPrint={printInvoice}
+        onSaveAsPdf={saveAsPdf}
+        onDownloadHtml={downloadAsHtml}
+      />
     </div>
   );
 };

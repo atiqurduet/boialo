@@ -4,6 +4,8 @@ import { toast } from "sonner";
 
 export const useInvoiceDownload = () => {
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [invoiceHtml, setInvoiceHtml] = useState<string | null>(null);
+  const [invoiceFilename, setInvoiceFilename] = useState<string>("");
 
   const downloadInvoice = async (orderId: string) => {
     setDownloading(orderId);
@@ -23,34 +25,8 @@ export const useInvoiceDownload = () => {
       if (error) throw error;
 
       if (data?.rawHtml) {
-        // Open invoice in new window for printing/saving as PDF
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-          printWindow.document.write(data.rawHtml);
-          printWindow.document.close();
-          
-          // Add print styles and trigger print dialog after fonts load
-          printWindow.onload = () => {
-            setTimeout(() => {
-              printWindow.print();
-            }, 500);
-          };
-          
-          toast.success("ইনভয়েস তৈরি হয়েছে - প্রিন্ট বা PDF হিসেবে সংরক্ষণ করুন");
-        } else {
-          // Fallback: download as HTML file
-          const blob = new Blob([data.rawHtml], { type: 'text/html;charset=utf-8' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = data.filename || `invoice-${orderId}.html`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          
-          toast.success("ইনভয়েস ডাউনলোড হয়েছে");
-        }
+        setInvoiceHtml(data.rawHtml);
+        setInvoiceFilename(data.filename || `invoice-${orderId}.html`);
       }
     } catch (error) {
       console.error("Error downloading invoice:", error);
@@ -60,5 +36,73 @@ export const useInvoiceDownload = () => {
     }
   };
 
-  return { downloadInvoice, downloading };
+  const printInvoice = () => {
+    if (!invoiceHtml) return;
+    
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (printWindow) {
+      printWindow.document.write(invoiceHtml);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+        }, 300);
+      };
+    }
+  };
+
+  const saveAsPdf = () => {
+    if (!invoiceHtml) return;
+    
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (printWindow) {
+      const htmlWithPrintHint = invoiceHtml.replace(
+        '</style>',
+        `
+        @media print {
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+        </style>
+        `
+      );
+      printWindow.document.write(htmlWithPrintHint);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+        }, 300);
+      };
+      toast.info("প্রিন্ট ডায়ালগ থেকে 'Save as PDF' নির্বাচন করুন");
+    }
+  };
+
+  const downloadAsHtml = () => {
+    if (!invoiceHtml) return;
+    
+    const blob = new Blob([invoiceHtml], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = invoiceFilename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("ইনভয়েস ডাউনলোড হয়েছে");
+  };
+
+  const closeInvoice = () => {
+    setInvoiceHtml(null);
+    setInvoiceFilename("");
+  };
+
+  return { 
+    downloadInvoice, 
+    downloading, 
+    invoiceHtml, 
+    printInvoice, 
+    saveAsPdf, 
+    downloadAsHtml,
+    closeInvoice 
+  };
 };
