@@ -36,7 +36,10 @@ const menuItems = [
   { icon: FolderTree, label: 'ক্যাটাগরি', href: '/admin/categories', roles: ['admin', 'manager'] },
   { icon: Image, label: 'ব্যানার', href: '/admin/banners', roles: ['admin', 'manager'] },
   { icon: Ticket, label: 'কুপন', href: '/admin/coupons', roles: ['admin', 'manager'] },
-  { icon: Users, label: 'ইউজার', href: '/admin/users', roles: ['admin'] },
+  { icon: Users, label: 'কাস্টমার', href: '/admin/customers', roles: ['admin', 'manager', 'support'] },
+  { icon: Tag, label: 'পেমেন্ট', href: '/admin/payments', roles: ['admin'] },
+  { icon: FileText, label: 'কুরিয়ার', href: '/admin/couriers', roles: ['admin'] },
+  { icon: BarChart3, label: 'ফ্রড রিভিউ', href: '/admin/fraud-review', roles: ['admin', 'manager'] },
   { icon: BarChart3, label: 'রিপোর্ট', href: '/admin/reports', roles: ['admin', 'manager'] },
   { icon: Settings, label: 'সেটিংস', href: '/admin/settings', roles: ['admin'] },
 ];

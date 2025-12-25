@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      address_book: {
+        Row: {
+          address: string
+          area: string | null
+          city: string | null
+          created_at: string | null
+          division: string | null
+          full_name: string
+          id: string
+          is_default: boolean | null
+          is_verified: boolean | null
+          label: string | null
+          phone: string
+          postal_code: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          address: string
+          area?: string | null
+          city?: string | null
+          created_at?: string | null
+          division?: string | null
+          full_name: string
+          id?: string
+          is_default?: boolean | null
+          is_verified?: boolean | null
+          label?: string | null
+          phone: string
+          postal_code?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string
+          area?: string | null
+          city?: string | null
+          created_at?: string | null
+          division?: string | null
+          full_name?: string
+          id?: string
+          is_default?: boolean | null
+          is_verified?: boolean | null
+          label?: string | null
+          phone?: string
+          postal_code?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_audit_logs: {
         Row: {
           action: string
@@ -217,6 +268,99 @@ export type Database = {
         }
         Relationships: []
       }
+      courier_providers: {
+        Row: {
+          api_endpoint: string | null
+          config: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name_bn: string
+          name_en: string
+          provider: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_endpoint?: string | null
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name_bn: string
+          name_en: string
+          provider: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_endpoint?: string | null
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name_bn?: string
+          name_en?: string
+          provider?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      customer_risk_profiles: {
+        Row: {
+          blacklist_reason: string | null
+          cancelled_orders: number | null
+          created_at: string | null
+          fraud_flags: Json | null
+          id: string
+          is_blacklisted: boolean | null
+          notes: string | null
+          phone_verified: boolean | null
+          phone_verified_at: string | null
+          returned_orders: number | null
+          risk_score: number | null
+          successful_orders: number | null
+          total_orders: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          blacklist_reason?: string | null
+          cancelled_orders?: number | null
+          created_at?: string | null
+          fraud_flags?: Json | null
+          id?: string
+          is_blacklisted?: boolean | null
+          notes?: string | null
+          phone_verified?: boolean | null
+          phone_verified_at?: string | null
+          returned_orders?: number | null
+          risk_score?: number | null
+          successful_orders?: number | null
+          total_orders?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          blacklist_reason?: string | null
+          cancelled_orders?: number | null
+          created_at?: string | null
+          fraud_flags?: Json | null
+          id?: string
+          is_blacklisted?: boolean | null
+          notes?: string | null
+          phone_verified?: boolean | null
+          phone_verified_at?: string | null
+          returned_orders?: number | null
+          risk_score?: number | null
+          successful_orders?: number | null
+          total_orders?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       homepage_sections: {
         Row: {
           content: Json | null
@@ -303,10 +447,54 @@ export type Database = {
           },
         ]
       }
+      order_reviews: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string | null
+          order_id: string | null
+          reason: string | null
+          reviewed_at: string | null
+          reviewer_id: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           address: string
+          courier_provider: string | null
+          courier_status: string | null
           created_at: string
+          delivered_at: string | null
           delivery_area: string
           delivery_charge: number
           email: string | null
@@ -316,16 +504,24 @@ export type Database = {
           order_number: string
           payment_method: string
           phone: string
+          phone_verified: boolean | null
+          requires_review: boolean | null
+          review_status: string | null
+          shipped_at: string | null
           status: string
           subtotal: number
           total: number
+          tracking_number: string | null
           transaction_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           address: string
+          courier_provider?: string | null
+          courier_status?: string | null
           created_at?: string
+          delivered_at?: string | null
           delivery_area: string
           delivery_charge: number
           email?: string | null
@@ -335,16 +531,24 @@ export type Database = {
           order_number: string
           payment_method: string
           phone: string
+          phone_verified?: boolean | null
+          requires_review?: boolean | null
+          review_status?: string | null
+          shipped_at?: string | null
           status?: string
           subtotal: number
           total: number
+          tracking_number?: string | null
           transaction_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           address?: string
+          courier_provider?: string | null
+          courier_status?: string | null
           created_at?: string
+          delivered_at?: string | null
           delivery_area?: string
           delivery_charge?: number
           email?: string | null
@@ -354,12 +558,83 @@ export type Database = {
           order_number?: string
           payment_method?: string
           phone?: string
+          phone_verified?: boolean | null
+          requires_review?: boolean | null
+          review_status?: string | null
+          shipped_at?: string | null
           status?: string
           subtotal?: number
           total?: number
+          tracking_number?: string | null
           transaction_id?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      payment_methods: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name_bn: string
+          name_en: string
+          provider: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name_bn: string
+          name_en: string
+          provider: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name_bn?: string
+          name_en?: string
+          provider?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      phone_verifications: {
+        Row: {
+          attempts: number | null
+          created_at: string | null
+          expires_at: string
+          id: string
+          otp_code: string
+          phone: string
+          verified: boolean | null
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          otp_code: string
+          phone: string
+          verified?: boolean | null
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          otp_code?: string
+          phone?: string
+          verified?: boolean | null
         }
         Relationships: []
       }
@@ -622,6 +897,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_risk_score: { Args: { p_user_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
