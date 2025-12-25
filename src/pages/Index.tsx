@@ -17,7 +17,9 @@ import {
 import { Link } from "react-router-dom";
 
 const Index = () => {
-  const flashSaleProducts = sampleProducts.filter((p) => p.discount && p.discount >= 40);
+  // Filter out preorder products - they should only appear on Preorder page
+  const regularProducts = sampleProducts.filter((p) => !p.isPreorder);
+  const flashSaleProducts = regularProducts.filter((p) => p.discount && p.discount >= 40);
 
   return (
     <div className="min-h-screen bg-background">
@@ -32,7 +34,7 @@ const Index = () => {
 
         <div className="container py-8">
           {/* Flash Sale Section */}
-          <FlashSaleSection products={flashSaleProducts.length > 0 ? flashSaleProducts : sampleProducts} />
+          <FlashSaleSection products={flashSaleProducts.length > 0 ? flashSaleProducts : regularProducts} />
 
           {/* Category Sections Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -61,7 +63,7 @@ const Index = () => {
           {/* New Releases */}
           <ProductGrid
             title="নতুন প্রকাশিত বই"
-            products={sampleProducts.slice(0, 10)}
+            products={regularProducts.slice(0, 10)}
             viewAllLink="/shop?sort=new"
             columns={5}
           />
@@ -78,7 +80,7 @@ const Index = () => {
               </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {sampleProducts.slice(0, 5).map((product, index) => (
+              {regularProducts.slice(0, 5).map((product, index) => (
                 <Link key={product.id} to={`/product/${product.id}`} className="relative group">
                   <div className="absolute -top-2 -left-2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm z-10">
                     {index + 1}
@@ -139,7 +141,7 @@ const Index = () => {
           {/* More Products */}
           <ProductGrid
             title="আপনার জন্য সুপারিশকৃত"
-            products={sampleProducts.slice(3, 8)}
+            products={regularProducts.slice(3, 8)}
             viewAllLink="/shop"
             columns={5}
           />
