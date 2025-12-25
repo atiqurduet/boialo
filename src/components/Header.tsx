@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Heart, ShoppingBag, User, Menu, LogOut } from "lucide-react";
+import { Heart, ShoppingBag, User, Menu, LogOut, Package } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SearchDropdown } from "@/components/SearchDropdown";
@@ -109,6 +109,12 @@ export const Header = () => {
                       <Link to="/profile" className="cursor-pointer">
                         <User className="w-4 h-4 mr-2" />
                         My Profile
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/orders" className="cursor-pointer">
+                        <Package className="w-4 h-4 mr-2" />
+                        My Orders
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
