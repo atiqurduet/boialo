@@ -38,7 +38,10 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminHomepage from "./pages/admin/AdminHomepage";
-
+import AdminPayments from "./pages/admin/AdminPayments";
+import AdminCouriers from "./pages/admin/AdminCouriers";
+import AdminCustomers from "./pages/admin/AdminCustomers";
+import AdminFraudReview from "./pages/admin/AdminFraudReview";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -85,6 +88,10 @@ const App = () => (
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/reports" element={<AdminReports />} />
                 <Route path="/admin/settings" element={<AdminSettings />} />
+                <Route path="/admin/payments" element={<AdminPayments />} />
+                <Route path="/admin/couriers" element={<AdminCouriers />} />
+                <Route path="/admin/customers" element={<AdminCustomers />} />
+                <Route path="/admin/fraud-review" element={<AdminFraudReview />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
