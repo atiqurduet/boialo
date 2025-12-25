@@ -60,24 +60,29 @@ export const ReviewForm = ({ productId, onSuccess, onCancel }: ReviewFormProps) 
     setSubmitting(true);
 
     try {
-      // Check if user has purchased this product
+      // Verify user has purchased this product
+      const { data: userOrders } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("user_id", user.id);
+
+      if (!userOrders || userOrders.length === 0) {
+        toast.error("শুধুমাত্র যারা এই পণ্যটি কিনেছেন তারাই রিভিউ দিতে পারবেন");
+        setSubmitting(false);
+        return;
+      }
+
+      const orderIds = userOrders.map(o => o.id);
       const { data: orderItems } = await supabase
         .from("order_items")
-        .select("id, order_id")
-        .eq("product_id", productId);
+        .select("id")
+        .eq("product_id", productId)
+        .in("order_id", orderIds);
 
-      let isVerifiedPurchase = false;
-
-      if (orderItems && orderItems.length > 0) {
-        // Check if any of these orders belong to the user
-        const orderIds = orderItems.map(item => item.order_id);
-        const { data: userOrders } = await supabase
-          .from("orders")
-          .select("id")
-          .eq("user_id", user.id)
-          .in("id", orderIds);
-
-        isVerifiedPurchase = (userOrders?.length || 0) > 0;
+      if (!orderItems || orderItems.length === 0) {
+        toast.error("শুধুমাত্র যারা এই পণ্যটি কিনেছেন তারাই রিভিউ দিতে পারবেন");
+        setSubmitting(false);
+        return;
       }
 
       const { error } = await supabase
@@ -88,7 +93,7 @@ export const ReviewForm = ({ productId, onSuccess, onCancel }: ReviewFormProps) 
           rating,
           title: title.trim() || null,
           comment: comment.trim() || null,
-          is_verified_purchase: isVerifiedPurchase,
+          is_verified_purchase: true,
         });
 
       if (error) {
