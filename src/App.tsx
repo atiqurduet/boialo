@@ -27,6 +27,17 @@ import Privacy from "./pages/Privacy";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
+// Admin Pages
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminCategories from "./pages/admin/AdminCategories";
+import AdminOrders from "./pages/admin/AdminOrders";
+import AdminBanners from "./pages/admin/AdminBanners";
+import AdminCoupons from "./pages/admin/AdminCoupons";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminReports from "./pages/admin/AdminReports";
+import AdminSettings from "./pages/admin/AdminSettings";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -61,6 +72,18 @@ const App = () => (
                 <Route path="/lifestyle" element={<Shop />} />
                 <Route path="/stationery" element={<Shop />} />
                 <Route path="/food" element={<Shop />} />
+                
+                {/* Admin Routes */}
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/products" element={<AdminProducts />} />
+                <Route path="/admin/categories" element={<AdminCategories />} />
+                <Route path="/admin/orders" element={<AdminOrders />} />
+                <Route path="/admin/banners" element={<AdminBanners />} />
+                <Route path="/admin/coupons" element={<AdminCoupons />} />
+                <Route path="/admin/users" element={<AdminUsers />} />
+                <Route path="/admin/reports" element={<AdminReports />} />
+                <Route path="/admin/settings" element={<AdminSettings />} />
+                
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
