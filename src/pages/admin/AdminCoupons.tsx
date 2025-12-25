@@ -79,7 +79,16 @@ const AdminCoupons = () => {
     e.preventDefault();
     
     try {
-      const couponData = {
+      const couponData: {
+        code: string;
+        discount_type: string;
+        discount_value: number;
+        min_order_amount: number;
+        max_uses: number | null;
+        is_active: boolean;
+        start_date: string | null;
+        end_date: string | null;
+      } = {
         code: formData.code.toUpperCase(),
         discount_type: formData.discount_type,
         discount_value: formData.discount_value,
@@ -120,7 +129,7 @@ const AdminCoupons = () => {
     setEditingCoupon(coupon);
     setFormData({
       code: coupon.code,
-      discount_type: coupon.discount_type,
+      discount_type: coupon.discount_type as 'percentage' | 'fixed',
       discount_value: coupon.discount_value,
       min_order_amount: coupon.min_order_amount,
       max_uses: coupon.max_uses?.toString() || '',
