@@ -8,12 +8,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, CreditCard, Smartphone, Truck, MapPin, ChevronLeft, Loader2 } from "lucide-react";
+import { Check, CreditCard, Smartphone, Truck, MapPin, ChevronLeft, Loader2, Shield, Phone } from "lucide-react";
 import { useCartContext } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 const checkoutSchema = z.object({
   fullName: z.string().trim().min(2, "নাম অন্তত ২ অক্ষরের হতে হবে").max(100, "নাম ১০০ অক্ষরের বেশি হতে পারবে না"),
@@ -41,6 +53,24 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [deliveryArea, setDeliveryArea] = useState("inside");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // OTP Verification States
+  const [showOtpDialog, setShowOtpDialog] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [countdown, setCountdown] = useState(0);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+
+  // Countdown timer for OTP resend
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -105,6 +135,10 @@ const Checkout = () => {
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
+    // Reset phone verification if phone changes
+    if (field === "phone") {
+      setPhoneVerified(false);
+    }
   };
 
   const generateOrderNumber = () => {
@@ -139,8 +173,82 @@ const Checkout = () => {
     }
   };
 
-  const handlePlaceOrder = async () => {
-    if (!validateForm() || !user) return;
+  // Send OTP
+  const sendOtp = async () => {
+    if (!formData.phone || !/^01[3-9]\d{8}$/.test(formData.phone)) {
+      toast.error("সঠিক মোবাইল নম্বর দিন");
+      return;
+    }
+
+    setOtpSending(true);
+    setOtpError("");
+
+    try {
+      const fullPhone = "+88" + formData.phone;
+      const { data, error } = await supabase.functions.invoke("send-otp", {
+        body: { phone: fullPhone, action: "send" },
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        setOtpSent(true);
+        setCountdown(60); // 60 seconds countdown
+        toast.success("OTP পাঠানো হয়েছে");
+        
+        // For testing - show debug OTP if no SMS provider configured
+        if (data.debug_otp) {
+          toast.info(`টেস্ট OTP: ${data.debug_otp}`, { duration: 10000 });
+        }
+      } else {
+        throw new Error(data?.error || "OTP পাঠাতে সমস্যা হয়েছে");
+      }
+    } catch (error) {
+      console.error("OTP send error:", error);
+      toast.error("OTP পাঠাতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  // Verify OTP
+  const verifyOtp = async () => {
+    if (otpValue.length !== 6) {
+      setOtpError("৬ সংখ্যার OTP দিন");
+      return;
+    }
+
+    setOtpVerifying(true);
+    setOtpError("");
+
+    try {
+      const fullPhone = "+88" + formData.phone;
+      const { data, error } = await supabase.functions.invoke("send-otp", {
+        body: { phone: fullPhone, action: "verify", otp: otpValue },
+      });
+
+      if (error) throw error;
+
+      if (data?.verified) {
+        setPhoneVerified(true);
+        setShowOtpDialog(false);
+        toast.success("ফোন নম্বর যাচাই সফল!");
+        // Proceed with order
+        await placeOrder();
+      } else {
+        setOtpError(data?.error || "ভুল OTP। আবার চেষ্টা করুন।");
+      }
+    } catch (error) {
+      console.error("OTP verify error:", error);
+      setOtpError("OTP যাচাই করতে সমস্যা হয়েছে");
+    } finally {
+      setOtpVerifying(false);
+    }
+  };
+
+  // Place order after OTP verification
+  const placeOrder = async () => {
+    if (!user) return;
 
     setIsSubmitting(true);
 
@@ -149,7 +257,7 @@ const Checkout = () => {
       const deliveryCharge = deliveryArea === "inside" ? 60 : 120;
       const total = subtotal + deliveryCharge;
 
-      // Create order
+      // Create order with phone_verified flag
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -167,6 +275,7 @@ const Checkout = () => {
           email: formData.email?.trim() || null,
           address: formData.address.trim(),
           notes: formData.notes?.trim() || null,
+          phone_verified: true,
         })
         .select()
         .single();
@@ -194,12 +303,26 @@ const Checkout = () => {
 
       toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
       navigate("/order-confirmation", { state: { orderNumber } });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Order error:", error);
       toast.error("অর্ডার করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Handle order button click - show OTP dialog
+  const handlePlaceOrder = async () => {
+    if (!validateForm() || !user) return;
+
+    // Open OTP dialog
+    setShowOtpDialog(true);
+    setOtpValue("");
+    setOtpError("");
+    setOtpSent(false);
+    
+    // Auto-send OTP
+    await sendOtp();
   };
 
   const deliveryCharge = deliveryArea === "inside" ? 60 : 120;
@@ -279,14 +402,21 @@ const Checkout = () => {
                   {errors.fullName && <p className="text-destructive text-xs mt-1">{errors.fullName}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="phone">মোবাইল নম্বর *</Label>
-                  <Input
-                    id="phone"
-                    placeholder="01XXXXXXXXX"
-                    className={`mt-1 ${errors.phone ? "border-destructive" : ""}`}
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange("phone", e.target.value)}
-                  />
+                  <Label htmlFor="phone">মোবাইল নম্বর * (OTP যাচাই হবে)</Label>
+                  <div className="relative mt-1">
+                    <Input
+                      id="phone"
+                      placeholder="01XXXXXXXXX"
+                      className={`pr-10 ${errors.phone ? "border-destructive" : ""}`}
+                      value={formData.phone}
+                      onChange={(e) => handleInputChange("phone", e.target.value)}
+                    />
+                    {phoneVerified && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Check className="w-5 h-5 text-green-500" />
+                      </div>
+                    )}
+                  </div>
                   {errors.phone && <p className="text-destructive text-xs mt-1">{errors.phone}</p>}
                 </div>
                 <div>
@@ -422,6 +552,21 @@ const Checkout = () => {
                 </div>
               )}
             </div>
+
+            {/* OTP Verification Info */}
+            <div className="bg-green-50 dark:bg-green-950/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-green-800 dark:text-green-200">নিরাপত্তা যাচাই</p>
+                  <p className="text-sm text-green-600 dark:text-green-400">
+                    অর্ডার কনফার্ম করতে আপনার মোবাইল নম্বরে OTP পাঠানো হবে
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Order Summary */}
@@ -478,7 +623,10 @@ const Checkout = () => {
                     প্রসেসিং...
                   </>
                 ) : (
-                  "অর্ডার কনফার্ম করুন"
+                  <>
+                    <Shield className="w-4 h-4 mr-2" />
+                    OTP যাচাই করে অর্ডার করুন
+                  </>
                 )}
               </Button>
 
@@ -497,6 +645,92 @@ const Checkout = () => {
           </div>
         </div>
       </main>
+
+      {/* OTP Verification Dialog */}
+      <Dialog open={showOtpDialog} onOpenChange={setShowOtpDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Phone className="w-5 h-5 text-primary" />
+              ফোন নম্বর যাচাই
+            </DialogTitle>
+            <DialogDescription>
+              {formData.phone} নম্বরে একটি ৬ সংখ্যার OTP পাঠানো হয়েছে
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* OTP Input */}
+            <div className="flex flex-col items-center space-y-4">
+              <InputOTP
+                maxLength={6}
+                value={otpValue}
+                onChange={(value) => {
+                  setOtpValue(value);
+                  setOtpError("");
+                }}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+
+              {otpError && (
+                <p className="text-destructive text-sm">{otpError}</p>
+              )}
+            </div>
+
+            {/* Resend OTP */}
+            <div className="text-center">
+              {countdown > 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  পুনরায় OTP পাঠাতে অপেক্ষা করুন: <span className="font-bold">{countdown}s</span>
+                </p>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={sendOtp}
+                  disabled={otpSending}
+                >
+                  {otpSending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      পাঠানো হচ্ছে...
+                    </>
+                  ) : (
+                    "পুনরায় OTP পাঠান"
+                  )}
+                </Button>
+              )}
+            </div>
+
+            {/* Verify Button */}
+            <Button
+              className="w-full"
+              onClick={verifyOtp}
+              disabled={otpValue.length !== 6 || otpVerifying}
+            >
+              {otpVerifying ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  যাচাই হচ্ছে...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  যাচাই করে অর্ডার সম্পন্ন করুন
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
