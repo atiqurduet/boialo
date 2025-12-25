@@ -217,6 +217,51 @@ export type Database = {
         }
         Relationships: []
       }
+      homepage_sections: {
+        Row: {
+          content: Json | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          section_type: string
+          settings: Json | null
+          sort_order: number | null
+          subtitle_bn: string | null
+          subtitle_en: string | null
+          title_bn: string
+          title_en: string | null
+          updated_at: string
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          section_type: string
+          settings?: Json | null
+          sort_order?: number | null
+          subtitle_bn?: string | null
+          subtitle_en?: string | null
+          title_bn: string
+          title_en?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          section_type?: string
+          settings?: Json | null
+          sort_order?: number | null
+          subtitle_bn?: string | null
+          subtitle_en?: string | null
+          title_bn?: string
+          title_en?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
