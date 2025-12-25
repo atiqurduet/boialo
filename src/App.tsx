@@ -23,6 +23,7 @@ import Contact from "./pages/Contact";
 import FAQ from "./pages/FAQ";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
                 <Route path="/faq" element={<FAQ />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="/lifestyle" element={<Shop />} />
                 <Route path="/stationery" element={<Shop />} />
                 <Route path="/food" element={<Shop />} />
