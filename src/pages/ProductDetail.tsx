@@ -9,6 +9,25 @@ import { sampleProducts } from "@/data/products";
 import { Button } from "@/components/ui/button";
 import { Heart, Share2, ChevronRight } from "lucide-react";
 
+const getCategoryName = (category?: string) => {
+  switch (category) {
+    case "academic": return "একাডেমিক বই";
+    case "children": return "শিশু কিশোরদের বই";
+    case "islamic": return "ইসলামি বই";
+    case "history": return "ইতিহাস";
+    case "biography": return "জীবনী";
+    case "hadith": return "হাদীস";
+    case "tafsir": return "তাফসীর";
+    case "fiqh": return "ফিকহ";
+    case "arabic": return "আরবি ভাষা";
+    case "self-help": return "আত্মশুদ্ধি ও অনুপ্রেরণা";
+    case "novel": return "উপন্যাস";
+    case "literature": return "সাহিত্য";
+    case "magazine": return "ম্যাগাজিন";
+    default: return "ইসলামি বই";
+  }
+};
+
 const ProductDetail = () => {
   const { id } = useParams();
   const [quantity, setQuantity] = useState(1);
@@ -70,20 +89,20 @@ const ProductDetail = () => {
               <div className="space-y-2 text-sm">
                 <p>
                   <span className="text-muted-foreground">লেখক : </span>
-                  <Link to="#" className="text-primary hover:underline">
+                  <Link to={`/shop?author=${encodeURIComponent(product.author)}`} className="text-primary hover:underline">
                     {product.author}
                   </Link>
                 </p>
                 <p>
                   <span className="text-muted-foreground">প্রকাশনী : </span>
-                  <Link to="#" className="text-primary hover:underline">
-                    মুন্দানদানী প্রকাশনী
+                  <Link to={`/shop?publisher=${encodeURIComponent(product.publisher || 'মুন্দানদানী প্রকাশনী')}`} className="text-primary hover:underline">
+                    {product.publisher || 'মুন্দানদানী প্রকাশনী'}
                   </Link>
                 </p>
                 <p>
                   <span className="text-muted-foreground">বিষয় : </span>
-                  <Link to="#" className="text-primary hover:underline">
-                    আত্মশুদ্ধি ও অনুপ্রেরণা
+                  <Link to={`/shop?category=${product.category || 'islamic'}`} className="text-primary hover:underline">
+                    {getCategoryName(product.category)}
                   </Link>
                 </p>
                 <p>
