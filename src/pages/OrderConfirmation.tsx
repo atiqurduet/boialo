@@ -3,11 +3,12 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
-import { CheckCircle, Package, Truck, Phone, Mail, Copy, Home, Loader2 } from "lucide-react";
+import { CheckCircle, Package, Truck, Phone, Mail, Copy, Home, Loader2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useInvoiceDownload } from "@/hooks/useInvoiceDownload";
 
 interface OrderItem {
   id: string;
@@ -37,6 +38,7 @@ const OrderConfirmation = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { downloadInvoice, downloading } = useInvoiceDownload();
 
   const orderNumberFromState = location.state?.orderNumber;
 
@@ -155,15 +157,30 @@ const OrderConfirmation = () => {
 
           {/* Order Number */}
           <div className="bg-card rounded-xl p-6 shadow-sm mb-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <p className="text-sm text-muted-foreground">অর্ডার নম্বর</p>
                 <p className="text-xl font-bold text-primary">{order.order_number}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={copyOrderNumber}>
-                <Copy className="w-4 h-4 mr-2" />
-                কপি করুন
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={copyOrderNumber}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  কপি করুন
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => downloadInvoice(order.id)}
+                  disabled={downloading === order.id}
+                >
+                  {downloading === order.id ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  ইনভয়েস
+                </Button>
+              </div>
             </div>
             <p className="text-sm text-muted-foreground mt-2">
               অর্ডার তারিখ: {orderDate}
