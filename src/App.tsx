@@ -42,6 +42,7 @@ import AdminPayments from "./pages/admin/AdminPayments";
 import AdminCouriers from "./pages/admin/AdminCouriers";
 import AdminCustomers from "./pages/admin/AdminCustomers";
 import AdminFraudReview from "./pages/admin/AdminFraudReview";
+import AdminSMS from "./pages/admin/AdminSMS";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -92,6 +93,7 @@ const App = () => (
                 <Route path="/admin/couriers" element={<AdminCouriers />} />
                 <Route path="/admin/customers" element={<AdminCustomers />} />
                 <Route path="/admin/fraud-review" element={<AdminFraudReview />} />
+                <Route path="/admin/sms" element={<AdminSMS />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>

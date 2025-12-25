@@ -6,13 +6,179 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface SMSProvider {
+  id: string;
+  name: string;
+  provider: string;
+  is_active: boolean;
+  is_default: boolean;
+  config: Record<string, string>;
+}
+
+// Twilio SMS sender
+async function sendViaTwilio(phone: string, message: string, config: Record<string, string>): Promise<boolean> {
+  const { account_sid, auth_token, from_number } = config;
+  
+  if (!account_sid || !auth_token || !from_number) {
+    console.error("Twilio config incomplete");
+    return false;
+  }
+
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${account_sid}/Messages.json`;
+  const auth = btoa(`${account_sid}:${auth_token}`);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Authorization": `Basic ${auth}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      To: phone,
+      From: from_number,
+      Body: message,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error("Twilio error:", error);
+    return false;
+  }
+
+  console.log("SMS sent via Twilio");
+  return true;
+}
+
+// MSG91 SMS sender
+async function sendViaMSG91(phone: string, message: string, config: Record<string, string>): Promise<boolean> {
+  const { auth_key, sender_id, template_id, route } = config;
+
+  if (!auth_key || !sender_id) {
+    console.error("MSG91 config incomplete");
+    return false;
+  }
+
+  // Extract OTP from message for template
+  const otpMatch = message.match(/\d{6}/);
+  const otp = otpMatch ? otpMatch[0] : message;
+
+  const url = "https://control.msg91.com/api/v5/flow/";
+  
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "authkey": auth_key,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      template_id: template_id || "default",
+      sender: sender_id,
+      short_url: "0",
+      mobiles: phone.replace("+", ""),
+      VAR1: otp,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error("MSG91 error:", error);
+    return false;
+  }
+
+  console.log("SMS sent via MSG91");
+  return true;
+}
+
+// SSL Wireless SMS sender (Bangladesh)
+async function sendViaSSLWireless(phone: string, message: string, config: Record<string, string>): Promise<boolean> {
+  const { api_token, sid } = config;
+
+  if (!api_token || !sid) {
+    console.error("SSL Wireless config incomplete");
+    return false;
+  }
+
+  const url = "https://smsplus.sslwireless.com/api/v3/send-sms";
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      api_token: api_token,
+      sid: sid,
+      msisdn: phone.replace("+88", "").replace("+", ""),
+      sms: message,
+      csms_id: `otp_${Date.now()}`,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error("SSL Wireless error:", error);
+    return false;
+  }
+
+  console.log("SMS sent via SSL Wireless");
+  return true;
+}
+
+// BulkSMSBD sender
+async function sendViaBulkSMSBD(phone: string, message: string, config: Record<string, string>): Promise<boolean> {
+  const { api_key, sender_id } = config;
+
+  if (!api_key || !sender_id) {
+    console.error("BulkSMSBD config incomplete");
+    return false;
+  }
+
+  const url = `https://bulksmsbd.net/api/smsapi`;
+  const params = new URLSearchParams({
+    api_key: api_key,
+    type: "text",
+    number: phone.replace("+88", "").replace("+", ""),
+    senderid: sender_id,
+    message: message,
+  });
+
+  const response = await fetch(`${url}?${params}`);
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error("BulkSMSBD error:", error);
+    return false;
+  }
+
+  console.log("SMS sent via BulkSMSBD");
+  return true;
+}
+
+// Main SMS sender function
+async function sendSMS(phone: string, message: string, provider: SMSProvider): Promise<boolean> {
+  switch (provider.provider) {
+    case "twilio":
+      return sendViaTwilio(phone, message, provider.config);
+    case "msg91":
+      return sendViaMSG91(phone, message, provider.config);
+    case "ssl_wireless":
+      return sendViaSSLWireless(phone, message, provider.config);
+    case "bulksmsbd":
+      return sendViaBulkSMSBD(phone, message, provider.config);
+    default:
+      console.error("Unknown SMS provider:", provider.provider);
+      return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { phone, action } = await req.json();
+    const { phone, action, otp: userOtp } = await req.json();
     
     if (!phone) {
       return new Response(
@@ -47,15 +213,47 @@ serve(async (req) => {
         );
       }
 
-      // In production, integrate with SMS provider (e.g., Twilio, MSG91)
-      // For now, log the OTP (remove in production!)
-      console.log(`OTP for ${phone}: ${otp}`);
+      // Get default active SMS provider
+      const { data: providers, error: providerError } = await supabase
+        .from("sms_providers")
+        .select("*")
+        .eq("is_active", true)
+        .order("is_default", { ascending: false })
+        .order("sort_order", { ascending: true })
+        .limit(1);
 
+      if (providerError) {
+        console.error("Error fetching SMS provider:", providerError);
+      }
+
+      const message = `আপনার বইআলো OTP কোড: ${otp}। এটি ৫ মিনিটের জন্য বৈধ।`;
+      let smsSent = false;
+
+      if (providers && providers.length > 0) {
+        const provider = providers[0] as SMSProvider;
+        smsSent = await sendSMS(phone, message, provider);
+        
+        if (smsSent) {
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: "OTP sent successfully",
+              provider: provider.name
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      // Fallback: No provider configured or SMS failed
+      console.log(`OTP for ${phone}: ${otp} (SMS not sent - no active provider)`);
+      
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: "OTP sent successfully",
-          // Remove this in production - only for testing
+          message: "OTP generated",
+          warning: "No SMS provider configured. OTP logged for testing.",
+          // Remove debug_otp in production!
           debug_otp: otp 
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -63,9 +261,7 @@ serve(async (req) => {
     } 
     
     if (action === "verify") {
-      const { otp } = await req.json();
-      
-      if (!otp) {
+      if (!userOtp) {
         return new Response(
           JSON.stringify({ error: "OTP is required" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -77,18 +273,43 @@ serve(async (req) => {
         .from("phone_verifications")
         .select("*")
         .eq("phone", phone)
-        .eq("otp_code", otp)
+        .eq("otp_code", userOtp)
         .eq("verified", false)
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (findError || !verification) {
+      if (findError) {
+        console.error("Error finding verification:", findError);
+        return new Response(
+          JSON.stringify({ error: "Verification failed" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!verification) {
+        // Check attempts
+        const { data: latestAttempt } = await supabase
+          .from("phone_verifications")
+          .select("attempts")
+          .eq("phone", phone)
+          .eq("verified", false)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (latestAttempt && latestAttempt.attempts >= 3) {
+          return new Response(
+            JSON.stringify({ error: "Too many attempts. Please request a new OTP." }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         // Increment attempts
         await supabase
           .from("phone_verifications")
-          .update({ attempts: supabase.rpc("increment_attempts") })
+          .update({ attempts: (latestAttempt?.attempts || 0) + 1 })
           .eq("phone", phone)
           .eq("verified", false);
 
@@ -111,7 +332,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ error: "Invalid action" }),
+      JSON.stringify({ error: "Invalid action. Use 'send' or 'verify'." }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
