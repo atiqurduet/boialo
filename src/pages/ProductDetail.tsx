@@ -6,9 +6,10 @@ import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductReviews } from "@/components/ProductReviews";
+import { ProductImageGallery } from "@/components/ProductImageGallery";
 import { sampleProducts } from "@/data/products";
 import { Button } from "@/components/ui/button";
-import { Heart, Share2, ChevronRight, BookOpen, X, FileText } from "lucide-react";
+import { Heart, Share2, ChevronRight, BookOpen, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -60,6 +61,11 @@ const ProductDetail = () => {
   // Find product from sample data or use first sample product as fallback
   const sampleProduct = sampleProducts.find((p) => p.id === id) || sampleProducts[0];
   
+  // Parse images array
+  const productImages: string[] = dbProduct?.images 
+    ? (Array.isArray(dbProduct.images) ? dbProduct.images as string[] : [])
+    : (sampleProduct.image ? [sampleProduct.image] : []);
+
   // Use database product if available, otherwise fallback to sample
   const product = dbProduct ? {
     id: dbProduct.id,
@@ -68,13 +74,12 @@ const ProductDetail = () => {
     price: dbProduct.price,
     originalPrice: dbProduct.original_price,
     discount: dbProduct.discount_percent,
-    image: Array.isArray(dbProduct.images) && dbProduct.images.length > 0 
-      ? (dbProduct.images[0] as string) 
-      : '/placeholder.svg',
+    image: productImages.length > 0 ? productImages[0] : '/placeholder.svg',
+    images: productImages,
     publisher: dbProduct.publisher,
     category: dbProduct.category_id,
     previewUrl: dbProduct.preview_url,
-  } : sampleProduct;
+  } : { ...sampleProduct, images: productImages };
 
   const relatedProducts = sampleProducts.filter((p) => p.id !== product.id).slice(0, 4);
   const hasDiscount = product.discount && product.discount > 0;
@@ -103,23 +108,11 @@ const ProductDetail = () => {
           <div className="lg:col-span-1">
             <div className="sticky top-24">
               <div className="bg-card rounded-xl p-4 shadow-sm">
-                <div className="relative">
-                  <p className="text-xs text-primary mb-2 cursor-pointer hover:underline">
-                    ভিতরে কী আছে পড়তে বইয়ের ছবিতে ক্লিক করুন
-                  </p>
-                  <div className="aspect-[3/4] rounded-lg overflow-hidden bg-muted">
-                    <img
-                      src={product.image}
-                      alt={product.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  {hasDiscount && (
-                    <div className="absolute top-2 left-2 bg-primary text-primary-foreground px-3 py-1 rounded-md text-sm font-bold">
-                      {product.discount}% OFF
-                    </div>
-                  )}
-                </div>
+                <ProductImageGallery 
+                  images={(product as any).images || [product.image]}
+                  title={product.title}
+                  discount={product.discount}
+                />
               </div>
             </div>
           </div>
