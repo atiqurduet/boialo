@@ -32,6 +32,7 @@ interface Product {
   images: any;
   is_featured: boolean;
   is_preorder: boolean;
+  category_id: string | null;
 }
 
 interface HomepageSection {
