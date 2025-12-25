@@ -6,9 +6,21 @@ import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Package, ChevronRight, ShoppingBag } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Loader2, Package, ChevronRight, ShoppingBag, XCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Order {
   id: string;
@@ -31,6 +43,7 @@ const OrderHistory = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -73,6 +86,31 @@ const OrderHistory = () => {
 
   const getStatusInfo = (status: string) => {
     return statusMap[status] || { label: status, variant: "outline" as const };
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!user) return;
+    
+    setCancellingId(orderId);
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: "cancelled", updated_at: new Date().toISOString() })
+        .eq("id", orderId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setOrders(orders.map(order => 
+        order.id === orderId ? { ...order, status: "cancelled" } : order
+      ));
+      toast.success("অর্ডার বাতিল করা হয়েছে");
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      toast.error("অর্ডার বাতিল করতে সমস্যা হয়েছে");
+    } finally {
+      setCancellingId(null);
+    }
   };
 
   if (authLoading || loading) {
@@ -134,14 +172,55 @@ const OrderHistory = () => {
                             </div>
                           </div>
                         </div>
-                        <Link
-                          to="/order-confirmation"
-                          state={{ orderNumber: order.order_number }}
-                        >
-                          <Button variant="ghost" size="icon">
-                            <ChevronRight className="w-5 h-5" />
-                          </Button>
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          {order.status === "pending" && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                                  disabled={cancellingId === order.id}
+                                >
+                                  {cancellingId === order.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <XCircle className="w-4 h-4 mr-1" />
+                                      বাতিল
+                                    </>
+                                  )}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>অর্ডার বাতিল করতে চান?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    আপনি কি নিশ্চিত যে আপনি অর্ডার #{order.order_number} বাতিল করতে চান? 
+                                    এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>না</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleCancelOrder(order.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    হ্যাঁ, বাতিল করুন
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                          <Link
+                            to="/order-confirmation"
+                            state={{ orderNumber: order.order_number }}
+                          >
+                            <Button variant="ghost" size="icon">
+                              <ChevronRight className="w-5 h-5" />
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
