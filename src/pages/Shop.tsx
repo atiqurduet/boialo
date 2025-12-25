@@ -38,7 +38,8 @@ const Shop = () => {
   };
 
   const filteredProducts = useMemo(() => {
-    let products = sampleProducts;
+    // Start with non-preorder products only (preorder products are shown on Preorder page)
+    let products = sampleProducts.filter((p) => !p.isPreorder);
 
     // Filter by search query
     if (searchQuery) {
