@@ -20,6 +20,8 @@ import {
 const Shop = () => {
   const [searchParams] = useSearchParams();
   const category = searchParams.get("category");
+  const author = searchParams.get("author");
+  const publisher = searchParams.get("publisher");
   const searchQuery = searchParams.get("search") || "";
   const [priceRange, setPriceRange] = useState([0, 30000]);
   const [showFilters, setShowFilters] = useState(false);
@@ -53,17 +55,33 @@ const Shop = () => {
       products = products.filter((p) => p.category === category);
     }
 
+    // Filter by author
+    if (author) {
+      products = products.filter((p) => p.author === author);
+    }
+
+    // Filter by publisher
+    if (publisher) {
+      products = products.filter((p) => p.publisher === publisher);
+    }
+
     // Filter by price range
     products = products.filter(
       (p) => p.price >= priceRange[0] && p.price <= priceRange[1]
     );
 
     return products;
-  }, [searchQuery, category, priceRange]);
+  }, [searchQuery, category, author, publisher, priceRange]);
 
   const getCategoryTitle = () => {
     if (searchQuery) {
       return `"${searchQuery}" এর ফলাফল`;
+    }
+    if (author) {
+      return `লেখক: ${author}`;
+    }
+    if (publisher) {
+      return `প্রকাশনী: ${publisher}`;
     }
     switch (category) {
       case "academic":
@@ -72,6 +90,26 @@ const Shop = () => {
         return "শিশু কিশোরদের বই";
       case "islamic":
         return "ইসলামি বই";
+      case "history":
+        return "ইতিহাস";
+      case "biography":
+        return "জীবনী";
+      case "hadith":
+        return "হাদীস";
+      case "tafsir":
+        return "তাফসীর";
+      case "fiqh":
+        return "ফিকহ";
+      case "arabic":
+        return "আরবি ভাষা";
+      case "self-help":
+        return "আত্মশুদ্ধি ও অনুপ্রেরণা";
+      case "novel":
+        return "উপন্যাস";
+      case "literature":
+        return "সাহিত্য";
+      case "magazine":
+        return "ম্যাগাজিন";
       default:
         return "সকল বই";
     }

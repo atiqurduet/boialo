@@ -14,6 +14,7 @@ export interface Product {
   discount?: number;
   image: string;
   category?: string;
+  publisher?: string;
 }
 
 interface ProductCardProps {
@@ -53,7 +54,13 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
           <h4 className="font-medium text-sm text-foreground group-hover:text-primary transition-colors line-clamp-2">
             {product.title}
           </h4>
-          <p className="text-xs text-muted-foreground mt-1">{product.author}</p>
+          <Link 
+            to={`/shop?author=${encodeURIComponent(product.author)}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs text-muted-foreground mt-1 hover:text-primary transition-colors block"
+          >
+            {product.author}
+          </Link>
           <div className="flex items-center gap-2 mt-1">
             <span className="text-primary font-bold text-sm">৳{product.price}</span>
             {hasDiscount && (
@@ -111,7 +118,13 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
             {product.title}
           </h3>
         </Link>
-        <p className="text-sm text-muted-foreground mb-2 line-clamp-1">{product.author}</p>
+        <Link 
+          to={`/shop?author=${encodeURIComponent(product.author)}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-sm text-muted-foreground mb-2 line-clamp-1 hover:text-primary transition-colors block"
+        >
+          {product.author}
+        </Link>
         <div className="flex items-center gap-2 mb-3">
           <span className="price-sale text-lg">৳{product.price}</span>
           {hasDiscount && (
