@@ -16,38 +16,45 @@ interface SMSProvider {
 }
 
 // Twilio SMS sender
-async function sendViaTwilio(phone: string, message: string, config: Record<string, string>): Promise<boolean> {
-  const { account_sid, auth_token, from_number } = config;
+async function sendViaTwilio(phone: string, message: string): Promise<boolean> {
+  const account_sid = Deno.env.get("TWILIO_ACCOUNT_SID");
+  const auth_token = Deno.env.get("TWILIO_AUTH_TOKEN");
+  const from_number = Deno.env.get("TWILIO_PHONE_NUMBER");
   
   if (!account_sid || !auth_token || !from_number) {
-    console.error("Twilio config incomplete");
+    console.error("Twilio environment variables not configured");
     return false;
   }
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${account_sid}/Messages.json`;
   const auth = btoa(`${account_sid}:${auth_token}`);
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Authorization": `Basic ${auth}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      To: phone,
-      From: from_number,
-      Body: message,
-    }),
-  });
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Basic ${auth}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        To: phone,
+        From: from_number,
+        Body: message,
+      }),
+    });
 
-  if (!response.ok) {
-    const error = await response.text();
-    console.error("Twilio error:", error);
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("Twilio error:", error);
+      return false;
+    }
+
+    console.log("SMS sent via Twilio successfully");
+    return true;
+  } catch (error) {
+    console.error("Twilio request error:", error);
     return false;
   }
-
-  console.log("SMS sent via Twilio");
-  return true;
 }
 
 // MSG91 SMS sender
@@ -155,11 +162,11 @@ async function sendViaBulkSMSBD(phone: string, message: string, config: Record<s
   return true;
 }
 
-// Main SMS sender function
+// Main SMS sender function - now uses environment variables for Twilio
 async function sendSMS(phone: string, message: string, provider: SMSProvider): Promise<boolean> {
   switch (provider.provider) {
     case "twilio":
-      return sendViaTwilio(phone, message, provider.config);
+      return sendViaTwilio(phone, message);
     case "msg91":
       return sendViaMSG91(phone, message, provider.config);
     case "ssl_wireless":
