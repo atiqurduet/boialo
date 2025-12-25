@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.send-otp]
 verify_jwt = false
+
+[functions.order-sms-notify]
+verify_jwt = false

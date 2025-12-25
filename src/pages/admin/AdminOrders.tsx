@@ -36,6 +36,8 @@ interface Order {
   payment_method: string;
   transaction_id: string | null;
   notes: string | null;
+  tracking_number: string | null;
+  courier_provider: string | null;
   created_at: string;
 }
 
@@ -101,12 +103,55 @@ const AdminOrders = () => {
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     try {
+      const orderToUpdate = orders.find(o => o.id === orderId);
+      
+      const updateData: Record<string, any> = { status: newStatus };
+      
+      // Add timestamps for specific statuses
+      if (newStatus === 'shipped') {
+        updateData.shipped_at = new Date().toISOString();
+      } else if (newStatus === 'delivered') {
+        updateData.delivered_at = new Date().toISOString();
+      }
+      
       const { error } = await supabase
         .from('orders')
-        .update({ status: newStatus })
+        .update(updateData)
         .eq('id', orderId);
 
       if (error) throw error;
+      
+      // Send SMS notification
+      if (orderToUpdate) {
+        try {
+          const { data: smsResult, error: smsError } = await supabase.functions.invoke('order-sms-notify', {
+            body: {
+              order_id: orderId,
+              new_status: newStatus,
+              order_number: orderToUpdate.order_number,
+              phone: orderToUpdate.phone,
+              full_name: orderToUpdate.full_name,
+              total: orderToUpdate.total,
+              tracking_number: orderToUpdate.tracking_number,
+              courier_provider: orderToUpdate.courier_provider,
+            }
+          });
+          
+          if (smsError) {
+            console.error('SMS notification error:', smsError);
+          } else {
+            console.log('SMS notification result:', smsResult);
+            if (smsResult?.warning) {
+              toast({ 
+                title: 'স্ট্যাটাস আপডেট হয়েছে', 
+                description: 'SMS প্রোভাইডার কনফিগার করা নেই',
+              });
+            }
+          }
+        } catch (smsErr) {
+          console.error('Failed to send SMS:', smsErr);
+        }
+      }
       
       toast({ title: 'সফল', description: 'অর্ডার স্ট্যাটাস আপডেট হয়েছে' });
       fetchOrders();
