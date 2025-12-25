@@ -6,8 +6,20 @@ import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import { Eye, EyeOff, Loader2, Phone, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const SignIn = () => {
@@ -24,6 +36,13 @@ const SignIn = () => {
   const [phone, setPhone] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
 
+  // OTP states
+  const [showOtpDialog, setShowOtpDialog] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
@@ -31,10 +50,94 @@ const SignIn = () => {
     }
   }, [user, navigate]);
 
+  // Resend timer countdown
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendTimer]);
+
+  const formatPhoneNumber = (phoneNumber: string): string => {
+    let formatted = phoneNumber.replace(/\D/g, '');
+    if (formatted.startsWith('0')) {
+      formatted = '88' + formatted;
+    } else if (!formatted.startsWith('88')) {
+      formatted = '88' + formatted;
+    }
+    return formatted;
+  };
+
+  const sendOtp = async () => {
+    if (!phone || phone.length < 11) {
+      toast.error("সঠিক ফোন নম্বর দিন");
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      const formattedPhone = formatPhoneNumber(phone);
+      const { data, error } = await supabase.functions.invoke('send-otp', {
+        body: { action: 'send', phone: formattedPhone }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success("OTP পাঠানো হয়েছে");
+        setResendTimer(60);
+        setShowOtpDialog(true);
+        
+        // For testing - show OTP in toast if returned (only in dev/no SMS provider)
+        if (data.otp) {
+          toast.info(`টেস্ট OTP: ${data.otp}`, { duration: 10000 });
+        }
+      } else {
+        throw new Error(data.error || 'OTP পাঠাতে সমস্যা হয়েছে');
+      }
+    } catch (error: any) {
+      console.error('Error sending OTP:', error);
+      toast.error(error.message || "OTP পাঠাতে সমস্যা হয়েছে");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (otpCode.length !== 6) {
+      toast.error("৬ ডিজিটের OTP দিন");
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      const formattedPhone = formatPhoneNumber(phone);
+      const { data, error } = await supabase.functions.invoke('send-otp', {
+        body: { action: 'verify', phone: formattedPhone, otp: otpCode }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success("ফোন নম্বর যাচাই হয়েছে");
+        setPhoneVerified(true);
+        setShowOtpDialog(false);
+        setOtpCode("");
+      } else {
+        throw new Error(data.error || 'OTP যাচাই ব্যর্থ');
+      }
+    } catch (error: any) {
+      console.error('Error verifying OTP:', error);
+      toast.error(error.message || "OTP যাচাই ব্যর্থ");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      toast.error("Please fill in all fields");
+      toast.error("সব ফিল্ড পূরণ করুন");
       return;
     }
 
@@ -44,12 +147,12 @@ const SignIn = () => {
 
     if (error) {
       if (error.message.includes("Invalid login credentials")) {
-        toast.error("Invalid email or password");
+        toast.error("ভুল ইমেইল বা পাসওয়ার্ড");
       } else {
         toast.error(error.message);
       }
     } else {
-      toast.success("Welcome back!");
+      toast.success("স্বাগতম!");
       navigate("/");
     }
   };
@@ -57,17 +160,22 @@ const SignIn = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || !fullName) {
-      toast.error("Please fill in all required fields");
+      toast.error("সব প্রয়োজনীয় ফিল্ড পূরণ করুন");
       return;
     }
 
     if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+      toast.error("পাসওয়ার্ড কমপক্ষে ৬ অক্ষর হতে হবে");
       return;
     }
 
     if (!agreeTerms) {
-      toast.error("Please agree to the terms and conditions");
+      toast.error("শর্তাবলী মেনে নিন");
+      return;
+    }
+
+    if (phone && !phoneVerified) {
+      toast.error("ফোন নম্বর যাচাই করুন");
       return;
     }
 
@@ -77,15 +185,32 @@ const SignIn = () => {
 
     if (error) {
       if (error.message.includes("already registered")) {
-        toast.error("This email is already registered");
+        toast.error("এই ইমেইল আগে থেকেই রেজিস্টার্ড");
       } else {
         toast.error(error.message);
       }
     } else {
-      toast.success("Account created successfully!");
+      // Update profile with phone if verified
+      if (phone && phoneVerified) {
+        const formattedPhone = formatPhoneNumber(phone);
+        setTimeout(async () => {
+          const { data: { user: newUser } } = await supabase.auth.getUser();
+          if (newUser) {
+            await supabase.from('profiles').update({ phone: formattedPhone }).eq('id', newUser.id);
+          }
+        }, 1000);
+      }
+      toast.success("অ্যাকাউন্ট তৈরি হয়েছে!");
       navigate("/");
     }
   };
+
+  // Reset phone verification when phone changes
+  useEffect(() => {
+    if (phoneVerified) {
+      setPhoneVerified(false);
+    }
+  }, [phone]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -217,15 +342,35 @@ const SignIn = () => {
                 </div>
                 <div>
                   <Label htmlFor="phone">ফোন নম্বর</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="আপনার ফোন নম্বর"
-                    className="mt-1"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    disabled={loading}
-                  />
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="01XXXXXXXXX"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      disabled={loading || phoneVerified}
+                      className="flex-1"
+                    />
+                    {phone && phone.length >= 11 && (
+                      phoneVerified ? (
+                        <Button type="button" variant="outline" disabled className="gap-1 text-green-600">
+                          <CheckCircle className="w-4 h-4" />
+                          যাচাই হয়েছে
+                        </Button>
+                      ) : (
+                        <Button type="button" variant="outline" onClick={sendOtp} disabled={otpLoading}>
+                          {otpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4 mr-1" />}
+                          OTP পাঠান
+                        </Button>
+                      )
+                    )}
+                  </div>
+                  {phoneVerified && (
+                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> ফোন নম্বর যাচাই সম্পন্ন
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="reg-password">পাসওয়ার্ড *</Label>
@@ -281,7 +426,6 @@ const SignIn = () => {
               </form>
             )}
 
-            {/* Social Login - Removed for now as OAuth is not configured */}
             <div className="mt-6 text-center text-sm text-muted-foreground">
               {isLogin ? (
                 <p>
@@ -308,6 +452,45 @@ const SignIn = () => {
           </div>
         </div>
       </main>
+
+      {/* OTP Verification Dialog */}
+      <Dialog open={showOtpDialog} onOpenChange={setShowOtpDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center">ফোন যাচাই করুন</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-center text-muted-foreground text-sm">
+              {formatPhoneNumber(phone)} নম্বরে পাঠানো ৬ ডিজিটের কোড দিন
+            </p>
+            <div className="flex justify-center">
+              <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+            <Button onClick={verifyOtp} className="w-full" disabled={otpLoading || otpCode.length !== 6}>
+              {otpLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              যাচাই করুন
+            </Button>
+            <div className="text-center">
+              {resendTimer > 0 ? (
+                <p className="text-sm text-muted-foreground">{resendTimer} সেকেন্ড পর আবার পাঠান</p>
+              ) : (
+                <Button variant="link" onClick={sendOtp} disabled={otpLoading} className="text-sm">
+                  আবার OTP পাঠান
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
