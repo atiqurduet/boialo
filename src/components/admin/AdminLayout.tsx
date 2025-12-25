@@ -19,7 +19,8 @@ import {
   X,
   ShoppingCart,
   BarChart3,
-  Ticket
+  Ticket,
+  Home
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +30,7 @@ interface AdminLayoutProps {
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'ড্যাশবোর্ড', href: '/admin', roles: ['admin', 'manager', 'support'] },
+  { icon: Home, label: 'হোমপেজ', href: '/admin/homepage', roles: ['admin', 'manager'] },
   { icon: ShoppingCart, label: 'অর্ডার', href: '/admin/orders', roles: ['admin', 'manager', 'support'] },
   { icon: Package, label: 'প্রোডাক্ট', href: '/admin/products', roles: ['admin', 'manager'] },
   { icon: FolderTree, label: 'ক্যাটাগরি', href: '/admin/categories', roles: ['admin', 'manager'] },
