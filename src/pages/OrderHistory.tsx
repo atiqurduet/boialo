@@ -17,10 +17,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Package, ChevronRight, ShoppingBag, XCircle } from "lucide-react";
+import { Loader2, Package, ChevronRight, ShoppingBag, XCircle, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useInvoiceDownload } from "@/hooks/useInvoiceDownload";
 
 interface Order {
   id: string;
@@ -45,6 +46,7 @@ const OrderHistory = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { downloadInvoice, downloading } = useInvoiceDownload();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -173,6 +175,21 @@ const OrderHistory = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => downloadInvoice(order.id)}
+                            disabled={downloading === order.id}
+                          >
+                            {downloading === order.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Download className="w-4 h-4 mr-1" />
+                                ইনভয়েস
+                              </>
+                            )}
+                          </Button>
                           {order.status === "pending" && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
