@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
-import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -80,130 +79,261 @@ serve(async (req) => {
       });
     }
 
-    // Generate PDF
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    
-    // Header
-    doc.setFontSize(24);
-    doc.setTextColor(33, 37, 41);
-    doc.text("WafiLife", 20, 25);
-    
-    doc.setFontSize(12);
-    doc.setTextColor(108, 117, 125);
-    doc.text("Invoice", pageWidth - 20, 25, { align: "right" });
-
-    // Order info
-    doc.setFontSize(10);
-    doc.setTextColor(33, 37, 41);
-    const orderDate = new Date(order.created_at).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-    
-    doc.text(`Order Number: ${order.order_number}`, 20, 45);
-    doc.text(`Date: ${orderDate}`, 20, 52);
-    doc.text(`Status: ${order.status.toUpperCase()}`, 20, 59);
-
-    // Customer info
-    doc.setFontSize(11);
-    doc.setTextColor(33, 37, 41);
-    doc.text("Bill To:", 20, 75);
-    doc.setFontSize(10);
-    doc.text(order.full_name, 20, 82);
-    doc.text(order.phone, 20, 89);
-    if (order.email) {
-      doc.text(order.email, 20, 96);
-    }
-    doc.setTextColor(108, 117, 125);
-    const addressLines = doc.splitTextToSize(order.address, 80);
-    let addressY = order.email ? 103 : 96;
-    addressLines.forEach((line: string) => {
-      doc.text(line, 20, addressY);
-      addressY += 6;
-    });
-
-    // Table header
-    let tableY = addressY + 15;
-    doc.setFillColor(248, 249, 250);
-    doc.rect(20, tableY - 5, pageWidth - 40, 10, "F");
-    
-    doc.setFontSize(10);
-    doc.setTextColor(33, 37, 41);
-    doc.text("Item", 22, tableY);
-    doc.text("Qty", 120, tableY);
-    doc.text("Price", 145, tableY);
-    doc.text("Total", pageWidth - 22, tableY, { align: "right" });
-
-    // Table rows
-    tableY += 12;
-    doc.setTextColor(73, 80, 87);
-    
-    (orderItems || []).forEach((item: any) => {
-      const itemTotal = Number(item.price) * item.quantity;
-      const titleLines = doc.splitTextToSize(item.product_title, 90);
-      
-      doc.text(titleLines[0], 22, tableY);
-      doc.text(item.quantity.toString(), 120, tableY);
-      doc.text(`${Number(item.price).toFixed(0)} BDT`, 145, tableY);
-      doc.text(`${itemTotal.toFixed(0)} BDT`, pageWidth - 22, tableY, { align: "right" });
-      
-      tableY += titleLines.length > 1 ? 14 : 10;
-    });
-
-    // Separator line
-    tableY += 5;
-    doc.setDrawColor(222, 226, 230);
-    doc.line(20, tableY, pageWidth - 20, tableY);
-
-    // Totals
-    tableY += 12;
-    doc.setTextColor(108, 117, 125);
-    doc.text("Subtotal:", 130, tableY);
-    doc.setTextColor(33, 37, 41);
-    doc.text(`${Number(order.subtotal).toFixed(0)} BDT`, pageWidth - 22, tableY, { align: "right" });
-
-    tableY += 8;
-    doc.setTextColor(108, 117, 125);
-    doc.text("Delivery Charge:", 130, tableY);
-    doc.setTextColor(33, 37, 41);
-    doc.text(`${Number(order.delivery_charge).toFixed(0)} BDT`, pageWidth - 22, tableY, { align: "right" });
-
-    tableY += 10;
-    doc.setFontSize(12);
-    doc.setTextColor(33, 37, 41);
-    doc.text("Total:", 130, tableY);
-    doc.text(`${Number(order.total).toFixed(0)} BDT`, pageWidth - 22, tableY, { align: "right" });
-
-    // Payment method
-    tableY += 15;
-    doc.setFontSize(10);
-    doc.setTextColor(108, 117, 125);
     const paymentMethods: Record<string, string> = {
       cod: "Cash on Delivery",
       bkash: "bKash",
       nagad: "Nagad",
       card: "Card Payment",
     };
-    doc.text(`Payment Method: ${paymentMethods[order.payment_method] || order.payment_method}`, 20, tableY);
 
-    // Footer
-    const footerY = doc.internal.pageSize.getHeight() - 20;
-    doc.setFontSize(9);
-    doc.setTextColor(173, 181, 189);
-    doc.text("Thank you for your order!", pageWidth / 2, footerY, { align: "center" });
-    doc.text("WafiLife - Your trusted Islamic bookstore", pageWidth / 2, footerY + 6, { align: "center" });
+    const orderDate = new Date(order.created_at).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
 
-    // Generate PDF as base64
-    const pdfBase64 = doc.output("datauristring");
+    // Generate HTML invoice with proper Unicode support
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Noto Sans Bengali', 'Inter', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background: #fff;
+      padding: 40px;
+    }
+    
+    .invoice {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .logo {
+      font-size: 28px;
+      font-weight: 700;
+      color: #059669;
+    }
+    
+    .invoice-title {
+      text-align: right;
+    }
+    
+    .invoice-title h1 {
+      font-size: 24px;
+      color: #6b7280;
+      font-weight: 600;
+    }
+    
+    .invoice-meta {
+      margin-top: 10px;
+      color: #6b7280;
+    }
+    
+    .info-section {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 40px;
+    }
+    
+    .info-block h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+    
+    .info-block p {
+      margin: 4px 0;
+    }
+    
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+    
+    .items-table th {
+      background: #f9fafb;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .items-table th:last-child,
+    .items-table td:last-child {
+      text-align: right;
+    }
+    
+    .items-table td {
+      padding: 12px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .totals {
+      display: flex;
+      justify-content: flex-end;
+    }
+    
+    .totals-table {
+      width: 300px;
+    }
+    
+    .totals-table tr td {
+      padding: 8px 0;
+    }
+    
+    .totals-table tr td:last-child {
+      text-align: right;
+      font-weight: 500;
+    }
+    
+    .totals-table .total-row {
+      border-top: 2px solid #e5e7eb;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    
+    .totals-table .total-row td {
+      padding-top: 16px;
+      color: #059669;
+    }
+    
+    .footer {
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+      color: #9ca3af;
+      font-size: 12px;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-processing { background: #dbeafe; color: #1e40af; }
+    .status-shipped { background: #e0e7ff; color: #3730a3; }
+    .status-delivered { background: #d1fae5; color: #065f46; }
+    .status-cancelled { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <div class="invoice">
+    <div class="header">
+      <div class="logo">WafiLife</div>
+      <div class="invoice-title">
+        <h1>INVOICE</h1>
+        <div class="invoice-meta">
+          <p><strong>Order:</strong> ${order.order_number}</p>
+          <p><strong>Date:</strong> ${orderDate}</p>
+          <p><span class="status-badge status-${order.status}">${order.status}</span></p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="info-section">
+      <div class="info-block">
+        <h3>Bill To</h3>
+        <p><strong>${order.full_name}</strong></p>
+        <p>${order.phone}</p>
+        ${order.email ? `<p>${order.email}</p>` : ''}
+        <p>${order.address}</p>
+      </div>
+      <div class="info-block" style="text-align: right;">
+        <h3>Payment Method</h3>
+        <p>${paymentMethods[order.payment_method] || order.payment_method}</p>
+        ${order.transaction_id ? `<p>TXN: ${order.transaction_id}</p>` : ''}
+      </div>
+    </div>
+    
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Qty</th>
+          <th>Price</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${(orderItems || []).map((item: any) => `
+          <tr>
+            <td>${item.product_title}</td>
+            <td>${item.quantity}</td>
+            <td>৳${Number(item.price).toFixed(0)}</td>
+            <td>৳${(Number(item.price) * item.quantity).toFixed(0)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    
+    <div class="totals">
+      <table class="totals-table">
+        <tr>
+          <td>Subtotal</td>
+          <td>৳${Number(order.subtotal).toFixed(0)}</td>
+        </tr>
+        <tr>
+          <td>Delivery Charge</td>
+          <td>৳${Number(order.delivery_charge).toFixed(0)}</td>
+        </tr>
+        <tr class="total-row">
+          <td>Total</td>
+          <td>৳${Number(order.total).toFixed(0)}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div class="footer">
+      <p>Thank you for your order! | ধন্যবাদ!</p>
+      <p>WafiLife - Your trusted Islamic bookstore</p>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    // Convert HTML to base64 data URI for download
+    const base64Html = btoa(unescape(encodeURIComponent(html)));
+    const dataUri = `data:text/html;charset=utf-8;base64,${base64Html}`;
 
     console.log(`Invoice generated successfully for order: ${order.order_number}`);
 
     return new Response(
       JSON.stringify({ 
-        pdf: pdfBase64,
-        filename: `invoice-${order.order_number}.pdf`
+        html: dataUri,
+        filename: `invoice-${order.order_number}.html`,
+        rawHtml: html
       }),
       {
         status: 200,
