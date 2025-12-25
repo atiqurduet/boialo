@@ -22,16 +22,35 @@ export const useInvoiceDownload = () => {
 
       if (error) throw error;
 
-      if (data?.pdf) {
-        // Create download link
-        const link = document.createElement("a");
-        link.href = data.pdf;
-        link.download = data.filename || `invoice-${orderId}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        toast.success("ইনভয়েস ডাউনলোড হয়েছে");
+      if (data?.rawHtml) {
+        // Open invoice in new window for printing/saving as PDF
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(data.rawHtml);
+          printWindow.document.close();
+          
+          // Add print styles and trigger print dialog after fonts load
+          printWindow.onload = () => {
+            setTimeout(() => {
+              printWindow.print();
+            }, 500);
+          };
+          
+          toast.success("ইনভয়েস তৈরি হয়েছে - প্রিন্ট বা PDF হিসেবে সংরক্ষণ করুন");
+        } else {
+          // Fallback: download as HTML file
+          const blob = new Blob([data.rawHtml], { type: 'text/html;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = data.filename || `invoice-${orderId}.html`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          
+          toast.success("ইনভয়েস ডাউনলোড হয়েছে");
+        }
       }
     } catch (error) {
       console.error("Error downloading invoice:", error);
