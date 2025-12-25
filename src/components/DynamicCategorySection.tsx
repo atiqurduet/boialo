@@ -1,5 +1,6 @@
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState } from "react";
 
 interface Category {
   id: string;
@@ -19,55 +20,105 @@ interface DynamicCategorySectionProps {
 export const DynamicCategorySection = ({ 
   categories, 
   title = "জনপ্রিয় ক্যাটাগরি",
-  columns = 4 
 }: DynamicCategorySectionProps) => {
+  const [selectedParent, setSelectedParent] = useState<Category | null>(null);
+
   // Get parent categories only
   const parentCategories = categories.filter(c => !c.parent_id).slice(0, 8);
+  
+  // Get subcategories for selected parent
+  const subcategories = selectedParent 
+    ? categories.filter(c => c.parent_id === selectedParent.id)
+    : [];
 
   if (parentCategories.length === 0) {
     return null;
   }
 
+  const displayCategories = selectedParent ? subcategories : parentCategories;
+  const hasSubcategories = (categoryId: string) => 
+    categories.some(c => c.parent_id === categoryId);
+
+  const handleCategoryClick = (category: Category, e: React.MouseEvent) => {
+    // If it's a parent category with subcategories, show them instead of navigating
+    if (!selectedParent && hasSubcategories(category.id)) {
+      e.preventDefault();
+      setSelectedParent(category);
+    }
+  };
+
   return (
     <section className="bg-card rounded-xl p-6 shadow-sm mb-8">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="section-title mb-0">{title}</h2>
+        <div className="flex items-center gap-2">
+          {selectedParent && (
+            <button
+              onClick={() => setSelectedParent(null)}
+              className="flex items-center gap-1 text-primary hover:underline text-sm font-medium"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              পিছনে
+            </button>
+          )}
+          <h2 className="section-title mb-0">
+            {selectedParent ? selectedParent.name_bn : title}
+          </h2>
+        </div>
         <Link
-          to="/shop"
+          to={selectedParent ? `/shop?category=${selectedParent.slug}` : "/shop"}
           className="text-primary text-sm font-medium hover:underline flex items-center gap-1"
         >
           সব দেখুন <ChevronRight className="w-4 h-4" />
         </Link>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {parentCategories.map((category) => (
-          <Link
-            key={category.id}
-            to={`/shop?category=${category.slug}`}
-            className="category-card group"
+      
+      {displayCategories.length === 0 && selectedParent ? (
+        <div className="text-center py-8 text-muted-foreground">
+          এই ক্যাটাগরিতে কোনো সাব-ক্যাটাগরি নেই
+          <Link 
+            to={`/shop?category=${selectedParent.slug}`}
+            className="block mt-2 text-primary hover:underline"
           >
-            <div className="w-20 h-24 md:w-24 md:h-32 rounded-lg overflow-hidden mb-2 shadow-md group-hover:shadow-lg transition-shadow bg-muted">
-              {category.image_url ? (
-                <img
-                  src={category.image_url}
-                  alt={category.name_bn}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholder.svg';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                  <span className="text-3xl">📚</span>
-                </div>
-              )}
-            </div>
-            <span className="text-sm text-center text-muted-foreground group-hover:text-primary transition-colors line-clamp-2">
-              {category.name_bn}
-            </span>
+            সব পণ্য দেখুন
           </Link>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {displayCategories.map((category) => (
+            <Link
+              key={category.id}
+              to={`/shop?category=${category.slug}`}
+              onClick={(e) => handleCategoryClick(category, e)}
+              className="category-card group"
+            >
+              <div className="relative w-20 h-24 md:w-24 md:h-32 rounded-lg overflow-hidden mb-2 shadow-md group-hover:shadow-lg transition-shadow bg-muted">
+                {category.image_url ? (
+                  <img
+                    src={category.image_url}
+                    alt={category.name_bn}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/placeholder.svg';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                    <span className="text-3xl">📚</span>
+                  </div>
+                )}
+                {!selectedParent && hasSubcategories(category.id) && (
+                  <div className="absolute bottom-1 right-1 bg-primary/80 text-primary-foreground rounded-full p-1">
+                    <ChevronRight className="w-3 h-3" />
+                  </div>
+                )}
+              </div>
+              <span className="text-sm text-center text-muted-foreground group-hover:text-primary transition-colors line-clamp-2">
+                {category.name_bn}
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
     </section>
   );
 };
