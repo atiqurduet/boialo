@@ -213,14 +213,14 @@ const AdminCategories = () => {
                 <div>
                   <Label>প্যারেন্ট ক্যাটাগরি</Label>
                   <Select
-                    value={formData.parent_id}
-                    onValueChange={(value) => setFormData({ ...formData, parent_id: value })}
+                    value={formData.parent_id || "none"}
+                    onValueChange={(value) => setFormData({ ...formData, parent_id: value === "none" ? "" : value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="প্যারেন্ট নির্বাচন করুন (ঐচ্ছিক)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">কোন প্যারেন্ট নেই</SelectItem>
+                      <SelectItem value="none">কোন প্যারেন্ট নেই (মূল ক্যাটাগরি)</SelectItem>
                       {parentCategories
                         .filter(c => c.id !== editingCategory?.id)
                         .map((cat) => (
