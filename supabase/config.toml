@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.order-sms-notify]
 verify_jwt = false
+
+[functions.admin-invoice]
+verify_jwt = false

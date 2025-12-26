@@ -19,7 +19,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Eye, Printer } from 'lucide-react';
+import { Search, Eye, FileText, Truck, Loader2 } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -58,7 +58,43 @@ const AdminOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [generatingDoc, setGeneratingDoc] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const generateDocument = async (orderId: string, type: 'invoice' | 'delivery-slip') => {
+    setGeneratingDoc(`${orderId}-${type}`);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: 'Error', description: 'লগইন করুন', variant: 'destructive' });
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('admin-invoice', {
+        body: { orderId, type }
+      });
+
+      if (error) throw error;
+
+      // Open in new window for printing
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(data.html);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      }
+
+      toast({ title: 'সফল', description: type === 'invoice' ? 'ইনভয়েস তৈরি হয়েছে' : 'ডেলিভারি স্লিপ তৈরি হয়েছে' });
+    } catch (error: any) {
+      console.error('Document generation error:', error);
+      toast({ title: 'Error', description: 'ডকুমেন্ট তৈরিতে সমস্যা হয়েছে', variant: 'destructive' });
+    } finally {
+      setGeneratingDoc(null);
+    }
+  };
 
   useEffect(() => {
     fetchOrders();
@@ -258,9 +294,27 @@ const AdminOrders = () => {
                         <td className="py-3 px-4 text-sm text-muted-foreground">
                           {new Date(order.created_at).toLocaleDateString('bn-BD')}
                         </td>
-                        <td className="py-3 px-4 text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewOrder(order)}>
+                        <td className="py-3 px-4 text-right space-x-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleViewOrder(order)} title="বিস্তারিত">
                             <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => generateDocument(order.id, 'invoice')}
+                            disabled={generatingDoc === `${order.id}-invoice`}
+                            title="ইনভয়েস"
+                          >
+                            {generatingDoc === `${order.id}-invoice` ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => generateDocument(order.id, 'delivery-slip')}
+                            disabled={generatingDoc === `${order.id}-delivery-slip`}
+                            title="ডেলিভারি স্লিপ"
+                          >
+                            {generatingDoc === `${order.id}-delivery-slip` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
                           </Button>
                         </td>
                       </tr>
@@ -280,6 +334,28 @@ const AdminOrders = () => {
             </DialogHeader>
             {selectedOrder && (
               <div className="space-y-6">
+                {/* Print Actions */}
+                <div className="flex gap-2 flex-wrap">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => generateDocument(selectedOrder.id, 'invoice')}
+                    disabled={generatingDoc === `${selectedOrder.id}-invoice`}
+                  >
+                    {generatingDoc === `${selectedOrder.id}-invoice` ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
+                    ইনভয়েস প্রিন্ট
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => generateDocument(selectedOrder.id, 'delivery-slip')}
+                    disabled={generatingDoc === `${selectedOrder.id}-delivery-slip`}
+                  >
+                    {generatingDoc === `${selectedOrder.id}-delivery-slip` ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Truck className="h-4 w-4 mr-2" />}
+                    ডেলিভারি স্লিপ প্রিন্ট
+                  </Button>
+                </div>
+
                 {/* Status Update */}
                 <div className="flex items-center gap-4">
                   <Label>স্ট্যাটাস:</Label>
