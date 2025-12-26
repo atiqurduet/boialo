@@ -65,20 +65,20 @@ const Index = () => {
         <TrustBadges />
 
         <div className="container py-8">
+          {/* Category Section - Always show if categories exist */}
+          {categories.length > 0 && (
+            <DynamicCategorySection 
+              categories={categories}
+              products={products}
+              title={categorySection?.title_bn || "জনপ্রিয় ক্যাটাগরি"}
+            />
+          )}
+
           {/* Flash Sale Section */}
           {flashSaleSection && (
             <DynamicFlashSale 
               products={discountedProducts.length > 0 ? discountedProducts : products} 
               title={flashSaleSection.title_bn}
-            />
-          )}
-
-          {/* Category Section */}
-          {categorySection && categories.length > 0 && (
-            <DynamicCategorySection 
-              categories={categories}
-              products={products}
-              title={categorySection.title_bn}
             />
           )}
 
