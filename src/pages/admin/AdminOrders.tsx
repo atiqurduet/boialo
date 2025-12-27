@@ -17,9 +17,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Eye, FileText, Truck, Loader2 } from 'lucide-react';
+import { Search, Eye, FileText, Truck, Loader2, Printer, X } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -59,7 +60,114 @@ const AdminOrders = () => {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [generatingDoc, setGeneratingDoc] = useState<string | null>(null);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [bulkPrinting, setBulkPrinting] = useState<'invoice' | 'delivery-slip' | null>(null);
   const { toast } = useToast();
+
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrderIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrderIds.size === filteredOrders.length) {
+      setSelectedOrderIds(new Set());
+    } else {
+      setSelectedOrderIds(new Set(filteredOrders.map(o => o.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedOrderIds(new Set());
+  };
+
+  const bulkPrint = async (type: 'invoice' | 'delivery-slip') => {
+    if (selectedOrderIds.size === 0) return;
+    
+    setBulkPrinting(type);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: 'Error', description: 'লগইন করুন', variant: 'destructive' });
+        return;
+      }
+
+      // Generate all documents
+      const orderIdsArray = Array.from(selectedOrderIds);
+      const htmlParts: string[] = [];
+      
+      for (const orderId of orderIdsArray) {
+        const { data, error } = await supabase.functions.invoke('admin-invoice', {
+          body: { orderId, type }
+        });
+        
+        if (error) {
+          console.error(`Error generating ${type} for order ${orderId}:`, error);
+          continue;
+        }
+        
+        htmlParts.push(data.html);
+      }
+
+      if (htmlParts.length === 0) {
+        toast({ title: 'Error', description: 'কোন ডকুমেন্ট তৈরি হয়নি', variant: 'destructive' });
+        return;
+      }
+
+      // Combine all HTML with page breaks
+      const combinedHtml = `
+        <!DOCTYPE html>
+        <html lang="bn">
+        <head>
+          <meta charset="UTF-8">
+          <title>বাল্ক ${type === 'invoice' ? 'ইনভয়েস' : 'ডেলিভারি স্লিপ'}</title>
+          <style>
+            @media print {
+              .page-break { page-break-after: always; }
+              .page-break:last-child { page-break-after: auto; }
+            }
+          </style>
+        </head>
+        <body>
+          ${htmlParts.map((html, index) => {
+            // Extract body content from each HTML
+            const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+            const bodyContent = bodyMatch ? bodyMatch[1] : html;
+            return `<div class="${index < htmlParts.length - 1 ? 'page-break' : ''}">${bodyContent}</div>`;
+          }).join('')}
+        </body>
+        </html>
+      `;
+
+      // Open in new window for printing
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(combinedHtml);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      }
+
+      toast({ 
+        title: 'সফল', 
+        description: `${htmlParts.length}টি ${type === 'invoice' ? 'ইনভয়েস' : 'ডেলিভারি স্লিপ'} তৈরি হয়েছে` 
+      });
+    } catch (error: any) {
+      console.error('Bulk print error:', error);
+      toast({ title: 'Error', description: 'বাল্ক প্রিন্টে সমস্যা হয়েছে', variant: 'destructive' });
+    } finally {
+      setBulkPrinting(null);
+    }
+  };
 
   const generateDocument = async (orderId: string, type: 'invoice' | 'delivery-slip') => {
     setGeneratingDoc(`${orderId}-${type}`);
@@ -261,6 +369,36 @@ const AdminOrders = () => {
           </Select>
         </div>
 
+        {/* Bulk Actions Bar */}
+        {selectedOrderIds.size > 0 && (
+          <div className="flex items-center gap-4 p-4 bg-primary/10 rounded-lg border border-primary/20">
+            <span className="font-medium">{selectedOrderIds.size}টি অর্ডার সিলেক্টেড</span>
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                onClick={() => bulkPrint('invoice')}
+                disabled={bulkPrinting !== null}
+              >
+                {bulkPrinting === 'invoice' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Printer className="h-4 w-4 mr-2" />}
+                বাল্ক ইনভয়েস প্রিন্ট
+              </Button>
+              <Button 
+                size="sm" 
+                variant="secondary"
+                onClick={() => bulkPrint('delivery-slip')}
+                disabled={bulkPrinting !== null}
+              >
+                {bulkPrinting === 'delivery-slip' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Truck className="h-4 w-4 mr-2" />}
+                বাল্ক ডেলিভারি স্লিপ প্রিন্ট
+              </Button>
+            </div>
+            <Button size="sm" variant="ghost" onClick={clearSelection}>
+              <X className="h-4 w-4 mr-1" />
+              বাতিল
+            </Button>
+          </div>
+        )}
+
         {/* Orders Table */}
         <Card>
           <CardContent className="p-0">
@@ -273,6 +411,12 @@ const AdminOrders = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b bg-muted/50">
+                      <th className="py-3 px-4 w-10">
+                        <Checkbox 
+                          checked={filteredOrders.length > 0 && selectedOrderIds.size === filteredOrders.length}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </th>
                       <th className="text-left py-3 px-4 font-medium">অর্ডার নং</th>
                       <th className="text-left py-3 px-4 font-medium">গ্রাহক</th>
                       <th className="text-left py-3 px-4 font-medium">মোট</th>
@@ -283,7 +427,13 @@ const AdminOrders = () => {
                   </thead>
                   <tbody>
                     {filteredOrders.map((order) => (
-                      <tr key={order.id} className="border-b hover:bg-muted/50">
+                      <tr key={order.id} className={`border-b hover:bg-muted/50 ${selectedOrderIds.has(order.id) ? 'bg-primary/5' : ''}`}>
+                        <td className="py-3 px-4">
+                          <Checkbox 
+                            checked={selectedOrderIds.has(order.id)}
+                            onCheckedChange={() => toggleOrderSelection(order.id)}
+                          />
+                        </td>
                         <td className="py-3 px-4 font-mono text-sm">{order.order_number}</td>
                         <td className="py-3 px-4">
                           <p className="font-medium">{order.full_name}</p>
