@@ -3,12 +3,20 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Heart, User, Phone, Mail, ChevronRight } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
+interface DynamicMenuItem {
+  name: string;
+  path: string;
+  openInNewTab?: boolean;
+}
+
 interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
+  dynamicMenuItems?: DynamicMenuItem[];
 }
 
-const menuItems = [
+// Fallback menu items
+const defaultMenuItems = [
   { name: "হোম", path: "/", hasSubmenu: false },
   { 
     name: "জেনারেল বই", 
@@ -42,7 +50,17 @@ const menuItems = [
   { name: "স্টেশনারি", path: "/stationery", hasSubmenu: false },
 ];
 
-export const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
+export const MobileMenu = ({ isOpen, onClose, dynamicMenuItems }: MobileMenuProps) => {
+  // Use dynamic items if provided, otherwise use default
+  const menuItems = dynamicMenuItems && dynamicMenuItems.length > 0
+    ? dynamicMenuItems.map(item => ({ 
+        name: item.name, 
+        path: item.path, 
+        hasSubmenu: false, 
+        openInNewTab: item.openInNewTab || false 
+      }))
+    : defaultMenuItems;
+
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0 bg-card">
@@ -82,34 +100,54 @@ export const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
 
           {/* Navigation */}
           <Accordion type="single" collapsible className="w-full">
-            {menuItems.map((item, index) => (
-              item.hasSubmenu ? (
-                <AccordionItem key={index} value={`item-${index}`} className="border-b border-border">
-                  <AccordionTrigger className="px-4 py-3 hover:bg-muted text-sm font-medium hover:no-underline">
-                    {item.name}
-                  </AccordionTrigger>
-                  <AccordionContent className="pb-0">
-                    <div className="bg-muted/50">
-                      <Link
-                        to={item.path}
-                        className="block px-6 py-2.5 text-sm text-primary hover:bg-muted transition-colors"
-                        onClick={onClose}
-                      >
-                        সব দেখুন
-                      </Link>
-                      {item.submenu?.map((subItem, subIndex) => (
+            {menuItems.map((item, index) => {
+              const hasSubmenu = 'hasSubmenu' in item && item.hasSubmenu && 'submenu' in item;
+              
+              if (hasSubmenu && 'submenu' in item) {
+                return (
+                  <AccordionItem key={index} value={`item-${index}`} className="border-b border-border">
+                    <AccordionTrigger className="px-4 py-3 hover:bg-muted text-sm font-medium hover:no-underline">
+                      {item.name}
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-0">
+                      <div className="bg-muted/50">
                         <Link
-                          key={subIndex}
-                          to={subItem.path}
-                          className="block px-6 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                          to={item.path}
+                          className="block px-6 py-2.5 text-sm text-primary hover:bg-muted transition-colors"
                           onClick={onClose}
                         >
-                          {subItem.name}
+                          সব দেখুন
                         </Link>
-                      ))}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
+                        {(item as any).submenu?.map((subItem: any, subIndex: number) => (
+                          <Link
+                            key={subIndex}
+                            to={subItem.path}
+                            className="block px-6 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                            onClick={onClose}
+                          >
+                            {subItem.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              }
+
+              const openInNewTab = 'openInNewTab' in item && item.openInNewTab;
+              
+              return openInNewTab ? (
+                <a
+                  key={index}
+                  href={item.path}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted transition-colors border-b border-border"
+                  onClick={onClose}
+                >
+                  {item.name}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </a>
               ) : (
                 <Link
                   key={index}
@@ -120,8 +158,8 @@ export const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
                   {item.name}
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </Link>
-              )
-            ))}
+              );
+            })}
           </Accordion>
 
           {/* Info Links */}

@@ -1,7 +1,29 @@
 import { Link } from "react-router-dom";
 import { Facebook, Youtube, Instagram, Phone, Mail, MapPin } from "lucide-react";
+import { useFooterData } from "@/hooks/useFooterData";
 
 export const Footer = () => {
+  const { sections, loading } = useFooterData();
+
+  // Get sections by type
+  const linksSections = sections.filter(s => s.section_type === 'links');
+  const contactSection = sections.find(s => s.section_type === 'contact');
+  const socialSection = sections.find(s => s.section_type === 'social');
+
+  // Parse contact info
+  const contactInfo = contactSection?.content || {
+    address: "৬০/এ, পুরানা পল্টন, ঢাকা-১০০০, বাংলাদেশ",
+    phone: "+৮৮০ ১৭০০-০০০০০০",
+    email: "info@wafilife.com"
+  };
+
+  // Parse social links
+  const socialLinks = socialSection?.content || {
+    facebook: "#",
+    youtube: "#",
+    instagram: "#"
+  };
+
   return (
     <footer className="bg-card border-t border-border mt-12">
       <div className="container py-12">
@@ -23,19 +45,25 @@ export const Footer = () => {
             </p>
             <div className="flex items-center gap-3">
               <a
-                href="#"
+                href={socialLinks.facebook || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-10 h-10 bg-muted rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
               >
                 <Facebook className="w-5 h-5" />
               </a>
               <a
-                href="#"
+                href={socialLinks.youtube || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-10 h-10 bg-muted rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
               >
                 <Youtube className="w-5 h-5" />
               </a>
               <a
-                href="#"
+                href={socialLinks.instagram || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-10 h-10 bg-muted rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
               >
                 <Instagram className="w-5 h-5" />
@@ -43,85 +71,61 @@ export const Footer = () => {
             </div>
           </div>
 
-          {/* Quick Links */}
-          <div>
-            <h3 className="font-bold text-lg mb-4">দ্রুত লিংক</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/about" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  আমাদের সম্পর্কে
-                </Link>
-              </li>
-              <li>
-                <Link to="/contact" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  যোগাযোগ করুন
-                </Link>
-              </li>
-              <li>
-                <Link to="/faq" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  সাধারণ জিজ্ঞাসা
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  শর্তাবলী
-                </Link>
-              </li>
-              <li>
-                <Link to="/privacy" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  গোপনীয়তা নীতি
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Categories */}
-          <div>
-            <h3 className="font-bold text-lg mb-4">বিভাগসমূহ</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/shop?category=islamic" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  ইসলামি বই
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop?category=academic" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  একাডেমিক বই
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop?category=children" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  শিশু কিশোরদের বই
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop?category=lifestyle" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  লাইফস্টাইল
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop?category=stationery" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  স্টেশনারি
-                </Link>
-              </li>
-            </ul>
-          </div>
+          {/* Dynamic Link Sections */}
+          {loading ? (
+            <>
+              <div className="animate-pulse">
+                <div className="h-6 w-24 bg-muted rounded mb-4" />
+                <div className="space-y-2">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="h-4 w-32 bg-muted rounded" />
+                  ))}
+                </div>
+              </div>
+              <div className="animate-pulse">
+                <div className="h-6 w-24 bg-muted rounded mb-4" />
+                <div className="space-y-2">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="h-4 w-32 bg-muted rounded" />
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            linksSections.slice(0, 2).map((section) => (
+              <div key={section.id}>
+                <h3 className="font-bold text-lg mb-4">{section.title_bn}</h3>
+                <ul className="space-y-2">
+                  {section.links?.map((link) => (
+                    <li key={link.id}>
+                      <Link 
+                        to={link.url} 
+                        className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        {link.title_bn}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))
+          )}
 
           {/* Contact */}
           <div>
-            <h3 className="font-bold text-lg mb-4">যোগাযোগ</h3>
+            <h3 className="font-bold text-lg mb-4">{contactSection?.title_bn || "যোগাযোগ"}</h3>
             <ul className="space-y-3">
               <li className="flex items-start gap-2 text-sm text-muted-foreground">
                 <MapPin className="w-5 h-5 shrink-0 text-primary" />
-                <span>৬০/এ, পুরানা পল্টন, ঢাকা-১০০০, বাংলাদেশ</span>
+                <span>{contactInfo.address}</span>
               </li>
               <li className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Phone className="w-5 h-5 shrink-0 text-primary" />
-                <span>+৮৮০ ১৭০০-০০০০০০</span>
+                <span>{contactInfo.phone}</span>
               </li>
               <li className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Mail className="w-5 h-5 shrink-0 text-primary" />
-                <span>info@wafilife.com</span>
+                <span>{contactInfo.email}</span>
               </li>
             </ul>
           </div>
