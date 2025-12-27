@@ -49,6 +49,8 @@ import AdminSMS from "./pages/admin/AdminSMS";
 import AdminWriters from "./pages/admin/AdminWriters";
 import AdminPublishers from "./pages/admin/AdminPublishers";
 import AdminBrands from "./pages/admin/AdminBrands";
+import AdminMenu from "./pages/admin/AdminMenu";
+import AdminFooter from "./pages/admin/AdminFooter";
 
 const queryClient = new QueryClient();
 

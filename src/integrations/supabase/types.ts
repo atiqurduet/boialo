@@ -409,6 +409,86 @@ export type Database = {
         }
         Relationships: []
       }
+      footer_links: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          section_id: string
+          sort_order: number | null
+          title_bn: string
+          title_en: string | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          section_id: string
+          sort_order?: number | null
+          title_bn: string
+          title_en?: string | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          section_id?: string
+          sort_order?: number | null
+          title_bn?: string
+          title_en?: string | null
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "footer_links_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "footer_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      footer_sections: {
+        Row: {
+          content: Json | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          section_type: string
+          sort_order: number | null
+          title_bn: string
+          title_en: string | null
+          updated_at: string
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          section_type?: string
+          sort_order?: number | null
+          title_bn: string
+          title_en?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          section_type?: string
+          sort_order?: number | null
+          title_bn?: string
+          title_en?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       homepage_sections: {
         Row: {
           content: Json | null
@@ -450,6 +530,93 @@ export type Database = {
           subtitle_en?: string | null
           title_bn?: string
           title_en?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      menu_items: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          menu_id: string
+          open_in_new_tab: boolean | null
+          parent_id: string | null
+          sort_order: number | null
+          title_bn: string
+          title_en: string | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          menu_id: string
+          open_in_new_tab?: boolean | null
+          parent_id?: string | null
+          sort_order?: number | null
+          title_bn: string
+          title_en?: string | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          menu_id?: string
+          open_in_new_tab?: boolean | null
+          parent_id?: string | null
+          sort_order?: number | null
+          title_bn?: string
+          title_en?: string | null
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_menu_id_fkey"
+            columns: ["menu_id"]
+            isOneToOne: false
+            referencedRelation: "navigation_menus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_items_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      navigation_menus: {
+        Row: {
+          created_at: string
+          id: string
+          location: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location?: string
+          name?: string
+          slug?: string
           updated_at?: string
         }
         Relationships: []

@@ -12,9 +12,16 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { GripVertical, Pencil, Eye, EyeOff, Settings2 } from 'lucide-react';
+import { GripVertical, Eye, EyeOff, Settings2, Plus, Trash2 } from 'lucide-react';
 
 interface HomepageSection {
   id: string;
@@ -34,16 +41,27 @@ const sectionTypeLabels: Record<string, string> = {
   bestsellers: '🏆 বেস্টসেলার',
   promo_banner: '🎯 প্রমো ব্যানার',
   recommended: '💡 সুপারিশকৃত',
+  featured_products: '⭐ ফিচার্ড প্রোডাক্ট',
+  custom_products: '📦 কাস্টম প্রোডাক্ট গ্রিড',
+  trust_badges: '🛡️ ট্রাস্ট ব্যাজ',
+  newsletter: '📧 নিউজলেটার',
 };
+
+const sectionTypes = Object.entries(sectionTypeLabels).map(([value, label]) => ({
+  value,
+  label
+}));
 
 const AdminHomepage = () => {
   const [sections, setSections] = useState<HomepageSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingSection, setEditingSection] = useState<HomepageSection | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
+    section_type: '',
     title_bn: '',
     title_en: '',
     subtitle_bn: '',
@@ -72,9 +90,25 @@ const AdminHomepage = () => {
     }
   };
 
+  const handleCreate = () => {
+    setIsCreating(true);
+    setEditingSection(null);
+    setFormData({
+      section_type: 'new_releases',
+      title_bn: '',
+      title_en: '',
+      subtitle_bn: '',
+      is_active: true,
+      settings: {},
+    });
+    setDialogOpen(true);
+  };
+
   const handleEdit = (section: HomepageSection) => {
+    setIsCreating(false);
     setEditingSection(section);
     setFormData({
+      section_type: section.section_type,
       title_bn: section.title_bn,
       title_en: section.title_en || '',
       subtitle_bn: section.subtitle_bn || '',
@@ -86,24 +120,63 @@ const AdminHomepage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingSection) return;
+
+    try {
+      if (isCreating) {
+        // Get max sort order
+        const maxOrder = sections.length > 0 
+          ? Math.max(...sections.map(s => s.sort_order)) + 1 
+          : 0;
+
+        const { error } = await supabase
+          .from('homepage_sections')
+          .insert({
+            section_type: formData.section_type,
+            title_bn: formData.title_bn,
+            title_en: formData.title_en || null,
+            subtitle_bn: formData.subtitle_bn || null,
+            is_active: formData.is_active,
+            settings: formData.settings,
+            sort_order: maxOrder,
+          });
+
+        if (error) throw error;
+        toast({ title: 'সফল', description: 'নতুন সেকশন যোগ হয়েছে' });
+      } else if (editingSection) {
+        const { error } = await supabase
+          .from('homepage_sections')
+          .update({
+            section_type: formData.section_type,
+            title_bn: formData.title_bn,
+            title_en: formData.title_en || null,
+            subtitle_bn: formData.subtitle_bn || null,
+            is_active: formData.is_active,
+            settings: formData.settings,
+          })
+          .eq('id', editingSection.id);
+
+        if (error) throw error;
+        toast({ title: 'সফল', description: 'সেকশন আপডেট হয়েছে' });
+      }
+
+      setDialogOpen(false);
+      fetchSections();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleDelete = async (sectionId: string) => {
+    if (!confirm('আপনি কি নিশ্চিত এই সেকশন মুছতে চান?')) return;
 
     try {
       const { error } = await supabase
         .from('homepage_sections')
-        .update({
-          title_bn: formData.title_bn,
-          title_en: formData.title_en || null,
-          subtitle_bn: formData.subtitle_bn || null,
-          is_active: formData.is_active,
-          settings: formData.settings,
-        })
-        .eq('id', editingSection.id);
+        .delete()
+        .eq('id', sectionId);
 
       if (error) throw error;
-
-      toast({ title: 'সফল', description: 'সেকশন আপডেট হয়েছে' });
-      setDialogOpen(false);
+      toast({ title: 'সফল', description: 'সেকশন মুছে ফেলা হয়েছে' });
       fetchSections();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -159,9 +232,10 @@ const AdminHomepage = () => {
   };
 
   const renderSettingsEditor = () => {
-    if (!editingSection) return null;
+    const sectionType = isCreating ? formData.section_type : editingSection?.section_type;
+    if (!sectionType) return null;
 
-    switch (editingSection.section_type) {
+    switch (sectionType) {
       case 'promo_banner':
         return (
           <div className="space-y-4 border-t pt-4 mt-4">
@@ -218,6 +292,16 @@ const AdminHomepage = () => {
                 })}
               />
             </div>
+            <div>
+              <Label>ব্যাকগ্রাউন্ড ইমেজ URL</Label>
+              <Input
+                value={formData.settings.background_image || ''}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, background_image: e.target.value }
+                })}
+              />
+            </div>
           </div>
         );
 
@@ -225,6 +309,8 @@ const AdminHomepage = () => {
       case 'new_releases':
       case 'bestsellers':
       case 'recommended':
+      case 'featured_products':
+      case 'custom_products':
         return (
           <div className="space-y-4 border-t pt-4 mt-4">
             <h4 className="font-medium">সেকশন সেটিংস</h4>
@@ -239,7 +325,18 @@ const AdminHomepage = () => {
                 })}
               />
             </div>
-            {editingSection.section_type === 'flash_sale' && (
+            <div>
+              <Label>কলাম সংখ্যা</Label>
+              <Input
+                type="number"
+                value={formData.settings.columns || 5}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, columns: Number(e.target.value) }
+                })}
+              />
+            </div>
+            {sectionType === 'flash_sale' && (
               <div>
                 <Label>মিনিমাম ডিসকাউন্ট (%)</Label>
                 <Input
@@ -252,6 +349,26 @@ const AdminHomepage = () => {
                 />
               </div>
             )}
+            <div>
+              <Label>View All লিংক</Label>
+              <Input
+                value={formData.settings.view_all_link || '/shop'}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, view_all_link: e.target.value }
+                })}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={formData.settings.show_ranking || false}
+                onCheckedChange={(checked) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, show_ranking: checked }
+                })}
+              />
+              <Label>র‍্যাংকিং দেখান</Label>
+            </div>
           </div>
         );
 
@@ -270,6 +387,17 @@ const AdminHomepage = () => {
                 })}
               />
             </div>
+            <div>
+              <Label>সর্বোচ্চ ক্যাটাগরি সংখ্যা</Label>
+              <Input
+                type="number"
+                value={formData.settings.max_categories || 8}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, max_categories: Number(e.target.value) }
+                })}
+              />
+            </div>
           </div>
         );
 
@@ -281,9 +409,15 @@ const AdminHomepage = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">হোমপেজ সেকশন</h1>
-          <p className="text-muted-foreground">হোমপেজের সেকশনগুলো ম্যানেজ করুন</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">হোমপেজ সেকশন</h1>
+            <p className="text-muted-foreground">হোমপেজের সেকশনগুলো ম্যানেজ করুন - আনলিমিটেড সেকশন যোগ করুন</p>
+          </div>
+          <Button onClick={handleCreate}>
+            <Plus className="w-4 h-4 mr-2" />
+            নতুন সেকশন
+          </Button>
         </div>
 
         {/* Sections List */}
@@ -292,7 +426,9 @@ const AdminHomepage = () => {
             {loading ? (
               <div className="p-8 text-center">লোড হচ্ছে...</div>
             ) : sections.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">কোন সেকশন নেই</div>
+              <div className="p-8 text-center text-muted-foreground">
+                কোন সেকশন নেই। নতুন সেকশন যোগ করুন।
+              </div>
             ) : (
               <div className="divide-y">
                 {sections.map((section, index) => (
@@ -341,6 +477,14 @@ const AdminHomepage = () => {
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(section)}>
                         <Settings2 className="h-4 w-4" />
                       </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleDelete(section.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -349,15 +493,35 @@ const AdminHomepage = () => {
           </CardContent>
         </Card>
 
-        {/* Edit Dialog */}
+        {/* Create/Edit Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                সেকশন এডিট: {editingSection && sectionTypeLabels[editingSection.section_type]}
+                {isCreating ? 'নতুন সেকশন যোগ করুন' : `সেকশন এডিট: ${editingSection && sectionTypeLabels[editingSection.section_type]}`}
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {isCreating && (
+                <div>
+                  <Label>সেকশন টাইপ</Label>
+                  <Select
+                    value={formData.section_type}
+                    onValueChange={(value) => setFormData({ ...formData, section_type: value, settings: {} })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="সেকশন টাইপ নির্বাচন করুন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sectionTypes.map(type => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <Label>টাইটেল (বাংলা)</Label>
                 <Input
@@ -391,7 +555,7 @@ const AdminHomepage = () => {
               {renderSettingsEditor()}
 
               <Button type="submit" className="w-full">
-                আপডেট করুন
+                {isCreating ? 'সেকশন যোগ করুন' : 'আপডেট করুন'}
               </Button>
             </form>
           </DialogContent>
@@ -401,13 +565,19 @@ const AdminHomepage = () => {
         <Card>
           <CardContent className="p-6">
             <h3 className="font-bold mb-4">💡 সেকশন গাইড</h3>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>• <strong>ফ্ল্যাশ সেল:</strong> ডিসকাউন্ট থাকা প্রোডাক্ট দেখায়</p>
-              <p>• <strong>ক্যাটাগরি গ্রিড:</strong> সব প্যারেন্ট ক্যাটাগরি দেখায়</p>
-              <p>• <strong>নতুন প্রকাশিত:</strong> সাম্প্রতিক যোগ করা প্রোডাক্ট</p>
-              <p>• <strong>বেস্টসেলার:</strong> ফিচার্ড মার্ক করা প্রোডাক্ট</p>
-              <p>• <strong>প্রমো ব্যানার:</strong> কাস্টম প্রমোশনাল ব্যানার</p>
-              <p>• <strong>সুপারিশকৃত:</strong> সাধারণ প্রোডাক্ট সাজেশন</p>
+            <div className="grid md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+              <div className="space-y-2">
+                <p>• <strong>ফ্ল্যাশ সেল:</strong> ডিসকাউন্ট থাকা প্রোডাক্ট দেখায়</p>
+                <p>• <strong>ক্যাটাগরি গ্রিড:</strong> সব প্যারেন্ট ক্যাটাগরি দেখায়</p>
+                <p>• <strong>নতুন প্রকাশিত:</strong> সাম্প্রতিক যোগ করা প্রোডাক্ট</p>
+                <p>• <strong>বেস্টসেলার:</strong> ফিচার্ড মার্ক করা প্রোডাক্ট</p>
+              </div>
+              <div className="space-y-2">
+                <p>• <strong>প্রমো ব্যানার:</strong> কাস্টম প্রমোশনাল ব্যানার</p>
+                <p>• <strong>সুপারিশকৃত:</strong> সাধারণ প্রোডাক্ট সাজেশন</p>
+                <p>• <strong>ফিচার্ড প্রোডাক্ট:</strong> বিশেষ প্রোডাক্ট হাইলাইট</p>
+                <p>• <strong>কাস্টম গ্রিড:</strong> নিজের মতো প্রোডাক্ট সাজান</p>
+              </div>
             </div>
           </CardContent>
         </Card>

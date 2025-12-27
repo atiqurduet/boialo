@@ -7,6 +7,7 @@ import { MobileMenu } from "@/components/MobileMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCartContext } from "@/contexts/CartContext";
 import { useWishlistContext } from "@/contexts/WishlistContext";
+import { useNavigationMenu } from "@/hooks/useNavigationMenu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,19 +16,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
-const navLinks = [
+// Fallback nav links if no database data
+const fallbackNavLinks = [
   { name: "হোম", path: "/" },
   { name: "জেনারেল বই", path: "/shop" },
   { name: "একাডেমিক", path: "/shop?category=academic" },
   { name: "আরবি বই", path: "/shop?category=arabic" },
-  { name: "বিষয়", path: "/shop?category=subject" },
   { name: "লেখক", path: "/authors" },
   { name: "প্রকাশক", path: "/publishers" },
   { name: "আজকের অফার", path: "/offers" },
   { name: "প্রি-অর্ডার", path: "/preorder" },
-  { name: "লাইফস্টাইল", path: "/lifestyle" },
-  { name: "স্টেশনারি", path: "/stationery" },
-  { name: "ফুড", path: "/food" },
 ];
 
 export const Header = () => {
@@ -36,6 +34,7 @@ export const Header = () => {
   const { user, signOut } = useAuth();
   const { cartCount } = useCartContext();
   const { wishlistCount } = useWishlistContext();
+  const { menuItems, loading: menuLoading } = useNavigationMenu('header');
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -43,6 +42,11 @@ export const Header = () => {
     toast.success("Logged out successfully");
     navigate("/");
   };
+
+  // Use dynamic menu items or fallback
+  const navLinks = menuItems.length > 0 
+    ? menuItems.map(item => ({ name: item.title_bn, path: item.url, openInNewTab: item.open_in_new_tab }))
+    : fallbackNavLinks.map(item => ({ ...item, openInNewTab: false }));
 
   return (
     <>
@@ -170,11 +174,22 @@ export const Header = () => {
         <nav className="hidden md:block border-t border-border bg-card">
           <div className="container">
             <ul className="flex items-center gap-1 overflow-x-auto py-1">
-              {navLinks.map((link) => (
-                <li key={link.name}>
-                  <Link to={link.path} className="nav-link whitespace-nowrap">
-                    {link.name}
-                  </Link>
+              {navLinks.map((link, index) => (
+                <li key={`${link.name}-${index}`}>
+                  {link.openInNewTab ? (
+                    <a 
+                      href={link.path} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="nav-link whitespace-nowrap"
+                    >
+                      {link.name}
+                    </a>
+                  ) : (
+                    <Link to={link.path} className="nav-link whitespace-nowrap">
+                      {link.name}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
@@ -182,7 +197,11 @@ export const Header = () => {
         </nav>
       </header>
 
-      <MobileMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+      <MobileMenu 
+        isOpen={isMenuOpen} 
+        onClose={() => setIsMenuOpen(false)} 
+        dynamicMenuItems={navLinks}
+      />
     </>
   );
 };
