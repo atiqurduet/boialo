@@ -48,6 +48,7 @@ import AdminFraudReview from "./pages/admin/AdminFraudReview";
 import AdminSMS from "./pages/admin/AdminSMS";
 import AdminWriters from "./pages/admin/AdminWriters";
 import AdminPublishers from "./pages/admin/AdminPublishers";
+import AdminBranding from "./pages/admin/AdminBranding";
 import AdminBrands from "./pages/admin/AdminBrands";
 import AdminMenu from "./pages/admin/AdminMenu";
 import AdminFooter from "./pages/admin/AdminFooter";
@@ -112,6 +113,7 @@ const App = () => (
                 <Route path="/admin/sms" element={<AdminSMS />} />
                 <Route path="/admin/menu" element={<AdminMenu />} />
                 <Route path="/admin/footer" element={<AdminFooter />} />
+                <Route path="/admin/branding" element={<AdminBranding />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>

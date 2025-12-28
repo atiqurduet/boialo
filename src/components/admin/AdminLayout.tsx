@@ -22,7 +22,8 @@ import {
   Ticket,
   Home,
   Navigation,
-  Footprints
+  Footprints,
+  Palette
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +34,7 @@ interface AdminLayoutProps {
 const menuItems = [
   { icon: LayoutDashboard, label: 'ড্যাশবোর্ড', href: '/admin', roles: ['admin', 'manager', 'support'] },
   { icon: Home, label: 'হোমপেজ', href: '/admin/homepage', roles: ['admin', 'manager'] },
+  { icon: Palette, label: 'ব্র্যান্ডিং', href: '/admin/branding', roles: ['admin', 'manager'] },
   { icon: Navigation, label: 'মেনু', href: '/admin/menu', roles: ['admin', 'manager'] },
   { icon: Footprints, label: 'ফুটার', href: '/admin/footer', roles: ['admin', 'manager'] },
   { icon: ShoppingCart, label: 'অর্ডার', href: '/admin/orders', roles: ['admin', 'manager', 'support'] },
