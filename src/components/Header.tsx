@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCartContext } from "@/contexts/CartContext";
 import { useWishlistContext } from "@/contexts/WishlistContext";
 import { useNavigationMenu } from "@/hooks/useNavigationMenu";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +36,7 @@ export const Header = () => {
   const { cartCount } = useCartContext();
   const { wishlistCount } = useWishlistContext();
   const { menuItems, loading: menuLoading } = useNavigationMenu('header');
+  const { settings: siteSettings } = useSiteSettings();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -55,15 +57,23 @@ export const Header = () => {
         <div className="container py-4">
           <div className="flex items-center justify-between gap-4">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-1 shrink-0">
-              <svg viewBox="0 0 40 40" className="w-8 h-8" fill="none">
-                <circle cx="20" cy="20" r="18" className="fill-primary" />
-                <path
-                  d="M12 28V14l8 7-8 7zm8-7l8-7v14l-8-7z"
-                  className="fill-primary-foreground"
+            <Link to="/" className="flex items-center gap-2 shrink-0">
+              {siteSettings.header_logo ? (
+                <img 
+                  src={siteSettings.header_logo} 
+                  alt={siteSettings.site_name} 
+                  className="h-10 object-contain"
                 />
-              </svg>
-              <span className="text-2xl font-bold text-primary">WafiLife</span>
+              ) : (
+                <svg viewBox="0 0 40 40" className="w-8 h-8" fill="none">
+                  <circle cx="20" cy="20" r="18" className="fill-primary" />
+                  <path
+                    d="M12 28V14l8 7-8 7zm8-7l8-7v14l-8-7z"
+                    className="fill-primary-foreground"
+                  />
+                </svg>
+              )}
+              <span className="text-2xl font-bold text-primary">{siteSettings.site_name}</span>
             </Link>
 
             {/* Search Bar */}

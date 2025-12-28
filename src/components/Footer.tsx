@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { Facebook, Youtube, Instagram, Phone, Mail, MapPin } from "lucide-react";
 import { useFooterData } from "@/hooks/useFooterData";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 export const Footer = () => {
   const { sections, loading } = useFooterData();
+  const { settings: siteSettings, loading: settingsLoading } = useSiteSettings();
 
   // Get sections by type
   const linksSections = sections.filter(s => s.section_type === 'links');
@@ -30,18 +32,31 @@ export const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
           <div>
-            <Link to="/" className="flex items-center gap-1 mb-4">
-              <svg viewBox="0 0 40 40" className="w-8 h-8" fill="none">
-                <circle cx="20" cy="20" r="18" className="fill-primary" />
-                <path
-                  d="M12 28V14l8 7-8 7zm8-7l8-7v14l-8-7z"
-                  className="fill-primary-foreground"
+            <Link to="/" className="flex items-center gap-2 mb-4">
+              {siteSettings.footer_logo ? (
+                <img 
+                  src={siteSettings.footer_logo} 
+                  alt={siteSettings.site_name} 
+                  className="h-10 object-contain"
                 />
-              </svg>
-              <span className="text-2xl font-bold text-primary">WafiLife</span>
+              ) : (
+                <>
+                  <svg viewBox="0 0 40 40" className="w-8 h-8" fill="none">
+                    <circle cx="20" cy="20" r="18" className="fill-primary" />
+                    <path
+                      d="M12 28V14l8 7-8 7zm8-7l8-7v14l-8-7z"
+                      className="fill-primary-foreground"
+                    />
+                  </svg>
+                  <span className="text-2xl font-bold text-primary">{siteSettings.site_name}</span>
+                </>
+              )}
+              {siteSettings.footer_logo && (
+                <span className="text-2xl font-bold text-primary">{siteSettings.site_name}</span>
+              )}
             </Link>
             <p className="text-sm text-muted-foreground mb-4">
-              বাংলাদেশের সবচেয়ে বড় অনলাইন বই ও লাইফস্টাইল শপ। আমরা সেরা মানের পণ্য সরবরাহ করি।
+              {settingsLoading ? 'লোড হচ্ছে...' : siteSettings.footer_description}
             </p>
             <div className="flex items-center gap-3">
               <a
@@ -137,7 +152,7 @@ export const Footer = () => {
         <div className="container py-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
-              © ২০২৫ WafiLife. সর্বস্বত্ব সংরক্ষিত।
+              {settingsLoading ? '© 2025 WafiLife' : siteSettings.copyright_text}
             </p>
             <div className="flex items-center gap-4">
               <img

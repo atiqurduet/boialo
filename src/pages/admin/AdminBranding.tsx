@@ -1,0 +1,266 @@
+import { useState, useEffect } from "react";
+import { AdminLayout } from "@/components/admin/AdminLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Loader2, Image as ImageIcon, Type, Bell } from "lucide-react";
+
+interface BrandingSettings {
+  header_logo: string;
+  footer_logo: string;
+  site_name: string;
+  footer_description: string;
+  copyright_text: string;
+  pre_header_text: string;
+  pre_header_link: string;
+  pre_header_enabled: boolean;
+}
+
+const defaultSettings: BrandingSettings = {
+  header_logo: '',
+  footer_logo: '',
+  site_name: 'WafiLife',
+  footer_description: 'বাংলাদেশের সবচেয়ে বড় অনলাইন বই ও লাইফস্টাইল শপ।',
+  copyright_text: '© 2024 WafiLife. সর্বস্বত্ব সংরক্ষিত।',
+  pre_header_text: '🎉 সকল বইয়ে ১৫% ছাড়! কোড: BOOK15',
+  pre_header_link: '/offers',
+  pre_header_enabled: true,
+};
+
+export default function AdminBranding() {
+  const [settings, setSettings] = useState<BrandingSettings>(defaultSettings);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('setting_key, setting_value')
+        .eq('category', 'branding');
+
+      if (error) throw error;
+
+      if (data) {
+        const newSettings = { ...defaultSettings };
+        data.forEach(item => {
+          const value = item.setting_value;
+          const key = item.setting_key;
+          if (key === 'pre_header_enabled') {
+            newSettings.pre_header_enabled = value === true || value === 'true';
+          } else if (key in newSettings) {
+            (newSettings as Record<string, unknown>)[key] = typeof value === 'string' ? value : String(value || '');
+          }
+        });
+        setSettings(newSettings);
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      toast.error('সেটিংস লোড করতে সমস্যা হয়েছে');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const updates = Object.entries(settings).map(([key, value]) => ({
+        setting_key: key,
+        setting_value: typeof value === 'boolean' ? value : value,
+        category: 'branding',
+        setting_type: key === 'pre_header_enabled' ? 'boolean' : 'string',
+      }));
+
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('site_settings')
+          .upsert(update, { onConflict: 'setting_key' });
+        
+        if (error) throw error;
+      }
+
+      toast.success('সেটিংস সংরক্ষিত হয়েছে');
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast.error('সেটিংস সংরক্ষণে সমস্যা হয়েছে');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateSetting = <K extends keyof BrandingSettings>(key: K, value: BrandingSettings[K]) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  return (
+    <AdminLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">ব্র্যান্ডিং সেটিংস</h1>
+            <p className="text-muted-foreground">
+              হেডার, ফুটার এবং প্রি-হেডার কাস্টমাইজ করুন
+            </p>
+          </div>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            সংরক্ষণ করুন
+          </Button>
+        </div>
+
+        {/* Logo Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ImageIcon className="w-5 h-5" />
+              লোগো সেটিংস
+            </CardTitle>
+            <CardDescription>
+              হেডার এবং ফুটার লোগো আপডেট করুন
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="site_name">সাইটের নাম</Label>
+                <Input
+                  id="site_name"
+                  value={settings.site_name}
+                  onChange={(e) => updateSetting('site_name', e.target.value)}
+                  placeholder="WafiLife"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="header_logo">হেডার লোগো URL</Label>
+                <Input
+                  id="header_logo"
+                  value={settings.header_logo}
+                  onChange={(e) => updateSetting('header_logo', e.target.value)}
+                  placeholder="https://example.com/logo.png"
+                />
+                {settings.header_logo && (
+                  <img 
+                    src={settings.header_logo} 
+                    alt="Header Logo Preview" 
+                    className="h-12 object-contain mt-2 bg-muted p-2 rounded"
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="footer_logo">ফুটার লোগো URL</Label>
+                <Input
+                  id="footer_logo"
+                  value={settings.footer_logo}
+                  onChange={(e) => updateSetting('footer_logo', e.target.value)}
+                  placeholder="https://example.com/footer-logo.png"
+                />
+                {settings.footer_logo && (
+                  <img 
+                    src={settings.footer_logo} 
+                    alt="Footer Logo Preview" 
+                    className="h-12 object-contain mt-2 bg-muted p-2 rounded"
+                  />
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Pre-Header Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="w-5 h-5" />
+              প্রি-হেডার (ঘোষণা বার)
+            </CardTitle>
+            <CardDescription>
+              হেডারের উপরে ঘোষণা বার কাস্টমাইজ করুন
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="pre_header_enabled">প্রি-হেডার দেখান</Label>
+              <Switch
+                id="pre_header_enabled"
+                checked={settings.pre_header_enabled}
+                onCheckedChange={(checked) => updateSetting('pre_header_enabled', checked)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pre_header_text">ঘোষণা টেক্সট</Label>
+              <Input
+                id="pre_header_text"
+                value={settings.pre_header_text}
+                onChange={(e) => updateSetting('pre_header_text', e.target.value)}
+                placeholder="🎉 বিশেষ অফার!"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pre_header_link">ঘোষণা লিংক</Label>
+              <Input
+                id="pre_header_link"
+                value={settings.pre_header_link}
+                onChange={(e) => updateSetting('pre_header_link', e.target.value)}
+                placeholder="/offers"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Footer Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Type className="w-5 h-5" />
+              ফুটার সেটিংস
+            </CardTitle>
+            <CardDescription>
+              ফুটার বিবরণ এবং কপিরাইট টেক্সট আপডেট করুন
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="footer_description">ফুটার বিবরণ</Label>
+              <Textarea
+                id="footer_description"
+                value={settings.footer_description}
+                onChange={(e) => updateSetting('footer_description', e.target.value)}
+                placeholder="আপনার সাইটের বিবরণ..."
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="copyright_text">কপিরাইট টেক্সট</Label>
+              <Input
+                id="copyright_text"
+                value={settings.copyright_text}
+                onChange={(e) => updateSetting('copyright_text', e.target.value)}
+                placeholder="© 2024 YourSite. সর্বস্বত্ব সংরক্ষিত।"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AdminLayout>
+  );
+}
