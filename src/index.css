@@ -211,4 +211,13 @@
       transform: scale(1);
     }
   }
+
+  /* Hide scrollbar for nav */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }

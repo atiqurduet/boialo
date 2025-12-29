@@ -19,9 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { GripVertical, Eye, EyeOff, Settings2, Plus, Trash2 } from 'lucide-react';
+import { GripVertical, Eye, EyeOff, Settings2, Plus, Trash2, Search } from 'lucide-react';
 
 interface HomepageSection {
   id: string;
@@ -37,12 +38,14 @@ interface HomepageSection {
 const sectionTypeLabels: Record<string, string> = {
   flash_sale: '⚡ ফ্ল্যাশ সেল',
   category_grid: '📚 ক্যাটাগরি গ্রিড',
+  category_products: '📂 ক্যাটাগরি প্রোডাক্ট',
+  writer_products: '✍️ লেখকের বই',
   new_releases: '🆕 নতুন প্রকাশিত',
   bestsellers: '🏆 বেস্টসেলার',
   promo_banner: '🎯 প্রমো ব্যানার',
   recommended: '💡 সুপারিশকৃত',
   featured_products: '⭐ ফিচার্ড প্রোডাক্ট',
-  custom_products: '📦 কাস্টম প্রোডাক্ট গ্রিড',
+  selected_products: '📌 সিলেক্টেড প্রোডাক্ট',
   trust_badges: '🛡️ ট্রাস্ট ব্যাজ',
   newsletter: '📧 নিউজলেটার',
 };
@@ -60,6 +63,12 @@ const AdminHomepage = () => {
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
 
+  // Data for dropdowns
+  const [categories, setCategories] = useState<Array<{ id: string; name_bn: string }>>([]);
+  const [writers, setWriters] = useState<Array<{ id: string; name_bn: string }>>([]);
+  const [products, setProducts] = useState<Array<{ id: string; title_bn: string }>>([]);
+  const [productSearch, setProductSearch] = useState('');
+
   const [formData, setFormData] = useState({
     section_type: '',
     title_bn: '',
@@ -71,7 +80,43 @@ const AdminHomepage = () => {
 
   useEffect(() => {
     fetchSections();
+    fetchCategories();
+    fetchWriters();
   }, []);
+
+  useEffect(() => {
+    if (productSearch.length >= 2) {
+      fetchProducts(productSearch);
+    }
+  }, [productSearch]);
+
+  const fetchCategories = async () => {
+    const { data } = await supabase
+      .from('categories')
+      .select('id, name_bn')
+      .eq('is_active', true)
+      .order('name_bn');
+    setCategories(data || []);
+  };
+
+  const fetchWriters = async () => {
+    const { data } = await supabase
+      .from('writers')
+      .select('id, name_bn')
+      .eq('is_active', true)
+      .order('name_bn');
+    setWriters(data || []);
+  };
+
+  const fetchProducts = async (search: string) => {
+    const { data } = await supabase
+      .from('products')
+      .select('id, title_bn')
+      .eq('is_active', true)
+      .ilike('title_bn', `%${search}%`)
+      .limit(20);
+    setProducts(data || []);
+  };
 
   const fetchSections = async () => {
     try {
@@ -310,7 +355,6 @@ const AdminHomepage = () => {
       case 'bestsellers':
       case 'recommended':
       case 'featured_products':
-      case 'custom_products':
         return (
           <div className="space-y-4 border-t pt-4 mt-4">
             <h4 className="font-medium">সেকশন সেটিংস</h4>
@@ -369,6 +413,152 @@ const AdminHomepage = () => {
               />
               <Label>র‍্যাংকিং দেখান</Label>
             </div>
+          </div>
+        );
+
+      case 'category_products':
+        return (
+          <div className="space-y-4 border-t pt-4 mt-4">
+            <h4 className="font-medium">ক্যাটাগরি প্রোডাক্ট সেটিংস</h4>
+            <div>
+              <Label>ক্যাটাগরি নির্বাচন করুন</Label>
+              <Select
+                value={formData.settings.category_id || ''}
+                onValueChange={(value) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, category_id: value }
+                })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="ক্যাটাগরি নির্বাচন করুন" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.name_bn}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>প্রোডাক্ট সংখ্যা</Label>
+              <Input
+                type="number"
+                value={formData.settings.limit || 10}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, limit: Number(e.target.value) }
+                })}
+              />
+            </div>
+            <div>
+              <Label>View All লিংক</Label>
+              <Input
+                value={formData.settings.view_all_link || '/shop'}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, view_all_link: e.target.value }
+                })}
+              />
+            </div>
+          </div>
+        );
+
+      case 'writer_products':
+        return (
+          <div className="space-y-4 border-t pt-4 mt-4">
+            <h4 className="font-medium">লেখকের বই সেটিংস</h4>
+            <div>
+              <Label>লেখক নির্বাচন করুন</Label>
+              <Select
+                value={formData.settings.writer_id || ''}
+                onValueChange={(value) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, writer_id: value }
+                })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="লেখক নির্বাচন করুন" />
+                </SelectTrigger>
+                <SelectContent>
+                  {writers.map(writer => (
+                    <SelectItem key={writer.id} value={writer.id}>{writer.name_bn}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>প্রোডাক্ট সংখ্যা</Label>
+              <Input
+                type="number"
+                value={formData.settings.limit || 10}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, limit: Number(e.target.value) }
+                })}
+              />
+            </div>
+            <div>
+              <Label>View All লিংক</Label>
+              <Input
+                value={formData.settings.view_all_link || '/authors'}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, view_all_link: e.target.value }
+                })}
+              />
+            </div>
+          </div>
+        );
+
+      case 'selected_products':
+        const selectedProducts: string[] = formData.settings.product_ids || [];
+        return (
+          <div className="space-y-4 border-t pt-4 mt-4">
+            <h4 className="font-medium">সিলেক্টেড প্রোডাক্ট সেটিংস</h4>
+            <div>
+              <Label>প্রোডাক্ট খুঁজুন</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="প্রোডাক্টের নাম লিখুন..."
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+            {products.length > 0 && productSearch.length >= 2 && (
+              <div className="border rounded-lg max-h-48 overflow-y-auto">
+                {products.map(product => (
+                  <label 
+                    key={product.id} 
+                    className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedProducts.includes(product.id)}
+                      onCheckedChange={(checked) => {
+                        const newIds = checked 
+                          ? [...selectedProducts, product.id]
+                          : selectedProducts.filter(id => id !== product.id);
+                        setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, product_ids: newIds }
+                        });
+                      }}
+                    />
+                    <span className="text-sm">{product.title_bn}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            {selectedProducts.length > 0 && (
+              <div>
+                <Label>নির্বাচিত প্রোডাক্ট ({selectedProducts.length})</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedProducts.length}টি প্রোডাক্ট নির্বাচন করা হয়েছে
+                </p>
+              </div>
+            )}
           </div>
         );
 
