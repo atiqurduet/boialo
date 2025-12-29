@@ -14,6 +14,7 @@ import { LogoUpload } from "@/components/admin/LogoUpload";
 interface BrandingSettings {
   header_logo: string;
   footer_logo: string;
+  favicon: string;
   site_name: string;
   footer_description: string;
   copyright_text: string;
@@ -25,6 +26,7 @@ interface BrandingSettings {
 const defaultSettings: BrandingSettings = {
   header_logo: '',
   footer_logo: '',
+  favicon: '',
   site_name: 'WafiLife',
   footer_description: 'বাংলাদেশের সবচেয়ে বড় অনলাইন বই ও লাইফস্টাইল শপ।',
   copyright_text: '© 2024 WafiLife. সর্বস্বত্ব সংরক্ষিত।',
@@ -168,6 +170,18 @@ export default function AdminBranding() {
                   label="Footer Logo"
                   folder="footer"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>ফেভিকন</Label>
+                <LogoUpload
+                  value={settings.favicon}
+                  onChange={(url) => updateSetting('favicon', url)}
+                  label="Favicon"
+                  folder="favicon"
+                />
+                <p className="text-xs text-muted-foreground">
+                  ব্রাউজার ট্যাবে দেখানো আইকন (সাজেস্টেড: ৩২x৩২ বা ৬৪x৬৪ পিক্সেল)
+                </p>
               </div>
             </div>
           </CardContent>

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface SiteSettings {
   header_logo: string;
   footer_logo: string;
+  favicon: string;
   site_name: string;
   footer_description: string;
   copyright_text: string;
@@ -15,6 +16,7 @@ interface SiteSettings {
 const defaultSettings: SiteSettings = {
   header_logo: '',
   footer_logo: '',
+  favicon: '',
   site_name: 'WafiLife',
   footer_description: 'বাংলাদেশের সবচেয়ে বড় অনলাইন বই ও লাইফস্টাইল শপ। আমরা সেরা মানের পণ্য সরবরাহ করি।',
   copyright_text: '© 2024 WafiLife. সর্বস্বত্ব সংরক্ষিত।',
@@ -36,6 +38,7 @@ export function useSiteSettings() {
           .in('setting_key', [
             'header_logo',
             'footer_logo',
+            'favicon',
             'site_name',
             'footer_description',
             'copyright_text',
@@ -58,6 +61,19 @@ export function useSiteSettings() {
             }
           });
           setSettings(newSettings);
+          
+          // Update favicon dynamically
+          if (newSettings.favicon) {
+            const existingFavicon = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+            if (existingFavicon) {
+              existingFavicon.href = newSettings.favicon;
+            } else {
+              const link = document.createElement('link');
+              link.rel = 'icon';
+              link.href = newSettings.favicon;
+              document.head.appendChild(link);
+            }
+          }
         }
       } catch (error) {
         console.error('Error fetching site settings:', error);
