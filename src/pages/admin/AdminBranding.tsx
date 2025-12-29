@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Image as ImageIcon, Type, Bell } from "lucide-react";
+import { LogoUpload } from "@/components/admin/LogoUpload";
 
 interface BrandingSettings {
   header_logo: string;
@@ -151,36 +152,22 @@ export default function AdminBranding() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="header_logo">হেডার লোগো URL</Label>
-                <Input
-                  id="header_logo"
+                <Label>হেডার লোগো</Label>
+                <LogoUpload
                   value={settings.header_logo}
-                  onChange={(e) => updateSetting('header_logo', e.target.value)}
-                  placeholder="https://example.com/logo.png"
+                  onChange={(url) => updateSetting('header_logo', url)}
+                  label="Header Logo"
+                  folder="header"
                 />
-                {settings.header_logo && (
-                  <img 
-                    src={settings.header_logo} 
-                    alt="Header Logo Preview" 
-                    className="h-12 object-contain mt-2 bg-muted p-2 rounded"
-                  />
-                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="footer_logo">ফুটার লোগো URL</Label>
-                <Input
-                  id="footer_logo"
+                <Label>ফুটার লোগো</Label>
+                <LogoUpload
                   value={settings.footer_logo}
-                  onChange={(e) => updateSetting('footer_logo', e.target.value)}
-                  placeholder="https://example.com/footer-logo.png"
+                  onChange={(url) => updateSetting('footer_logo', url)}
+                  label="Footer Logo"
+                  folder="footer"
                 />
-                {settings.footer_logo && (
-                  <img 
-                    src={settings.footer_logo} 
-                    alt="Footer Logo Preview" 
-                    className="h-12 object-contain mt-2 bg-muted p-2 rounded"
-                  />
-                )}
               </div>
             </div>
           </CardContent>
