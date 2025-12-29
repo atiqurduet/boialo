@@ -54,18 +54,28 @@ export const Header = () => {
     <>
       <header className="sticky top-0 z-50 bg-card border-b border-border">
         {/* Top Header */}
-        <div className="container py-4">
-          <div className="flex items-center justify-between gap-4">
+        <div className="container py-3 md:py-4">
+          <div className="flex items-center justify-between gap-2 md:gap-4">
+            {/* Mobile Menu Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden shrink-0"
+              onClick={() => setIsMenuOpen(true)}
+            >
+              <Menu className="w-5 h-5" />
+            </Button>
+
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 shrink-0">
+            <Link to="/" className="flex items-center gap-1.5 md:gap-2 shrink-0">
               {siteSettings.header_logo ? (
                 <img 
                   src={siteSettings.header_logo} 
                   alt={siteSettings.site_name} 
-                  className="h-10 object-contain"
+                  className="h-8 md:h-10 object-contain"
                 />
               ) : (
-                <svg viewBox="0 0 40 40" className="w-8 h-8" fill="none">
+                <svg viewBox="0 0 40 40" className="w-7 h-7 md:w-8 md:h-8" fill="none">
                   <circle cx="20" cy="20" r="18" className="fill-primary" />
                   <path
                     d="M12 28V14l8 7-8 7zm8-7l8-7v14l-8-7z"
@@ -73,10 +83,10 @@ export const Header = () => {
                   />
                 </svg>
               )}
-              <span className="text-2xl font-bold text-primary">{siteSettings.site_name}</span>
+              <span className="text-lg md:text-2xl font-bold text-primary hidden xs:inline">{siteSettings.site_name}</span>
             </Link>
 
-            {/* Search Bar */}
+            {/* Search Bar - Desktop */}
             <SearchDropdown
               query={searchQuery}
               onQueryChange={setSearchQuery}
@@ -84,34 +94,36 @@ export const Header = () => {
             />
 
             {/* Right Actions */}
-            <div className="flex items-center gap-2 md:gap-4">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
               <Link
                 to="/wishlist"
-                className="hidden sm:flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors relative"
+                className="hidden sm:flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors relative p-2"
               >
                 <Heart className="w-5 h-5" />
                 <span className="hidden lg:inline text-sm">উইশলিস্ট</span>
                 {wishlistCount > 0 && (
-                  <span className="absolute -top-1 -right-1 lg:-top-2 lg:right-12 bg-primary text-primary-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                  <span className="absolute top-0 right-0 lg:-top-1 lg:right-12 bg-primary text-primary-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">
                     {wishlistCount}
                   </span>
                 )}
               </Link>
               <Link
                 to="/cart"
-                className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors relative"
+                className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors relative p-2"
               >
                 <ShoppingBag className="w-5 h-5" />
                 <span className="hidden lg:inline text-sm">শপিং ব্যাগ</span>
-                <span className="absolute -top-1 -right-1 lg:-top-2 lg:right-8 bg-primary text-primary-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                  {cartCount}
-                </span>
+                {cartCount > 0 && (
+                  <span className="absolute top-0 right-0 lg:-top-1 lg:right-8 bg-primary text-primary-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
               </Link>
 
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors">
+                    <button className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors p-2">
                       <User className="w-5 h-5" />
                       <span className="hidden lg:inline text-sm truncate max-w-[100px]">
                         {user.user_metadata?.full_name || user.email?.split("@")[0]}
@@ -152,21 +164,12 @@ export const Header = () => {
               ) : (
                 <Link
                   to="/signin"
-                  className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                  className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors p-2"
                 >
                   <User className="w-5 h-5" />
                   <span className="hidden lg:inline text-sm">Sign In</span>
                 </Link>
               )}
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden"
-                onClick={() => setIsMenuOpen(true)}
-              >
-                <Menu className="w-5 h-5" />
-              </Button>
             </div>
           </div>
 
@@ -180,12 +183,12 @@ export const Header = () => {
           </div>
         </div>
 
-        {/* Navigation */}
+        {/* Navigation - Desktop only */}
         <nav className="hidden md:block border-t border-border bg-card">
           <div className="container">
-            <ul className="flex items-center gap-1 overflow-x-auto py-1">
+            <ul className="flex items-center gap-1 overflow-x-auto py-1 scrollbar-hide">
               {navLinks.map((link, index) => (
-                <li key={`${link.name}-${index}`}>
+                <li key={`${link.name}-${index}`} className="shrink-0">
                   {link.openInNewTab ? (
                     <a 
                       href={link.path} 

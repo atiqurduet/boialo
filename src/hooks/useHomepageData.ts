@@ -33,6 +33,14 @@ interface Product {
   is_featured: boolean;
   is_preorder: boolean;
   category_id: string | null;
+  writer_id: string | null;
+}
+
+interface Writer {
+  id: string;
+  name_bn: string;
+  name_en: string;
+  slug: string;
 }
 
 interface HomepageSection {
@@ -50,16 +58,21 @@ interface HomepageData {
   banners: Banner[];
   categories: Category[];
   products: Product[];
+  writers: Writer[];
   sections: HomepageSection[];
   loading: boolean;
   error: string | null;
+  getProductsByCategory: (categoryId: string) => Product[];
+  getProductsByWriter: (writerId: string) => Product[];
+  getProductsByIds: (ids: string[]) => Product[];
 }
 
 export const useHomepageData = (): HomepageData => {
-  const [data, setData] = useState<HomepageData>({
+  const [data, setData] = useState<Omit<HomepageData, 'getProductsByCategory' | 'getProductsByWriter' | 'getProductsByIds'>>({
     banners: [],
     categories: [],
     products: [],
+    writers: [],
     sections: [],
     loading: true,
     error: null,
@@ -69,7 +82,7 @@ export const useHomepageData = (): HomepageData => {
     const fetchData = async () => {
       try {
         // Fetch all data in parallel
-        const [bannersRes, categoriesRes, productsRes, sectionsRes] = await Promise.all([
+        const [bannersRes, categoriesRes, productsRes, sectionsRes, writersRes] = await Promise.all([
           supabase
             .from('banners')
             .select('*')
@@ -85,23 +98,30 @@ export const useHomepageData = (): HomepageData => {
             .select('*')
             .eq('is_active', true)
             .order('created_at', { ascending: false })
-            .limit(50),
+            .limit(100),
           supabase
             .from('homepage_sections')
             .select('*')
             .eq('is_active', true)
             .order('sort_order', { ascending: true }),
+          supabase
+            .from('writers')
+            .select('id, name_bn, name_en, slug')
+            .eq('is_active', true)
+            .order('name_bn'),
         ]);
 
         if (bannersRes.error) throw bannersRes.error;
         if (categoriesRes.error) throw categoriesRes.error;
         if (productsRes.error) throw productsRes.error;
         if (sectionsRes.error) throw sectionsRes.error;
+        if (writersRes.error) throw writersRes.error;
 
         setData({
           banners: bannersRes.data || [],
           categories: categoriesRes.data || [],
           products: productsRes.data || [],
+          writers: writersRes.data || [],
           sections: sectionsRes.data || [],
           loading: false,
           error: null,
@@ -119,5 +139,23 @@ export const useHomepageData = (): HomepageData => {
     fetchData();
   }, []);
 
-  return data;
+  // Helper functions to filter products
+  const getProductsByCategory = (categoryId: string): Product[] => {
+    return data.products.filter(p => p.category_id === categoryId);
+  };
+
+  const getProductsByWriter = (writerId: string): Product[] => {
+    return data.products.filter(p => p.writer_id === writerId);
+  };
+
+  const getProductsByIds = (ids: string[]): Product[] => {
+    return data.products.filter(p => ids.includes(p.id));
+  };
+
+  return {
+    ...data,
+    getProductsByCategory,
+    getProductsByWriter,
+    getProductsByIds,
+  };
 };
