@@ -6,11 +6,9 @@ import { ProductCard } from "@/components/ProductCard";
 import { Heart, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWishlistContext } from "@/contexts/WishlistContext";
-import { useAuth } from "@/contexts/AuthContext";
 
 const Wishlist = () => {
   const { wishlistItems, loading, removeFromWishlist, clearWishlist } = useWishlistContext();
-  const { user } = useAuth();
 
   if (loading) {
     return (
@@ -27,27 +25,7 @@ const Wishlist = () => {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-background">
-        <AnnouncementBar />
-        <Header />
-        <main className="container py-12">
-          <div className="text-center py-16">
-            <Heart className="w-20 h-20 mx-auto text-muted-foreground mb-6" />
-            <h1 className="text-2xl font-bold mb-4">Please sign in to view your wishlist</h1>
-            <p className="text-muted-foreground mb-8">
-              Sign in to save your favorite books and access them later
-            </p>
-            <Link to="/signin">
-              <Button className="btn-primary">Sign In</Button>
-            </Link>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+  // Guest users can now use wishlist - no login required
 
   if (wishlistItems.length === 0) {
     return (

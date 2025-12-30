@@ -5,11 +5,9 @@ import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { Button } from "@/components/ui/button";
 import { Trash2, Plus, Minus, ShoppingBag, Loader2 } from "lucide-react";
 import { useCartContext } from "@/contexts/CartContext";
-import { useAuth } from "@/contexts/AuthContext";
 
 const Cart = () => {
   const { cartItems, loading, updateQuantity, removeFromCart, subtotal } = useCartContext();
-  const { user } = useAuth();
   
   const shipping = subtotal >= 499 ? 0 : 60;
   const total = subtotal + shipping;
@@ -29,27 +27,7 @@ const Cart = () => {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-background">
-        <AnnouncementBar />
-        <Header />
-        <main className="container py-12">
-          <div className="text-center py-16">
-            <ShoppingBag className="w-20 h-20 mx-auto text-muted-foreground mb-6" />
-            <h1 className="text-2xl font-bold mb-4">Please sign in to view your cart</h1>
-            <p className="text-muted-foreground mb-8">
-              Sign in to add items to your cart and start shopping
-            </p>
-            <Link to="/signin">
-              <Button className="btn-primary">Sign In</Button>
-            </Link>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+  // Guest users can now use cart - no login required
 
   if (cartItems.length === 0) {
     return (

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
@@ -7,10 +7,17 @@ import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductReviews } from "@/components/ProductReviews";
 import { ProductImageGallery } from "@/components/ProductImageGallery";
+import { SecurePdfViewer } from "@/components/SecurePdfViewer";
+import { SocialShare } from "@/components/SocialShare";
+import { ExpandableText } from "@/components/ExpandableText";
 import { sampleProducts } from "@/data/products";
 import { Button } from "@/components/ui/button";
-import { Heart, Share2, ChevronRight, BookOpen, FileText } from "lucide-react";
+import { Heart, ChevronRight, BookOpen, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWishlistContext } from "@/contexts/WishlistContext";
+import { useCartContext } from "@/contexts/CartContext";
+import { format } from "date-fns";
+import { bn } from "date-fns/locale";
 import {
   Dialog,
   DialogContent,
@@ -18,29 +25,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const getCategoryName = (category?: string) => {
-  switch (category) {
-    case "academic": return "একাডেমিক বই";
-    case "children": return "শিশু কিশোরদের বই";
-    case "islamic": return "ইসলামি বই";
-    case "history": return "ইতিহাস";
-    case "biography": return "জীবনী";
-    case "hadith": return "হাদীস";
-    case "tafsir": return "তাফসীর";
-    case "fiqh": return "ফিকহ";
-    case "arabic": return "আরবি ভাষা";
-    case "self-help": return "আত্মশুদ্ধি ও অনুপ্রেরণা";
-    case "novel": return "উপন্যাস";
-    case "literature": return "সাহিত্য";
-    case "magazine": return "ম্যাগাজিন";
-    default: return "ইসলামি বই";
-  }
-};
-
 const ProductDetail = () => {
   const { id } = useParams();
-  const [quantity, setQuantity] = useState(1);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [preorderMessage, setPreorderMessage] = useState<string>("");
+  const { isInWishlist, toggleWishlist } = useWishlistContext();
+  const { addToCart } = useCartContext();
 
   // Fetch product from Supabase
   const { data: dbProduct } = useQuery({
@@ -48,15 +38,38 @@ const ProductDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          category:categories(id, name_bn, name_en, slug),
+          writer:writers(id, name_bn, name_en, slug),
+          publisher_rel:publishers(id, name_bn, name_en, slug)
+        `)
         .eq('id', id)
-        .single();
+        .maybeSingle();
       
       if (error) return null;
       return data;
     },
     enabled: !!id,
   });
+
+  // Fetch preorder message setting
+  useEffect(() => {
+    const fetchPreorderMessage = async () => {
+      const { data } = await supabase
+        .from('site_settings')
+        .select('setting_value')
+        .eq('setting_key', 'preorder_message')
+        .maybeSingle();
+      
+      if (data?.setting_value) {
+        setPreorderMessage(String(data.setting_value).replace(/^"|"$/g, ''));
+      } else {
+        setPreorderMessage('আমাদের জানিয়েছেন এই পণ্যটি {release_date} প্রকাশিত হতে পারে। প্রকাশিত হওয়ার সাথে সাথে পণ্যটি পেতে আগেই অর্ডার করে রাখুন।');
+      }
+    };
+    fetchPreorderMessage();
+  }, []);
 
   // Find product from sample data or use first sample product as fallback
   const sampleProduct = sampleProducts.find((p) => p.id === id) || sampleProducts[0];
@@ -66,25 +79,102 @@ const ProductDetail = () => {
     ? (Array.isArray(dbProduct.images) ? dbProduct.images as string[] : [])
     : (sampleProduct.image ? [sampleProduct.image] : []);
 
+  // Get category name
+  const getCategoryName = () => {
+    if (dbProduct?.category?.name_bn) return dbProduct.category.name_bn;
+    return 'ইসলামি বই';
+  };
+
+  // Get category slug for link
+  const getCategorySlug = () => {
+    if (dbProduct?.category?.slug) return dbProduct.category.slug;
+    if (dbProduct?.category?.id) return dbProduct.category.id;
+    return 'islamic';
+  };
+
+  // Get writer info
+  const getWriterName = () => {
+    if (dbProduct?.writer?.name_bn) return dbProduct.writer.name_bn;
+    if (dbProduct?.author) return dbProduct.author;
+    return sampleProduct.author || 'অজানা লেখক';
+  };
+
+  const getWriterSlug = () => {
+    if (dbProduct?.writer?.slug) return dbProduct.writer.slug;
+    if (dbProduct?.writer?.id) return dbProduct.writer.id;
+    return encodeURIComponent(getWriterName());
+  };
+
+  // Get publisher info
+  const getPublisherName = () => {
+    if (dbProduct?.publisher_rel?.name_bn) return dbProduct.publisher_rel.name_bn;
+    if (dbProduct?.publisher) return dbProduct.publisher;
+    return 'মুন্দানদানী প্রকাশনী';
+  };
+
+  const getPublisherSlug = () => {
+    if (dbProduct?.publisher_rel?.slug) return dbProduct.publisher_rel.slug;
+    if (dbProduct?.publisher_rel?.id) return dbProduct.publisher_rel.id;
+    return encodeURIComponent(getPublisherName());
+  };
+
+  // Format release date
+  const getFormattedReleaseDate = () => {
+    if (dbProduct?.release_date) {
+      try {
+        return format(new Date(dbProduct.release_date), 'd MMMM yyyy', { locale: bn });
+      } catch {
+        return dbProduct.release_date;
+      }
+    }
+    return '30 December 2025';
+  };
+
+  // Get preorder message with date
+  const getPreorderMessage = () => {
+    const releaseDate = getFormattedReleaseDate();
+    return preorderMessage.replace('{release_date}', releaseDate);
+  };
+
   // Use database product if available, otherwise fallback to sample
   const product = dbProduct ? {
     id: dbProduct.id,
     title: dbProduct.title_bn || dbProduct.title_en,
-    author: dbProduct.author || 'অজানা লেখক',
+    author: getWriterName(),
     price: dbProduct.price,
     originalPrice: dbProduct.original_price,
     discount: dbProduct.discount_percent,
     image: productImages.length > 0 ? productImages[0] : '/placeholder.svg',
     images: productImages,
-    publisher: dbProduct.publisher,
-    category: dbProduct.category_id,
+    publisher: getPublisherName(),
+    category: getCategorySlug(),
+    categoryName: getCategoryName(),
     previewUrl: dbProduct.preview_url,
-  } : { ...sampleProduct, images: productImages };
+    description: dbProduct.description_bn || dbProduct.description_en || '',
+    isPreorder: dbProduct.is_preorder,
+    releaseDate: dbProduct.release_date,
+    pages: dbProduct.stock_quantity, // Using stock as placeholder for pages
+  } : { 
+    ...sampleProduct, 
+    images: productImages,
+    categoryName: 'ইসলামি বই',
+    description: 'মুমিনের হারাবার কিছু নেই আমরা এমন এক সময়ে বাস করছি, যেখানে কষ্ট মানেই পরাজয়, হারানো মানেই শেষ, আর ব্যথা মানেই আল্লাহর অসন্তুষ্টি—এমন ভুল ধারণা আমাদের চারপাশে ছড়িয়ে পড়েছে।',
+    isPreorder: true,
+  };
 
   const relatedProducts = sampleProducts.filter((p) => p.id !== product.id).slice(0, 4);
   const hasDiscount = product.discount && product.discount > 0;
   const previewUrl = (product as any).previewUrl;
-  const isPdf = previewUrl?.toLowerCase().endsWith('.pdf');
+  const inWishlist = isInWishlist(product.id);
+  const productUrl = `/product/${product.id}`;
+
+  const handleAddToCart = () => {
+    addToCart(product.id);
+  };
+
+  const handlePreOrder = () => {
+    addToCart(product.id);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -98,7 +188,12 @@ const ProductDetail = () => {
           <ChevronRight className="w-4 h-4" />
           <Link to="/shop" className="hover:text-primary">বিষয়</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-foreground">ইসলামি বই</span>
+          <Link 
+            to={`/shop?category=${getCategorySlug()}`} 
+            className="hover:text-primary"
+          >
+            {getCategoryName()}
+          </Link>
           <ChevronRight className="w-4 h-4" />
           <span className="text-foreground line-clamp-1">{product.title}</span>
         </nav>
@@ -112,6 +207,8 @@ const ProductDetail = () => {
                   images={(product as any).images || [product.image]}
                   title={product.title}
                   discount={product.discount}
+                  previewUrl={previewUrl}
+                  onPreviewClick={() => setPreviewOpen(true)}
                 />
               </div>
             </div>
@@ -125,20 +222,29 @@ const ProductDetail = () => {
               <div className="space-y-2 text-sm">
                 <p>
                   <span className="text-muted-foreground">লেখক : </span>
-                  <Link to={`/shop?author=${encodeURIComponent(product.author)}`} className="text-primary hover:underline">
-                    {product.author}
+                  <Link 
+                    to={`/shop?writer=${getWriterSlug()}`} 
+                    className="text-primary hover:underline"
+                  >
+                    {getWriterName()}
                   </Link>
                 </p>
                 <p>
                   <span className="text-muted-foreground">প্রকাশনী : </span>
-                  <Link to={`/shop?publisher=${encodeURIComponent(product.publisher || 'মুন্দানদানী প্রকাশনী')}`} className="text-primary hover:underline">
-                    {product.publisher || 'মুন্দানদানী প্রকাশনী'}
+                  <Link 
+                    to={`/shop?publisher=${getPublisherSlug()}`} 
+                    className="text-primary hover:underline"
+                  >
+                    {getPublisherName()}
                   </Link>
                 </p>
                 <p>
                   <span className="text-muted-foreground">বিষয় : </span>
-                  <Link to={`/shop?category=${product.category || 'islamic'}`} className="text-primary hover:underline">
-                    {getCategoryName(product.category as string)}
+                  <Link 
+                    to={`/shop?category=${getCategorySlug()}`} 
+                    className="text-primary hover:underline"
+                  >
+                    {getCategoryName()}
                   </Link>
                 </p>
                 <p>
@@ -148,22 +254,27 @@ const ProductDetail = () => {
               </div>
 
               {/* Pre-order Notice */}
-              <div className="bg-muted/50 border border-border rounded-lg p-4 text-sm">
-                <p className="text-foreground">
-                  আমাদের জানিয়েছেন এই পণ্যটি <strong>30 December 2025</strong> প্রকাশিত হতে পারে। প্রকাশিত হওয়ার সাথে সাথে পণ্যটি পেতে আগেই অর্ডার করে রাখুন।
-                </p>
-              </div>
+              {(product as any).isPreorder && (
+                <div className="bg-muted/50 border border-border rounded-lg p-4 text-sm">
+                  <p className="text-foreground">
+                    {getPreorderMessage().split(getFormattedReleaseDate()).map((part, index, arr) => (
+                      <span key={index}>
+                        {part}
+                        {index < arr.length - 1 && (
+                          <strong>{getFormattedReleaseDate()}</strong>
+                        )}
+                      </span>
+                    ))}
+                  </p>
+                </div>
+              )}
 
-              {/* Description */}
-              <div className="text-sm text-muted-foreground leading-relaxed">
-                <p>
-                  মুমিনের হারাবার কিছু নেই আমরা এমন এক সময়ে বাস করছি, যেখানে কষ্ট মানেই পরাজয়,
-                  হারানো মানেই শেষ, আর ব্যথা মানেই আল্লাহর অসন্তুষ্টি—এমন ভুল ধারণা আমাদের চারপাশে
-                  ছড়িয়ে পড়েছে।{" "}
-                  <Link to="#" className="text-primary hover:underline">
-                    আরো পড়ুন
-                  </Link>
-                </p>
+              {/* Description with Read More */}
+              <div className="text-sm text-muted-foreground">
+                <ExpandableText 
+                  text={(product as any).description || 'মুমিনের হারাবার কিছু নেই আমরা এমন এক সময়ে বাস করছি, যেখানে কষ্ট মানেই পরাজয়, হারানো মানেই শেষ, আর ব্যথা মানেই আল্লাহর অসন্তুষ্টি—এমন ভুল ধারণা আমাদের চারপাশে ছড়িয়ে পড়েছে।'}
+                  maxLength={150}
+                />
               </div>
 
               {/* Price */}
@@ -183,11 +294,25 @@ const ProductDetail = () => {
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button className="btn-outline-primary flex-1">
-                  প্রি-অর্ডার করুন
-                </Button>
+                {(product as any).isPreorder ? (
+                  <Button 
+                    className="flex-1 bg-primary hover:bg-primary/90"
+                    onClick={handlePreOrder}
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-2" />
+                    প্রি-অর্ডার করুন
+                  </Button>
+                ) : (
+                  <Button 
+                    className="flex-1 bg-primary hover:bg-primary/90"
+                    onClick={handleAddToCart}
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-2" />
+                    কার্টে যোগ করুন
+                  </Button>
+                )}
                 <Button 
-                  className="btn-primary flex-1 bg-accent hover:bg-accent/90"
+                  className="flex-1 bg-accent hover:bg-accent/90"
                   onClick={() => setPreviewOpen(true)}
                   disabled={!previewUrl}
                 >
@@ -203,15 +328,22 @@ const ProductDetail = () => {
               )}
 
               {/* Wishlist & Share */}
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <button className="flex items-center gap-2 hover:text-primary transition-colors">
-                  <Heart className="w-5 h-5" />
-                  Wishlist
+              <div className="flex items-center gap-4 text-sm">
+                <button 
+                  className={`flex items-center gap-2 transition-colors ${
+                    inWishlist ? 'text-red-500' : 'text-muted-foreground hover:text-primary'
+                  }`}
+                  onClick={() => toggleWishlist(product.id)}
+                >
+                  <Heart className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`} />
+                  {inWishlist ? 'উইশলিস্টে আছে' : 'Wishlist'}
                 </button>
-                <button className="flex items-center gap-2 hover:text-primary transition-colors">
-                  <Share2 className="w-5 h-5" />
-                  বন্ধুদের সাথে শেয়ার করুন
-                </button>
+                <SocialShare 
+                  url={productUrl}
+                  title={product.title}
+                  description={(product as any).description}
+                  image={product.image}
+                />
               </div>
             </div>
           </div>
@@ -273,7 +405,7 @@ const ProductDetail = () => {
 
       <Footer />
 
-      {/* Preview Dialog */}
+      {/* Secure Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
@@ -283,40 +415,7 @@ const ProductDetail = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="overflow-auto max-h-[70vh]">
-            {previewUrl && isPdf ? (
-              <div className="flex flex-col items-center gap-4">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <FileText className="w-8 h-8" />
-                  <span>PDF Preview</span>
-                </div>
-                <iframe 
-                  src={previewUrl} 
-                  className="w-full h-[60vh] border rounded-lg"
-                  title="Book Preview PDF"
-                />
-                <a 
-                  href={previewUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline text-sm"
-                >
-                  নতুন ট্যাবে খুলুন
-                </a>
-              </div>
-            ) : previewUrl ? (
-              <div className="flex justify-center">
-                <img 
-                  src={previewUrl} 
-                  alt="Book Preview" 
-                  className="max-w-full max-h-[65vh] object-contain rounded-lg"
-                />
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <BookOpen className="w-16 h-16 mb-4 opacity-50" />
-                <p>এই বইয়ের প্রিভিউ এখনো যোগ করা হয়নি</p>
-              </div>
-            )}
+            <SecurePdfViewer url={previewUrl} title={product.title} />
           </div>
         </DialogContent>
       </Dialog>
