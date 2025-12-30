@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Image as ImageIcon, Type, Bell } from "lucide-react";
+import { Loader2, Image as ImageIcon, Type, Bell, ShoppingCart } from "lucide-react";
 import { LogoUpload } from "@/components/admin/LogoUpload";
 
 interface BrandingSettings {
@@ -21,6 +21,7 @@ interface BrandingSettings {
   pre_header_text: string;
   pre_header_link: string;
   pre_header_enabled: boolean;
+  preorder_message: string;
 }
 
 const defaultSettings: BrandingSettings = {
@@ -33,6 +34,7 @@ const defaultSettings: BrandingSettings = {
   pre_header_text: '🎉 সকল বইয়ে ১৫% ছাড়! কোড: BOOK15',
   pre_header_link: '/offers',
   pre_header_enabled: true,
+  preorder_message: 'আমাদের জানিয়েছেন এই পণ্যটি {release_date} প্রকাশিত হতে পারে। প্রকাশিত হওয়ার সাথে সাথে পণ্যটি পেতে আগেই অর্ডার করে রাখুন।',
 };
 
 export default function AdminBranding() {
@@ -49,7 +51,7 @@ export default function AdminBranding() {
       const { data, error } = await supabase
         .from('site_settings')
         .select('setting_key, setting_value')
-        .eq('category', 'branding');
+        .or('category.eq.branding,setting_key.eq.preorder_message');
 
       if (error) throw error;
 
@@ -60,6 +62,8 @@ export default function AdminBranding() {
           const key = item.setting_key;
           if (key === 'pre_header_enabled') {
             newSettings.pre_header_enabled = value === true || value === 'true';
+          } else if (key === 'preorder_message') {
+            newSettings.preorder_message = typeof value === 'string' ? value.replace(/^"|"$/g, '') : String(value || '');
           } else if (key in newSettings) {
             (newSettings as Record<string, unknown>)[key] = typeof value === 'string' ? value : String(value || '');
           }
@@ -258,6 +262,34 @@ export default function AdminBranding() {
                 onChange={(e) => updateSetting('copyright_text', e.target.value)}
                 placeholder="© 2024 YourSite. সর্বস্বত্ব সংরক্ষিত।"
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Pre-Order Message Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5" />
+              প্রি-অর্ডার মেসেজ
+            </CardTitle>
+            <CardDescription>
+              প্রি-অর্ডার পণ্যের জন্য কাস্টম মেসেজ সেট করুন। {'{release_date}'} প্লেসহোল্ডার ব্যবহার করুন।
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="preorder_message">প্রি-অর্ডার মেসেজ</Label>
+              <Textarea
+                id="preorder_message"
+                value={settings.preorder_message}
+                onChange={(e) => updateSetting('preorder_message', e.target.value)}
+                placeholder="আমাদের জানিয়েছেন এই পণ্যটি {release_date} প্রকাশিত হতে পারে..."
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                {'{release_date}'} স্বয়ংক্রিয়ভাবে পণ্যের প্রকাশের তারিখ দিয়ে প্রতিস্থাপিত হবে
+              </p>
             </div>
           </CardContent>
         </Card>

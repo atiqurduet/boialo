@@ -1,25 +1,36 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ProductImageGalleryProps {
   images: string[];
   title: string;
   discount?: number;
+  previewUrl?: string;
+  onPreviewClick?: () => void;
 }
 
-export const ProductImageGallery = ({ images, title, discount }: ProductImageGalleryProps) => {
+export const ProductImageGallery = ({ 
+  images, 
+  title, 
+  discount, 
+  previewUrl,
+  onPreviewClick 
+}: ProductImageGalleryProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const hasDiscount = discount && discount > 0;
+  const hasPreview = !!previewUrl;
   
   // Fallback to placeholder if no images
   const displayImages = images.length > 0 ? images : ['/placeholder.svg'];
 
-  const goToPrevious = () => {
+  const goToPrevious = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setCurrentIndex((prev) => (prev === 0 ? displayImages.length - 1 : prev - 1));
   };
 
-  const goToNext = () => {
+  const goToNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setCurrentIndex((prev) => (prev === displayImages.length - 1 ? 0 : prev + 1));
   };
 
@@ -27,19 +38,46 @@ export const ProductImageGallery = ({ images, title, discount }: ProductImageGal
     setCurrentIndex(index);
   };
 
+  const handleImageClick = () => {
+    if (hasPreview && onPreviewClick) {
+      onPreviewClick();
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Main Image */}
       <div className="relative group">
-        <p className="text-xs text-primary mb-2 cursor-pointer hover:underline">
-          ভিতরে কী আছে পড়তে বইয়ের ছবিতে ক্লিক করুন
-        </p>
-        <div className="aspect-[3/4] rounded-lg overflow-hidden bg-muted relative">
+        {hasPreview && (
+          <p 
+            className="text-xs text-primary mb-2 cursor-pointer hover:underline flex items-center gap-1"
+            onClick={handleImageClick}
+          >
+            <Eye className="w-3 h-3" />
+            ভিতরে কী আছে পড়তে বইয়ের ছবিতে ক্লিক করুন
+          </p>
+        )}
+        <div 
+          className={`aspect-[3/4] rounded-lg overflow-hidden bg-muted relative ${
+            hasPreview ? 'cursor-pointer' : ''
+          }`}
+          onClick={handleImageClick}
+        >
           <img
             src={displayImages[currentIndex]}
             alt={`${title} - Image ${currentIndex + 1}`}
             className="w-full h-full object-cover transition-opacity duration-300"
           />
+          
+          {/* Preview Overlay on hover */}
+          {hasPreview && (
+            <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+              <div className="bg-background/90 rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-medium">
+                <Eye className="w-4 h-4" />
+                প্রিভিউ দেখুন
+              </div>
+            </div>
+          )}
           
           {/* Navigation Arrows */}
           {displayImages.length > 1 && (
