@@ -1,14 +1,16 @@
 import { useState, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
-import { ProductCard } from "@/components/ProductCard";
+import { ProductCard, Product } from "@/components/ProductCard";
 import { sampleProducts, publishers } from "@/data/products";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown, ChevronUp, Filter, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
   SelectContent,
@@ -21,6 +23,7 @@ const Shop = () => {
   const [searchParams] = useSearchParams();
   const category = searchParams.get("category");
   const author = searchParams.get("author");
+  const writer = searchParams.get("writer"); // writer slug or ID from database
   const publisher = searchParams.get("publisher");
   const searchQuery = searchParams.get("search") || "";
   const [priceRange, setPriceRange] = useState([0, 30000]);
@@ -30,6 +33,78 @@ const Shop = () => {
     publisher: true,
   });
 
+  // Fetch categories from database
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('categories')
+        .select('id, name_bn, name_en, slug')
+        .eq('is_active', true);
+      return data || [];
+    },
+  });
+
+  // Fetch writers from database
+  const { data: writers = [] } = useQuery({
+    queryKey: ['writers'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('writers')
+        .select('id, name_bn, name_en, slug')
+        .eq('is_active', true);
+      return data || [];
+    },
+  });
+
+  // Fetch publishers from database
+  const { data: dbPublishers = [] } = useQuery({
+    queryKey: ['publishers'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('publishers')
+        .select('id, name_bn, name_en, slug')
+        .eq('is_active', true);
+      return data || [];
+    },
+  });
+
+  // Fetch products from database
+  const { data: dbProducts = [] } = useQuery({
+    queryKey: ['products-shop'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('products')
+        .select(`
+          *,
+          category:categories(id, name_bn, name_en, slug),
+          writer:writers(id, name_bn, name_en, slug),
+          publisher_rel:publishers(id, name_bn, name_en, slug)
+        `)
+        .eq('is_active', true)
+        .eq('is_preorder', false);
+      return data || [];
+    },
+  });
+
+  // Find matching writer info
+  const getWriterInfo = () => {
+    if (!writer) return null;
+    return writers.find(w => w.slug === writer || w.id === writer);
+  };
+
+  // Find matching publisher info
+  const getPublisherInfo = () => {
+    if (!publisher) return null;
+    return dbPublishers.find(p => p.slug === publisher || p.id === publisher);
+  };
+
+  // Find matching category info
+  const getCategoryInfo = () => {
+    if (!category) return null;
+    return categories.find(c => c.slug === category || c.id === category);
+  };
+
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
       ...prev,
@@ -37,9 +112,37 @@ const Shop = () => {
     }));
   };
 
+  // Convert database products to Product interface
+  const convertDbProduct = (dbProduct: any): Product => {
+    const images = dbProduct.images as string[] || [];
+    return {
+      id: dbProduct.id,
+      title: dbProduct.title_bn || dbProduct.title_en,
+      author: dbProduct.writer?.name_bn || dbProduct.author || 'অজানা লেখক',
+      price: dbProduct.price,
+      originalPrice: dbProduct.original_price,
+      discount: dbProduct.discount_percent,
+      image: images.length > 0 ? images[0] : '/placeholder.svg',
+      category: dbProduct.category?.slug || dbProduct.category_id,
+      publisher: dbProduct.publisher_rel?.name_bn || dbProduct.publisher,
+      isPreorder: dbProduct.is_preorder,
+      releaseDate: dbProduct.release_date,
+    };
+  };
+
   const filteredProducts = useMemo(() => {
-    // Start with non-preorder products only (preorder products are shown on Preorder page)
-    let products = sampleProducts.filter((p) => !p.isPreorder);
+    // Combine database products with sample products
+    let allProducts: Product[] = [
+      ...dbProducts.map(convertDbProduct),
+      ...sampleProducts.filter((p) => !p.isPreorder)
+    ];
+
+    // Remove duplicates by ID
+    const uniqueProducts = allProducts.filter((product, index, self) =>
+      index === self.findIndex((p) => p.id === product.id)
+    );
+
+    let products = uniqueProducts;
 
     // Filter by search query
     if (searchQuery) {
@@ -51,19 +154,61 @@ const Shop = () => {
       );
     }
 
-    // Filter by category
+    // Filter by category (slug or ID)
     if (category) {
-      products = products.filter((p) => p.category === category);
+      const categoryInfo = getCategoryInfo();
+      products = products.filter((p) => {
+        if (categoryInfo) {
+          // Match by category slug or ID
+          return p.category === categoryInfo.slug || p.category === categoryInfo.id;
+        }
+        // Fallback to direct category match
+        return p.category === category;
+      });
     }
 
-    // Filter by author
+    // Filter by writer (from database - slug or ID)
+    if (writer) {
+      const writerInfo = getWriterInfo();
+      products = dbProducts
+        .filter(p => {
+          if (writerInfo) {
+            return p.writer?.slug === writerInfo.slug || 
+                   p.writer?.id === writerInfo.id ||
+                   p.writer_id === writerInfo.id;
+          }
+          return false;
+        })
+        .map(convertDbProduct);
+    }
+
+    // Filter by author (from sample data - for backward compatibility)
     if (author) {
       products = products.filter((p) => p.author === author);
     }
 
-    // Filter by publisher
+    // Filter by publisher (slug, ID, or name)
     if (publisher) {
-      products = products.filter((p) => p.publisher === publisher);
+      const publisherInfo = getPublisherInfo();
+      if (publisherInfo) {
+        // Filter from database products
+        const dbFiltered = dbProducts
+          .filter(p => 
+            p.publisher_rel?.slug === publisherInfo.slug || 
+            p.publisher_rel?.id === publisherInfo.id ||
+            p.publisher_id === publisherInfo.id
+          )
+          .map(convertDbProduct);
+        
+        // Also check sample products by publisher name
+        const sampleFiltered = sampleProducts
+          .filter(p => p.publisher === publisherInfo.name_bn || p.publisher === publisherInfo.name_en);
+        
+        products = [...dbFiltered, ...sampleFiltered];
+      } else {
+        // Fallback to direct name match
+        products = products.filter((p) => p.publisher === publisher);
+      }
     }
 
     // Filter by price range
@@ -72,48 +217,120 @@ const Shop = () => {
     );
 
     return products;
-  }, [searchQuery, category, author, publisher, priceRange]);
+  }, [searchQuery, category, author, writer, publisher, priceRange, dbProducts, categories, writers, dbPublishers]);
 
   const getCategoryTitle = () => {
     if (searchQuery) {
       return `"${searchQuery}" এর ফলাফল`;
     }
+    
+    // Writer filter
+    if (writer) {
+      const writerInfo = getWriterInfo();
+      if (writerInfo) {
+        return `লেখক: ${writerInfo.name_bn}`;
+      }
+      return `লেখক: ${writer}`;
+    }
+    
+    // Author filter (backward compatibility)
     if (author) {
       return `লেখক: ${author}`;
     }
+    
+    // Publisher filter
     if (publisher) {
+      const publisherInfo = getPublisherInfo();
+      if (publisherInfo) {
+        return `প্রকাশনী: ${publisherInfo.name_bn}`;
+      }
       return `প্রকাশনী: ${publisher}`;
     }
-    switch (category) {
-      case "academic":
-        return "একাডেমিক বই";
-      case "children":
-        return "শিশু কিশোরদের বই";
-      case "islamic":
-        return "ইসলামি বই";
-      case "history":
-        return "ইতিহাস";
-      case "biography":
-        return "জীবনী";
-      case "hadith":
-        return "হাদীস";
-      case "tafsir":
-        return "তাফসীর";
-      case "fiqh":
-        return "ফিকহ";
-      case "arabic":
-        return "আরবি ভাষা";
-      case "self-help":
-        return "আত্মশুদ্ধি ও অনুপ্রেরণা";
-      case "novel":
-        return "উপন্যাস";
-      case "literature":
-        return "সাহিত্য";
-      case "magazine":
-        return "ম্যাগাজিন";
-      default:
-        return "সকল বই";
+    
+    // Category filter
+    if (category) {
+      const categoryInfo = getCategoryInfo();
+      if (categoryInfo) {
+        return categoryInfo.name_bn;
+      }
+      
+      // Fallback category names
+      switch (category) {
+        case "academic":
+          return "একাডেমিক বই";
+        case "children":
+          return "শিশু কিশোরদের বই";
+        case "islamic":
+          return "ইসলামি বই";
+        case "history":
+          return "ইতিহাস";
+        case "biography":
+          return "জীবনী";
+        case "hadith":
+          return "হাদীস";
+        case "tafsir":
+          return "তাফসীর";
+        case "fiqh":
+          return "ফিকহ";
+        case "arabic":
+          return "আরবি ভাষা";
+        case "self-help":
+          return "আত্মশুদ্ধি ও অনুপ্রেরণা";
+        case "novel":
+          return "উপন্যাস";
+        case "literature":
+          return "সাহিত্য";
+        case "magazine":
+          return "ম্যাগাজিন";
+        default:
+          return category;
+      }
     }
+    
+    return "সকল বই";
+  };
+
+  // Generate SEO-friendly breadcrumb
+  const getBreadcrumb = () => {
+    if (writer) {
+      const writerInfo = getWriterInfo();
+      return (
+        <>
+          <Link to="/authors" className="hover:text-primary">লেখক</Link>
+          <span className="mx-2">›</span>
+          <span className="text-foreground">{writerInfo?.name_bn || writer}</span>
+        </>
+      );
+    }
+    if (author) {
+      return (
+        <>
+          <Link to="/authors" className="hover:text-primary">লেখক</Link>
+          <span className="mx-2">›</span>
+          <span className="text-foreground">{author}</span>
+        </>
+      );
+    }
+    if (publisher) {
+      const publisherInfo = getPublisherInfo();
+      return (
+        <>
+          <Link to="/publishers" className="hover:text-primary">প্রকাশনী</Link>
+          <span className="mx-2">›</span>
+          <span className="text-foreground">{publisherInfo?.name_bn || publisher}</span>
+        </>
+      );
+    }
+    if (category) {
+      return (
+        <>
+          <span>বিষয়</span>
+          <span className="mx-2">›</span>
+          <span className="text-foreground">{getCategoryTitle()}</span>
+        </>
+      );
+    }
+    return <span className="text-foreground">সকল বই</span>;
   };
 
   return (
@@ -123,10 +340,10 @@ const Shop = () => {
 
       <main className="container py-6">
         {/* Breadcrumb */}
-        <nav className="text-sm text-muted-foreground mb-4">
-          <span>বই</span>
+        <nav className="text-sm text-muted-foreground mb-4 flex flex-wrap items-center">
+          <Link to="/" className="hover:text-primary">হোম</Link>
           <span className="mx-2">›</span>
-          <span className="text-foreground">{getCategoryTitle()}</span>
+          {getBreadcrumb()}
         </nav>
 
         <div className="flex flex-col lg:flex-row gap-6">
@@ -228,17 +445,29 @@ const Shop = () => {
                 </button>
                 {expandedSections.publisher && (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {publishers.map((publisher) => (
-                      <label
-                        key={publisher.id}
-                        className="filter-checkbox"
-                      >
-                        <Checkbox />
-                        <span>
-                          {publisher.name} ({publisher.count})
-                        </span>
-                      </label>
-                    ))}
+                    {dbPublishers.length > 0 ? (
+                      dbPublishers.map((pub) => (
+                        <Link
+                          key={pub.id}
+                          to={`/shop?publisher=${pub.slug}`}
+                          className="flex items-center gap-2 text-sm hover:text-primary transition-colors py-1"
+                        >
+                          <span>{pub.name_bn}</span>
+                        </Link>
+                      ))
+                    ) : (
+                      publishers.map((pub) => (
+                        <label
+                          key={pub.id}
+                          className="filter-checkbox"
+                        >
+                          <Checkbox />
+                          <span>
+                            {pub.name} ({pub.count})
+                          </span>
+                        </label>
+                      ))
+                    )}
                   </div>
                 )}
               </div>
@@ -296,23 +525,25 @@ const Shop = () => {
             )}
 
             {/* Pagination */}
-            <div className="flex items-center justify-center gap-2 mt-8">
-              <Button variant="outline" size="sm" disabled>
-                Previous
-              </Button>
-              <Button variant="default" size="sm">
-                1
-              </Button>
-              <Button variant="outline" size="sm">
-                2
-              </Button>
-              <Button variant="outline" size="sm">
-                3
-              </Button>
-              <Button variant="outline" size="sm">
-                Next
-              </Button>
-            </div>
+            {filteredProducts.length > 0 && (
+              <div className="flex items-center justify-center gap-2 mt-8">
+                <Button variant="outline" size="sm" disabled>
+                  Previous
+                </Button>
+                <Button variant="default" size="sm">
+                  1
+                </Button>
+                <Button variant="outline" size="sm">
+                  2
+                </Button>
+                <Button variant="outline" size="sm">
+                  3
+                </Button>
+                <Button variant="outline" size="sm">
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </main>
