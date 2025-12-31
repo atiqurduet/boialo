@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { sampleProducts } from "@/data/products";
 import { toast } from "sonner";
 
 const GUEST_CART_KEY = 'guest_cart';
@@ -11,11 +10,24 @@ interface GuestCartItem {
   quantity: number;
 }
 
+interface ProductData {
+  id: string;
+  title: string;
+  author: string;
+  price: number;
+  originalPrice?: number;
+  discount?: number;
+  image: string;
+  category?: string;
+  publisher?: string;
+  isPreorder?: boolean;
+}
+
 export interface CartItem {
   id: string;
   productId: string;
   quantity: number;
-  product: typeof sampleProducts[0];
+  product: ProductData;
 }
 
 // Helper functions for localStorage
@@ -34,6 +46,35 @@ const setGuestCart = (items: GuestCartItem[]) => {
 
 const clearGuestCart = () => {
   localStorage.removeItem(GUEST_CART_KEY);
+};
+
+// Fetch product from database
+const fetchProduct = async (productId: string): Promise<ProductData | null> => {
+  const { data } = await supabase
+    .from('products')
+    .select(`
+      *,
+      writer:writers(name_bn),
+      publisher_rel:publishers(name_bn)
+    `)
+    .eq('id', productId)
+    .maybeSingle();
+  
+  if (!data) return null;
+  
+  const images = data.images as string[] || [];
+  return {
+    id: data.id,
+    title: data.title_bn || data.title_en,
+    author: data.writer?.name_bn || data.author || 'অজানা লেখক',
+    price: data.price,
+    originalPrice: data.original_price || undefined,
+    discount: data.discount_percent || undefined,
+    image: images.length > 0 ? images[0] : '/placeholder.svg',
+    category: data.category_id,
+    publisher: data.publisher_rel?.name_bn || data.publisher,
+    isPreorder: data.is_preorder,
+  };
 };
 
 export const useCart = () => {
@@ -82,17 +123,19 @@ export const useCart = () => {
     if (!user) {
       // Guest user - load from localStorage
       const guestCart = getGuestCart();
-      const items = guestCart
-        .map((item) => {
-          const product = sampleProducts.find((p) => p.id === item.productId);
-          return product ? {
+      const items: CartItem[] = [];
+      
+      for (const item of guestCart) {
+        const product = await fetchProduct(item.productId);
+        if (product) {
+          items.push({
             id: `guest-${item.productId}`,
             productId: item.productId,
             quantity: item.quantity,
             product,
-          } : null;
-        })
-        .filter((item): item is CartItem => item !== null);
+          });
+        }
+      }
 
       setCartItems(items);
       setLoading(false);
@@ -110,15 +153,18 @@ export const useCart = () => {
 
       if (error) throw error;
 
-      const items = data.map((item) => {
-        const product = sampleProducts.find((p) => p.id === item.product_id);
-        return {
-          id: item.id,
-          productId: item.product_id,
-          quantity: item.quantity,
-          product: product!,
-        };
-      }).filter((item) => item.product);
+      const items: CartItem[] = [];
+      for (const item of data) {
+        const product = await fetchProduct(item.product_id);
+        if (product) {
+          items.push({
+            id: item.id,
+            productId: item.product_id,
+            quantity: item.quantity,
+            product,
+          });
+        }
+      }
 
       setCartItems(items);
     } catch (error) {

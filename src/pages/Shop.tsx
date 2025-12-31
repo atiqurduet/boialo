@@ -5,12 +5,11 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { ProductCard, Product } from "@/components/ProductCard";
-import { sampleProducts, publishers } from "@/data/products";
 import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown, ChevronUp, Filter, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -22,8 +21,7 @@ import {
 const Shop = () => {
   const [searchParams] = useSearchParams();
   const category = searchParams.get("category");
-  const author = searchParams.get("author");
-  const writer = searchParams.get("writer"); // writer slug or ID from database
+  const writer = searchParams.get("writer");
   const publisher = searchParams.get("publisher");
   const searchQuery = searchParams.get("search") || "";
   const [priceRange, setPriceRange] = useState([0, 30000]);
@@ -70,7 +68,7 @@ const Shop = () => {
   });
 
   // Fetch products from database
-  const { data: dbProducts = [] } = useQuery({
+  const { data: dbProducts = [], isLoading } = useQuery({
     queryKey: ['products-shop'],
     queryFn: async () => {
       const { data } = await supabase
@@ -81,8 +79,7 @@ const Shop = () => {
           writer:writers(id, name_bn, name_en, slug),
           publisher_rel:publishers(id, name_bn, name_en, slug)
         `)
-        .eq('is_active', true)
-        .eq('is_preorder', false);
+        .eq('is_active', true);
       return data || [];
     },
   });
@@ -131,18 +128,7 @@ const Shop = () => {
   };
 
   const filteredProducts = useMemo(() => {
-    // Combine database products with sample products
-    let allProducts: Product[] = [
-      ...dbProducts.map(convertDbProduct),
-      ...sampleProducts.filter((p) => !p.isPreorder)
-    ];
-
-    // Remove duplicates by ID
-    const uniqueProducts = allProducts.filter((product, index, self) =>
-      index === self.findIndex((p) => p.id === product.id)
-    );
-
-    let products = uniqueProducts;
+    let products: Product[] = dbProducts.map(convertDbProduct);
 
     // Filter by search query
     if (searchQuery) {
@@ -157,28 +143,19 @@ const Shop = () => {
     // Filter by category (slug or ID)
     if (category) {
       const categoryInfo = getCategoryInfo();
-      
-      // Get filtered database products by category
-      const dbFiltered = dbProducts
+      products = dbProducts
         .filter(p => {
           if (categoryInfo) {
             return p.category?.slug === categoryInfo.slug || 
                    p.category?.id === categoryInfo.id ||
                    p.category_id === categoryInfo.id;
           }
-          // Direct match for category slug
           return p.category?.slug === category || p.category_id === category;
         })
         .map(convertDbProduct);
-      
-      // Get filtered sample products by category
-      const sampleFiltered = sampleProducts
-        .filter(p => !p.isPreorder && p.category === category);
-      
-      products = [...dbFiltered, ...sampleFiltered];
     }
 
-    // Filter by writer (from database - slug or ID)
+    // Filter by writer (slug or ID)
     if (writer) {
       const writerInfo = getWriterInfo();
       products = dbProducts
@@ -193,32 +170,17 @@ const Shop = () => {
         .map(convertDbProduct);
     }
 
-    // Filter by author (from sample data - for backward compatibility)
-    if (author) {
-      products = products.filter((p) => p.author === author);
-    }
-
-    // Filter by publisher (slug, ID, or name)
+    // Filter by publisher (slug or ID)
     if (publisher) {
       const publisherInfo = getPublisherInfo();
       if (publisherInfo) {
-        // Filter from database products
-        const dbFiltered = dbProducts
+        products = dbProducts
           .filter(p => 
             p.publisher_rel?.slug === publisherInfo.slug || 
             p.publisher_rel?.id === publisherInfo.id ||
             p.publisher_id === publisherInfo.id
           )
           .map(convertDbProduct);
-        
-        // Also check sample products by publisher name
-        const sampleFiltered = sampleProducts
-          .filter(p => p.publisher === publisherInfo.name_bn || p.publisher === publisherInfo.name_en);
-        
-        products = [...dbFiltered, ...sampleFiltered];
-      } else {
-        // Fallback to direct name match
-        products = products.filter((p) => p.publisher === publisher);
       }
     }
 
@@ -228,14 +190,13 @@ const Shop = () => {
     );
 
     return products;
-  }, [searchQuery, category, author, writer, publisher, priceRange, dbProducts, categories, writers, dbPublishers]);
+  }, [searchQuery, category, writer, publisher, priceRange, dbProducts, categories, writers, dbPublishers]);
 
   const getCategoryTitle = () => {
     if (searchQuery) {
       return `"${searchQuery}" এর ফলাফল`;
     }
     
-    // Writer filter
     if (writer) {
       const writerInfo = getWriterInfo();
       if (writerInfo) {
@@ -244,12 +205,6 @@ const Shop = () => {
       return `লেখক: ${writer}`;
     }
     
-    // Author filter (backward compatibility)
-    if (author) {
-      return `লেখক: ${author}`;
-    }
-    
-    // Publisher filter
     if (publisher) {
       const publisherInfo = getPublisherInfo();
       if (publisherInfo) {
@@ -258,44 +213,12 @@ const Shop = () => {
       return `প্রকাশনী: ${publisher}`;
     }
     
-    // Category filter
     if (category) {
       const categoryInfo = getCategoryInfo();
       if (categoryInfo) {
         return categoryInfo.name_bn;
       }
-      
-      // Fallback category names
-      switch (category) {
-        case "academic":
-          return "একাডেমিক বই";
-        case "children":
-          return "শিশু কিশোরদের বই";
-        case "islamic":
-          return "ইসলামি বই";
-        case "history":
-          return "ইতিহাস";
-        case "biography":
-          return "জীবনী";
-        case "hadith":
-          return "হাদীস";
-        case "tafsir":
-          return "তাফসীর";
-        case "fiqh":
-          return "ফিকহ";
-        case "arabic":
-          return "আরবি ভাষা";
-        case "self-help":
-          return "আত্মশুদ্ধি ও অনুপ্রেরণা";
-        case "novel":
-          return "উপন্যাস";
-        case "literature":
-          return "সাহিত্য";
-        case "magazine":
-          return "ম্যাগাজিন";
-        default:
-          return category;
-      }
+      return category;
     }
     
     return "সকল বই";
@@ -310,15 +233,6 @@ const Shop = () => {
           <Link to="/authors" className="hover:text-primary">লেখক</Link>
           <span className="mx-2">›</span>
           <span className="text-foreground">{writerInfo?.name_bn || writer}</span>
-        </>
-      );
-    }
-    if (author) {
-      return (
-        <>
-          <Link to="/authors" className="hover:text-primary">লেখক</Link>
-          <span className="mx-2">›</span>
-          <span className="text-foreground">{author}</span>
         </>
       );
     }
@@ -467,17 +381,7 @@ const Shop = () => {
                         </Link>
                       ))
                     ) : (
-                      publishers.map((pub) => (
-                        <label
-                          key={pub.id}
-                          className="filter-checkbox"
-                        >
-                          <Checkbox />
-                          <span>
-                            {pub.name} ({pub.count})
-                          </span>
-                        </label>
-                      ))
+                      <p className="text-sm text-muted-foreground">কোনো প্রকাশক নেই</p>
                     )}
                   </div>
                 )}
@@ -519,7 +423,13 @@ const Shop = () => {
               </div>
             </div>
 
-            {filteredProducts.length > 0 ? (
+            {isLoading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                {[...Array(8)].map((_, i) => (
+                  <Skeleton key={i} className="h-[280px] rounded-xl" />
+                ))}
+              </div>
+            ) : filteredProducts.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                 {filteredProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />

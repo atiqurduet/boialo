@@ -4,13 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
-import { ProductCard } from "@/components/ProductCard";
+import { ProductCard, Product } from "@/components/ProductCard";
 import { ProductReviews } from "@/components/ProductReviews";
 import { ProductImageGallery } from "@/components/ProductImageGallery";
 import { SecurePdfViewer } from "@/components/SecurePdfViewer";
 import { SocialShare } from "@/components/SocialShare";
 import { ExpandableText } from "@/components/ExpandableText";
-import { sampleProducts } from "@/data/products";
 import { Button } from "@/components/ui/button";
 import { Heart, ChevronRight, BookOpen, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +17,7 @@ import { useWishlistContext } from "@/contexts/WishlistContext";
 import { useCartContext } from "@/contexts/CartContext";
 import { format } from "date-fns";
 import { bn } from "date-fns/locale";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +33,7 @@ const ProductDetail = () => {
   const { addToCart } = useCartContext();
 
   // Fetch product from Supabase
-  const { data: dbProduct } = useQuery({
+  const { data: dbProduct, isLoading } = useQuery({
     queryKey: ['product', id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -51,6 +51,28 @@ const ProductDetail = () => {
       return data;
     },
     enabled: !!id,
+  });
+
+  // Fetch related products
+  const { data: relatedDbProducts = [] } = useQuery({
+    queryKey: ['related-products', dbProduct?.category_id],
+    queryFn: async () => {
+      if (!dbProduct?.category_id) return [];
+      const { data } = await supabase
+        .from('products')
+        .select(`
+          *,
+          category:categories(id, name_bn, slug),
+          writer:writers(id, name_bn, slug),
+          publisher_rel:publishers(id, name_bn, slug)
+        `)
+        .eq('is_active', true)
+        .eq('category_id', dbProduct.category_id)
+        .neq('id', id)
+        .limit(4);
+      return data || [];
+    },
+    enabled: !!dbProduct?.category_id,
   });
 
   // Fetch preorder message setting
@@ -71,32 +93,84 @@ const ProductDetail = () => {
     fetchPreorderMessage();
   }, []);
 
-  // Find product from sample data or use first sample product as fallback
-  const sampleProduct = sampleProducts.find((p) => p.id === id) || sampleProducts[0];
-  
+  // Convert database product to Product interface
+  const convertDbProduct = (dbProduct: any): Product => {
+    const images = dbProduct.images as string[] || [];
+    return {
+      id: dbProduct.id,
+      title: dbProduct.title_bn || dbProduct.title_en,
+      author: dbProduct.writer?.name_bn || dbProduct.author || 'অজানা লেখক',
+      price: dbProduct.price,
+      originalPrice: dbProduct.original_price,
+      discount: dbProduct.discount_percent,
+      image: images.length > 0 ? images[0] : '/placeholder.svg',
+      category: dbProduct.category?.slug || dbProduct.category_id,
+      publisher: dbProduct.publisher_rel?.name_bn || dbProduct.publisher,
+      isPreorder: dbProduct.is_preorder,
+      releaseDate: dbProduct.release_date,
+    };
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <AnnouncementBar />
+        <Header />
+        <main className="container py-6">
+          <Skeleton className="h-6 w-64 mb-6" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <Skeleton className="h-[400px] rounded-xl" />
+            <Skeleton className="h-[400px] rounded-xl" />
+            <Skeleton className="h-[400px] rounded-xl" />
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!dbProduct) {
+    return (
+      <div className="min-h-screen bg-background">
+        <AnnouncementBar />
+        <Header />
+        <main className="container py-6">
+          <div className="text-center py-16">
+            <h2 className="text-xl font-bold mb-2">পণ্য পাওয়া যায়নি</h2>
+            <p className="text-muted-foreground">এই পণ্যটি বর্তমানে উপলব্ধ নয়</p>
+            <Link to="/shop" className="text-primary hover:underline mt-4 inline-block">
+              সকল পণ্য দেখুন
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   // Parse images array
   const productImages: string[] = dbProduct?.images 
     ? (Array.isArray(dbProduct.images) ? dbProduct.images as string[] : [])
-    : (sampleProduct.image ? [sampleProduct.image] : []);
+    : [];
 
   // Get category name
   const getCategoryName = () => {
     if (dbProduct?.category?.name_bn) return dbProduct.category.name_bn;
-    return 'ইসলামি বই';
+    return 'বিষয়';
   };
 
   // Get category slug for link
   const getCategorySlug = () => {
     if (dbProduct?.category?.slug) return dbProduct.category.slug;
     if (dbProduct?.category?.id) return dbProduct.category.id;
-    return 'islamic';
+    return '';
   };
 
   // Get writer info
   const getWriterName = () => {
     if (dbProduct?.writer?.name_bn) return dbProduct.writer.name_bn;
     if (dbProduct?.author) return dbProduct.author;
-    return sampleProduct.author || 'অজানা লেখক';
+    return 'অজানা লেখক';
   };
 
   const getWriterSlug = () => {
@@ -109,7 +183,7 @@ const ProductDetail = () => {
   const getPublisherName = () => {
     if (dbProduct?.publisher_rel?.name_bn) return dbProduct.publisher_rel.name_bn;
     if (dbProduct?.publisher) return dbProduct.publisher;
-    return 'মুন্দানদানী প্রকাশনী';
+    return 'প্রকাশনী';
   };
 
   const getPublisherSlug = () => {
@@ -127,7 +201,7 @@ const ProductDetail = () => {
         return dbProduct.release_date;
       }
     }
-    return '30 December 2025';
+    return '';
   };
 
   // Get preorder message with date
@@ -136,8 +210,8 @@ const ProductDetail = () => {
     return preorderMessage.replace('{release_date}', releaseDate);
   };
 
-  // Use database product if available, otherwise fallback to sample
-  const product = dbProduct ? {
+  // Use database product
+  const product = {
     id: dbProduct.id,
     title: dbProduct.title_bn || dbProduct.title_en,
     author: getWriterName(),
@@ -153,18 +227,12 @@ const ProductDetail = () => {
     description: dbProduct.description_bn || dbProduct.description_en || '',
     isPreorder: dbProduct.is_preorder,
     releaseDate: dbProduct.release_date,
-    pages: dbProduct.stock_quantity, // Using stock as placeholder for pages
-  } : { 
-    ...sampleProduct, 
-    images: productImages,
-    categoryName: 'ইসলামি বই',
-    description: 'মুমিনের হারাবার কিছু নেই আমরা এমন এক সময়ে বাস করছি, যেখানে কষ্ট মানেই পরাজয়, হারানো মানেই শেষ, আর ব্যথা মানেই আল্লাহর অসন্তুষ্টি—এমন ভুল ধারণা আমাদের চারপাশে ছড়িয়ে পড়েছে।',
-    isPreorder: true,
+    pages: dbProduct.stock_quantity,
   };
 
-  const relatedProducts = sampleProducts.filter((p) => p.id !== product.id).slice(0, 4);
+  const relatedProducts = relatedDbProducts.map(convertDbProduct);
   const hasDiscount = product.discount && product.discount > 0;
-  const previewUrl = (product as any).previewUrl;
+  const previewUrl = product.previewUrl;
   const inWishlist = isInWishlist(product.id);
   const productUrl = `/product/${product.id}`;
 
@@ -204,7 +272,7 @@ const ProductDetail = () => {
             <div className="sticky top-24">
               <div className="bg-card rounded-xl p-4 shadow-sm">
                 <ProductImageGallery 
-                  images={(product as any).images || [product.image]}
+                  images={product.images.length > 0 ? product.images : [product.image]}
                   title={product.title}
                   discount={product.discount}
                   previewUrl={previewUrl}
@@ -247,14 +315,10 @@ const ProductDetail = () => {
                     {getCategoryName()}
                   </Link>
                 </p>
-                <p>
-                  <span className="text-muted-foreground">পৃষ্ঠা : </span>
-                  240, সংস্করণ : ডিসেম্বর 2025
-                </p>
               </div>
 
               {/* Pre-order Notice */}
-              {(product as any).isPreorder && (
+              {product.isPreorder && (
                 <div className="bg-muted/50 border border-border rounded-lg p-4 text-sm">
                   <p className="text-foreground">
                     {getPreorderMessage().split(getFormattedReleaseDate()).map((part, index, arr) => (
@@ -270,12 +334,14 @@ const ProductDetail = () => {
               )}
 
               {/* Description with Read More */}
-              <div className="text-sm text-muted-foreground">
-                <ExpandableText 
-                  text={(product as any).description || 'মুমিনের হারাবার কিছু নেই আমরা এমন এক সময়ে বাস করছি, যেখানে কষ্ট মানেই পরাজয়, হারানো মানেই শেষ, আর ব্যথা মানেই আল্লাহর অসন্তুষ্টি—এমন ভুল ধারণা আমাদের চারপাশে ছড়িয়ে পড়েছে।'}
-                  maxLength={150}
-                />
-              </div>
+              {product.description && (
+                <div className="text-sm text-muted-foreground">
+                  <ExpandableText 
+                    text={product.description}
+                    maxLength={150}
+                  />
+                </div>
+              )}
 
               {/* Price */}
               <div className="flex items-baseline gap-3">
@@ -294,7 +360,7 @@ const ProductDetail = () => {
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3">
-                {(product as any).isPreorder ? (
+                {product.isPreorder ? (
                   <Button 
                     className="flex-1 bg-primary hover:bg-primary/90"
                     onClick={handlePreOrder}
@@ -341,7 +407,7 @@ const ProductDetail = () => {
                 <SocialShare 
                   url={productUrl}
                   title={product.title}
-                  description={(product as any).description}
+                  description={product.description}
                   image={product.image}
                 />
               </div>
@@ -381,19 +447,21 @@ const ProductDetail = () => {
             </div>
 
             {/* Related Products */}
-            <div className="bg-card rounded-xl p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">আরো দেখুন...</h3>
-                <Link to="/shop" className="text-primary text-sm hover:underline">
-                  সবগুলো দেখুন
-                </Link>
+            {relatedProducts.length > 0 && (
+              <div className="bg-card rounded-xl p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold">আরো দেখুন...</h3>
+                  <Link to="/shop" className="text-primary text-sm hover:underline">
+                    সবগুলো দেখুন
+                  </Link>
+                </div>
+                <div className="space-y-3">
+                  {relatedProducts.map((relatedProduct) => (
+                    <ProductCard key={relatedProduct.id} product={relatedProduct} variant="compact" />
+                  ))}
+                </div>
               </div>
-              <div className="space-y-3">
-                {relatedProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} variant="compact" />
-                ))}
-              </div>
-            </div>
+            )}
           </div>
         </div>
 

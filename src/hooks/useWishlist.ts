@@ -1,15 +1,27 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { sampleProducts } from "@/data/products";
 import { toast } from "sonner";
 
 const GUEST_WISHLIST_KEY = 'guest_wishlist';
 
+interface ProductData {
+  id: string;
+  title: string;
+  author: string;
+  price: number;
+  originalPrice?: number;
+  discount?: number;
+  image: string;
+  category?: string;
+  publisher?: string;
+  isPreorder?: boolean;
+}
+
 export interface WishlistItem {
   id: string;
   productId: string;
-  product: typeof sampleProducts[0];
+  product: ProductData;
 }
 
 // Helper functions for localStorage
@@ -28,6 +40,35 @@ const setGuestWishlist = (productIds: string[]) => {
 
 const clearGuestWishlistStorage = () => {
   localStorage.removeItem(GUEST_WISHLIST_KEY);
+};
+
+// Fetch product from database
+const fetchProduct = async (productId: string): Promise<ProductData | null> => {
+  const { data } = await supabase
+    .from('products')
+    .select(`
+      *,
+      writer:writers(name_bn),
+      publisher_rel:publishers(name_bn)
+    `)
+    .eq('id', productId)
+    .maybeSingle();
+  
+  if (!data) return null;
+  
+  const images = data.images as string[] || [];
+  return {
+    id: data.id,
+    title: data.title_bn || data.title_en,
+    author: data.writer?.name_bn || data.author || 'অজানা লেখক',
+    price: data.price,
+    originalPrice: data.original_price || undefined,
+    discount: data.discount_percent || undefined,
+    image: images.length > 0 ? images[0] : '/placeholder.svg',
+    category: data.category_id,
+    publisher: data.publisher_rel?.name_bn || data.publisher,
+    isPreorder: data.is_preorder,
+  };
 };
 
 export const useWishlist = () => {
@@ -69,16 +110,18 @@ export const useWishlist = () => {
     if (!user) {
       // Guest user - load from localStorage
       const guestWishlist = getGuestWishlist();
-      const items = guestWishlist
-        .map((productId) => {
-          const product = sampleProducts.find((p) => p.id === productId);
-          return product ? {
+      const items: WishlistItem[] = [];
+      
+      for (const productId of guestWishlist) {
+        const product = await fetchProduct(productId);
+        if (product) {
+          items.push({
             id: `guest-${productId}`,
             productId,
             product,
-          } : null;
-        })
-        .filter((item): item is WishlistItem => item !== null);
+          });
+        }
+      }
 
       setWishlistItems(items);
       setLoading(false);
@@ -96,14 +139,17 @@ export const useWishlist = () => {
 
       if (error) throw error;
 
-      const items = data.map((item) => {
-        const product = sampleProducts.find((p) => p.id === item.product_id);
-        return {
-          id: item.id,
-          productId: item.product_id,
-          product: product!,
-        };
-      }).filter((item) => item.product);
+      const items: WishlistItem[] = [];
+      for (const item of data) {
+        const product = await fetchProduct(item.product_id);
+        if (product) {
+          items.push({
+            id: item.id,
+            productId: item.product_id,
+            product,
+          });
+        }
+      }
 
       setWishlistItems(items);
     } catch (error) {
