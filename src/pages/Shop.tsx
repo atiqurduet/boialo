@@ -157,14 +157,25 @@ const Shop = () => {
     // Filter by category (slug or ID)
     if (category) {
       const categoryInfo = getCategoryInfo();
-      products = products.filter((p) => {
-        if (categoryInfo) {
-          // Match by category slug or ID
-          return p.category === categoryInfo.slug || p.category === categoryInfo.id;
-        }
-        // Fallback to direct category match
-        return p.category === category;
-      });
+      
+      // Get filtered database products by category
+      const dbFiltered = dbProducts
+        .filter(p => {
+          if (categoryInfo) {
+            return p.category?.slug === categoryInfo.slug || 
+                   p.category?.id === categoryInfo.id ||
+                   p.category_id === categoryInfo.id;
+          }
+          // Direct match for category slug
+          return p.category?.slug === category || p.category_id === category;
+        })
+        .map(convertDbProduct);
+      
+      // Get filtered sample products by category
+      const sampleFiltered = sampleProducts
+        .filter(p => !p.isPreorder && p.category === category);
+      
+      products = [...dbFiltered, ...sampleFiltered];
     }
 
     // Filter by writer (from database - slug or ID)
