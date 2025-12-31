@@ -4,28 +4,55 @@ import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { Link } from "react-router-dom";
 import { Search, Book } from "lucide-react";
 import { useState } from "react";
-
-const authors = [
-  { id: "1", name: "শাইখ মুহাম্মাদ আবদুর রহমান", bookCount: 45, image: "https://ui-avatars.com/api/?name=শাইখ&background=dc2626&color=fff&size=128" },
-  { id: "2", name: "হা মীম নাজীবুল্লাহ", bookCount: 32, image: "https://ui-avatars.com/api/?name=হা+মীম&background=dc2626&color=fff&size=128" },
-  { id: "3", name: "কামরুল আনাম খান", bookCount: 28, image: "https://ui-avatars.com/api/?name=কামরুল&background=dc2626&color=fff&size=128" },
-  { id: "4", name: "খুবাইব মাহমুদ", bookCount: 15, image: "https://ui-avatars.com/api/?name=খুবাইব&background=dc2626&color=fff&size=128" },
-  { id: "5", name: "রেজাউল করিম", bookCount: 42, image: "https://ui-avatars.com/api/?name=রেজাউল&background=dc2626&color=fff&size=128" },
-  { id: "6", name: "মাওলানা আবদুর রশীদ তারাপাশী", bookCount: 18, image: "https://ui-avatars.com/api/?name=তারাপাশী&background=dc2626&color=fff&size=128" },
-  { id: "7", name: "সুজন বড়ুয়া", bookCount: 22, image: "https://ui-avatars.com/api/?name=সুজন&background=dc2626&color=fff&size=128" },
-  { id: "8", name: "রাজু আলাউদ্দিন", bookCount: 35, image: "https://ui-avatars.com/api/?name=রাজু&background=dc2626&color=fff&size=128" },
-  { id: "9", name: "মুফতি জামাল হোসেন", bookCount: 55, image: "https://ui-avatars.com/api/?name=জামাল&background=dc2626&color=fff&size=128" },
-  { id: "10", name: "ড. মুহাম্মাদ ইকবাল", bookCount: 67, image: "https://ui-avatars.com/api/?name=ইকবাল&background=dc2626&color=fff&size=128" },
-  { id: "11", name: "শাইখ আবু বকর যাকারিয়া", bookCount: 89, image: "https://ui-avatars.com/api/?name=যাকারিয়া&background=dc2626&color=fff&size=128" },
-  { id: "12", name: "মাওলানা তারিক জামিল", bookCount: 12, image: "https://ui-avatars.com/api/?name=তারিক&background=dc2626&color=fff&size=128" },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Authors = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredAuthors = authors.filter((author) =>
-    author.name.toLowerCase().includes(searchQuery.toLowerCase())
+  // Fetch writers from database
+  const { data: writers = [], isLoading } = useQuery({
+    queryKey: ['writers-list'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('writers')
+        .select('id, name_bn, name_en, slug, image_url')
+        .eq('is_active', true)
+        .order('name_bn');
+      return data || [];
+    },
+  });
+
+  // Fetch product counts per writer
+  const { data: writerCounts = {} } = useQuery({
+    queryKey: ['writer-product-counts'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('products')
+        .select('writer_id')
+        .eq('is_active', true);
+      
+      const counts: Record<string, number> = {};
+      (data || []).forEach((p) => {
+        if (p.writer_id) {
+          counts[p.writer_id] = (counts[p.writer_id] || 0) + 1;
+        }
+      });
+      return counts;
+    },
+  });
+
+  const filteredAuthors = writers.filter((author) =>
+    author.name_bn.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (author.name_en && author.name_en.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const getAuthorImage = (author: typeof writers[0]) => {
+    if (author.image_url) return author.image_url;
+    const name = author.name_bn.split(' ')[0];
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=dc2626&color=fff&size=128`;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -53,32 +80,44 @@ const Authors = () => {
         </div>
 
         {/* Authors Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-          {filteredAuthors.map((author) => (
-            <Link
-              key={author.id}
-              to={`/shop?author=${author.id}`}
-              className="bg-card rounded-xl p-4 text-center hover:shadow-lg transition-all group"
-            >
-              <div className="w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-muted">
-                <img
-                  src={author.image}
-                  alt={author.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                />
+        {isLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="bg-card rounded-xl p-4 text-center">
+                <Skeleton className="w-20 h-20 mx-auto mb-3 rounded-full" />
+                <Skeleton className="h-4 w-24 mx-auto mb-2" />
+                <Skeleton className="h-3 w-16 mx-auto" />
               </div>
-              <h3 className="font-medium text-sm line-clamp-2 mb-1 group-hover:text-primary transition-colors">
-                {author.name}
-              </h3>
-              <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                <Book className="w-3 h-3" />
-                <span>{author.bookCount} টি বই</span>
-              </div>
-            </Link>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+            {filteredAuthors.map((author) => (
+              <Link
+                key={author.id}
+                to={`/shop?writer=${author.slug}`}
+                className="bg-card rounded-xl p-4 text-center hover:shadow-lg transition-all group"
+              >
+                <div className="w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-muted">
+                  <img
+                    src={getAuthorImage(author)}
+                    alt={author.name_bn}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                  />
+                </div>
+                <h3 className="font-medium text-sm line-clamp-2 mb-1 group-hover:text-primary transition-colors">
+                  {author.name_bn}
+                </h3>
+                <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                  <Book className="w-3 h-3" />
+                  <span>{writerCounts[author.id] || 0} টি বই</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
 
-        {filteredAuthors.length === 0 && (
+        {!isLoading && filteredAuthors.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">কোনো লেখক পাওয়া যায়নি</p>
           </div>

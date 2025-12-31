@@ -1,15 +1,64 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
-import { ProductCard } from "@/components/ProductCard";
-import { sampleProducts } from "@/data/products";
+import { ProductCard, Product } from "@/components/ProductCard";
 import { Clock, BookOpen, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-// Filter only products that are marked as preorder
-const preorderProducts = sampleProducts.filter((p) => p.isPreorder === true);
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
+import { bn } from "date-fns/locale";
 
 const Preorder = () => {
+  // Fetch preorder products from database
+  const { data: dbProducts = [], isLoading } = useQuery({
+    queryKey: ['preorder-products'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('products')
+        .select(`
+          *,
+          category:categories(id, name_bn, slug),
+          writer:writers(id, name_bn, slug),
+          publisher_rel:publishers(id, name_bn, slug)
+        `)
+        .eq('is_active', true)
+        .eq('is_preorder', true)
+        .order('release_date', { ascending: true });
+      return data || [];
+    },
+  });
+
+  // Convert database products to Product interface
+  const convertDbProduct = (dbProduct: any): Product => {
+    const images = dbProduct.images as string[] || [];
+    let releaseDate = '';
+    if (dbProduct.release_date) {
+      try {
+        releaseDate = format(new Date(dbProduct.release_date), 'd MMMM yyyy', { locale: bn });
+      } catch {
+        releaseDate = dbProduct.release_date;
+      }
+    }
+    
+    return {
+      id: dbProduct.id,
+      title: dbProduct.title_bn || dbProduct.title_en,
+      author: dbProduct.writer?.name_bn || dbProduct.author || 'অজানা লেখক',
+      price: dbProduct.price,
+      originalPrice: dbProduct.original_price,
+      discount: dbProduct.discount_percent,
+      image: images.length > 0 ? images[0] : '/placeholder.svg',
+      category: dbProduct.category?.slug || dbProduct.category_id,
+      publisher: dbProduct.publisher_rel?.name_bn || dbProduct.publisher,
+      isPreorder: dbProduct.is_preorder,
+      releaseDate: releaseDate,
+    };
+  };
+
+  const preorderProducts = dbProducts.map(convertDbProduct);
+
   return (
     <div className="min-h-screen bg-background">
       <AnnouncementBar />
@@ -63,17 +112,32 @@ const Preorder = () => {
 
         {/* Products */}
         <h2 className="text-2xl font-bold mb-6">প্রি-অর্ডার বই</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-          {preorderProducts.map((product) => (
-            <div key={product.id} className="relative">
-              <ProductCard product={product} />
-              <div className="bg-muted/50 rounded-b-lg px-3 py-2 text-xs text-muted-foreground flex items-center gap-1 -mt-1">
-                <Clock className="w-3 h-3" />
-                প্রকাশ: {product.releaseDate}
+        
+        {isLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-[320px] rounded-xl" />
+            ))}
+          </div>
+        ) : preorderProducts.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+            {preorderProducts.map((product) => (
+              <div key={product.id} className="relative">
+                <ProductCard product={product} />
+                {product.releaseDate && (
+                  <div className="bg-muted/50 rounded-b-lg px-3 py-2 text-xs text-muted-foreground flex items-center gap-1 -mt-1">
+                    <Clock className="w-3 h-3" />
+                    প্রকাশ: {product.releaseDate}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">বর্তমানে কোনো প্রি-অর্ডার বই নেই</p>
+          </div>
+        )}
 
         {/* Notify CTA */}
         <div className="mt-12 bg-muted/30 rounded-xl p-8 text-center">
