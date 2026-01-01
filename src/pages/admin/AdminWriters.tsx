@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
+import { LogoUpload } from '@/components/admin/LogoUpload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -203,8 +204,13 @@ const AdminWriters = () => {
                       <Input value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} placeholder="auto-generated" />
                     </div>
                     <div>
-                      <Label>ছবির URL</Label>
-                      <Input value={formData.image_url} onChange={(e) => setFormData({ ...formData, image_url: e.target.value })} />
+                      <Label>ছবি</Label>
+                      <LogoUpload
+                        value={formData.image_url}
+                        onChange={(url) => setFormData({ ...formData, image_url: url })}
+                        label="লেখকের ছবি"
+                        folder="writers"
+                      />
                     </div>
                     <div>
                       <Label>জীবনী (বাংলা)</Label>
