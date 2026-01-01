@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
+import { BannerImageUpload } from '@/components/admin/BannerImageUpload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -184,21 +185,22 @@ const AdminBanners = () => {
                 </div>
 
                 <div>
-                  <Label>ডেস্কটপ ইমেজ URL *</Label>
-                  <Input
+                  <Label>ডেস্কটপ ইমেজ *</Label>
+                  <BannerImageUpload
                     value={formData.image_desktop}
-                    onChange={(e) => setFormData({ ...formData, image_desktop: e.target.value })}
-                    placeholder="https://..."
-                    required
+                    onChange={(url) => setFormData({ ...formData, image_desktop: url })}
+                    label="ডেস্কটপ ব্যানার আপলোড করুন"
+                    aspectRatio="desktop"
                   />
                 </div>
 
                 <div>
-                  <Label>মোবাইল ইমেজ URL</Label>
-                  <Input
+                  <Label>মোবাইল ইমেজ (ঐচ্ছিক)</Label>
+                  <BannerImageUpload
                     value={formData.image_mobile}
-                    onChange={(e) => setFormData({ ...formData, image_mobile: e.target.value })}
-                    placeholder="https://..."
+                    onChange={(url) => setFormData({ ...formData, image_mobile: url })}
+                    label="মোবাইল ব্যানার আপলোড করুন"
+                    aspectRatio="mobile"
                   />
                 </div>
 
