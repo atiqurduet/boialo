@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
+import { LogoUpload } from '@/components/admin/LogoUpload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -231,11 +232,12 @@ const AdminCategories = () => {
                 </div>
 
                 <div>
-                  <Label>ইমেজ URL</Label>
-                  <Input
+                  <Label>ইমেজ</Label>
+                  <LogoUpload
                     value={formData.image_url}
-                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                    placeholder="https://..."
+                    onChange={(url) => setFormData({ ...formData, image_url: url })}
+                    label="ক্যাটাগরি ইমেজ"
+                    folder="categories"
                   />
                 </div>
 
