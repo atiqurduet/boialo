@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
+import { LogoUpload } from '@/components/admin/LogoUpload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -214,8 +215,13 @@ const AdminBrands = () => {
                       </div>
                     </div>
                     <div>
-                      <Label>লোগো URL</Label>
-                      <Input value={formData.logo_url} onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })} />
+                      <Label>লোগো</Label>
+                      <LogoUpload
+                        value={formData.logo_url}
+                        onChange={(url) => setFormData({ ...formData, logo_url: url })}
+                        label="ব্র্যান্ড লোগো"
+                        folder="brands"
+                      />
                     </div>
                     <div>
                       <Label>বিবরণ (বাংলা)</Label>
