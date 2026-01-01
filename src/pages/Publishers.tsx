@@ -3,30 +3,78 @@ import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { Link } from "react-router-dom";
 import { Search, BookOpen } from "lucide-react";
-import { useState } from "react";
-import { publishers } from "@/data/products";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-const allPublishers = [
-  { id: "1", name: "ঐতিহ্য", count: 150, image: "https://ui-avatars.com/api/?name=ঐতিহ্য&background=14b8a6&color=fff&size=128" },
-  { id: "2", name: "গার্ডিয়ান পাবলিকেশন্স", count: 131, image: "https://ui-avatars.com/api/?name=গার্ডিয়ান&background=14b8a6&color=fff&size=128" },
-  { id: "3", name: "সন্দীপন প্রকাশন", count: 103, image: "https://ui-avatars.com/api/?name=সন্দীপন&background=14b8a6&color=fff&size=128" },
-  { id: "4", name: "মাদারস", count: 83, image: "https://ui-avatars.com/api/?name=মাদারস&background=14b8a6&color=fff&size=128" },
-  { id: "5", name: "ইলহাম ILHAM", count: 83, image: "https://ui-avatars.com/api/?name=ইলহাম&background=14b8a6&color=fff&size=128" },
-  { id: "6", name: "কালান্তর প্রকাশনী", count: 74, image: "https://ui-avatars.com/api/?name=কালান্তর&background=14b8a6&color=fff&size=128" },
-  { id: "7", name: "সমকালীন প্রকাশন", count: 68, image: "https://ui-avatars.com/api/?name=সমকালীন&background=14b8a6&color=fff&size=128" },
-  { id: "8", name: "প্রচ্ছদ প্রকাশন", count: 59, image: "https://ui-avatars.com/api/?name=প্রচ্ছদ&background=14b8a6&color=fff&size=128" },
-  { id: "9", name: "মক্তবা দারুল কালাম", count: 92, image: "https://ui-avatars.com/api/?name=মক্তবা&background=14b8a6&color=fff&size=128" },
-  { id: "10", name: "ওয়াফি পাবলিকেশন্স", count: 125, image: "https://ui-avatars.com/api/?name=ওয়াফি&background=14b8a6&color=fff&size=128" },
-  { id: "11", name: "রিয়াদুস সালেহিন", count: 47, image: "https://ui-avatars.com/api/?name=রিয়াদুস&background=14b8a6&color=fff&size=128" },
-  { id: "12", name: "দারুল ইফতা", count: 38, image: "https://ui-avatars.com/api/?name=ইফতা&background=14b8a6&color=fff&size=128" },
-];
+interface Publisher {
+  id: string;
+  name_bn: string;
+  name_en: string;
+  slug: string;
+  logo_url: string | null;
+  is_active: boolean;
+  product_count?: number;
+}
 
 const Publishers = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [publishers, setPublishers] = useState<Publisher[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredPublishers = allPublishers.filter((publisher) =>
-    publisher.name.toLowerCase().includes(searchQuery.toLowerCase())
+  useEffect(() => {
+    const fetchPublishers = async () => {
+      try {
+        // Fetch publishers
+        const { data: publishersData, error: publishersError } = await supabase
+          .from("publishers")
+          .select("*")
+          .eq("is_active", true)
+          .order("name_bn");
+
+        if (publishersError) throw publishersError;
+
+        // Fetch product counts for each publisher
+        const { data: productCounts, error: countError } = await supabase
+          .from("products")
+          .select("publisher_id")
+          .eq("is_active", true);
+
+        if (countError) throw countError;
+
+        // Count products per publisher
+        const countMap: Record<string, number> = {};
+        productCounts?.forEach((p) => {
+          if (p.publisher_id) {
+            countMap[p.publisher_id] = (countMap[p.publisher_id] || 0) + 1;
+          }
+        });
+
+        // Merge counts with publishers
+        const publishersWithCounts = (publishersData || []).map((pub) => ({
+          ...pub,
+          product_count: countMap[pub.id] || 0,
+        }));
+
+        setPublishers(publishersWithCounts);
+      } catch (error) {
+        console.error("Error fetching publishers:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPublishers();
+  }, []);
+
+  const filteredPublishers = publishers.filter((publisher) =>
+    publisher.name_bn.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    publisher.name_en.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const getPublisherImage = (publisher: Publisher) => {
+    if (publisher.logo_url) return publisher.logo_url;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(publisher.name_bn)}&background=14b8a6&color=fff&size=128`;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -53,36 +101,51 @@ const Publishers = () => {
           </div>
         </div>
 
-        {/* Publishers Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-          {filteredPublishers.map((publisher) => (
-            <Link
-              key={publisher.id}
-              to={`/shop?publisher=${publisher.id}`}
-              className="bg-card rounded-xl p-4 text-center hover:shadow-lg transition-all group"
-            >
-              <div className="w-20 h-20 mx-auto mb-3 rounded-xl overflow-hidden bg-accent/10">
-                <img
-                  src={publisher.image}
-                  alt={publisher.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                />
+        {/* Loading State */}
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="bg-card rounded-xl p-4 animate-pulse">
+                <div className="w-20 h-20 mx-auto mb-3 rounded-xl bg-muted" />
+                <div className="h-4 bg-muted rounded mx-auto w-3/4 mb-2" />
+                <div className="h-3 bg-muted rounded mx-auto w-1/2" />
               </div>
-              <h3 className="font-medium text-sm line-clamp-2 mb-1 group-hover:text-primary transition-colors">
-                {publisher.name}
-              </h3>
-              <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                <BookOpen className="w-3 h-3" />
-                <span>{publisher.count} টি বই</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        {filteredPublishers.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">কোনো প্রকাশক পাওয়া যায়নি</p>
+            ))}
           </div>
+        ) : (
+          <>
+            {/* Publishers Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+              {filteredPublishers.map((publisher) => (
+                <Link
+                  key={publisher.id}
+                  to={`/shop?publisher=${publisher.slug}`}
+                  className="bg-card rounded-xl p-4 text-center hover:shadow-lg transition-all group"
+                >
+                  <div className="w-20 h-20 mx-auto mb-3 rounded-xl overflow-hidden bg-accent/10">
+                    <img
+                      src={getPublisherImage(publisher)}
+                      alt={publisher.name_bn}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                    />
+                  </div>
+                  <h3 className="font-medium text-sm line-clamp-2 mb-1 group-hover:text-primary transition-colors">
+                    {publisher.name_bn}
+                  </h3>
+                  <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                    <BookOpen className="w-3 h-3" />
+                    <span>{publisher.product_count} টি বই</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {filteredPublishers.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">কোনো প্রকাশক পাওয়া যায়নি</p>
+              </div>
+            )}
+          </>
         )}
       </main>
 
