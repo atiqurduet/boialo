@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Search, X } from 'lucide-react';
+import { ProductBulkActions } from '@/components/admin/ProductBulkActions';
 import { ProductImageUpload } from '@/components/admin/ProductImageUpload';
 import { ProductPreviewUpload } from '@/components/admin/ProductPreviewUpload';
 
@@ -372,10 +373,18 @@ const AdminProducts = () => {
             <h1 className="text-2xl font-bold">প্রোডাক্ট</h1>
             <p className="text-muted-foreground">সকল প্রোডাক্ট ম্যানেজ করুন</p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />নতুন প্রোডাক্ট</Button>
-            </DialogTrigger>
+          <div className="flex flex-wrap gap-2 items-center">
+            <ProductBulkActions
+              categories={categories}
+              writers={writers}
+              publishers={publishers}
+              brands={brands}
+              onImportComplete={fetchProducts}
+            />
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2" />নতুন প্রোডাক্ট</Button>
+              </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingProduct ? 'প্রোডাক্ট এডিট' : 'নতুন প্রোডাক্ট'}</DialogTitle>
@@ -587,7 +596,8 @@ const AdminProducts = () => {
                 <Button type="submit" className="w-full">{editingProduct ? 'আপডেট করুন' : 'যোগ করুন'}</Button>
               </form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         <div className="relative max-w-md">
