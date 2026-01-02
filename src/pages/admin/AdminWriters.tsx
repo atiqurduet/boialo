@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { LogoUpload } from '@/components/admin/LogoUpload';
+import { WriterBulkActions } from '@/components/admin/WriterBulkActions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -174,10 +175,12 @@ const AdminWriters = () => {
             <h1 className="text-2xl font-bold">লেখক</h1>
             <p className="text-muted-foreground">সকল লেখক ম্যানেজ করুন</p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />নতুন লেখক</Button>
-            </DialogTrigger>
+          <div className="flex flex-wrap gap-2 items-center">
+            <WriterBulkActions onImportComplete={fetchWriters} />
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2" />নতুন লেখক</Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingWriter ? 'লেখক এডিট' : 'নতুন লেখক'}</DialogTitle>
@@ -239,7 +242,8 @@ const AdminWriters = () => {
                 <Button type="submit" className="w-full">{editingWriter ? 'আপডেট করুন' : 'যোগ করুন'}</Button>
               </form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         <div className="relative max-w-md">
