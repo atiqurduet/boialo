@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { LogoUpload } from '@/components/admin/LogoUpload';
+import { PublisherBulkActions } from '@/components/admin/PublisherBulkActions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -179,10 +180,12 @@ const AdminPublishers = () => {
             <h1 className="text-2xl font-bold">প্রকাশনী</h1>
             <p className="text-muted-foreground">সকল প্রকাশনী ম্যানেজ করুন</p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />নতুন প্রকাশনী</Button>
-            </DialogTrigger>
+          <div className="flex flex-wrap gap-2 items-center">
+            <PublisherBulkActions onImportComplete={fetchPublishers} />
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2" />নতুন প্রকাশনী</Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingPublisher ? 'প্রকাশনী এডিট' : 'নতুন প্রকাশনী'}</DialogTitle>
@@ -250,7 +253,8 @@ const AdminPublishers = () => {
                 <Button type="submit" className="w-full">{editingPublisher ? 'আপডেট করুন' : 'যোগ করুন'}</Button>
               </form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         <div className="relative max-w-md">

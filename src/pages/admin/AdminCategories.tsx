@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { LogoUpload } from '@/components/admin/LogoUpload';
+import { CategoryBulkActions } from '@/components/admin/CategoryBulkActions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -171,13 +172,15 @@ const AdminCategories = () => {
             <h1 className="text-2xl font-bold">ক্যাটাগরি</h1>
             <p className="text-muted-foreground">প্রোডাক্ট ক্যাটাগরি ম্যানেজ করুন</p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                নতুন ক্যাটাগরি
-              </Button>
-            </DialogTrigger>
+          <div className="flex flex-wrap gap-2 items-center">
+            <CategoryBulkActions categories={categories} onImportComplete={fetchCategories} />
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  নতুন ক্যাটাগরি
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{editingCategory ? 'ক্যাটাগরি এডিট' : 'নতুন ক্যাটাগরি'}</DialogTitle>
@@ -263,7 +266,8 @@ const AdminCategories = () => {
                 </Button>
               </form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         {/* Categories List */}
