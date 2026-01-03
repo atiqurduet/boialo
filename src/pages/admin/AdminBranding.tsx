@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Image as ImageIcon, Type, Bell, ShoppingCart } from "lucide-react";
+import { Loader2, Image as ImageIcon, Type, Bell, ShoppingCart, FileText } from "lucide-react";
 import { LogoUpload } from "@/components/admin/LogoUpload";
 
 interface BrandingSettings {
@@ -22,19 +22,31 @@ interface BrandingSettings {
   pre_header_link: string;
   pre_header_enabled: boolean;
   preorder_message: string;
+  invoice_company_name: string;
+  invoice_company_tagline: string;
+  invoice_company_address: string;
+  invoice_company_phone: string;
+  invoice_company_email: string;
+  invoice_footer_text: string;
 }
 
 const defaultSettings: BrandingSettings = {
   header_logo: '',
   footer_logo: '',
   favicon: '',
-  site_name: 'WafiLife',
+  site_name: 'বইআলো',
   footer_description: 'বাংলাদেশের সবচেয়ে বড় অনলাইন বই ও লাইফস্টাইল শপ।',
-  copyright_text: '© 2024 WafiLife. সর্বস্বত্ব সংরক্ষিত।',
+  copyright_text: '© 2024 বইআলো. সর্বস্বত্ব সংরক্ষিত।',
   pre_header_text: '🎉 সকল বইয়ে ১৫% ছাড়! কোড: BOOK15',
   pre_header_link: '/offers',
   pre_header_enabled: true,
   preorder_message: 'আমাদের জানিয়েছেন এই পণ্যটি {release_date} প্রকাশিত হতে পারে। প্রকাশিত হওয়ার সাথে সাথে পণ্যটি পেতে আগেই অর্ডার করে রাখুন।',
+  invoice_company_name: 'বইআলো',
+  invoice_company_tagline: 'আপনার বিশ্বস্ত অনলাইন বই স্টোর',
+  invoice_company_address: 'ঢাকা, বাংলাদেশ',
+  invoice_company_phone: '+880 1XXX-XXXXXX',
+  invoice_company_email: 'support@boialo.com',
+  invoice_footer_text: 'ধন্যবাদ আপনার অর্ডারের জন্য!',
 };
 
 export default function AdminBranding() {
@@ -51,7 +63,7 @@ export default function AdminBranding() {
       const { data, error } = await supabase
         .from('site_settings')
         .select('setting_key, setting_value')
-        .or('category.eq.branding,setting_key.eq.preorder_message');
+        .or('category.eq.branding,category.eq.invoice,setting_key.eq.preorder_message');
 
       if (error) throw error;
 
@@ -84,7 +96,7 @@ export default function AdminBranding() {
       const updates = Object.entries(settings).map(([key, value]) => ({
         setting_key: key,
         setting_value: typeof value === 'boolean' ? value : value,
-        category: 'branding',
+        category: key.startsWith('invoice_') ? 'invoice' : 'branding',
         setting_type: key === 'pre_header_enabled' ? 'boolean' : 'string',
       }));
 
@@ -290,6 +302,79 @@ export default function AdminBranding() {
               <p className="text-xs text-muted-foreground">
                 {'{release_date}'} স্বয়ংক্রিয়ভাবে পণ্যের প্রকাশের তারিখ দিয়ে প্রতিস্থাপিত হবে
               </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Invoice Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              ইনভয়েস সেটিংস
+            </CardTitle>
+            <CardDescription>
+              ইনভয়েস এবং ডেলিভারি স্লিপে কোম্পানির তথ্য কাস্টমাইজ করুন
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="invoice_company_name">কোম্পানির নাম</Label>
+                <Input
+                  id="invoice_company_name"
+                  value={settings.invoice_company_name}
+                  onChange={(e) => updateSetting('invoice_company_name', e.target.value)}
+                  placeholder="বইআলো"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoice_company_tagline">ট্যাগলাইন</Label>
+                <Input
+                  id="invoice_company_tagline"
+                  value={settings.invoice_company_tagline}
+                  onChange={(e) => updateSetting('invoice_company_tagline', e.target.value)}
+                  placeholder="আপনার বিশ্বস্ত অনলাইন বই স্টোর"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invoice_company_address">ঠিকানা</Label>
+              <Input
+                id="invoice_company_address"
+                value={settings.invoice_company_address}
+                onChange={(e) => updateSetting('invoice_company_address', e.target.value)}
+                placeholder="ঢাকা, বাংলাদেশ"
+              />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="invoice_company_phone">ফোন নম্বর</Label>
+                <Input
+                  id="invoice_company_phone"
+                  value={settings.invoice_company_phone}
+                  onChange={(e) => updateSetting('invoice_company_phone', e.target.value)}
+                  placeholder="+880 1XXX-XXXXXX"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoice_company_email">ইমেইল</Label>
+                <Input
+                  id="invoice_company_email"
+                  value={settings.invoice_company_email}
+                  onChange={(e) => updateSetting('invoice_company_email', e.target.value)}
+                  placeholder="support@boialo.com"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invoice_footer_text">ফুটার মেসেজ</Label>
+              <Input
+                id="invoice_footer_text"
+                value={settings.invoice_footer_text}
+                onChange={(e) => updateSetting('invoice_footer_text', e.target.value)}
+                placeholder="ধন্যবাদ আপনার অর্ডারের জন্য!"
+              />
             </div>
           </CardContent>
         </Card>
