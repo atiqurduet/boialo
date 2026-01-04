@@ -53,6 +53,7 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [deliveryArea, setDeliveryArea] = useState("inside");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [abandonedCheckoutId, setAbandonedCheckoutId] = useState<string | null>(null);
 
   // OTP Verification States
   const [showOtpDialog, setShowOtpDialog] = useState(false);
@@ -63,6 +64,84 @@ const Checkout = () => {
   const [otpError, setOtpError] = useState("");
   const [countdown, setCountdown] = useState(0);
   const [phoneVerified, setPhoneVerified] = useState(false);
+
+  // Track abandoned checkout - create/update on checkout page load
+  useEffect(() => {
+    const trackAbandonedCheckout = async () => {
+      if (!user || cartItems.length === 0) return;
+
+      const cartData = cartItems.map(item => ({
+        product_id: item.productId,
+        product_title: item.product.title,
+        product_image: item.product.image || null,
+        price: item.product.price,
+        quantity: item.quantity,
+      }));
+
+      try {
+        // Check if there's already an abandoned checkout for this user
+        const { data: existing } = await supabase
+          .from("abandoned_checkouts")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("recovered", false)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (existing) {
+          // Update existing
+          await supabase
+            .from("abandoned_checkouts")
+            .update({
+              cart_items: cartData,
+              subtotal: subtotal,
+              step: "checkout_started",
+              last_activity_at: new Date().toISOString(),
+            })
+            .eq("id", existing.id);
+          setAbandonedCheckoutId(existing.id);
+        } else {
+          // Create new
+          const { data: newCheckout } = await supabase
+            .from("abandoned_checkouts")
+            .insert({
+              user_id: user.id,
+              cart_items: cartData,
+              subtotal: subtotal,
+              step: "checkout_started",
+            })
+            .select("id")
+            .single();
+          if (newCheckout) {
+            setAbandonedCheckoutId(newCheckout.id);
+          }
+        }
+      } catch (error) {
+        console.error("Error tracking abandoned checkout:", error);
+      }
+    };
+
+    trackAbandonedCheckout();
+  }, [user, cartItems.length > 0]); // Only run once when user and cart are available
+
+  // Update abandoned checkout step when form data changes
+  const updateAbandonedStep = async (step: string, additionalData?: Record<string, any>) => {
+    if (!abandonedCheckoutId) return;
+    
+    try {
+      await supabase
+        .from("abandoned_checkouts")
+        .update({
+          step,
+          last_activity_at: new Date().toISOString(),
+          ...additionalData,
+        })
+        .eq("id", abandonedCheckoutId);
+    } catch (error) {
+      console.error("Error updating abandoned checkout:", error);
+    }
+  };
 
   // Countdown timer for OTP resend
   useEffect(() => {
@@ -138,6 +217,17 @@ const Checkout = () => {
     // Reset phone verification if phone changes
     if (field === "phone") {
       setPhoneVerified(false);
+    }
+    
+    // Update abandoned checkout with form data
+    if (field === "address" && value.length > 10) {
+      updateAbandonedStep("address_filled", {
+        full_name: formData.fullName,
+        phone: formData.phone,
+        email: formData.email,
+        address: value,
+        delivery_area: deliveryArea,
+      });
     }
   };
 
@@ -298,6 +388,17 @@ const Checkout = () => {
 
       if (itemsError) throw itemsError;
 
+      // Mark abandoned checkout as recovered
+      if (abandonedCheckoutId) {
+        await supabase
+          .from("abandoned_checkouts")
+          .update({ 
+            recovered: true, 
+            recovered_order_id: order.id 
+          })
+          .eq("id", abandonedCheckoutId);
+      }
+
       // Clear cart
       await clearCart();
 
@@ -314,6 +415,16 @@ const Checkout = () => {
   // Handle order button click - show OTP dialog
   const handlePlaceOrder = async () => {
     if (!validateForm() || !user) return;
+
+    // Update abandoned checkout step
+    updateAbandonedStep("otp_pending", {
+      full_name: formData.fullName,
+      phone: formData.phone,
+      email: formData.email,
+      address: formData.address,
+      delivery_area: deliveryArea,
+      payment_method: paymentMethod,
+    });
 
     // Open OTP dialog
     setShowOtpDialog(true);
