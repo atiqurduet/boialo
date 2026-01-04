@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      abandoned_checkouts: {
+        Row: {
+          address: string | null
+          cart_items: Json | null
+          created_at: string | null
+          delivery_area: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          last_activity_at: string | null
+          payment_method: string | null
+          phone: string | null
+          recovered: boolean | null
+          recovered_order_id: string | null
+          session_id: string | null
+          step: string | null
+          subtotal: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          cart_items?: Json | null
+          created_at?: string | null
+          delivery_area?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          last_activity_at?: string | null
+          payment_method?: string | null
+          phone?: string | null
+          recovered?: boolean | null
+          recovered_order_id?: string | null
+          session_id?: string | null
+          step?: string | null
+          subtotal?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          cart_items?: Json | null
+          created_at?: string | null
+          delivery_area?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          last_activity_at?: string | null
+          payment_method?: string | null
+          phone?: string | null
+          recovered?: boolean | null
+          recovered_order_id?: string | null
+          session_id?: string | null
+          step?: string | null
+          subtotal?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       address_book: {
         Row: {
           address: string

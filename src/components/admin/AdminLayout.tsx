@@ -23,7 +23,8 @@ import {
   Home,
   Navigation,
   Footprints,
-  Palette
+  Palette,
+  ShoppingBag
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +39,7 @@ const menuItems = [
   { icon: Navigation, label: 'মেনু', href: '/admin/menu', roles: ['admin', 'manager'] },
   { icon: Footprints, label: 'ফুটার', href: '/admin/footer', roles: ['admin', 'manager'] },
   { icon: ShoppingCart, label: 'অর্ডার', href: '/admin/orders', roles: ['admin', 'manager', 'support'] },
+  { icon: ShoppingBag, label: 'অসম্পূর্ণ অর্ডার', href: '/admin/abandoned-carts', roles: ['admin', 'manager', 'support'] },
   { icon: Package, label: 'প্রোডাক্ট', href: '/admin/products', roles: ['admin', 'manager'] },
   { icon: FolderTree, label: 'ক্যাটাগরি', href: '/admin/categories', roles: ['admin', 'manager'] },
   { icon: Users, label: 'লেখক', href: '/admin/writers', roles: ['admin', 'manager'] },
