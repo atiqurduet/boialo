@@ -40,6 +40,7 @@ const menuItems = [
   { icon: Footprints, label: 'ফুটার', href: '/admin/footer', roles: ['admin', 'manager'] },
   { icon: ShoppingCart, label: 'অর্ডার', href: '/admin/orders', roles: ['admin', 'manager', 'support'] },
   { icon: ShoppingBag, label: 'অসম্পূর্ণ অর্ডার', href: '/admin/abandoned-carts', roles: ['admin', 'manager', 'support'] },
+  { icon: BarChart3, label: 'চেকআউট অ্যানালিটিক্স', href: '/admin/checkout-analytics', roles: ['admin', 'manager'] },
   { icon: Package, label: 'প্রোডাক্ট', href: '/admin/products', roles: ['admin', 'manager'] },
   { icon: FolderTree, label: 'ক্যাটাগরি', href: '/admin/categories', roles: ['admin', 'manager'] },
   { icon: Users, label: 'লেখক', href: '/admin/writers', roles: ['admin', 'manager'] },
