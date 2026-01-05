@@ -24,7 +24,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Search, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X, CalendarIcon } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { bn } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import { ProductBulkActions } from '@/components/admin/ProductBulkActions';
 import { ProductImageUpload } from '@/components/admin/ProductImageUpload';
 import { ProductPreviewUpload } from '@/components/admin/ProductPreviewUpload';
@@ -55,6 +60,7 @@ interface Product {
   description_bn: string | null;
   description_en: string | null;
   preview_url: string | null;
+  release_date: string | null;
 }
 
 interface Category {
@@ -119,6 +125,7 @@ const AdminProducts = () => {
     tags: [] as string[],
     isbn: '',
     preview_url: '',
+    release_date: null as Date | null,
   });
 
   useEffect(() => {
@@ -245,6 +252,7 @@ const AdminProducts = () => {
         tags: formData.tags.length > 0 ? formData.tags : null,
         isbn: formData.isbn || null,
         preview_url: formData.preview_url || null,
+        release_date: formData.release_date ? format(formData.release_date, 'yyyy-MM-dd') : null,
       };
 
       if (editingProduct) {
@@ -300,6 +308,7 @@ const AdminProducts = () => {
       tags: product.tags || [],
       isbn: product.isbn || '',
       preview_url: (product as any).preview_url || '',
+      release_date: product.release_date ? new Date(product.release_date) : null,
     });
     setDialogOpen(true);
   };
@@ -344,6 +353,7 @@ const AdminProducts = () => {
       tags: [],
       isbn: '',
       preview_url: '',
+      release_date: null,
     });
     setTagInput('');
   };
@@ -434,7 +444,7 @@ const AdminProducts = () => {
                         <Label>অ্যাক্টিভ</Label>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Switch checked={formData.is_preorder} onCheckedChange={(checked) => setFormData({ ...formData, is_preorder: checked })} />
+                        <Switch checked={formData.is_preorder} onCheckedChange={(checked) => setFormData({ ...formData, is_preorder: checked, release_date: checked ? formData.release_date : null })} />
                         <Label>প্রি-অর্ডার</Label>
                       </div>
                       <div className="flex items-center gap-2">
@@ -442,6 +452,41 @@ const AdminProducts = () => {
                         <Label>ফিচার্ড</Label>
                       </div>
                     </div>
+
+                    {/* Pre-order Release Date */}
+                    {formData.is_preorder && (
+                      <div className="space-y-2 p-4 bg-muted/50 rounded-lg border border-border">
+                        <Label className="text-base font-medium">প্রকাশের তারিখ</Label>
+                        <p className="text-sm text-muted-foreground">প্রি-অর্ডার পণ্যের প্রত্যাশিত প্রকাশের তারিখ নির্বাচন করুন</p>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !formData.release_date && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {formData.release_date ? (
+                                format(formData.release_date, 'd MMMM yyyy', { locale: bn })
+                              ) : (
+                                <span>তারিখ নির্বাচন করুন</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={formData.release_date || undefined}
+                              onSelect={(date) => setFormData({ ...formData, release_date: date || null })}
+                              initialFocus
+                              className="pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    )}
 
                     {/* Product Images Upload */}
                     <div>
