@@ -19,16 +19,18 @@ import {
 } from "@/components/ui/select";
 
 const Shop = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const category = searchParams.get("category");
   const writer = searchParams.get("writer");
   const publisher = searchParams.get("publisher");
+  const preorder = searchParams.get("preorder");
   const searchQuery = searchParams.get("search") || "";
   const [priceRange, setPriceRange] = useState([0, 30000]);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     price: true,
     publisher: true,
+    preorder: true,
   });
 
   // Fetch categories from database
@@ -184,17 +186,28 @@ const Shop = () => {
       }
     }
 
+    // Filter by pre-order status
+    if (preorder === "true") {
+      products = products.filter(p => p.isPreorder === true);
+    } else if (preorder === "false") {
+      products = products.filter(p => p.isPreorder !== true);
+    }
+
     // Filter by price range
     products = products.filter(
       (p) => p.price >= priceRange[0] && p.price <= priceRange[1]
     );
 
     return products;
-  }, [searchQuery, category, writer, publisher, priceRange, dbProducts, categories, writers, dbPublishers]);
+  }, [searchQuery, category, writer, publisher, preorder, priceRange, dbProducts, categories, writers, dbPublishers]);
 
   const getCategoryTitle = () => {
     if (searchQuery) {
       return `"${searchQuery}" এর ফলাফল`;
+    }
+    
+    if (preorder === "true") {
+      return "প্রি-অর্ডার বই";
     }
     
     if (writer) {
@@ -222,6 +235,17 @@ const Shop = () => {
     }
     
     return "সকল বই";
+  };
+
+  // Handle pre-order filter toggle
+  const handlePreorderFilter = (value: string | null) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (value) {
+      newParams.set("preorder", value);
+    } else {
+      newParams.delete("preorder");
+    }
+    setSearchParams(newParams);
   };
 
   // Generate SEO-friendly breadcrumb
@@ -310,13 +334,56 @@ const Shop = () => {
             </div>
 
             <div className="bg-card rounded-xl p-5 shadow-sm space-y-6">
+              {/* Pre-order Filter */}
+              <div>
+                <button
+                  onClick={() => toggleSection("preorder")}
+                  className="flex items-center justify-between w-full font-semibold mb-4"
+                >
+                  প্রি-অর্ডার
+                  {expandedSections.preorder ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+                {expandedSections.preorder && (
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handlePreorderFilter(null)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                        !preorder ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      }`}
+                    >
+                      সকল পণ্য
+                    </button>
+                    <button
+                      onClick={() => handlePreorderFilter("true")}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                        preorder === "true" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      }`}
+                    >
+                      🔥 শুধু প্রি-অর্ডার
+                    </button>
+                    <button
+                      onClick={() => handlePreorderFilter("false")}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                        preorder === "false" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      }`}
+                    >
+                      স্টকে আছে
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Price Range */}
               <div>
                 <button
                   onClick={() => toggleSection("price")}
                   className="flex items-center justify-between w-full font-semibold mb-4"
                 >
-                  Price Range
+                  মূল্য পরিসীমা
                   {expandedSections.price ? (
                     <ChevronUp className="w-4 h-4" />
                   ) : (
