@@ -27,6 +27,7 @@ const Index = () => {
   // Filter products by criteria
   const discountedProducts = products.filter(p => p.discount_percent && p.discount_percent >= 30);
   const featuredProducts = products.filter(p => p.is_featured);
+  const preorderProducts = products.filter(p => p.is_preorder === true);
   const newProducts = products.slice(0, 10);
 
   if (loading) {
@@ -176,6 +177,19 @@ const Index = () => {
             showRanking={settings.show_ranking}
           />
         ) : null;
+
+      case 'preorder_products':
+        if (preorderProducts.length === 0) return null;
+        return (
+          <DynamicProductGrid
+            key={section.id}
+            products={preorderProducts.slice(0, limit)}
+            title={section.title_bn}
+            subtitle={section.subtitle_bn || undefined}
+            viewAllLink={settings.view_all_link || "/shop?preorder=true"}
+            columns={settings.columns || 5}
+          />
+        );
 
       case 'trust_badges':
         return <TrustBadges key={section.id} />;
