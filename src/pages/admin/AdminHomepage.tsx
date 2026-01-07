@@ -46,6 +46,7 @@ const sectionTypeLabels: Record<string, string> = {
   recommended: '💡 সুপারিশকৃত',
   featured_products: '⭐ ফিচার্ড প্রোডাক্ট',
   selected_products: '📌 সিলেক্টেড প্রোডাক্ট',
+  preorder_products: '📅 প্রি-অর্ডার বই',
   trust_badges: '🛡️ ট্রাস্ট ব্যাজ',
   newsletter: '📧 নিউজলেটার',
 };
@@ -355,6 +356,7 @@ const AdminHomepage = () => {
       case 'bestsellers':
       case 'recommended':
       case 'featured_products':
+      case 'preorder_products':
         return (
           <div className="space-y-4 border-t pt-4 mt-4">
             <h4 className="font-medium">সেকশন সেটিংস</h4>
