@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { ProductCard, Product } from "@/components/ProductCard";
 import { Slider } from "@/components/ui/slider";
-import { ChevronDown, ChevronUp, Filter, X, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Filter, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +28,8 @@ const Shop = () => {
   const searchQuery = searchParams.get("search") || "";
   const [priceRange, setPriceRange] = useState([0, 30000]);
   const [sortBy, setSortBy] = useState("new");
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 12;
   const [showFilters, setShowFilters] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     price: true,
@@ -37,7 +39,11 @@ const Shop = () => {
     brand: false,
   });
 
-  // Fetch categories from database
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [category, writer, publisher, brand, preorder, searchQuery, priceRange, sortBy]);
+
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
@@ -250,6 +256,35 @@ const Shop = () => {
 
     return products;
   }, [searchQuery, category, writer, publisher, brand, preorder, priceRange, sortBy, dbProducts, categories, writers, dbPublishers, brands]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * productsPerPage;
+    return filteredProducts.slice(startIndex, startIndex + productsPerPage);
+  }, [filteredProducts, currentPage, productsPerPage]);
+
+  // Reset to page 1 when filters change
+  const handleFilterChange = () => {
+    setCurrentPage(1);
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, '...', totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+      }
+    }
+    return pages;
+  };
 
   const getCategoryTitle = () => {
     if (searchQuery) {
@@ -628,9 +663,9 @@ const Shop = () => {
                   <Skeleton key={i} className="h-[280px] rounded-xl" />
                 ))}
               </div>
-            ) : filteredProducts.length > 0 ? (
+            ) : paginatedProducts.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                {filteredProducts.map((product) => (
+                {paginatedProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
@@ -645,24 +680,53 @@ const Shop = () => {
             )}
 
             {/* Pagination */}
-            {filteredProducts.length > 0 && (
-              <div className="flex items-center justify-center gap-2 mt-8">
-                <Button variant="outline" size="sm" disabled>
-                  Previous
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-1 sm:gap-2 mt-8 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="gap-1"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">আগের</span>
                 </Button>
-                <Button variant="default" size="sm">
-                  1
-                </Button>
-                <Button variant="outline" size="sm">
-                  2
-                </Button>
-                <Button variant="outline" size="sm">
-                  3
-                </Button>
-                <Button variant="outline" size="sm">
-                  Next
+                
+                {getPageNumbers().map((page, index) => (
+                  typeof page === 'number' ? (
+                    <Button
+                      key={index}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className="min-w-[36px]"
+                    >
+                      {page}
+                    </Button>
+                  ) : (
+                    <span key={index} className="px-2 text-muted-foreground">...</span>
+                  )
+                ))}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="gap-1"
+                >
+                  <span className="hidden sm:inline">পরের</span>
+                  <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
+            )}
+
+            {/* Results info */}
+            {filteredProducts.length > 0 && (
+              <p className="text-center text-sm text-muted-foreground mt-4">
+                মোট {filteredProducts.length} টি পণ্যের মধ্যে {(currentPage - 1) * productsPerPage + 1} - {Math.min(currentPage * productsPerPage, filteredProducts.length)} দেখাচ্ছে
+              </p>
             )}
           </div>
         </div>
