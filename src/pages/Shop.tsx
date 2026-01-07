@@ -27,6 +27,7 @@ const Shop = () => {
   const preorder = searchParams.get("preorder");
   const searchQuery = searchParams.get("search") || "";
   const [priceRange, setPriceRange] = useState([0, 30000]);
+  const [sortBy, setSortBy] = useState("new");
   const [showFilters, setShowFilters] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     price: true,
@@ -229,8 +230,26 @@ const Shop = () => {
       (p) => p.price >= priceRange[0] && p.price <= priceRange[1]
     );
 
+    // Sort products
+    switch (sortBy) {
+      case "price-low":
+        products.sort((a, b) => a.price - b.price);
+        break;
+      case "price-high":
+        products.sort((a, b) => b.price - a.price);
+        break;
+      case "popular":
+        // Sort by discount (higher discount = more popular assumption)
+        products.sort((a, b) => (b.discount || 0) - (a.discount || 0));
+        break;
+      case "new":
+      default:
+        // Already sorted by created_at from database, newest first
+        break;
+    }
+
     return products;
-  }, [searchQuery, category, writer, publisher, brand, preorder, priceRange, dbProducts, categories, writers, dbPublishers, brands]);
+  }, [searchQuery, category, writer, publisher, brand, preorder, priceRange, sortBy, dbProducts, categories, writers, dbPublishers, brands]);
 
   const getCategoryTitle = () => {
     if (searchQuery) {
@@ -355,15 +374,15 @@ const Shop = () => {
               <Filter className="w-4 h-4" />
               ফিল্টার
             </Button>
-            <Select defaultValue="new">
+            <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Sort by" />
+                <SelectValue placeholder="সাজান" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="new">New Released</SelectItem>
-                <SelectItem value="price-low">Price: Low to High</SelectItem>
-                <SelectItem value="price-high">Price: High to Low</SelectItem>
-                <SelectItem value="popular">Most Popular</SelectItem>
+                <SelectItem value="new">নতুন প্রকাশিত</SelectItem>
+                <SelectItem value="price-low">মূল্য: কম থেকে বেশি</SelectItem>
+                <SelectItem value="price-high">মূল্য: বেশি থেকে কম</SelectItem>
+                <SelectItem value="popular">জনপ্রিয়</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -589,15 +608,15 @@ const Shop = () => {
                 </p>
               </div>
               <div className="hidden lg:block">
-                <Select defaultValue="new">
+                <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Sort by" />
+                    <SelectValue placeholder="সাজান" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="new">New Released</SelectItem>
-                    <SelectItem value="price-low">Price: Low to High</SelectItem>
-                    <SelectItem value="price-high">Price: High to Low</SelectItem>
-                    <SelectItem value="popular">Most Popular</SelectItem>
+                    <SelectItem value="new">নতুন প্রকাশিত</SelectItem>
+                    <SelectItem value="price-low">মূল্য: কম থেকে বেশি</SelectItem>
+                    <SelectItem value="price-high">মূল্য: বেশি থেকে কম</SelectItem>
+                    <SelectItem value="popular">জনপ্রিয়</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
