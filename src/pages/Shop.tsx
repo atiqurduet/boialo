@@ -23,6 +23,7 @@ const Shop = () => {
   const category = searchParams.get("category");
   const writer = searchParams.get("writer");
   const publisher = searchParams.get("publisher");
+  const brand = searchParams.get("brand");
   const preorder = searchParams.get("preorder");
   const searchQuery = searchParams.get("search") || "";
   const [priceRange, setPriceRange] = useState([0, 30000]);
@@ -31,6 +32,8 @@ const Shop = () => {
     price: true,
     publisher: true,
     preorder: true,
+    writer: false,
+    brand: false,
   });
 
   // Fetch categories from database
@@ -63,6 +66,18 @@ const Shop = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from('publishers')
+        .select('id, name_bn, name_en, slug')
+        .eq('is_active', true);
+      return data || [];
+    },
+  });
+
+  // Fetch brands from database
+  const { data: brands = [] } = useQuery({
+    queryKey: ['brands'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('brands')
         .select('id, name_bn, name_en, slug')
         .eq('is_active', true);
       return data || [];
@@ -102,6 +117,12 @@ const Shop = () => {
   const getCategoryInfo = () => {
     if (!category) return null;
     return categories.find(c => c.slug === category || c.id === category);
+  };
+
+  // Find matching brand info
+  const getBrandInfo = () => {
+    if (!brand) return null;
+    return brands.find(b => b.slug === brand || b.id === brand);
   };
 
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -186,6 +207,16 @@ const Shop = () => {
       }
     }
 
+    // Filter by brand (slug or ID)
+    if (brand) {
+      const brandInfo = getBrandInfo();
+      if (brandInfo) {
+        products = dbProducts
+          .filter(p => p.brand_id === brandInfo.id)
+          .map(convertDbProduct);
+      }
+    }
+
     // Filter by pre-order status
     if (preorder === "true") {
       products = products.filter(p => p.isPreorder === true);
@@ -199,7 +230,7 @@ const Shop = () => {
     );
 
     return products;
-  }, [searchQuery, category, writer, publisher, preorder, priceRange, dbProducts, categories, writers, dbPublishers]);
+  }, [searchQuery, category, writer, publisher, brand, preorder, priceRange, dbProducts, categories, writers, dbPublishers, brands]);
 
   const getCategoryTitle = () => {
     if (searchQuery) {
@@ -224,6 +255,14 @@ const Shop = () => {
         return `প্রকাশনী: ${publisherInfo.name_bn}`;
       }
       return `প্রকাশনী: ${publisher}`;
+    }
+
+    if (brand) {
+      const brandInfo = getBrandInfo();
+      if (brandInfo) {
+        return `ব্র্যান্ড: ${brandInfo.name_bn}`;
+      }
+      return `ব্র্যান্ড: ${brand}`;
     }
     
     if (category) {
@@ -267,6 +306,16 @@ const Shop = () => {
           <Link to="/publishers" className="hover:text-primary">প্রকাশনী</Link>
           <span className="mx-2">›</span>
           <span className="text-foreground">{publisherInfo?.name_bn || publisher}</span>
+        </>
+      );
+    }
+    if (brand) {
+      const brandInfo = getBrandInfo();
+      return (
+        <>
+          <span>ব্র্যান্ড</span>
+          <span className="mx-2">›</span>
+          <span className="text-foreground">{brandInfo?.name_bn || brand}</span>
         </>
       );
     }
@@ -449,6 +498,70 @@ const Shop = () => {
                       ))
                     ) : (
                       <p className="text-sm text-muted-foreground">কোনো প্রকাশক নেই</p>
+                    )}
+                  </div>
+                )}
+               </div>
+
+              {/* Writers */}
+              <div>
+                <button
+                  onClick={() => toggleSection("writer")}
+                  className="flex items-center justify-between w-full font-semibold mb-4"
+                >
+                  লেখক
+                  {expandedSections.writer ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+                {expandedSections.writer && (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {writers.length > 0 ? (
+                      writers.map((w) => (
+                        <Link
+                          key={w.id}
+                          to={`/shop?writer=${w.slug}`}
+                          className="flex items-center gap-2 text-sm hover:text-primary transition-colors py-1"
+                        >
+                          <span>{w.name_bn}</span>
+                        </Link>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">কোনো লেখক নেই</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Brands */}
+              <div>
+                <button
+                  onClick={() => toggleSection("brand")}
+                  className="flex items-center justify-between w-full font-semibold mb-4"
+                >
+                  ব্র্যান্ড
+                  {expandedSections.brand ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+                {expandedSections.brand && (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {brands.length > 0 ? (
+                      brands.map((b) => (
+                        <Link
+                          key={b.id}
+                          to={`/shop?brand=${b.slug}`}
+                          className="flex items-center gap-2 text-sm hover:text-primary transition-colors py-1"
+                        >
+                          <span>{b.name_bn}</span>
+                        </Link>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">কোনো ব্র্যান্ড নেই</p>
                     )}
                   </div>
                 )}
