@@ -1239,6 +1239,196 @@ export type Database = {
         }
         Relationships: []
       }
+      universal_categories: {
+        Row: {
+          created_at: string
+          description_bn: string | null
+          description_en: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          meta_description: string | null
+          meta_title: string | null
+          name_bn: string
+          name_en: string
+          parent_id: string | null
+          product_type: Database["public"]["Enums"]["product_type"]
+          slug: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description_bn?: string | null
+          description_en?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          name_bn: string
+          name_en: string
+          parent_id?: string | null
+          product_type: Database["public"]["Enums"]["product_type"]
+          slug: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description_bn?: string | null
+          description_en?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          name_bn?: string
+          name_en?: string
+          parent_id?: string | null
+          product_type?: Database["public"]["Enums"]["product_type"]
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "universal_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "universal_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      universal_products: {
+        Row: {
+          brand: string | null
+          canonical_url: string | null
+          category_id: string | null
+          created_at: string
+          delivery_time: string | null
+          dimensions: string | null
+          discount_percent: number | null
+          id: string
+          images: Json | null
+          ingredients: string | null
+          is_active: boolean | null
+          is_featured: boolean | null
+          json_ld: Json | null
+          long_description_bn: string | null
+          long_description_en: string | null
+          manufacturer: string | null
+          meta_description: string | null
+          meta_keywords: string[] | null
+          meta_title: string | null
+          name_bn: string
+          name_en: string
+          og_description: string | null
+          og_image: string | null
+          og_title: string | null
+          original_price: number | null
+          price: number
+          product_type: Database["public"]["Enums"]["product_type"]
+          return_policy: string | null
+          short_description_bn: string | null
+          short_description_en: string | null
+          sku: string | null
+          slug: string
+          stock_quantity: number | null
+          updated_at: string
+          video_url: string | null
+          warranty: string | null
+          weight: string | null
+        }
+        Insert: {
+          brand?: string | null
+          canonical_url?: string | null
+          category_id?: string | null
+          created_at?: string
+          delivery_time?: string | null
+          dimensions?: string | null
+          discount_percent?: number | null
+          id?: string
+          images?: Json | null
+          ingredients?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          json_ld?: Json | null
+          long_description_bn?: string | null
+          long_description_en?: string | null
+          manufacturer?: string | null
+          meta_description?: string | null
+          meta_keywords?: string[] | null
+          meta_title?: string | null
+          name_bn: string
+          name_en: string
+          og_description?: string | null
+          og_image?: string | null
+          og_title?: string | null
+          original_price?: number | null
+          price: number
+          product_type: Database["public"]["Enums"]["product_type"]
+          return_policy?: string | null
+          short_description_bn?: string | null
+          short_description_en?: string | null
+          sku?: string | null
+          slug: string
+          stock_quantity?: number | null
+          updated_at?: string
+          video_url?: string | null
+          warranty?: string | null
+          weight?: string | null
+        }
+        Update: {
+          brand?: string | null
+          canonical_url?: string | null
+          category_id?: string | null
+          created_at?: string
+          delivery_time?: string | null
+          dimensions?: string | null
+          discount_percent?: number | null
+          id?: string
+          images?: Json | null
+          ingredients?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          json_ld?: Json | null
+          long_description_bn?: string | null
+          long_description_en?: string | null
+          manufacturer?: string | null
+          meta_description?: string | null
+          meta_keywords?: string[] | null
+          meta_title?: string | null
+          name_bn?: string
+          name_en?: string
+          og_description?: string | null
+          og_image?: string | null
+          og_title?: string | null
+          original_price?: number | null
+          price?: number
+          product_type?: Database["public"]["Enums"]["product_type"]
+          return_policy?: string | null
+          short_description_bn?: string | null
+          short_description_en?: string | null
+          sku?: string | null
+          slug?: string
+          stock_quantity?: number | null
+          updated_at?: string
+          video_url?: string | null
+          warranty?: string | null
+          weight?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "universal_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "universal_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1346,6 +1536,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "manager" | "support"
+      product_type: "lifestyle" | "stationery" | "food"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1474,6 +1665,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "support"],
+      product_type: ["lifestyle", "stationery", "food"],
     },
   },
 } as const
