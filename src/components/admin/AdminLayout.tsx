@@ -24,7 +24,9 @@ import {
   Navigation,
   Footprints,
   Palette,
-  ShoppingBag
+  ShoppingBag,
+  Layers,
+  Grid3X3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +48,8 @@ const menuItems = [
   { icon: Users, label: 'লেখক', href: '/admin/writers', roles: ['admin', 'manager'] },
   { icon: FileText, label: 'প্রকাশনী', href: '/admin/publishers', roles: ['admin', 'manager'] },
   { icon: Tag, label: 'ব্র্যান্ড', href: '/admin/brands', roles: ['admin', 'manager'] },
+  { icon: Layers, label: 'ইউনিভার্সাল প্রোডাক্ট', href: '/admin/universal-products', roles: ['admin', 'manager'] },
+  { icon: Grid3X3, label: 'ইউনিভার্সাল ক্যাটাগরি', href: '/admin/universal-categories', roles: ['admin', 'manager'] },
   { icon: Image, label: 'ব্যানার', href: '/admin/banners', roles: ['admin', 'manager'] },
   { icon: Ticket, label: 'কুপন', href: '/admin/coupons', roles: ['admin', 'manager'] },
   { icon: Users, label: 'কাস্টমার', href: '/admin/customers', roles: ['admin', 'manager', 'support'] },
