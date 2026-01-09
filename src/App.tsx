@@ -29,6 +29,8 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import CategoryLanding from "./pages/CategoryLanding";
+import UniversalProductDetail from "./pages/UniversalProductDetail";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -54,6 +56,8 @@ import AdminMenu from "./pages/admin/AdminMenu";
 import AdminFooter from "./pages/admin/AdminFooter";
 import AdminAbandonedCarts from "./pages/admin/AdminAbandonedCarts";
 import AdminCheckoutAnalytics from "./pages/admin/AdminCheckoutAnalytics";
+import AdminUniversalProducts from "./pages/admin/AdminUniversalProducts";
+import AdminUniversalCategories from "./pages/admin/AdminUniversalCategories";
 
 const queryClient = new QueryClient();
 
@@ -90,9 +94,9 @@ const App = () => (
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/profile" element={<Profile />} />
-                <Route path="/lifestyle" element={<Shop />} />
-                <Route path="/stationery" element={<Shop />} />
-                <Route path="/food" element={<Shop />} />
+                <Route path="/category/:productType" element={<CategoryLanding />} />
+                <Route path="/category/:productType/:categorySlug" element={<CategoryLanding />} />
+                <Route path="/universal-product/:slug" element={<UniversalProductDetail />} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminDashboard />} />
@@ -102,6 +106,8 @@ const App = () => (
                 <Route path="/admin/writers" element={<AdminWriters />} />
                 <Route path="/admin/publishers" element={<AdminPublishers />} />
                 <Route path="/admin/brands" element={<AdminBrands />} />
+                <Route path="/admin/universal-products" element={<AdminUniversalProducts />} />
+                <Route path="/admin/universal-categories" element={<AdminUniversalCategories />} />
                 <Route path="/admin/orders" element={<AdminOrders />} />
                 <Route path="/admin/banners" element={<AdminBanners />} />
                 <Route path="/admin/coupons" element={<AdminCoupons />} />
