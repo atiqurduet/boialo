@@ -132,17 +132,10 @@ const UniversalProductDetail = () => {
     }
   }, [product]);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!product) return;
     
-    addToCart({
-      id: product.id,
-      title: product.name_bn,
-      author: product.brand,
-      price: product.price,
-      image: product.images?.[0] || '/placeholder.svg',
-    }, quantity);
-    
+    await addToCart(product.id, quantity);
     toast.success('কার্টে যোগ করা হয়েছে');
   };
 
