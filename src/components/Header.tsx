@@ -25,6 +25,9 @@ const fallbackNavLinks = [
   { name: "আরবি বই", path: "/shop?category=arabic" },
   { name: "লেখক", path: "/authors" },
   { name: "প্রকাশক", path: "/publishers" },
+  { name: "লাইফস্টাইল", path: "/category/lifestyle" },
+  { name: "স্টেশনারী", path: "/category/stationery" },
+  { name: "ফুড", path: "/category/food" },
   { name: "আজকের অফার", path: "/offers" },
   { name: "প্রি-অর্ডার", path: "/preorder" },
 ];
