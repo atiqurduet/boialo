@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCartContext } from "@/contexts/CartContext";
 import { useWishlistContext } from "@/contexts/WishlistContext";
 import { toast } from "sonner";
+import { RelatedProducts } from "@/components/RelatedProducts";
 
 type ProductType = 'lifestyle' | 'stationery' | 'food';
 
@@ -428,6 +429,14 @@ const UniversalProductDetail = () => {
               </div>
             </div>
           )}
+
+          {/* Related Products */}
+          <RelatedProducts
+            currentProductId={product.id}
+            categoryId={product.category_id}
+            productType={product.product_type}
+            limit={4}
+          />
         </div>
       </main>
 
