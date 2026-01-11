@@ -26,6 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Search, X, Package, Utensils, Pencil as PencilIcon } from 'lucide-react';
 import { ProductImageUpload } from '@/components/admin/ProductImageUpload';
+import { UniversalProductBulkActions } from '@/components/admin/UniversalProductBulkActions';
 
 type ProductType = 'lifestyle' | 'stationery' | 'food';
 
@@ -359,10 +360,15 @@ const AdminUniversalProducts = () => {
             <h1 className="text-2xl font-bold">ইউনিভার্সাল প্রোডাক্ট</h1>
             <p className="text-muted-foreground">লাইফস্টাইল, স্টেশনারী ও ফুড প্রোডাক্ট ম্যানেজ করুন</p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />নতুন প্রোডাক্ট</Button>
-            </DialogTrigger>
+          <div className="flex flex-wrap gap-2">
+            <UniversalProductBulkActions 
+              categories={categories}
+              onImportComplete={fetchProducts}
+            />
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2" />নতুন প্রোডাক্ট</Button>
+              </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingProduct ? 'প্রোডাক্ট এডিট' : 'নতুন প্রোডাক্ট'}</DialogTitle>
@@ -603,7 +609,8 @@ const AdminUniversalProducts = () => {
                 </div>
               </form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         {/* Filters */}
