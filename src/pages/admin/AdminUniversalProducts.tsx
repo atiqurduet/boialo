@@ -428,12 +428,12 @@ const AdminUniversalProducts = () => {
                     </div>
                     <div>
                       <Label>ক্যাটাগরি</Label>
-                      <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
+                      <Select value={formData.category_id || "none"} onValueChange={(value) => setFormData({ ...formData, category_id: value === "none" ? "" : value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="ক্যাটাগরি নির্বাচন করুন" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">কোনো ক্যাটাগরি নেই</SelectItem>
+                          <SelectItem value="none">কোনো ক্যাটাগরি নেই</SelectItem>
                           {filteredCategories.map(cat => (
                             <SelectItem key={cat.id} value={cat.id}>{cat.name_bn}</SelectItem>
                           ))}
