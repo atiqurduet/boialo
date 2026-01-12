@@ -181,91 +181,91 @@ const AdminCategories = () => {
                   নতুন ক্যাটাগরি
                 </Button>
               </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{editingCategory ? 'ক্যাটাগরি এডিট' : 'নতুন ক্যাটাগরি'}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingCategory ? 'ক্যাটাগরি এডিট' : 'নতুন ক্যাটাগরি'}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>নাম (বাংলা)</Label>
+                      <Input
+                        value={formData.name_bn}
+                        onChange={(e) => setFormData({ ...formData, name_bn: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Name (English)</Label>
+                      <Input
+                        value={formData.name_en}
+                        onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <Label>নাম (বাংলা)</Label>
+                    <Label>Slug</Label>
                     <Input
-                      value={formData.name_bn}
-                      onChange={(e) => setFormData({ ...formData, name_bn: e.target.value })}
-                      required
+                      value={formData.slug}
+                      onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                      placeholder="auto-generated from English name"
                     />
                   </div>
+
                   <div>
-                    <Label>Name (English)</Label>
-                    <Input
-                      value={formData.name_en}
-                      onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
-                      required
+                    <Label>প্যারেন্ট ক্যাটাগরি</Label>
+                    <Select
+                      value={formData.parent_id || "none"}
+                      onValueChange={(value) => setFormData({ ...formData, parent_id: value === "none" ? "" : value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="প্যারেন্ট নির্বাচন করুন (ঐচ্ছিক)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">কোন প্যারেন্ট নেই (মূল ক্যাটাগরি)</SelectItem>
+                        {parentCategories
+                          .filter(c => c.id !== editingCategory?.id)
+                          .map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>{cat.name_bn}</SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>ইমেজ</Label>
+                    <LogoUpload
+                      value={formData.image_url}
+                      onChange={(url) => setFormData({ ...formData, image_url: url })}
+                      label="ক্যাটাগরি ইমেজ"
+                      folder="categories"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <Label>Slug</Label>
-                  <Input
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    placeholder="auto-generated from English name"
-                  />
-                </div>
+                  <div>
+                    <Label>সর্ট অর্ডার</Label>
+                    <Input
+                      type="number"
+                      value={formData.sort_order}
+                      onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) })}
+                    />
+                  </div>
 
-                <div>
-                  <Label>প্যারেন্ট ক্যাটাগরি</Label>
-                  <Select
-                    value={formData.parent_id || "none"}
-                    onValueChange={(value) => setFormData({ ...formData, parent_id: value === "none" ? "" : value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="প্যারেন্ট নির্বাচন করুন (ঐচ্ছিক)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">কোন প্যারেন্ট নেই (মূল ক্যাটাগরি)</SelectItem>
-                      {parentCategories
-                        .filter(c => c.id !== editingCategory?.id)
-                        .map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>{cat.name_bn}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={formData.is_active}
+                      onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                    />
+                    <Label>অ্যাক্টিভ</Label>
+                  </div>
 
-                <div>
-                  <Label>ইমেজ</Label>
-                  <LogoUpload
-                    value={formData.image_url}
-                    onChange={(url) => setFormData({ ...formData, image_url: url })}
-                    label="ক্যাটাগরি ইমেজ"
-                    folder="categories"
-                  />
-                </div>
-
-                <div>
-                  <Label>সর্ট অর্ডার</Label>
-                  <Input
-                    type="number"
-                    value={formData.sort_order}
-                    onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) })}
-                  />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                  />
-                  <Label>অ্যাক্টিভ</Label>
-                </div>
-
-                <Button type="submit" className="w-full">
-                  {editingCategory ? 'আপডেট করুন' : 'যোগ করুন'}
-                </Button>
-              </form>
-            </DialogContent>
+                  <Button type="submit" className="w-full">
+                    {editingCategory ? 'আপডেট করুন' : 'যোগ করুন'}
+                  </Button>
+                </form>
+              </DialogContent>
             </Dialog>
           </div>
         </div>

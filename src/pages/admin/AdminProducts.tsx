@@ -395,7 +395,7 @@ const AdminProducts = () => {
               <DialogTrigger asChild>
                 <Button><Plus className="h-4 w-4 mr-2" />নতুন প্রোডাক্ট</Button>
               </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingProduct ? 'প্রোডাক্ট এডিট' : 'নতুন প্রোডাক্ট'}</DialogTitle>
               </DialogHeader>
@@ -640,7 +640,7 @@ const AdminProducts = () => {
 
                 <Button type="submit" className="w-full">{editingProduct ? 'আপডেট করুন' : 'যোগ করুন'}</Button>
               </form>
-            </DialogContent>
+              </DialogContent>
             </Dialog>
           </div>
         </div>
