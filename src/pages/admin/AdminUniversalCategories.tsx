@@ -260,12 +260,12 @@ const AdminUniversalCategories = () => {
                   </div>
                   <div>
                     <Label>প্যারেন্ট ক্যাটাগরি</Label>
-                    <Select value={formData.parent_id} onValueChange={(value) => setFormData({ ...formData, parent_id: value })}>
+                    <Select value={formData.parent_id || "none"} onValueChange={(value) => setFormData({ ...formData, parent_id: value === "none" ? "" : value })}>
                       <SelectTrigger>
                         <SelectValue placeholder="কোনো প্যারেন্ট নেই" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">কোনো প্যারেন্ট নেই</SelectItem>
+                        <SelectItem value="none">কোনো প্যারেন্ট নেই</SelectItem>
                         {parentCategories.map(cat => (
                           <SelectItem key={cat.id} value={cat.id}>{cat.name_bn}</SelectItem>
                         ))}
