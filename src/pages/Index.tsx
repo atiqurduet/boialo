@@ -5,6 +5,8 @@ import { DynamicCategorySection } from "@/components/DynamicCategorySection";
 import { DynamicProductGrid } from "@/components/DynamicProductGrid";
 import { DynamicFlashSale } from "@/components/DynamicFlashSale";
 import { DynamicPromoBanner } from "@/components/DynamicPromoBanner";
+import { DynamicUniversalProductGrid } from "@/components/DynamicUniversalProductGrid";
+import { DynamicUniversalCategorySection } from "@/components/DynamicUniversalCategorySection";
 import { TrustBadges } from "@/components/TrustBadges";
 import { NewsletterSection } from "@/components/NewsletterSection";
 import { Footer } from "@/components/Footer";
@@ -16,12 +18,17 @@ const Index = () => {
     banners, 
     categories, 
     products, 
+    universalCategories,
+    universalProducts,
     writers,
     sections, 
     loading,
     getProductsByCategory,
     getProductsByWriter,
-    getProductsByIds
+    getProductsByIds,
+    getUniversalProductsByCategory,
+    getUniversalProductsByType,
+    getUniversalCategoriesByType
   } = useHomepageData();
 
   // Filter products by criteria
@@ -196,6 +203,50 @@ const Index = () => {
 
       case 'newsletter':
         return <NewsletterSection key={section.id} />;
+
+      // Universal Products Section Types
+      case 'universal_category_products':
+        const universalCategoryId = settings.universal_category_id;
+        const productType = settings.product_type;
+        if (!universalCategoryId && !productType) return null;
+        
+        let uniProducts;
+        if (universalCategoryId) {
+          uniProducts = getUniversalProductsByCategory(universalCategoryId).slice(0, limit);
+        } else {
+          uniProducts = getUniversalProductsByType(productType).slice(0, limit);
+        }
+        
+        if (uniProducts.length === 0) return null;
+        
+        const uniCategory = universalCategories.find(c => c.id === universalCategoryId);
+        return (
+          <DynamicUniversalProductGrid
+            key={section.id}
+            products={uniProducts}
+            title={section.title_bn}
+            subtitle={section.subtitle_bn || undefined}
+            viewAllLink={settings.view_all_link || `/${productType}${uniCategory ? `?category=${uniCategory.slug}` : ''}`}
+            columns={settings.columns || 5}
+          />
+        );
+
+      case 'universal_category_grid':
+        const gridProductType = settings.product_type;
+        if (!gridProductType) return null;
+        
+        const typeCategories = getUniversalCategoriesByType(gridProductType);
+        if (typeCategories.length === 0) return null;
+        
+        return (
+          <DynamicUniversalCategorySection
+            key={section.id}
+            categories={typeCategories}
+            title={section.title_bn}
+            productType={gridProductType}
+            maxCategories={settings.max_categories || 8}
+          />
+        );
 
       default:
         return null;
