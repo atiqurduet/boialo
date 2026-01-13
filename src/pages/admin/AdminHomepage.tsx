@@ -51,6 +51,7 @@ const sectionTypeLabels: Record<string, string> = {
   newsletter: '📧 নিউজলেটার',
   universal_category_products: '🛍️ ইউনিভার্সাল ক্যাটাগরি প্রোডাক্ট',
   universal_category_grid: '🏷️ ইউনিভার্সাল ক্যাটাগরি গ্রিড',
+  universal_flash_sale: '⚡ ইউনিভার্সাল ফ্ল্যাশ সেল',
 };
 
 const sectionTypes = Object.entries(sectionTypeLabels).map(([value, label]) => ({
@@ -370,6 +371,7 @@ const AdminHomepage = () => {
       case 'recommended':
       case 'featured_products':
       case 'preorder_products':
+      case 'universal_flash_sale':
         return (
           <div className="space-y-4 border-t pt-4 mt-4">
             <h4 className="font-medium">সেকশন সেটিংস</h4>
@@ -395,17 +397,39 @@ const AdminHomepage = () => {
                 })}
               />
             </div>
-            {sectionType === 'flash_sale' && (
+            {(sectionType === 'flash_sale' || sectionType === 'universal_flash_sale') && (
               <div>
                 <Label>মিনিমাম ডিসকাউন্ট (%)</Label>
                 <Input
                   type="number"
-                  value={formData.settings.min_discount || 30}
+                  value={formData.settings.min_discount || 10}
                   onChange={(e) => setFormData({
                     ...formData,
                     settings: { ...formData.settings, min_discount: Number(e.target.value) }
                   })}
                 />
+              </div>
+            )}
+            {sectionType === 'universal_flash_sale' && (
+              <div>
+                <Label>প্রোডাক্ট টাইপ</Label>
+                <Select
+                  value={formData.settings.product_type || 'all'}
+                  onValueChange={(value) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, product_type: value }
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="প্রোডাক্ট টাইপ নির্বাচন করুন" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">🛒 সব টাইপ</SelectItem>
+                    <SelectItem value="lifestyle">🛍️ Lifestyle</SelectItem>
+                    <SelectItem value="stationery">✏️ Stationery</SelectItem>
+                    <SelectItem value="food">🍔 Food</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
             <div>

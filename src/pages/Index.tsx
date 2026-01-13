@@ -7,6 +7,7 @@ import { DynamicFlashSale } from "@/components/DynamicFlashSale";
 import { DynamicPromoBanner } from "@/components/DynamicPromoBanner";
 import { DynamicUniversalProductGrid } from "@/components/DynamicUniversalProductGrid";
 import { DynamicUniversalCategorySection } from "@/components/DynamicUniversalCategorySection";
+import { DynamicUniversalFlashSale } from "@/components/DynamicUniversalFlashSale";
 import { TrustBadges } from "@/components/TrustBadges";
 import { NewsletterSection } from "@/components/NewsletterSection";
 import { Footer } from "@/components/Footer";
@@ -245,6 +246,32 @@ const Index = () => {
             title={section.title_bn}
             productType={gridProductType}
             maxCategories={settings.max_categories || 8}
+          />
+        );
+
+      case 'universal_flash_sale':
+        const flashProductType = settings.product_type;
+        const minDiscount = settings.min_discount || 10;
+        
+        let flashUniProducts;
+        if (flashProductType && flashProductType !== 'all') {
+          flashUniProducts = universalProducts
+            .filter(p => p.product_type === flashProductType && p.discount_percent && p.discount_percent >= minDiscount)
+            .slice(0, limit);
+        } else {
+          flashUniProducts = universalProducts
+            .filter(p => p.discount_percent && p.discount_percent >= minDiscount)
+            .slice(0, limit);
+        }
+        
+        if (flashUniProducts.length === 0) return null;
+        
+        return (
+          <DynamicUniversalFlashSale
+            key={section.id}
+            products={flashUniProducts}
+            title={section.title_bn}
+            viewAllLink={settings.view_all_link || (flashProductType && flashProductType !== 'all' ? `/${flashProductType}` : '/lifestyle')}
           />
         );
 
