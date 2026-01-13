@@ -36,6 +36,31 @@ interface Product {
   writer_id: string | null;
 }
 
+interface UniversalCategory {
+  id: string;
+  name_bn: string;
+  name_en: string;
+  slug: string;
+  image_url: string | null;
+  parent_id: string | null;
+  product_type: string;
+}
+
+interface UniversalProduct {
+  id: string;
+  name_bn: string;
+  name_en: string;
+  slug: string;
+  price: number;
+  original_price: number | null;
+  discount_percent: number | null;
+  brand: string | null;
+  images: any;
+  is_featured: boolean;
+  category_id: string | null;
+  product_type: string;
+}
+
 interface Writer {
   id: string;
   name_bn: string;
@@ -58,6 +83,8 @@ interface HomepageData {
   banners: Banner[];
   categories: Category[];
   products: Product[];
+  universalCategories: UniversalCategory[];
+  universalProducts: UniversalProduct[];
   writers: Writer[];
   sections: HomepageSection[];
   loading: boolean;
@@ -65,13 +92,18 @@ interface HomepageData {
   getProductsByCategory: (categoryId: string) => Product[];
   getProductsByWriter: (writerId: string) => Product[];
   getProductsByIds: (ids: string[]) => Product[];
+  getUniversalProductsByCategory: (categoryId: string) => UniversalProduct[];
+  getUniversalProductsByType: (productType: string) => UniversalProduct[];
+  getUniversalCategoriesByType: (productType: string) => UniversalCategory[];
 }
 
 export const useHomepageData = (): HomepageData => {
-  const [data, setData] = useState<Omit<HomepageData, 'getProductsByCategory' | 'getProductsByWriter' | 'getProductsByIds'>>({
+  const [data, setData] = useState<Omit<HomepageData, 'getProductsByCategory' | 'getProductsByWriter' | 'getProductsByIds' | 'getUniversalProductsByCategory' | 'getUniversalProductsByType' | 'getUniversalCategoriesByType'>>({
     banners: [],
     categories: [],
     products: [],
+    universalCategories: [],
+    universalProducts: [],
     writers: [],
     sections: [],
     loading: true,
@@ -82,7 +114,7 @@ export const useHomepageData = (): HomepageData => {
     const fetchData = async () => {
       try {
         // Fetch all data in parallel
-        const [bannersRes, categoriesRes, productsRes, sectionsRes, writersRes] = await Promise.all([
+        const [bannersRes, categoriesRes, productsRes, sectionsRes, writersRes, universalCategoriesRes, universalProductsRes] = await Promise.all([
           supabase
             .from('banners')
             .select('*')
@@ -109,6 +141,17 @@ export const useHomepageData = (): HomepageData => {
             .select('id, name_bn, name_en, slug')
             .eq('is_active', true)
             .order('name_bn'),
+          supabase
+            .from('universal_categories')
+            .select('*')
+            .eq('is_active', true)
+            .order('sort_order', { ascending: true }),
+          supabase
+            .from('universal_products')
+            .select('*')
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .limit(100),
         ]);
 
         if (bannersRes.error) throw bannersRes.error;
@@ -116,11 +159,15 @@ export const useHomepageData = (): HomepageData => {
         if (productsRes.error) throw productsRes.error;
         if (sectionsRes.error) throw sectionsRes.error;
         if (writersRes.error) throw writersRes.error;
+        if (universalCategoriesRes.error) throw universalCategoriesRes.error;
+        if (universalProductsRes.error) throw universalProductsRes.error;
 
         setData({
           banners: bannersRes.data || [],
           categories: categoriesRes.data || [],
           products: productsRes.data || [],
+          universalCategories: universalCategoriesRes.data || [],
+          universalProducts: universalProductsRes.data || [],
           writers: writersRes.data || [],
           sections: sectionsRes.data || [],
           loading: false,
@@ -152,10 +199,25 @@ export const useHomepageData = (): HomepageData => {
     return data.products.filter(p => ids.includes(p.id));
   };
 
+  const getUniversalProductsByCategory = (categoryId: string): UniversalProduct[] => {
+    return data.universalProducts.filter(p => p.category_id === categoryId);
+  };
+
+  const getUniversalProductsByType = (productType: string): UniversalProduct[] => {
+    return data.universalProducts.filter(p => p.product_type === productType);
+  };
+
+  const getUniversalCategoriesByType = (productType: string): UniversalCategory[] => {
+    return data.universalCategories.filter(c => c.product_type === productType);
+  };
+
   return {
     ...data,
     getProductsByCategory,
     getProductsByWriter,
     getProductsByIds,
+    getUniversalProductsByCategory,
+    getUniversalProductsByType,
+    getUniversalCategoriesByType,
   };
 };

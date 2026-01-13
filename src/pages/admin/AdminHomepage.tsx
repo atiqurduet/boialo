@@ -49,6 +49,8 @@ const sectionTypeLabels: Record<string, string> = {
   preorder_products: '📅 প্রি-অর্ডার বই',
   trust_badges: '🛡️ ট্রাস্ট ব্যাজ',
   newsletter: '📧 নিউজলেটার',
+  universal_category_products: '🛍️ ইউনিভার্সাল ক্যাটাগরি প্রোডাক্ট',
+  universal_category_grid: '🏷️ ইউনিভার্সাল ক্যাটাগরি গ্রিড',
 };
 
 const sectionTypes = Object.entries(sectionTypeLabels).map(([value, label]) => ({
@@ -66,6 +68,7 @@ const AdminHomepage = () => {
 
   // Data for dropdowns
   const [categories, setCategories] = useState<Array<{ id: string; name_bn: string }>>([]);
+  const [universalCategories, setUniversalCategories] = useState<Array<{ id: string; name_bn: string; product_type: string }>>([]);
   const [writers, setWriters] = useState<Array<{ id: string; name_bn: string }>>([]);
   const [products, setProducts] = useState<Array<{ id: string; title_bn: string }>>([]);
   const [productSearch, setProductSearch] = useState('');
@@ -82,6 +85,7 @@ const AdminHomepage = () => {
   useEffect(() => {
     fetchSections();
     fetchCategories();
+    fetchUniversalCategories();
     fetchWriters();
   }, []);
 
@@ -98,6 +102,15 @@ const AdminHomepage = () => {
       .eq('is_active', true)
       .order('name_bn');
     setCategories(data || []);
+  };
+
+  const fetchUniversalCategories = async () => {
+    const { data } = await supabase
+      .from('universal_categories')
+      .select('id, name_bn, product_type')
+      .eq('is_active', true)
+      .order('name_bn');
+    setUniversalCategories(data || []);
   };
 
   const fetchWriters = async () => {
@@ -578,6 +591,115 @@ const AdminHomepage = () => {
                   settings: { ...formData.settings, columns: Number(e.target.value) }
                 })}
               />
+            </div>
+            <div>
+              <Label>সর্বোচ্চ ক্যাটাগরি সংখ্যা</Label>
+              <Input
+                type="number"
+                value={formData.settings.max_categories || 8}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, max_categories: Number(e.target.value) }
+                })}
+              />
+            </div>
+          </div>
+        );
+
+      case 'universal_category_products':
+        return (
+          <div className="space-y-4 border-t pt-4 mt-4">
+            <h4 className="font-medium">ইউনিভার্সাল ক্যাটাগরি প্রোডাক্ট সেটিংস</h4>
+            <div>
+              <Label>প্রোডাক্ট টাইপ</Label>
+              <Select
+                value={formData.settings.product_type || ''}
+                onValueChange={(value) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, product_type: value, universal_category_id: '' }
+                })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="প্রোডাক্ট টাইপ নির্বাচন করুন" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lifestyle">🛍️ Lifestyle</SelectItem>
+                  <SelectItem value="stationery">✏️ Stationery</SelectItem>
+                  <SelectItem value="food">🍔 Food</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {formData.settings.product_type && (
+              <div>
+                <Label>ক্যাটাগরি নির্বাচন করুন</Label>
+                <Select
+                  value={formData.settings.universal_category_id || ''}
+                  onValueChange={(value) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, universal_category_id: value }
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="ক্যাটাগরি নির্বাচন করুন" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {universalCategories
+                      .filter(cat => cat.product_type === formData.settings.product_type)
+                      .map(cat => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name_bn}</SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div>
+              <Label>প্রোডাক্ট সংখ্যা</Label>
+              <Input
+                type="number"
+                value={formData.settings.limit || 10}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, limit: Number(e.target.value) }
+                })}
+              />
+            </div>
+            <div>
+              <Label>View All লিংক</Label>
+              <Input
+                value={formData.settings.view_all_link || ''}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, view_all_link: e.target.value }
+                })}
+                placeholder={`/${formData.settings.product_type || 'lifestyle'}`}
+              />
+            </div>
+          </div>
+        );
+
+      case 'universal_category_grid':
+        return (
+          <div className="space-y-4 border-t pt-4 mt-4">
+            <h4 className="font-medium">ইউনিভার্সাল ক্যাটাগরি গ্রিড সেটিংস</h4>
+            <div>
+              <Label>প্রোডাক্ট টাইপ</Label>
+              <Select
+                value={formData.settings.product_type || ''}
+                onValueChange={(value) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, product_type: value }
+                })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="প্রোডাক্ট টাইপ নির্বাচন করুন" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lifestyle">🛍️ Lifestyle</SelectItem>
+                  <SelectItem value="stationery">✏️ Stationery</SelectItem>
+                  <SelectItem value="food">🍔 Food</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>সর্বোচ্চ ক্যাটাগরি সংখ্যা</Label>
