@@ -241,64 +241,64 @@ function generateInvoiceHtml(order: any, orderItems: any[], settings: InvoiceSet
     
     body {
       font-family: 'Noto Sans Bengali', sans-serif;
-      font-size: 12px;
-      line-height: 1.5;
+      font-size: 14px;
+      line-height: 1.6;
       color: #1a1a1a;
       background: #fff;
-      padding: 15px;
+      padding: 30px;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     
-    .invoice { max-width: 100%; margin: 0 auto; }
+    .invoice { max-width: 800px; margin: 0 auto; }
     
     .header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #059669;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid #059669;
     }
     
-    .company-info { display: flex; flex-direction: column; gap: 2px; }
-    .logo { font-size: 22px; font-weight: 700; color: #059669; }
-    .logo-sub { font-size: 10px; color: #6b7280; }
-    .company-contact { font-size: 9px; color: #6b7280; margin-top: 3px; }
+    .company-info { display: flex; flex-direction: column; gap: 3px; }
+    .logo { font-size: 28px; font-weight: 700; color: #059669; }
+    .logo-sub { font-size: 11px; color: #6b7280; }
+    .company-contact { font-size: 10px; color: #6b7280; margin-top: 5px; }
     
     .invoice-title { text-align: right; }
-    .invoice-title h1 { font-size: 20px; color: #059669; font-weight: 700; margin-bottom: 5px; }
-    .invoice-meta { color: #6b7280; font-size: 11px; }
-    .invoice-meta p { margin: 2px 0; }
+    .invoice-title h1 { font-size: 24px; color: #059669; font-weight: 700; margin-bottom: 8px; }
+    .invoice-meta { color: #6b7280; font-size: 12px; }
+    .invoice-meta p { margin: 3px 0; }
     
     .info-section {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 15px;
-      gap: 20px;
+      margin-bottom: 25px;
+      gap: 30px;
     }
     
     .info-block { flex: 1; }
     .info-block h3 {
-      font-size: 10px;
+      font-size: 11px;
       text-transform: uppercase;
       color: #059669;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       letter-spacing: 0.5px;
       font-weight: 700;
       border-bottom: 1px solid #e5e7eb;
-      padding-bottom: 3px;
+      padding-bottom: 4px;
     }
-    .info-block p { margin: 2px 0; font-size: 11px; }
+    .info-block p { margin: 3px 0; font-size: 12px; }
     
-    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
     .items-table th {
       background: #059669;
       color: white;
-      padding: 8px 6px;
+      padding: 10px 8px;
       text-align: left;
       font-weight: 600;
-      font-size: 10px;
+      font-size: 11px;
     }
     .items-table th:nth-child(1) { width: 8%; text-align: center; }
     .items-table th:nth-child(2) { width: 47%; }
@@ -306,7 +306,7 @@ function generateInvoiceHtml(order: any, orderItems: any[], settings: InvoiceSet
     .items-table th:nth-child(4),
     .items-table th:nth-child(5) { width: 15%; text-align: right; }
     
-    .items-table td { padding: 6px; border-bottom: 1px solid #e5e7eb; font-size: 11px; }
+    .items-table td { padding: 10px 8px; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
     .items-table td:nth-child(1) { text-align: center; }
     .items-table td:nth-child(3),
     .items-table td:nth-child(4),
@@ -314,26 +314,26 @@ function generateInvoiceHtml(order: any, orderItems: any[], settings: InvoiceSet
     .items-table tbody tr:nth-child(even) { background: #f9fafb; }
     
     .totals { display: flex; justify-content: flex-end; }
-    .totals-table { width: 200px; }
-    .totals-table tr td { padding: 4px 0; font-size: 11px; }
+    .totals-table { width: 250px; }
+    .totals-table tr td { padding: 6px 0; font-size: 12px; }
     .totals-table tr td:last-child { text-align: right; font-weight: 500; }
     .totals-table .total-row { border-top: 2px solid #059669; }
-    .totals-table .total-row td { padding-top: 8px; font-size: 14px; font-weight: 700; color: #059669; }
+    .totals-table .total-row td { padding-top: 10px; font-size: 16px; font-weight: 700; color: #059669; }
     
     .footer {
-      margin-top: 20px;
-      padding-top: 10px;
+      margin-top: 30px;
+      padding-top: 15px;
       border-top: 1px solid #e5e7eb;
       text-align: center;
       color: #6b7280;
-      font-size: 10px;
+      font-size: 11px;
     }
     
     .status-badge {
       display: inline-block;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 9px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 10px;
       font-weight: 600;
     }
     .status-pending { background: #fef3c7; color: #92400e; }
@@ -343,7 +343,7 @@ function generateInvoiceHtml(order: any, orderItems: any[], settings: InvoiceSet
     .status-cancelled { background: #fee2e2; color: #991b1b; }
     
     @media print {
-      body { padding: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body { padding: 20px; }
       .invoice { max-width: 100%; }
     }
   </style>
@@ -450,7 +450,7 @@ function generateDeliverySlipHtml(order: any, orderItems: any[], settings: Invoi
   };
 
   const logoHtml = settings.logo_url 
-    ? `<img src="${settings.logo_url}" alt="${settings.company_name}" style="max-height: 40px; max-width: 120px; object-fit: contain;" />`
+    ? `<img src="${settings.logo_url}" alt="${settings.company_name}" style="max-height: 50px; max-width: 150px; object-fit: contain;" />`
     : `<div class="logo">${settings.company_name}</div>`;
 
   return `<!DOCTYPE html>
@@ -466,171 +466,229 @@ function generateDeliverySlipHtml(order: any, orderItems: any[], settings: Invoi
     
     body {
       font-family: 'Noto Sans Bengali', sans-serif;
-      font-size: 11px;
-      line-height: 1.4;
+      font-size: 14px;
+      line-height: 1.6;
       color: #1a1a1a;
       background: #fff;
-      padding: 10px;
+      padding: 30px;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     
-    .slip { max-width: 350px; margin: 0 auto; border: 2px dashed #059669; padding: 12px; }
+    .slip { max-width: 800px; margin: 0 auto; }
     
-    .header { text-align: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #059669; }
-    .logo { font-size: 18px; font-weight: 700; color: #059669; }
-    .slip-title { font-size: 12px; font-weight: 600; margin-top: 3px; color: #374151; }
-    
-    .order-info { 
-      background: #f0fdf4; 
-      padding: 8px; 
-      border-radius: 6px; 
-      margin-bottom: 10px;
-      text-align: center;
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid #059669;
     }
-    .order-number { font-size: 14px; font-weight: 700; color: #059669; }
-    .order-date { font-size: 9px; color: #6b7280; margin-top: 2px; }
     
-    .section { margin-bottom: 10px; }
-    .section-title { 
-      font-size: 9px; 
-      font-weight: 700; 
-      color: #059669; 
+    .company-info { display: flex; flex-direction: column; gap: 3px; }
+    .logo { font-size: 28px; font-weight: 700; color: #059669; }
+    .logo-sub { font-size: 11px; color: #6b7280; }
+    .company-contact { font-size: 10px; color: #6b7280; margin-top: 5px; }
+    
+    .slip-title { text-align: right; }
+    .slip-title h1 { font-size: 24px; color: #059669; font-weight: 700; margin-bottom: 8px; }
+    .slip-meta { color: #6b7280; font-size: 12px; }
+    .slip-meta p { margin: 3px 0; }
+    
+    .info-section {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 25px;
+      gap: 30px;
+    }
+    
+    .info-block { flex: 1; }
+    .info-block h3 {
+      font-size: 11px;
       text-transform: uppercase;
-      margin-bottom: 5px;
+      color: #059669;
+      margin-bottom: 8px;
       letter-spacing: 0.5px;
-    }
-    
-    .customer-info p { margin: 2px 0; font-size: 10px; }
-    .customer-name { font-size: 13px; font-weight: 700; }
-    .customer-phone { font-size: 12px; font-weight: 600; color: #059669; }
-    
-    .items-list { border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden; }
-    .item { 
-      display: flex; 
-      justify-content: space-between; 
-      padding: 5px 8px; 
+      font-weight: 700;
       border-bottom: 1px solid #e5e7eb;
-      font-size: 10px;
+      padding-bottom: 4px;
     }
-    .item:last-child { border-bottom: none; }
-    .item-name { flex: 1; }
-    .item-qty { 
-      background: #059669; 
-      color: white; 
-      padding: 1px 6px; 
-      border-radius: 8px; 
-      font-size: 9px;
+    .info-block p { margin: 3px 0; font-size: 12px; }
+    
+    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    .items-table th {
+      background: #059669;
+      color: white;
+      padding: 10px 8px;
+      text-align: left;
       font-weight: 600;
+      font-size: 11px;
+    }
+    .items-table th:nth-child(1) { width: 10%; text-align: center; }
+    .items-table th:nth-child(2) { width: 75%; }
+    .items-table th:nth-child(3) { width: 15%; text-align: center; }
+    
+    .items-table td { padding: 10px 8px; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
+    .items-table td:nth-child(1) { text-align: center; }
+    .items-table td:nth-child(3) { text-align: center; font-weight: 600; }
+    .items-table tbody tr:nth-child(even) { background: #f9fafb; }
+    
+    .payment-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: ${order.payment_method === 'cod' ? '#fef3c7' : '#d1fae5'};
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
     }
     
-    .payment-box {
-      background: ${order.payment_method === 'cod' ? '#fef3c7' : '#d1fae5'};
-      padding: 8px;
-      border-radius: 6px;
-      text-align: center;
-      margin-bottom: 10px;
+    .payment-info { flex: 1; }
+    .payment-label { font-size: 11px; color: #6b7280; text-transform: uppercase; }
+    .payment-method-name { font-size: 14px; font-weight: 600; color: ${order.payment_method === 'cod' ? '#92400e' : '#059669'}; }
+    
+    .payment-amount {
+      text-align: right;
     }
-    .payment-method { font-size: 9px; color: #6b7280; }
-    .payment-amount { font-size: 16px; font-weight: 700; color: ${order.payment_method === 'cod' ? '#92400e' : '#059669'}; }
+    .amount-label { font-size: 11px; color: #6b7280; }
+    .amount-value { font-size: 24px; font-weight: 700; color: ${order.payment_method === 'cod' ? '#92400e' : '#059669'}; }
+    
     .cod-badge { 
       display: inline-block; 
       background: #dc2626; 
       color: white; 
-      padding: 2px 8px; 
-      border-radius: 3px; 
-      font-size: 10px; 
+      padding: 4px 12px; 
+      border-radius: 4px; 
+      font-size: 11px; 
       font-weight: 700;
-      margin-top: 3px;
+      margin-top: 5px;
     }
     
-    .courier-info {
-      background: #f3f4f6;
-      padding: 6px;
-      border-radius: 4px;
-      font-size: 9px;
-    }
-    .courier-info p { margin: 2px 0; }
-    
-    .footer { 
-      text-align: center; 
-      padding-top: 8px; 
-      border-top: 1px dashed #d1d5db;
-      font-size: 8px;
-      color: #9ca3af;
-    }
-    
-    .notes {
+    .notes-section {
       background: #fffbeb;
       border: 1px solid #fcd34d;
-      padding: 5px;
-      border-radius: 4px;
-      font-size: 9px;
-      margin-bottom: 10px;
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
     }
-    .notes-title { font-weight: 600; color: #92400e; }
+    .notes-title { font-weight: 600; color: #92400e; font-size: 11px; margin-bottom: 5px; }
+    .notes-text { font-size: 12px; color: #78350f; }
+    
+    .courier-section {
+      background: #f3f4f6;
+      padding: 12px 15px;
+      border-radius: 8px;
+      display: flex;
+      gap: 30px;
+    }
+    .courier-item { font-size: 12px; }
+    .courier-label { color: #6b7280; font-size: 10px; text-transform: uppercase; }
+    .courier-value { font-weight: 600; color: #1f2937; }
+    
+    .footer {
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+      color: #6b7280;
+      font-size: 11px;
+    }
     
     @media print {
-      body { padding: 5px; }
-      .slip { border: none; max-width: 100%; }
+      body { padding: 20px; }
+      .slip { max-width: 100%; }
     }
   </style>
 </head>
 <body>
   <div class="slip">
     <div class="header">
-      ${logoHtml}
-      <div class="slip-title">ডেলিভারি স্লিপ</div>
+      <div class="company-info">
+        ${logoHtml}
+        <div class="logo-sub">${settings.company_tagline}</div>
+        <div class="company-contact">
+          📍 ${settings.company_address} | 📞 ${settings.company_phone} | ✉️ ${settings.company_email}
+        </div>
+      </div>
+      <div class="slip-title">
+        <h1>ডেলিভারি স্লিপ</h1>
+        <div class="slip-meta">
+          <p><strong>অর্ডার নং:</strong> ${order.order_number}</p>
+          <p><strong>তারিখ:</strong> ${orderDate}</p>
+        </div>
+      </div>
     </div>
     
-    <div class="order-info">
-      <div class="order-number">#${order.order_number}</div>
-      <div class="order-date">${orderDate}</div>
-    </div>
-    
-    <div class="section">
-      <div class="section-title">📦 প্রাপক</div>
-      <div class="customer-info">
-        <p class="customer-name">${order.full_name}</p>
-        <p class="customer-phone">📞 ${order.phone}</p>
+    <div class="info-section">
+      <div class="info-block">
+        <h3>📦 প্রাপক তথ্য</h3>
+        <p><strong>${order.full_name}</strong></p>
+        <p>📞 ${order.phone}</p>
+        ${order.email ? `<p>✉️ ${order.email}</p>` : ''}
         <p>📍 ${order.address}</p>
         <p>🗺️ ${order.delivery_area}</p>
       </div>
     </div>
     
-    <div class="section">
-      <div class="section-title">📋 পণ্য তালিকা (${orderItems.length}টি)</div>
-      <div class="items-list">
-        ${orderItems.map((item: any) => `
-          <div class="item">
-            <span class="item-name">${item.product_title}</span>
-            <span class="item-qty">×${item.quantity}</span>
-          </div>
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>নং</th>
+          <th>পণ্য</th>
+          <th>পরিমাণ</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${orderItems.map((item: any, index: number) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${item.product_title}</td>
+            <td>×${item.quantity}</td>
+          </tr>
         `).join('')}
+      </tbody>
+    </table>
+    
+    <div class="payment-section">
+      <div class="payment-info">
+        <div class="payment-label">পেমেন্ট পদ্ধতি</div>
+        <div class="payment-method-name">${paymentMethods[order.payment_method] || order.payment_method}</div>
+        ${order.payment_method === 'cod' ? '<div class="cod-badge">💰 টাকা আদায় করুন</div>' : ''}
+      </div>
+      <div class="payment-amount">
+        <div class="amount-label">সর্বমোট</div>
+        <div class="amount-value">৳${Number(order.total).toLocaleString()}</div>
       </div>
     </div>
     
-    <div class="payment-box">
-      <div class="payment-method">${paymentMethods[order.payment_method] || order.payment_method}</div>
-      <div class="payment-amount">৳${Number(order.total).toLocaleString()}</div>
-      ${order.payment_method === 'cod' ? '<div class="cod-badge">টাকা আদায় করুন</div>' : ''}
-    </div>
-    
     ${order.notes ? `
-      <div class="notes">
-        <span class="notes-title">📝 নোট:</span> ${order.notes}
+      <div class="notes-section">
+        <div class="notes-title">📝 গ্রাহকের নোট</div>
+        <div class="notes-text">${order.notes}</div>
       </div>
     ` : ''}
     
     ${(order.courier_provider || order.tracking_number) ? `
-      <div class="courier-info">
-        ${order.courier_provider ? `<p><strong>কুরিয়ার:</strong> ${order.courier_provider}</p>` : ''}
-        ${order.tracking_number ? `<p><strong>ট্র্যাকিং:</strong> ${order.tracking_number}</p>` : ''}
+      <div class="courier-section">
+        ${order.courier_provider ? `
+          <div class="courier-item">
+            <div class="courier-label">কুরিয়ার</div>
+            <div class="courier-value">${order.courier_provider}</div>
+          </div>
+        ` : ''}
+        ${order.tracking_number ? `
+          <div class="courier-item">
+            <div class="courier-label">ট্র্যাকিং নম্বর</div>
+            <div class="courier-value">${order.tracking_number}</div>
+          </div>
+        ` : ''}
       </div>
     ` : ''}
     
     <div class="footer">
-      <p>${settings.company_name} | ${settings.company_phone}</p>
+      <p>${settings.footer_text}</p>
+      <p>${settings.company_name} - ${settings.company_tagline}</p>
     </div>
   </div>
 </body>
