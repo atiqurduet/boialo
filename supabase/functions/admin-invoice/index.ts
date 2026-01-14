@@ -228,6 +228,10 @@ function generateInvoiceHtml(order: any, orderItems: any[], settings: InvoiceSet
     ? `<img src="${settings.logo_url}" alt="${settings.company_name}" style="max-height: 50px; max-width: 150px; object-fit: contain;" />`
     : `<div class="logo">${settings.company_name}</div>`;
 
+  // Generate QR code URL for order tracking
+  const trackingUrl = `https://boialo.lovable.app/track/${order.order_number}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(trackingUrl)}`;
+
   return `<!DOCTYPE html>
 <html lang="bn">
 <head>
@@ -324,10 +328,16 @@ function generateInvoiceHtml(order: any, orderItems: any[], settings: InvoiceSet
       margin-top: 30px;
       padding-top: 15px;
       border-top: 1px solid #e5e7eb;
-      text-align: center;
-      color: #6b7280;
-      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
+    
+    .footer-text { text-align: left; color: #6b7280; font-size: 11px; }
+    
+    .qr-section { text-align: center; }
+    .qr-code img { width: 80px; height: 80px; }
+    .qr-label { font-size: 9px; color: #6b7280; margin-top: 4px; }
     
     .status-badge {
       display: inline-block;
@@ -427,8 +437,16 @@ function generateInvoiceHtml(order: any, orderItems: any[], settings: InvoiceSet
     </div>
     
     <div class="footer">
-      <p>${settings.footer_text}</p>
-      <p>${settings.company_name} - ${settings.company_tagline}</p>
+      <div class="footer-text">
+        <p>${settings.footer_text}</p>
+        <p>${settings.company_name} - ${settings.company_tagline}</p>
+      </div>
+      <div class="qr-section">
+        <div class="qr-code">
+          <img src="${qrCodeUrl}" alt="Order Tracking QR" />
+        </div>
+        <div class="qr-label">অর্ডার ট্র্যাক করুন</div>
+      </div>
     </div>
   </div>
 </body>
@@ -452,6 +470,10 @@ function generateDeliverySlipHtml(order: any, orderItems: any[], settings: Invoi
   const logoHtml = settings.logo_url 
     ? `<img src="${settings.logo_url}" alt="${settings.company_name}" style="max-height: 50px; max-width: 150px; object-fit: contain;" />`
     : `<div class="logo">${settings.company_name}</div>`;
+
+  // Generate QR code URL for order tracking
+  const trackingUrl = `https://boialo.lovable.app/track/${order.order_number}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(trackingUrl)}`;
 
   return `<!DOCTYPE html>
 <html lang="bn">
@@ -590,10 +612,16 @@ function generateDeliverySlipHtml(order: any, orderItems: any[], settings: Invoi
       margin-top: 30px;
       padding-top: 15px;
       border-top: 1px solid #e5e7eb;
-      text-align: center;
-      color: #6b7280;
-      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
+    
+    .footer-text { text-align: left; color: #6b7280; font-size: 11px; }
+    
+    .qr-section { text-align: center; }
+    .qr-code img { width: 80px; height: 80px; }
+    .qr-label { font-size: 9px; color: #6b7280; margin-top: 4px; }
     
     @media print {
       body { padding: 20px; }
@@ -687,8 +715,16 @@ function generateDeliverySlipHtml(order: any, orderItems: any[], settings: Invoi
     ` : ''}
     
     <div class="footer">
-      <p>${settings.footer_text}</p>
-      <p>${settings.company_name} - ${settings.company_tagline}</p>
+      <div class="footer-text">
+        <p>${settings.footer_text}</p>
+        <p>${settings.company_name} - ${settings.company_tagline}</p>
+      </div>
+      <div class="qr-section">
+        <div class="qr-code">
+          <img src="${qrCodeUrl}" alt="Order Tracking QR" />
+        </div>
+        <div class="qr-label">অর্ডার ট্র্যাক করুন</div>
+      </div>
     </div>
   </div>
 </body>
