@@ -96,11 +96,11 @@ export const DynamicProductGrid = ({
                 </div>
               )}
               
-              {/* Wishlist Button */}
+              {/* Wishlist Button - Top Right */}
               <button
                 onClick={(e) => handleToggleWishlist(e, product.id)}
                 className={cn(
-                  "absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center z-20 transition-all shadow-md",
+                  "absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center z-20 transition-all shadow-md",
                   inWishlist 
                     ? "bg-red-500 text-white" 
                     : "bg-white/90 text-muted-foreground hover:bg-white hover:text-red-500"
@@ -110,23 +110,14 @@ export const DynamicProductGrid = ({
                 <Heart className={cn("w-4 h-4", inWishlist && "fill-current")} />
               </button>
 
-              {/* Cart Button */}
-              <button
-                onClick={(e) => handleAddToCart(e, product.id)}
-                className="absolute top-2 right-2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center z-20 transition-all shadow-md hover:scale-110 hover:bg-primary/90"
-                aria-label="Add to cart"
-              >
-                <ShoppingCart className="w-4 h-4" />
-              </button>
-
               {product.discount_percent && product.discount_percent > 0 && (
-                <div className="absolute bottom-[120px] right-2 bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded z-10">
+                <div className="absolute top-2 left-2 bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded z-10">
                   -{product.discount_percent}%
                 </div>
               )}
               
               <Link to={`/product/${product.id}`}>
-                <div className="aspect-[3/4] overflow-hidden rounded-t-lg">
+                <div className="aspect-[3/4] overflow-hidden rounded-t-lg relative">
                   <img
                     src={getProductImage(product)}
                     alt={product.title_bn}
@@ -135,6 +126,15 @@ export const DynamicProductGrid = ({
                       (e.target as HTMLImageElement).src = '/placeholder.svg';
                     }}
                   />
+                  {/* Cart Button - Bottom, shows on hover */}
+                  <button
+                    onClick={(e) => handleAddToCart(e, product.id)}
+                    className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground py-2.5 text-sm font-medium flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20"
+                    aria-label="Add to cart"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    অর্ডার করুন
+                  </button>
                 </div>
                 <div className="p-3">
                   <h3 className="font-medium text-sm line-clamp-2 mb-1 group-hover:text-primary transition-colors">
