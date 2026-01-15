@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Clock } from "lucide-react";
+import { ChevronRight, Clock, ShoppingCart, Heart } from "lucide-react";
+import { useCartContext } from "@/contexts/CartContext";
+import { useWishlistContext } from "@/contexts/WishlistContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface UniversalProduct {
   id: string;
@@ -29,6 +32,9 @@ export const DynamicUniversalFlashSale = ({
   viewAllLink = "/lifestyle"
 }: DynamicUniversalFlashSaleProps) => {
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const { addToCart } = useCartContext();
+  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlistContext();
+  const { toast } = useToast();
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -54,6 +60,25 @@ export const DynamicUniversalFlashSale = ({
     if (typeof product.images === 'string') return product.images;
     if (Array.isArray(product.images) && product.images.length > 0) return product.images[0];
     return '/placeholder.svg';
+  };
+
+  const handleAddToCart = async (e: React.MouseEvent, productId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await addToCart(productId, 1);
+    toast({ title: "কার্টে যোগ হয়েছে", description: "প্রোডাক্টটি কার্টে যোগ করা হয়েছে" });
+  };
+
+  const handleToggleWishlist = async (e: React.MouseEvent, productId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isInWishlist(productId)) {
+      await removeFromWishlist(productId);
+      toast({ title: "উইশলিস্ট থেকে সরানো হয়েছে" });
+    } else {
+      await addToWishlist(productId);
+      toast({ title: "উইশলিস্টে যোগ হয়েছে" });
+    }
   };
 
   if (products.length === 0) {
@@ -97,8 +122,21 @@ export const DynamicUniversalFlashSale = ({
             <Link
               key={product.id}
               to={`/universal-product/${product.slug}`}
-              className="bg-card rounded-lg overflow-hidden group hover:shadow-lg transition-shadow"
+              className="bg-card rounded-lg overflow-hidden group hover:shadow-lg transition-shadow relative"
             >
+              {/* Wishlist Button - Top Right */}
+              <button
+                onClick={(e) => handleToggleWishlist(e, product.id)}
+                className="absolute top-2 left-2 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors shadow-sm"
+                aria-label="উইশলিস্টে যোগ করুন"
+              >
+                <Heart
+                  className={`w-4 h-4 transition-colors ${
+                    isInWishlist(product.id) ? "fill-destructive text-destructive" : "text-muted-foreground hover:text-destructive"
+                  }`}
+                />
+              </button>
+
               <div className="relative aspect-square">
                 <img
                   src={getProductImage(product)}
@@ -113,6 +151,15 @@ export const DynamicUniversalFlashSale = ({
                     -{product.discount_percent}%
                   </div>
                 )}
+
+                {/* Add to Cart Button - Bottom on Hover */}
+                <button
+                  onClick={(e) => handleAddToCart(e, product.id)}
+                  className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground py-2.5 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-full group-hover:translate-y-0"
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  <span className="text-sm font-medium">অর্ডার করুন</span>
+                </button>
               </div>
               <div className="p-3">
                 <h3 className="font-medium text-sm line-clamp-2 mb-1">{product.name_bn}</h3>
