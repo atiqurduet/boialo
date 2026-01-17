@@ -58,6 +58,7 @@ import AdminAbandonedCarts from "./pages/admin/AdminAbandonedCarts";
 import AdminCheckoutAnalytics from "./pages/admin/AdminCheckoutAnalytics";
 import AdminUniversalProducts from "./pages/admin/AdminUniversalProducts";
 import AdminUniversalCategories from "./pages/admin/AdminUniversalCategories";
+import AdminOffers from "./pages/admin/AdminOffers";
 
 const queryClient = new QueryClient();
 
@@ -124,6 +125,7 @@ const App = () => (
                 <Route path="/admin/branding" element={<AdminBranding />} />
                 <Route path="/admin/abandoned-carts" element={<AdminAbandonedCarts />} />
                 <Route path="/admin/checkout-analytics" element={<AdminCheckoutAnalytics />} />
+                <Route path="/admin/offers" element={<AdminOffers />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
