@@ -681,6 +681,173 @@ export type Database = {
         }
         Relationships: []
       }
+      offer_products: {
+        Row: {
+          created_at: string
+          id: string
+          offer_id: string
+          product_id: string
+          product_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          offer_id: string
+          product_id: string
+          product_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          offer_id?: string
+          product_id?: string
+          product_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_products_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offer_usage: {
+        Row: {
+          discount_amount: number
+          id: string
+          offer_id: string
+          order_id: string | null
+          used_at: string
+          user_id: string
+        }
+        Insert: {
+          discount_amount?: number
+          id?: string
+          offer_id: string
+          order_id?: string | null
+          used_at?: string
+          user_id: string
+        }
+        Update: {
+          discount_amount?: number
+          id?: string
+          offer_id?: string
+          order_id?: string | null
+          used_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_usage_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_usage_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offers: {
+        Row: {
+          applies_to: string
+          banner_image: string | null
+          buy_quantity: number | null
+          category_ids: string[] | null
+          created_at: string
+          description_bn: string | null
+          description_en: string | null
+          discount_value: number | null
+          end_date: string | null
+          get_quantity: number | null
+          id: string
+          is_active: boolean | null
+          is_featured: boolean | null
+          max_discount_amount: number | null
+          meta_description: string | null
+          meta_title: string | null
+          min_order_amount: number | null
+          name_bn: string
+          name_en: string | null
+          new_customers_only: boolean | null
+          offer_type: string
+          product_ids: string[] | null
+          slug: string
+          start_date: string | null
+          updated_at: string
+          usage_limit: number | null
+          usage_per_customer: number | null
+          used_count: number | null
+        }
+        Insert: {
+          applies_to: string
+          banner_image?: string | null
+          buy_quantity?: number | null
+          category_ids?: string[] | null
+          created_at?: string
+          description_bn?: string | null
+          description_en?: string | null
+          discount_value?: number | null
+          end_date?: string | null
+          get_quantity?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          max_discount_amount?: number | null
+          meta_description?: string | null
+          meta_title?: string | null
+          min_order_amount?: number | null
+          name_bn: string
+          name_en?: string | null
+          new_customers_only?: boolean | null
+          offer_type: string
+          product_ids?: string[] | null
+          slug: string
+          start_date?: string | null
+          updated_at?: string
+          usage_limit?: number | null
+          usage_per_customer?: number | null
+          used_count?: number | null
+        }
+        Update: {
+          applies_to?: string
+          banner_image?: string | null
+          buy_quantity?: number | null
+          category_ids?: string[] | null
+          created_at?: string
+          description_bn?: string | null
+          description_en?: string | null
+          discount_value?: number | null
+          end_date?: string | null
+          get_quantity?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          max_discount_amount?: number | null
+          meta_description?: string | null
+          meta_title?: string | null
+          min_order_amount?: number | null
+          name_bn?: string
+          name_en?: string | null
+          new_customers_only?: boolean | null
+          offer_type?: string
+          product_ids?: string[] | null
+          slug?: string
+          start_date?: string | null
+          updated_at?: string
+          usage_limit?: number | null
+          usage_per_customer?: number | null
+          used_count?: number | null
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
