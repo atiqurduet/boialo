@@ -10,6 +10,7 @@ import { DynamicUniversalCategorySection } from "@/components/DynamicUniversalCa
 import { DynamicUniversalFlashSale } from "@/components/DynamicUniversalFlashSale";
 import { TrustBadges } from "@/components/TrustBadges";
 import { NewsletterSection } from "@/components/NewsletterSection";
+import { FeaturedOfferBanner } from "@/components/FeaturedOfferBanner";
 import { Footer } from "@/components/Footer";
 import { useHomepageData } from "@/hooks/useHomepageData";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -293,6 +294,9 @@ const Index = () => {
         <TrustBadges />
 
         <div className="container py-8">
+          {/* Featured Offer Banner */}
+          <FeaturedOfferBanner />
+
           {/* Render sections in order */}
           {sections.map(section => renderSection(section))}
         </div>
