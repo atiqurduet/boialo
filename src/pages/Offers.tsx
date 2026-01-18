@@ -4,12 +4,12 @@ import { useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ProductCard, Product } from "@/components/ProductCard";
-import { Flame, Clock, Tag, Ticket, Filter, ChevronDown, Copy, Gift } from "lucide-react";
+import { CountdownTimer } from "@/components/CountdownTimer";
+import { Flame, Tag, Ticket, Filter, ChevronDown, Copy, Gift } from "lucide-react";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -191,22 +191,6 @@ const Offers = () => {
     }
   };
 
-  const getTimeRemaining = (endDate: string) => {
-    const end = new Date(endDate);
-    const now = new Date();
-    const diff = end.getTime() - now.getTime();
-    
-    if (diff <= 0) return null;
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    if (days > 0) return `${days} দিন ${hours} ঘণ্টা বাকি`;
-    if (hours > 0) return `${hours} ঘণ্টা ${minutes} মিনিট বাকি`;
-    return `${minutes} মিনিট বাকি`;
-  };
-
   const isLoading = offersLoading || productsLoading;
 
   return (
@@ -257,7 +241,7 @@ const Offers = () => {
             <CollapsibleContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 {coupons.map((coupon) => (
-                  <Card key={coupon.id} className="overflow-hidden">
+                  <Card key={coupon.id} className="overflow-hidden hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
@@ -272,9 +256,11 @@ const Offers = () => {
                             </div>
                           )}
                           {coupon.end_date && (
-                            <div className="text-xs text-orange-600 mt-1 flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {getTimeRemaining(coupon.end_date)}
+                            <div className="mt-2">
+                              <CountdownTimer 
+                                endDate={coupon.end_date} 
+                                variant="badge" 
+                              />
                             </div>
                           )}
                         </div>
@@ -316,18 +302,18 @@ const Offers = () => {
                   }`}
                   onClick={() => setSelectedOffer(selectedOffer === offer.slug ? null : offer.slug)}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge variant="secondary" className="text-primary">
-                        {getOfferValue(offer)}
-                      </Badge>
-                      {offer.end_date && (
-                        <span className="text-xs text-orange-600 flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {getTimeRemaining(offer.end_date)}
-                        </span>
-                      )}
-                    </div>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Badge variant="secondary" className="text-primary">
+                          {getOfferValue(offer)}
+                        </Badge>
+                        {offer.end_date && (
+                          <CountdownTimer 
+                            endDate={offer.end_date} 
+                            variant="compact" 
+                          />
+                        )}
+                      </div>
                     <h3 className="font-bold">{offer.name_bn}</h3>
                     {offer.description_bn && (
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">

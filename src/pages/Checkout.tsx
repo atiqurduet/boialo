@@ -3,12 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
+import { CouponInput } from "@/components/CouponInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, CreditCard, Smartphone, Truck, MapPin, ChevronLeft, Loader2, Shield, Phone } from "lucide-react";
+import { Check, CreditCard, Smartphone, Truck, MapPin, ChevronLeft, Loader2, Shield, Phone, Ticket } from "lucide-react";
 import { useCartContext } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +27,13 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+
+interface AppliedCoupon {
+  code: string;
+  discount_type: string;
+  discount_value: number;
+  discount_amount: number;
+}
 
 const checkoutSchema = z.object({
   fullName: z.string().trim().min(2, "নাম অন্তত ২ অক্ষরের হতে হবে").max(100, "নাম ১০০ অক্ষরের বেশি হতে পারবে না"),
@@ -54,6 +62,7 @@ const Checkout = () => {
   const [deliveryArea, setDeliveryArea] = useState("inside");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [abandonedCheckoutId, setAbandonedCheckoutId] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
 
   // OTP Verification States
   const [showOtpDialog, setShowOtpDialog] = useState(false);
@@ -345,7 +354,8 @@ const Checkout = () => {
     try {
       const orderNumber = generateOrderNumber();
       const deliveryCharge = deliveryArea === "inside" ? 60 : 120;
-      const total = subtotal + deliveryCharge;
+      const couponDiscount = appliedCoupon?.discount_amount || 0;
+      const total = subtotal - couponDiscount + deliveryCharge;
 
       // Create order with phone_verified flag
       const { data: order, error: orderError } = await supabase
@@ -437,7 +447,8 @@ const Checkout = () => {
   };
 
   const deliveryCharge = deliveryArea === "inside" ? 60 : 120;
-  const total = subtotal + deliveryCharge;
+  const couponDiscount = appliedCoupon?.discount_amount || 0;
+  const total = subtotal - couponDiscount + deliveryCharge;
 
   const paymentMethods = [
     {
@@ -707,10 +718,29 @@ const Checkout = () => {
               </div>
 
               <div className="border-t border-border pt-4 space-y-2 text-sm">
+                {/* Coupon Input */}
+                <div className="pb-3 border-b border-border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Ticket className="w-4 h-4 text-primary" />
+                    <span className="font-medium text-sm">কুপন কোড</span>
+                  </div>
+                  <CouponInput 
+                    subtotal={subtotal}
+                    onCouponApplied={setAppliedCoupon}
+                    appliedCoupon={appliedCoupon}
+                  />
+                </div>
+
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">সাবটোটাল</span>
                   <span>৳{subtotal}</span>
                 </div>
+                {couponDiscount > 0 && (
+                  <div className="flex items-center justify-between text-green-600">
+                    <span>কুপন ছাড় ({appliedCoupon?.code})</span>
+                    <span>-৳{couponDiscount}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">ডেলিভারি চার্জ</span>
                   <span>৳{deliveryCharge}</span>
