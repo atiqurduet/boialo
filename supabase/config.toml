@@ -17,3 +17,12 @@ verify_jwt = false
 
 [functions.preorder-processor]
 verify_jwt = false
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.abandoned-cart-reminder]
+verify_jwt = false
+
+[functions.offer-notification]
+verify_jwt = false
