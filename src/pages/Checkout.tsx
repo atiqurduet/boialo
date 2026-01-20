@@ -250,8 +250,8 @@ const Checkout = () => {
     try {
       checkoutSchema.parse(formData);
       
-      // Additional validation for mobile banking
-      if ((paymentMethod === "bkash" || paymentMethod === "nagad") && !formData.transactionId?.trim()) {
+      // Additional validation for nagad (bKash is now API-based, no manual transaction ID needed)
+      if (paymentMethod === "nagad" && !formData.transactionId?.trim()) {
         setErrors({ transactionId: "ট্রান্জেকশন আইডি দিন" });
         return false;
       }
@@ -345,6 +345,42 @@ const Checkout = () => {
     }
   };
 
+  // Initialize bKash payment
+  const initBkashPayment = async (orderId: string, orderNumber: string, totalAmount: number) => {
+    try {
+      const callbackUrl = `${window.location.origin}/bkash/callback`;
+      
+      const { data, error } = await supabase.functions.invoke("bkash-payment", {
+        body: {
+          action: "create",
+          orderId: orderNumber,
+          amount: totalAmount,
+          callbackUrl,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.bkashURL) {
+        // Store pending order info
+        localStorage.setItem("pending_bkash_order", JSON.stringify({
+          orderId,
+          orderNumber,
+          paymentID: data.paymentID,
+        }));
+
+        // Redirect to bKash payment page
+        window.location.href = data.bkashURL;
+      } else {
+        throw new Error(data.error || "বিকাশ পেমেন্ট শুরু করতে সমস্যা হয়েছে");
+      }
+    } catch (error: any) {
+      console.error("bKash init error:", error);
+      toast.error(error.message || "বিকাশ পেমেন্ট শুরু করতে সমস্যা হয়েছে");
+      setIsSubmitting(false);
+    }
+  };
+
   // Place order after OTP verification
   const placeOrder = async () => {
     if (!user) return;
@@ -363,12 +399,12 @@ const Checkout = () => {
         .insert({
           user_id: user.id,
           order_number: orderNumber,
-          status: "pending",
+          status: paymentMethod === "bkash" ? "payment_pending" : "pending",
           subtotal: subtotal,
           delivery_charge: deliveryCharge,
           total: total,
           payment_method: paymentMethod,
-          transaction_id: formData.transactionId || null,
+          transaction_id: paymentMethod === "bkash" ? null : (formData.transactionId || null),
           delivery_area: deliveryArea,
           full_name: formData.fullName.trim(),
           phone: formData.phone.trim(),
@@ -409,7 +445,13 @@ const Checkout = () => {
           .eq("id", abandonedCheckoutId);
       }
 
-      // Clear cart
+      // If bKash payment, redirect to bKash
+      if (paymentMethod === "bkash") {
+        await initBkashPayment(order.id, orderNumber, total);
+        return; // Don't clear cart yet - will be done after successful payment
+      }
+
+      // Clear cart for other payment methods
       await clearCart();
 
       toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
@@ -418,7 +460,9 @@ const Checkout = () => {
       console.error("Order error:", error);
       toast.error("অর্ডার করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
     } finally {
-      setIsSubmitting(false);
+      if (paymentMethod !== "bkash") {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -641,19 +685,15 @@ const Checkout = () => {
               </RadioGroup>
 
               {paymentMethod === "bkash" && (
-                <div className="mt-4 p-4 bg-pink-50 dark:bg-pink-950/20 rounded-lg border border-pink-200 dark:border-pink-800">
-                  <p className="text-sm text-pink-800 dark:text-pink-200">
-                    বিকাশ নম্বর: <strong>01XXX-XXXXXX</strong> (মার্চেন্ট)
-                    <br />
-                    Send Money করে ট্রান্জেকশন আইডি দিন
+                <div className="mt-4 p-4 bg-accent/50 rounded-lg border border-border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Smartphone className="w-5 h-5 text-primary" />
+                    <p className="font-medium text-foreground">বিকাশ পেমেন্ট</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    অর্ডার সম্পন্ন করতে আপনাকে বিকাশ পেমেন্ট পেজে নিয়ে যাওয়া হবে। 
+                    সেখানে আপনার বিকাশ অ্যাকাউন্ট থেকে পেমেন্ট সম্পন্ন করুন।
                   </p>
-                  <Input
-                    placeholder="Transaction ID"
-                    className={`mt-3 ${errors.transactionId ? "border-destructive" : ""}`}
-                    value={formData.transactionId}
-                    onChange={(e) => handleInputChange("transactionId", e.target.value)}
-                  />
-                  {errors.transactionId && <p className="text-destructive text-xs mt-1">{errors.transactionId}</p>}
                 </div>
               )}
 
