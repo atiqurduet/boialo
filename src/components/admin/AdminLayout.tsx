@@ -26,7 +26,8 @@ import {
   Palette,
   ShoppingBag,
   Layers,
-  Grid3X3
+  Grid3X3,
+  Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -56,6 +57,7 @@ const menuItems = [
   { icon: Tag, label: 'পেমেন্ট', href: '/admin/payments', roles: ['admin'] },
   { icon: FileText, label: 'কুরিয়ার', href: '/admin/couriers', roles: ['admin'] },
   { icon: FileText, label: 'SMS', href: '/admin/sms', roles: ['admin'] },
+  { icon: Mail, label: 'ইমেইল মার্কেটিং', href: '/admin/email-marketing', roles: ['admin', 'manager'] },
   { icon: BarChart3, label: 'ফ্রড রিভিউ', href: '/admin/fraud-review', roles: ['admin', 'manager'] },
   { icon: BarChart3, label: 'রিপোর্ট', href: '/admin/reports', roles: ['admin', 'manager'] },
   { icon: Settings, label: 'সেটিংস', href: '/admin/settings', roles: ['admin'] },
