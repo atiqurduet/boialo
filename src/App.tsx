@@ -31,6 +31,7 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import CategoryLanding from "./pages/CategoryLanding";
 import UniversalProductDetail from "./pages/UniversalProductDetail";
+import BkashCallback from "./pages/BkashCallback";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -99,6 +100,7 @@ const App = () => (
                 <Route path="/category/:productType" element={<CategoryLanding />} />
                 <Route path="/category/:productType/:categorySlug" element={<CategoryLanding />} />
                 <Route path="/universal-product/:slug" element={<UniversalProductDetail />} />
+                <Route path="/bkash/callback" element={<BkashCallback />} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminDashboard />} />
