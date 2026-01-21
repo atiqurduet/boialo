@@ -27,14 +27,14 @@ export const NewsletterSection = () => {
         .maybeSingle();
 
       if (existing) {
-        if (existing.status === 'subscribed') {
+        if (existing.status === 'active') {
           toast.info("আপনি ইতিমধ্যে সাবস্ক্রাইব করেছেন");
         } else {
           // Resubscribe
           await supabase
             .from('email_subscribers')
             .update({ 
-              status: 'subscribed', 
+              status: 'active', 
               unsubscribed_at: null,
               updated_at: new Date().toISOString()
             })
@@ -48,7 +48,7 @@ export const NewsletterSection = () => {
           .insert({
             email: email.trim().toLowerCase(),
             source: 'newsletter_form',
-            status: 'subscribed'
+            status: 'active'
           });
 
         if (error) throw error;
