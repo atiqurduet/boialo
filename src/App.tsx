@@ -18,7 +18,9 @@ import SignIn from "./pages/SignIn";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Authors from "./pages/Authors";
+import WriterDetail from "./pages/WriterDetail";
 import Publishers from "./pages/Publishers";
+import PublisherDetail from "./pages/PublisherDetail";
 import Wishlist from "./pages/Wishlist";
 import Offers from "./pages/Offers";
 import Preorder from "./pages/Preorder";
@@ -88,7 +90,9 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/wishlist" element={<Wishlist />} />
                 <Route path="/authors" element={<Authors />} />
+                <Route path="/writers/:slug" element={<WriterDetail />} />
                 <Route path="/publishers" element={<Publishers />} />
+                <Route path="/publishers/:slug" element={<PublisherDetail />} />
                 <Route path="/offers" element={<Offers />} />
                 <Route path="/preorder" element={<Preorder />} />
                 <Route path="/about" element={<About />} />
