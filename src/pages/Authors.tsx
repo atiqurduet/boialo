@@ -95,7 +95,7 @@ const Authors = () => {
             {filteredAuthors.map((author) => (
               <Link
                 key={author.id}
-                to={`/shop?writer=${author.slug}`}
+                to={`/writers/${author.slug}`}
                 className="bg-card rounded-xl p-4 text-center hover:shadow-lg transition-all group"
               >
                 <div className="w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-muted">

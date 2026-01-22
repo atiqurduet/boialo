@@ -119,7 +119,7 @@ const Publishers = () => {
               {filteredPublishers.map((publisher) => (
                 <Link
                   key={publisher.id}
-                  to={`/shop?publisher=${publisher.slug}`}
+                  to={`/publishers/${publisher.slug}`}
                   className="bg-card rounded-xl p-4 text-center hover:shadow-lg transition-all group"
                 >
                   <div className="w-20 h-20 mx-auto mb-3 rounded-xl overflow-hidden bg-accent/10">
