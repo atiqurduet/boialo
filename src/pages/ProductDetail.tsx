@@ -26,15 +26,15 @@ import {
 } from "@/components/ui/dialog";
 
 const ProductDetail = () => {
-  const { id } = useParams();
+  const { slug } = useParams();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [preorderMessage, setPreorderMessage] = useState<string>("");
   const { isInWishlist, toggleWishlist } = useWishlistContext();
   const { addToCart } = useCartContext();
 
-  // Fetch product from Supabase
+  // Fetch product from Supabase by slug
   const { data: dbProduct, isLoading } = useQuery({
-    queryKey: ['product', id],
+    queryKey: ['product', slug],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
@@ -44,18 +44,18 @@ const ProductDetail = () => {
           writer:writers(id, name_bn, name_en, slug),
           publisher_rel:publishers(id, name_bn, name_en, slug)
         `)
-        .eq('id', id)
+        .eq('slug', slug)
         .maybeSingle();
       
       if (error) return null;
       return data;
     },
-    enabled: !!id,
+    enabled: !!slug,
   });
 
   // Fetch related products
   const { data: relatedDbProducts = [] } = useQuery({
-    queryKey: ['related-products', dbProduct?.category_id],
+    queryKey: ['related-products', dbProduct?.category_id, dbProduct?.id],
     queryFn: async () => {
       if (!dbProduct?.category_id) return [];
       const { data } = await supabase
@@ -68,7 +68,7 @@ const ProductDetail = () => {
         `)
         .eq('is_active', true)
         .eq('category_id', dbProduct.category_id)
-        .neq('id', id)
+        .neq('id', dbProduct.id)
         .limit(4);
       return data || [];
     },
@@ -98,6 +98,7 @@ const ProductDetail = () => {
     const images = dbProduct.images as string[] || [];
     return {
       id: dbProduct.id,
+      slug: dbProduct.slug,
       title: dbProduct.title_bn || dbProduct.title_en,
       author: dbProduct.writer?.name_bn || dbProduct.author || 'অজানা লেখক',
       price: dbProduct.price,
@@ -234,7 +235,7 @@ const ProductDetail = () => {
   const hasDiscount = product.discount && product.discount > 0;
   const previewUrl = product.previewUrl;
   const inWishlist = isInWishlist(product.id);
-  const productUrl = `/product/${product.id}`;
+  const productUrl = `/product/${dbProduct?.slug}`;
 
   const handleAddToCart = () => {
     addToCart(product.id);

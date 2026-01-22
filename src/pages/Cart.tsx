@@ -67,7 +67,7 @@ const Cart = () => {
                 key={item.id}
                 className="bg-card rounded-xl p-4 shadow-sm flex gap-4"
               >
-                <Link to={`/product/${item.productId}`} className="shrink-0">
+                <Link to={`/product/${item.product.slug}`} className="shrink-0">
                   <img
                     src={item.product.image}
                     alt={item.product.title}
@@ -76,7 +76,7 @@ const Cart = () => {
                 </Link>
                 <div className="flex-1 min-w-0">
                   <Link
-                    to={`/product/${item.productId}`}
+                    to={`/product/${item.product.slug}`}
                     className="font-medium hover:text-primary transition-colors line-clamp-2"
                   >
                     {item.product.title}

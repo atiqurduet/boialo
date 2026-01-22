@@ -116,7 +116,7 @@ export const DynamicProductGrid = ({
                 </div>
               )}
               
-              <Link to={`/product/${product.id}`}>
+              <Link to={`/product/${product.slug}`}>
                 <div className="aspect-[3/4] overflow-hidden rounded-t-lg relative">
                   <img
                     src={getProductImage(product)}

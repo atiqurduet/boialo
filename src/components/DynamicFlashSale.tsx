@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Product {
   id: string;
+  slug: string;
   title_bn: string;
   title_en: string;
   price: number;
@@ -122,7 +123,7 @@ export const DynamicFlashSale = ({
           {discountedProducts.map((product) => (
             <Link
               key={product.id}
-              to={`/product/${product.id}`}
+              to={`/product/${product.slug}`}
               className="bg-card rounded-lg overflow-hidden group hover:shadow-lg transition-shadow relative"
             >
               {/* Wishlist Button - Top Right */}

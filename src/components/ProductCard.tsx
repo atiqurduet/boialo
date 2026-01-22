@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 export interface Product {
   id: string;
+  slug: string;
   title: string;
   author: string;
   price: number;
@@ -44,7 +45,7 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
   if (variant === "compact") {
     return (
       <Link
-        to={`/product/${product.id}`}
+        to={`/product/${product.slug}`}
         className="flex items-center gap-3 p-3 bg-card rounded-lg hover:bg-muted/50 transition-colors group"
       >
         <img
@@ -112,7 +113,7 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
       </button>
 
       {/* Product Image */}
-      <Link to={`/product/${product.id}`} className="block aspect-[3/4] overflow-hidden">
+      <Link to={`/product/${product.slug}`} className="block aspect-[3/4] overflow-hidden">
         <img
           src={product.image}
           alt={product.title}
@@ -122,7 +123,7 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
 
       {/* Product Info */}
       <div className="p-4">
-        <Link to={`/product/${product.id}`}>
+        <Link to={`/product/${product.slug}`}>
           <h3 className="font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2 mb-1 text-sm md:text-base">
             {product.title}
           </h3>

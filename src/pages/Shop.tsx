@@ -144,6 +144,7 @@ const Shop = () => {
     const images = dbProduct.images as string[] || [];
     return {
       id: dbProduct.id,
+      slug: dbProduct.slug,
       title: dbProduct.title_bn || dbProduct.title_en,
       author: dbProduct.writer?.name_bn || dbProduct.author || 'অজানা লেখক',
       price: dbProduct.price,
