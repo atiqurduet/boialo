@@ -12,6 +12,7 @@ interface GuestCartItem {
 
 interface ProductData {
   id: string;
+  slug: string;
   title: string;
   author: string;
   price: number;
@@ -65,6 +66,7 @@ const fetchProduct = async (productId: string): Promise<ProductData | null> => {
   const images = data.images as string[] || [];
   return {
     id: data.id,
+    slug: data.slug,
     title: data.title_bn || data.title_en,
     author: data.writer?.name_bn || data.author || 'অজানা লেখক',
     price: data.price,

@@ -166,7 +166,7 @@ export const SearchDropdown = ({
                 {results.products.map((product) => (
                   <Link
                     key={product.id}
-                    to={`/product/${product.id}`}
+                    to={`/product/${product.slug}`}
                     className="flex items-center gap-3 p-3 hover:bg-muted transition-colors"
                     onClick={handleProductClick}
                   >
