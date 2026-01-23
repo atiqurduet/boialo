@@ -128,7 +128,7 @@ export const SearchDropdown = ({
                   {results.categories.map((category) => (
                     <Link
                       key={category.id}
-                      to={`/shop?category=${category.slug}`}
+                      to={`/categories/${category.slug}`}
                       className="px-3 py-1.5 bg-muted rounded-full text-sm hover:bg-primary hover:text-primary-foreground transition-colors"
                       onClick={handleProductClick}
                     >

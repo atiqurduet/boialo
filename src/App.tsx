@@ -32,6 +32,7 @@ import Privacy from "./pages/Privacy";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import CategoryLanding from "./pages/CategoryLanding";
+import CategoryDetail from "./pages/CategoryDetail";
 import UniversalProductDetail from "./pages/UniversalProductDetail";
 import BkashCallback from "./pages/BkashCallback";
 
@@ -101,6 +102,7 @@ const App = () => (
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/categories/:slug" element={<CategoryDetail />} />
                 <Route path="/category/:productType" element={<CategoryLanding />} />
                 <Route path="/category/:productType/:categorySlug" element={<CategoryLanding />} />
                 <Route path="/universal-product/:slug" element={<UniversalProductDetail />} />
