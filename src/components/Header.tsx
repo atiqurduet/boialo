@@ -21,8 +21,8 @@ import { toast } from "sonner";
 const fallbackNavLinks = [
   { name: "হোম", path: "/" },
   { name: "জেনারেল বই", path: "/shop" },
-  { name: "একাডেমিক", path: "/shop?category=academic" },
-  { name: "আরবি বই", path: "/shop?category=arabic" },
+  { name: "একাডেমিক", path: "/categories/academic" },
+  { name: "আরবি বই", path: "/categories/arabic" },
   { name: "লেখক", path: "/authors" },
   { name: "প্রকাশক", path: "/publishers" },
   { name: "লাইফস্টাইল", path: "/category/lifestyle" },

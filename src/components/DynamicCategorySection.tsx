@@ -89,7 +89,7 @@ export const DynamicCategorySection = ({
           </h2>
         </div>
         <Link
-          to={selectedParent ? `/shop?category=${selectedParent.slug}` : "/shop"}
+          to={selectedParent ? `/categories/${selectedParent.slug}` : "/shop"}
           className="text-primary text-sm font-medium hover:underline flex items-center gap-1"
         >
           সব দেখুন <ChevronRight className="w-4 h-4" />
@@ -100,7 +100,7 @@ export const DynamicCategorySection = ({
         <div className="text-center py-8 text-muted-foreground">
           এই ক্যাটাগরিতে কোনো সাব-ক্যাটাগরি নেই
           <Link 
-            to={`/shop?category=${selectedParent.slug}`}
+            to={`/categories/${selectedParent.slug}`}
             className="block mt-2 text-primary hover:underline"
           >
             সব পণ্য দেখুন
@@ -111,7 +111,7 @@ export const DynamicCategorySection = ({
           {displayCategories.map((category) => (
             <Link
               key={category.id}
-              to={`/shop?category=${category.slug}`}
+              to={`/categories/${category.slug}`}
               onClick={(e) => handleCategoryClick(category, e)}
               className="category-card group"
             >

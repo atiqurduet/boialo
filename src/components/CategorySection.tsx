@@ -32,7 +32,7 @@ export const CategorySection = ({ title, categories, viewAllLink }: CategorySect
         {categories.map((category) => (
           <Link
             key={category.id}
-            to={`/shop?category=${category.slug}`}
+            to={`/categories/${category.slug}`}
             className="category-card group"
           >
             <div className="w-20 h-24 md:w-24 md:h-32 rounded-lg overflow-hidden mb-2 shadow-md group-hover:shadow-lg transition-shadow">
