@@ -4,7 +4,11 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
   LayoutDashboard,
   Package,
@@ -27,7 +31,12 @@ import {
   ShoppingBag,
   Layers,
   Grid3X3,
-  Mail
+  Mail,
+  ChevronDown,
+  Store,
+  Megaphone,
+  Truck,
+  CreditCard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -35,40 +44,130 @@ interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-const menuItems = [
-  { icon: LayoutDashboard, label: 'ড্যাশবোর্ড', href: '/admin', roles: ['admin', 'manager', 'support'] },
-  { icon: Home, label: 'হোমপেজ', href: '/admin/homepage', roles: ['admin', 'manager'] },
-  { icon: Palette, label: 'ব্র্যান্ডিং', href: '/admin/branding', roles: ['admin', 'manager'] },
-  { icon: Navigation, label: 'মেনু', href: '/admin/menu', roles: ['admin', 'manager'] },
-  { icon: Footprints, label: 'ফুটার', href: '/admin/footer', roles: ['admin', 'manager'] },
-  { icon: ShoppingCart, label: 'অর্ডার', href: '/admin/orders', roles: ['admin', 'manager', 'support'] },
-  { icon: ShoppingBag, label: 'অসম্পূর্ণ অর্ডার', href: '/admin/abandoned-carts', roles: ['admin', 'manager', 'support'] },
-  { icon: BarChart3, label: 'চেকআউট অ্যানালিটিক্স', href: '/admin/checkout-analytics', roles: ['admin', 'manager'] },
-  { icon: Package, label: 'প্রোডাক্ট', href: '/admin/products', roles: ['admin', 'manager'] },
-  { icon: FolderTree, label: 'ক্যাটাগরি', href: '/admin/categories', roles: ['admin', 'manager'] },
-  { icon: Users, label: 'লেখক', href: '/admin/writers', roles: ['admin', 'manager'] },
-  { icon: FileText, label: 'প্রকাশনী', href: '/admin/publishers', roles: ['admin', 'manager'] },
-  { icon: Tag, label: 'ব্র্যান্ড', href: '/admin/brands', roles: ['admin', 'manager'] },
-  { icon: Layers, label: 'ইউনিভার্সাল প্রোডাক্ট', href: '/admin/universal-products', roles: ['admin', 'manager'] },
-  { icon: Grid3X3, label: 'ইউনিভার্সাল ক্যাটাগরি', href: '/admin/universal-categories', roles: ['admin', 'manager'] },
-  { icon: Image, label: 'ব্যানার', href: '/admin/banners', roles: ['admin', 'manager'] },
-  { icon: Ticket, label: 'কুপন', href: '/admin/coupons', roles: ['admin', 'manager'] },
-  { icon: Users, label: 'কাস্টমার', href: '/admin/customers', roles: ['admin', 'manager', 'support'] },
-  { icon: Tag, label: 'পেমেন্ট', href: '/admin/payments', roles: ['admin'] },
-  { icon: FileText, label: 'কুরিয়ার', href: '/admin/couriers', roles: ['admin'] },
-  { icon: FileText, label: 'SMS', href: '/admin/sms', roles: ['admin'] },
-  { icon: Mail, label: 'ইমেইল মার্কেটিং', href: '/admin/email-marketing', roles: ['admin', 'manager'] },
-  { icon: BarChart3, label: 'ফ্রড রিভিউ', href: '/admin/fraud-review', roles: ['admin', 'manager'] },
-  { icon: BarChart3, label: 'রিপোর্ট', href: '/admin/reports', roles: ['admin', 'manager'] },
-  { icon: Settings, label: 'সেটিংস', href: '/admin/settings', roles: ['admin'] },
+interface MenuItem {
+  icon: any;
+  label: string;
+  href: string;
+  roles: string[];
+}
+
+interface MenuCategory {
+  icon: any;
+  label: string;
+  roles: string[];
+  items: MenuItem[];
+}
+
+// Grouped menu items by category
+const menuCategories: MenuCategory[] = [
+  {
+    icon: LayoutDashboard,
+    label: 'ড্যাশবোর্ড',
+    roles: ['admin', 'manager', 'support'],
+    items: [
+      { icon: LayoutDashboard, label: 'ড্যাশবোর্ড', href: '/admin', roles: ['admin', 'manager', 'support'] },
+      { icon: BarChart3, label: 'রিপোর্ট', href: '/admin/reports', roles: ['admin', 'manager'] },
+    ]
+  },
+  {
+    icon: Home,
+    label: 'সাইট ডিজাইন',
+    roles: ['admin', 'manager'],
+    items: [
+      { icon: Home, label: 'হোমপেজ', href: '/admin/homepage', roles: ['admin', 'manager'] },
+      { icon: Palette, label: 'ব্র্যান্ডিং', href: '/admin/branding', roles: ['admin', 'manager'] },
+      { icon: Navigation, label: 'মেনু', href: '/admin/menu', roles: ['admin', 'manager'] },
+      { icon: Footprints, label: 'ফুটার', href: '/admin/footer', roles: ['admin', 'manager'] },
+      { icon: Image, label: 'ব্যানার', href: '/admin/banners', roles: ['admin', 'manager'] },
+    ]
+  },
+  {
+    icon: ShoppingCart,
+    label: 'অর্ডার ম্যানেজমেন্ট',
+    roles: ['admin', 'manager', 'support'],
+    items: [
+      { icon: ShoppingCart, label: 'অর্ডার', href: '/admin/orders', roles: ['admin', 'manager', 'support'] },
+      { icon: ShoppingBag, label: 'অসম্পূর্ণ অর্ডার', href: '/admin/abandoned-carts', roles: ['admin', 'manager', 'support'] },
+      { icon: BarChart3, label: 'চেকআউট অ্যানালিটিক্স', href: '/admin/checkout-analytics', roles: ['admin', 'manager'] },
+      { icon: BarChart3, label: 'ফ্রড রিভিউ', href: '/admin/fraud-review', roles: ['admin', 'manager'] },
+    ]
+  },
+  {
+    icon: Store,
+    label: 'বই ম্যানেজমেন্ট',
+    roles: ['admin', 'manager'],
+    items: [
+      { icon: Package, label: 'প্রোডাক্ট', href: '/admin/products', roles: ['admin', 'manager'] },
+      { icon: FolderTree, label: 'ক্যাটাগরি', href: '/admin/categories', roles: ['admin', 'manager'] },
+      { icon: Users, label: 'লেখক', href: '/admin/writers', roles: ['admin', 'manager'] },
+      { icon: FileText, label: 'প্রকাশনী', href: '/admin/publishers', roles: ['admin', 'manager'] },
+    ]
+  },
+  {
+    icon: Layers,
+    label: 'ইউনিভার্সাল প্রোডাক্ট',
+    roles: ['admin', 'manager'],
+    items: [
+      { icon: Layers, label: 'প্রোডাক্ট', href: '/admin/universal-products', roles: ['admin', 'manager'] },
+      { icon: Grid3X3, label: 'ক্যাটাগরি', href: '/admin/universal-categories', roles: ['admin', 'manager'] },
+      { icon: Tag, label: 'ব্র্যান্ড', href: '/admin/brands', roles: ['admin', 'manager'] },
+    ]
+  },
+  {
+    icon: Megaphone,
+    label: 'মার্কেটিং',
+    roles: ['admin', 'manager'],
+    items: [
+      { icon: Ticket, label: 'কুপন', href: '/admin/coupons', roles: ['admin', 'manager'] },
+      { icon: Mail, label: 'ইমেইল মার্কেটিং', href: '/admin/email-marketing', roles: ['admin', 'manager'] },
+      { icon: FileText, label: 'SMS', href: '/admin/sms', roles: ['admin'] },
+    ]
+  },
+  {
+    icon: Users,
+    label: 'ইউজার ম্যানেজমেন্ট',
+    roles: ['admin', 'manager', 'support'],
+    items: [
+      { icon: Users, label: 'কাস্টমার', href: '/admin/customers', roles: ['admin', 'manager', 'support'] },
+    ]
+  },
+  {
+    icon: Settings,
+    label: 'সেটিংস',
+    roles: ['admin'],
+    items: [
+      { icon: CreditCard, label: 'পেমেন্ট', href: '/admin/payments', roles: ['admin'] },
+      { icon: Truck, label: 'কুরিয়ার', href: '/admin/couriers', roles: ['admin'] },
+      { icon: Settings, label: 'সাইট সেটিংস', href: '/admin/settings', roles: ['admin'] },
+    ]
+  },
 ];
 
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [openCategories, setOpenCategories] = useState<string[]>(['ড্যাশবোর্ড']);
   const location = useLocation();
   const navigate = useNavigate();
   const { isAdmin, role, loading, hasPermission } = useAdminAuth();
   const { user, signOut } = useAuth();
+
+  // Find which category contains the current route and open it
+  const currentCategory = menuCategories.find(cat => 
+    cat.items.some(item => location.pathname === item.href)
+  );
+
+  // Auto-open current category
+  if (currentCategory && !openCategories.includes(currentCategory.label)) {
+    setOpenCategories(prev => [...prev, currentCategory.label]);
+  }
+
+  const toggleCategory = (label: string) => {
+    setOpenCategories(prev => 
+      prev.includes(label) 
+        ? prev.filter(l => l !== label)
+        : [...prev, label]
+    );
+  };
 
   if (loading) {
     return (
@@ -100,8 +199,10 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     navigate('/signin');
   };
 
-  const filteredMenuItems = menuItems.filter(item => 
-    hasPermission(item.roles as any)
+  // Filter categories based on user role
+  const filteredCategories = menuCategories.filter(cat => 
+    hasPermission(cat.roles as any) && 
+    cat.items.some(item => hasPermission(item.roles as any))
   );
 
   const roleLabels = {
@@ -146,23 +247,60 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
             {/* Navigation */}
             <ScrollArea className="flex-1 py-4">
               <nav className="px-3 space-y-1">
-                {filteredMenuItems.map((item) => {
-                  const isActive = location.pathname === item.href;
+                {filteredCategories.map((category) => {
+                  const isOpen = openCategories.includes(category.label);
+                  const hasActiveItem = category.items.some(item => location.pathname === item.href);
+                  const filteredItems = category.items.filter(item => hasPermission(item.roles as any));
+
                   return (
-                    <Link
-                      key={item.href}
-                      to={item.href}
-                      onClick={() => setSidebarOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
+                    <Collapsible 
+                      key={category.label} 
+                      open={isOpen}
+                      onOpenChange={() => toggleCategory(category.label)}
                     >
-                      <item.icon className="h-5 w-5" />
-                      {item.label}
-                    </Link>
+                      <CollapsibleTrigger className="w-full">
+                        <div
+                          className={cn(
+                            "flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                            hasActiveItem
+                              ? "bg-primary/10 text-primary"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <category.icon className="h-5 w-5" />
+                            <span>{category.label}</span>
+                          </div>
+                          <ChevronDown 
+                            className={cn(
+                              "h-4 w-4 transition-transform duration-200",
+                              isOpen && "rotate-180"
+                            )} 
+                          />
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pl-4 mt-1 space-y-1">
+                        {filteredItems.map((item) => {
+                          const isActive = location.pathname === item.href;
+                          return (
+                            <Link
+                              key={item.href}
+                              to={item.href}
+                              onClick={() => setSidebarOpen(false)}
+                              className={cn(
+                                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                                isActive
+                                  ? "bg-primary text-primary-foreground"
+                                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                              )}
+                            >
+                              <item.icon className="h-4 w-4" />
+                              {item.label}
+                            </Link>
+                          );
+                        })}
+                      </CollapsibleContent>
+                    </Collapsible>
                   );
                 })}
               </nav>
