@@ -26,3 +26,7 @@ verify_jwt = false
 
 [functions.offer-notification]
 verify_jwt = false
+
+[functions.courier-booking]
+verify_jwt = false
+
