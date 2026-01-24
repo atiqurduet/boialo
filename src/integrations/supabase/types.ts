@@ -376,6 +376,54 @@ export type Database = {
         }
         Relationships: []
       }
+      courier_bookings: {
+        Row: {
+          actual_weight: number | null
+          api_response: Json | null
+          booking_status: string | null
+          cod_amount: number | null
+          consignment_id: string | null
+          courier_provider: string
+          created_at: string | null
+          estimated_delivery: string | null
+          id: string
+          order_id: string
+          pickup_scheduled_at: string | null
+          tracking_code: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          actual_weight?: number | null
+          api_response?: Json | null
+          booking_status?: string | null
+          cod_amount?: number | null
+          consignment_id?: string | null
+          courier_provider: string
+          created_at?: string | null
+          estimated_delivery?: string | null
+          id?: string
+          order_id: string
+          pickup_scheduled_at?: string | null
+          tracking_code?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          actual_weight?: number | null
+          api_response?: Json | null
+          booking_status?: string | null
+          cod_amount?: number | null
+          consignment_id?: string | null
+          courier_provider?: string
+          created_at?: string | null
+          estimated_delivery?: string | null
+          id?: string
+          order_id?: string
+          pickup_scheduled_at?: string | null
+          tracking_code?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       courier_providers: {
         Row: {
           api_endpoint: string | null
@@ -1155,8 +1203,39 @@ export type Database = {
           },
         ]
       }
+      order_status_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          notes: string | null
+          order_id: string
+          status: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          order_id: string
+          status: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          order_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
+          actual_weight: number | null
           address: string
           courier_provider: string | null
           courier_status: string | null
@@ -1164,7 +1243,9 @@ export type Database = {
           delivered_at: string | null
           delivery_area: string
           delivery_charge: number
+          delivery_notes: string | null
           email: string | null
+          estimated_delivery: string | null
           full_name: string
           id: string
           notes: string | null
@@ -1172,6 +1253,7 @@ export type Database = {
           payment_method: string
           phone: string
           phone_verified: boolean | null
+          priority: string | null
           requires_review: boolean | null
           review_status: string | null
           shipped_at: string | null
@@ -1184,6 +1266,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          actual_weight?: number | null
           address: string
           courier_provider?: string | null
           courier_status?: string | null
@@ -1191,7 +1274,9 @@ export type Database = {
           delivered_at?: string | null
           delivery_area: string
           delivery_charge: number
+          delivery_notes?: string | null
           email?: string | null
+          estimated_delivery?: string | null
           full_name: string
           id?: string
           notes?: string | null
@@ -1199,6 +1284,7 @@ export type Database = {
           payment_method: string
           phone: string
           phone_verified?: boolean | null
+          priority?: string | null
           requires_review?: boolean | null
           review_status?: string | null
           shipped_at?: string | null
@@ -1211,6 +1297,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          actual_weight?: number | null
           address?: string
           courier_provider?: string | null
           courier_status?: string | null
@@ -1218,7 +1305,9 @@ export type Database = {
           delivered_at?: string | null
           delivery_area?: string
           delivery_charge?: number
+          delivery_notes?: string | null
           email?: string | null
+          estimated_delivery?: string | null
           full_name?: string
           id?: string
           notes?: string | null
@@ -1226,6 +1315,7 @@ export type Database = {
           payment_method?: string
           phone?: string
           phone_verified?: boolean | null
+          priority?: string | null
           requires_review?: boolean | null
           review_status?: string | null
           shipped_at?: string | null

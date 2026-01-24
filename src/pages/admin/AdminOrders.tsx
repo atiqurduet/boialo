@@ -18,9 +18,14 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Eye, FileText, Truck, Loader2, Printer, X } from 'lucide-react';
+import { Search, Eye, FileText, Truck, Loader2, Printer, X, Clock, Package } from 'lucide-react';
+import { OrderCourierBooking } from '@/components/admin/OrderCourierBooking';
+import { OrderStatusTimeline } from '@/components/admin/OrderStatusTimeline';
+import { BulkCourierBooking } from '@/components/admin/BulkCourierBooking';
 
 interface Order {
   id: string;
@@ -39,7 +44,11 @@ interface Order {
   notes: string | null;
   tracking_number: string | null;
   courier_provider: string | null;
+  courier_status: string | null;
+  priority: string | null;
   created_at: string;
+  shipped_at: string | null;
+  delivered_at: string | null;
 }
 
 interface OrderItem {
@@ -62,6 +71,8 @@ const AdminOrders = () => {
   const [generatingDoc, setGeneratingDoc] = useState<string | null>(null);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [bulkPrinting, setBulkPrinting] = useState<'invoice' | 'delivery-slip' | null>(null);
+  const [bulkCourierOpen, setBulkCourierOpen] = useState(false);
+  const [statusNote, setStatusNote] = useState('');
   const { toast } = useToast();
 
   const toggleOrderSelection = (orderId: string) => {
@@ -245,11 +256,11 @@ const AdminOrders = () => {
     setDetailsOpen(true);
   };
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
+  const handleStatusChange = async (orderId: string, newStatus: string, notes?: string) => {
     try {
       const orderToUpdate = orders.find(o => o.id === orderId);
       
-      const updateData: Record<string, any> = { status: newStatus };
+      const updateData: Record<string, unknown> = { status: newStatus };
       
       // Add timestamps for specific statuses
       if (newStatus === 'shipped') {
@@ -264,6 +275,16 @@ const AdminOrders = () => {
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // Record status history
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from('order_status_history').insert({
+        order_id: orderId,
+        status: newStatus,
+        notes: notes || statusNote || null,
+        changed_by: user?.id || null,
+        metadata: { previous_status: orderToUpdate?.status },
+      });
       
       // Send SMS notification
       if (orderToUpdate) {
@@ -298,13 +319,15 @@ const AdminOrders = () => {
       }
       
       toast({ title: 'সফল', description: 'অর্ডার স্ট্যাটাস আপডেট হয়েছে' });
+      setStatusNote('');
       fetchOrders();
       
       if (selectedOrder?.id === orderId) {
         setSelectedOrder({ ...selectedOrder, status: newStatus });
       }
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
     }
   };
 
@@ -371,16 +394,16 @@ const AdminOrders = () => {
 
         {/* Bulk Actions Bar */}
         {selectedOrderIds.size > 0 && (
-          <div className="flex items-center gap-4 p-4 bg-primary/10 rounded-lg border border-primary/20">
+          <div className="flex items-center gap-4 p-4 bg-primary/10 rounded-lg border border-primary/20 flex-wrap">
             <span className="font-medium">{selectedOrderIds.size}টি অর্ডার সিলেক্টেড</span>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button 
                 size="sm" 
                 onClick={() => bulkPrint('invoice')}
                 disabled={bulkPrinting !== null}
               >
                 {bulkPrinting === 'invoice' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Printer className="h-4 w-4 mr-2" />}
-                বাল্ক ইনভয়েস প্রিন্ট
+                বাল্ক ইনভয়েস
               </Button>
               <Button 
                 size="sm" 
@@ -389,7 +412,15 @@ const AdminOrders = () => {
                 disabled={bulkPrinting !== null}
               >
                 {bulkPrinting === 'delivery-slip' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Truck className="h-4 w-4 mr-2" />}
-                বাল্ক ডেলিভারি স্লিপ প্রিন্ট
+                বাল্ক ডেলিভারি স্লিপ
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setBulkCourierOpen(true)}
+              >
+                <Package className="h-4 w-4 mr-2" />
+                বাল্ক কুরিয়ার বুক
               </Button>
             </div>
             <Button size="sm" variant="ghost" onClick={clearSelection}>
@@ -398,6 +429,17 @@ const AdminOrders = () => {
             </Button>
           </div>
         )}
+
+        {/* Bulk Courier Booking Dialog */}
+        <BulkCourierBooking
+          orderIds={Array.from(selectedOrderIds)}
+          open={bulkCourierOpen}
+          onOpenChange={setBulkCourierOpen}
+          onComplete={() => {
+            fetchOrders();
+            clearSelection();
+          }}
+        />
 
         {/* Orders Table */}
         <Card>
@@ -506,110 +548,153 @@ const AdminOrders = () => {
                   </Button>
                 </div>
 
-                {/* Status Update */}
-                <div className="flex items-center gap-4">
-                  <Label>স্ট্যাটাস:</Label>
-                  <Select
-                    value={selectedOrder.status}
-                    onValueChange={(value) => handleStatusChange(selectedOrder.id, value)}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">পেন্ডিং</SelectItem>
-                      <SelectItem value="processing">প্রসেসিং</SelectItem>
-                      <SelectItem value="shipped">শিপড</SelectItem>
-                      <SelectItem value="delivered">ডেলিভার্ড</SelectItem>
-                      <SelectItem value="cancelled">বাতিল</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Tabs defaultValue="details" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="details">বিস্তারিত</TabsTrigger>
+                    <TabsTrigger value="courier">কুরিয়ার</TabsTrigger>
+                    <TabsTrigger value="timeline">টাইমলাইন</TabsTrigger>
+                  </TabsList>
 
-                {/* Customer Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">গ্রাহকের নাম</Label>
-                    <p className="font-medium">{selectedOrder.full_name}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">ফোন</Label>
-                    <p className="font-medium">{selectedOrder.phone}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">ইমেইল</Label>
-                    <p className="font-medium">{selectedOrder.email || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">ডেলিভারি এরিয়া</Label>
-                    <p className="font-medium">{selectedOrder.delivery_area}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="text-muted-foreground">ঠিকানা</Label>
-                    <p className="font-medium">{selectedOrder.address}</p>
-                  </div>
-                  {selectedOrder.notes && (
-                    <div className="col-span-2">
-                      <Label className="text-muted-foreground">নোট</Label>
-                      <p className="font-medium">{selectedOrder.notes}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Order Items */}
-                <div>
-                  <Label className="text-muted-foreground mb-2 block">অর্ডার আইটেম</Label>
-                  <div className="border rounded-lg divide-y">
-                    {orderItems.map((item) => (
-                      <div key={item.id} className="flex items-center gap-4 p-3">
-                        {item.product_image && (
-                          <img
-                            src={item.product_image}
-                            alt={item.product_title}
-                            className="w-12 h-16 object-cover rounded"
-                          />
-                        )}
-                        <div className="flex-1">
-                          <p className="font-medium">{item.product_title}</p>
-                          <p className="text-sm text-muted-foreground">
-                            ৳{item.price} × {item.quantity}
-                          </p>
-                        </div>
-                        <p className="font-medium">৳{(item.price * item.quantity).toLocaleString()}</p>
+                  <TabsContent value="details" className="space-y-4 mt-4">
+                    {/* Status Update */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-4">
+                        <Label>স্ট্যাটাস:</Label>
+                        <Select
+                          value={selectedOrder.status}
+                          onValueChange={(value) => handleStatusChange(selectedOrder.id, value)}
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">পেন্ডিং</SelectItem>
+                            <SelectItem value="processing">প্রসেসিং</SelectItem>
+                            <SelectItem value="shipped">শিপড</SelectItem>
+                            <SelectItem value="delivered">ডেলিভার্ড</SelectItem>
+                            <SelectItem value="cancelled">বাতিল</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Order Summary */}
-                <div className="border-t pt-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span>সাবটোটাল</span>
-                    <span>৳{Number(selectedOrder.subtotal).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>ডেলিভারি চার্জ</span>
-                    <span>৳{Number(selectedOrder.delivery_charge).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>মোট</span>
-                    <span>৳{Number(selectedOrder.total).toLocaleString()}</span>
-                  </div>
-                </div>
-
-                {/* Payment Info */}
-                <div className="border-t pt-4">
-                  <div className="flex justify-between">
-                    <span>পেমেন্ট মেথড</span>
-                    <span className="font-medium">{selectedOrder.payment_method}</span>
-                  </div>
-                  {selectedOrder.transaction_id && (
-                    <div className="flex justify-between">
-                      <span>ট্রানজ্যাকশন আইডি</span>
-                      <span className="font-mono text-sm">{selectedOrder.transaction_id}</span>
+                      <Textarea
+                        placeholder="স্ট্যাটাস পরিবর্তনের নোট (ঐচ্ছিক)"
+                        value={statusNote}
+                        onChange={(e) => setStatusNote(e.target.value)}
+                        className="h-16"
+                      />
                     </div>
-                  )}
-                </div>
+
+                    {/* Customer Info */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-muted-foreground">গ্রাহকের নাম</Label>
+                        <p className="font-medium">{selectedOrder.full_name}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">ফোন</Label>
+                        <p className="font-medium">{selectedOrder.phone}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">ইমেইল</Label>
+                        <p className="font-medium">{selectedOrder.email || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">ডেলিভারি এরিয়া</Label>
+                        <p className="font-medium">{selectedOrder.delivery_area}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-muted-foreground">ঠিকানা</Label>
+                        <p className="font-medium">{selectedOrder.address}</p>
+                      </div>
+                      {selectedOrder.notes && (
+                        <div className="col-span-2">
+                          <Label className="text-muted-foreground">নোট</Label>
+                          <p className="font-medium">{selectedOrder.notes}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Order Items */}
+                    <div>
+                      <Label className="text-muted-foreground mb-2 block">অর্ডার আইটেম</Label>
+                      <div className="border rounded-lg divide-y">
+                        {orderItems.map((item) => (
+                          <div key={item.id} className="flex items-center gap-4 p-3">
+                            {item.product_image && (
+                              <img
+                                src={item.product_image}
+                                alt={item.product_title}
+                                className="w-12 h-16 object-cover rounded"
+                              />
+                            )}
+                            <div className="flex-1">
+                              <p className="font-medium">{item.product_title}</p>
+                              <p className="text-sm text-muted-foreground">
+                                ৳{item.price} × {item.quantity}
+                              </p>
+                            </div>
+                            <p className="font-medium">৳{(item.price * item.quantity).toLocaleString()}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Order Summary */}
+                    <div className="border-t pt-4 space-y-2">
+                      <div className="flex justify-between">
+                        <span>সাবটোটাল</span>
+                        <span>৳{Number(selectedOrder.subtotal).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>ডেলিভারি চার্জ</span>
+                        <span>৳{Number(selectedOrder.delivery_charge).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-lg">
+                        <span>মোট</span>
+                        <span>৳{Number(selectedOrder.total).toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    {/* Payment Info */}
+                    <div className="border-t pt-4">
+                      <div className="flex justify-between">
+                        <span>পেমেন্ট মেথড</span>
+                        <span className="font-medium">{selectedOrder.payment_method}</span>
+                      </div>
+                      {selectedOrder.transaction_id && (
+                        <div className="flex justify-between">
+                          <span>ট্রানজ্যাকশন আইডি</span>
+                          <span className="font-mono text-sm">{selectedOrder.transaction_id}</span>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="courier" className="mt-4">
+                    <OrderCourierBooking
+                      orderId={selectedOrder.id}
+                      orderNumber={selectedOrder.order_number}
+                      currentCourier={selectedOrder.courier_provider}
+                      trackingNumber={selectedOrder.tracking_number}
+                      onBookingComplete={() => {
+                        fetchOrders();
+                        // Refresh selected order
+                        const updated = orders.find(o => o.id === selectedOrder.id);
+                        if (updated) setSelectedOrder(updated);
+                      }}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="timeline" className="mt-4">
+                    <OrderStatusTimeline
+                      orderId={selectedOrder.id}
+                      currentStatus={selectedOrder.status}
+                      createdAt={selectedOrder.created_at}
+                      shippedAt={selectedOrder.shipped_at}
+                      deliveredAt={selectedOrder.delivered_at}
+                    />
+                  </TabsContent>
+                </Tabs>
               </div>
             )}
           </DialogContent>

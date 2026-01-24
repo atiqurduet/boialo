@@ -1,0 +1,351 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+interface CourierProvider {
+  id: string;
+  name_en: string;
+  provider: string;
+  config: Record<string, string>;
+  api_endpoint: string | null;
+}
+
+interface Order {
+  id: string;
+  order_number: string;
+  full_name: string;
+  phone: string;
+  address: string;
+  delivery_area: string;
+  total: number;
+  payment_method: string;
+}
+
+interface BookingResult {
+  success: boolean;
+  consignment_id?: string;
+  tracking_code?: string;
+  message?: string;
+  raw_response?: unknown;
+}
+
+// Pathao API Integration
+async function bookPathao(order: Order, config: Record<string, string>): Promise<BookingResult> {
+  const { client_id, client_secret, username, password, sandbox } = config;
+  
+  if (!client_id || !client_secret || !username || !password) {
+    return { success: false, message: "Pathao credentials not configured" };
+  }
+
+  const baseUrl = sandbox === "true" 
+    ? "https://hermes-api.p-stageenv.xyz" 
+    : "https://api-hermes.pathao.com";
+
+  try {
+    // Step 1: Get access token
+    const tokenResponse = await fetch(`${baseUrl}/aladdin/api/v1/issue-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id,
+        client_secret,
+        username,
+        password,
+        grant_type: "password"
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.text();
+      console.error("Pathao token error:", error);
+      return { success: false, message: "Failed to authenticate with Pathao", raw_response: error };
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    // Step 2: Create order
+    const orderPayload = {
+      store_id: config.store_id || 1,
+      merchant_order_id: order.order_number,
+      recipient_name: order.full_name,
+      recipient_phone: order.phone.replace("+88", ""),
+      recipient_address: order.address,
+      recipient_city: 1, // Dhaka default
+      recipient_zone: 1,
+      delivery_type: 48, // 48 hours delivery
+      item_type: 2, // Document
+      special_instruction: "",
+      item_quantity: 1,
+      item_weight: 0.5,
+      amount_to_collect: order.payment_method === "cod" ? order.total : 0,
+      item_description: `Order #${order.order_number}`,
+    };
+
+    const orderResponse = await fetch(`${baseUrl}/aladdin/api/v1/orders`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(orderPayload),
+    });
+
+    const orderResult = await orderResponse.json();
+
+    if (orderResponse.ok && orderResult.data) {
+      return {
+        success: true,
+        consignment_id: orderResult.data.consignment_id,
+        tracking_code: orderResult.data.consignment_id,
+        raw_response: orderResult,
+      };
+    }
+
+    return { success: false, message: orderResult.message || "Pathao booking failed", raw_response: orderResult };
+  } catch (error: unknown) {
+    console.error("Pathao API error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, message: `Pathao API error: ${errorMessage}` };
+  }
+}
+
+// Steadfast API Integration
+async function bookSteadfast(order: Order, config: Record<string, string>): Promise<BookingResult> {
+  const { api_key, secret_key, sandbox } = config;
+  
+  if (!api_key || !secret_key) {
+    return { success: false, message: "Steadfast credentials not configured" };
+  }
+
+  const baseUrl = sandbox === "true" 
+    ? "https://portal.packzy.com/api/v1" 
+    : "https://portal.steadfast.com.bd/api/v1";
+
+  try {
+    const orderPayload = {
+      invoice: order.order_number,
+      recipient_name: order.full_name,
+      recipient_phone: order.phone.replace("+88", ""),
+      recipient_address: order.address,
+      cod_amount: order.payment_method === "cod" ? order.total : 0,
+      note: `Order from BoiAlo - ${order.delivery_area}`,
+    };
+
+    const response = await fetch(`${baseUrl}/create_order`, {
+      method: "POST",
+      headers: {
+        "Api-Key": api_key,
+        "Secret-Key": secret_key,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(orderPayload),
+    });
+
+    const result = await response.json();
+
+    if (result.status === 200 && result.consignment) {
+      return {
+        success: true,
+        consignment_id: result.consignment.consignment_id,
+        tracking_code: result.consignment.tracking_code,
+        raw_response: result,
+      };
+    }
+
+    return { success: false, message: result.message || "Steadfast booking failed", raw_response: result };
+  } catch (error: unknown) {
+    console.error("Steadfast API error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, message: `Steadfast API error: ${errorMessage}` };
+  }
+}
+
+// RedX API Integration
+async function bookRedX(order: Order, config: Record<string, string>): Promise<BookingResult> {
+  const { api_token, sandbox } = config;
+  
+  if (!api_token) {
+    return { success: false, message: "RedX API token not configured" };
+  }
+
+  const baseUrl = sandbox === "true" 
+    ? "https://sandbox.redx.com.bd" 
+    : "https://openapi.redx.com.bd";
+
+  try {
+    const orderPayload = {
+      customer_name: order.full_name,
+      customer_phone: order.phone.replace("+88", ""),
+      delivery_area: order.delivery_area,
+      delivery_area_id: 1,
+      customer_address: order.address,
+      merchant_invoice_id: order.order_number,
+      cash_collection_amount: order.payment_method === "cod" ? order.total.toString() : "0",
+      parcel_weight: 500,
+      instruction: "",
+      value: order.total.toString(),
+    };
+
+    const response = await fetch(`${baseUrl}/v1.0.0-beta/parcel`, {
+      method: "POST",
+      headers: {
+        "API-ACCESS-TOKEN": `Bearer ${api_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(orderPayload),
+    });
+
+    const result = await response.json();
+
+    if (response.ok && result.tracking_id) {
+      return {
+        success: true,
+        consignment_id: result.tracking_id,
+        tracking_code: result.tracking_id,
+        raw_response: result,
+      };
+    }
+
+    return { success: false, message: result.message || "RedX booking failed", raw_response: result };
+  } catch (error: unknown) {
+    console.error("RedX API error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, message: `RedX API error: ${errorMessage}` };
+  }
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { order_id, courier_provider } = await req.json();
+    
+    console.log("Courier booking request:", { order_id, courier_provider });
+
+    if (!order_id || !courier_provider) {
+      return new Response(
+        JSON.stringify({ error: "order_id and courier_provider are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch order details
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("id", order_id)
+      .single();
+
+    if (orderError || !order) {
+      return new Response(
+        JSON.stringify({ error: "Order not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch courier provider config
+    const { data: provider, error: providerError } = await supabase
+      .from("courier_providers")
+      .select("*")
+      .eq("provider", courier_provider)
+      .eq("is_active", true)
+      .single();
+
+    if (providerError || !provider) {
+      return new Response(
+        JSON.stringify({ error: "Courier provider not found or inactive" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Book with appropriate courier
+    let bookingResult: BookingResult;
+    
+    switch (courier_provider) {
+      case "pathao":
+        bookingResult = await bookPathao(order, provider.config);
+        break;
+      case "steadfast":
+        bookingResult = await bookSteadfast(order, provider.config);
+        break;
+      case "redx":
+        bookingResult = await bookRedX(order, provider.config);
+        break;
+      case "manual":
+        bookingResult = { success: true, message: "Manual tracking - no API booking needed" };
+        break;
+      default:
+        return new Response(
+          JSON.stringify({ error: `Unsupported courier provider: ${courier_provider}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+    }
+
+    if (bookingResult.success) {
+      // Save booking record
+      await supabase.from("courier_bookings").upsert({
+        order_id: order.id,
+        courier_provider,
+        consignment_id: bookingResult.consignment_id,
+        tracking_code: bookingResult.tracking_code,
+        booking_status: "booked",
+        api_response: bookingResult.raw_response || {},
+        cod_amount: order.payment_method === "cod" ? order.total : 0,
+      }, { onConflict: "order_id" });
+
+      // Update order with tracking info
+      await supabase.from("orders").update({
+        courier_provider,
+        tracking_number: bookingResult.tracking_code || bookingResult.consignment_id,
+        courier_status: "booked",
+        status: "processing",
+      }).eq("id", order.id);
+
+      // Add to order history
+      await supabase.from("order_status_history").insert({
+        order_id: order.id,
+        status: "courier_booked",
+        notes: `Booked with ${provider.name_en}. Tracking: ${bookingResult.tracking_code || bookingResult.consignment_id}`,
+        metadata: { courier_provider, booking_result: bookingResult },
+      });
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: `Successfully booked with ${provider.name_en}`,
+          tracking_code: bookingResult.tracking_code || bookingResult.consignment_id,
+          consignment_id: bookingResult.consignment_id,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: bookingResult.message,
+        details: bookingResult.raw_response,
+      }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error: unknown) {
+    console.error("Courier booking error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
