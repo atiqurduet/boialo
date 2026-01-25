@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
+import { trackInitiateCheckout, trackAddPaymentInfo, trackAddShippingInfo, trackPurchase } from "@/lib/analytics";
 import {
   Dialog,
   DialogContent,
@@ -73,6 +74,22 @@ const Checkout = () => {
   const [otpError, setOtpError] = useState("");
   const [countdown, setCountdown] = useState(0);
   const [phoneVerified, setPhoneVerified] = useState(false);
+
+  // Track initiate checkout on load
+  useEffect(() => {
+    if (cartItems.length > 0 && !cartLoading) {
+      trackInitiateCheckout(
+        cartItems.map(item => ({
+          id: item.product.id,
+          name: item.product.title,
+          price: item.product.price,
+          category: item.product.category,
+          quantity: item.quantity,
+        })),
+        subtotal
+      );
+    }
+  }, [cartLoading]);
 
   // Track abandoned checkout - create/update on checkout page load
   useEffect(() => {
@@ -453,6 +470,22 @@ const Checkout = () => {
 
       // Clear cart for other payment methods
       await clearCart();
+
+      // Track purchase event
+      trackPurchase({
+        transaction_id: orderNumber,
+        value: total,
+        currency: 'BDT',
+        shipping: deliveryCharge,
+        coupon: appliedCoupon?.code,
+        items: cartItems.map(item => ({
+          id: item.product.id,
+          name: item.product.title,
+          price: item.product.price,
+          category: item.product.category,
+          quantity: item.quantity,
+        })),
+      });
 
       toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
       navigate("/order-confirmation", { state: { orderNumber } });

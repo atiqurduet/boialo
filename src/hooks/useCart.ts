@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { trackAddToCart, trackRemoveFromCart } from "@/lib/analytics";
 
 const GUEST_CART_KEY = 'guest_cart';
 
@@ -181,6 +182,18 @@ export const useCart = () => {
   }, [fetchCart]);
 
   const addToCart = async (productId: string, quantity: number = 1) => {
+    // Track add to cart event
+    const product = await fetchProduct(productId);
+    if (product) {
+      trackAddToCart({
+        id: product.id,
+        name: product.title,
+        price: product.price,
+        category: product.category,
+        quantity,
+      });
+    }
+
     if (!user) {
       // Guest cart - use localStorage
       const guestCart = getGuestCart();
@@ -260,6 +273,17 @@ export const useCart = () => {
 
   const removeFromCart = async (itemId: string) => {
     const item = cartItems.find((i) => i.id === itemId);
+    
+    // Track remove from cart
+    if (item) {
+      trackRemoveFromCart({
+        id: item.product.id,
+        name: item.product.title,
+        price: item.product.price,
+        category: item.product.category,
+        quantity: item.quantity,
+      });
+    }
     
     if (!user && item) {
       // Guest cart

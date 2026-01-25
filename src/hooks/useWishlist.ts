@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { trackAddToWishlist } from "@/lib/analytics";
 
 const GUEST_WISHLIST_KEY = 'guest_wishlist';
 
@@ -170,6 +171,17 @@ export const useWishlist = () => {
     if (exists) {
       toast.info("ইতিমধ্যে উইশলিস্টে আছে");
       return;
+    }
+
+    // Track wishlist add event
+    const product = await fetchProduct(productId);
+    if (product) {
+      trackAddToWishlist({
+        id: product.id,
+        name: product.title,
+        price: product.price,
+        category: product.category,
+      });
     }
 
     if (!user) {

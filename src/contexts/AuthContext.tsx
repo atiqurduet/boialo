@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { trackCompleteRegistration, trackLogin } from "@/lib/analytics";
 
 interface AuthContextType {
   user: User | null;
@@ -51,6 +52,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
       },
     });
+    
+    if (!error) {
+      trackCompleteRegistration('email');
+    }
+    
     return { error: error as Error | null };
   };
 
@@ -59,6 +65,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email,
       password,
     });
+    
+    if (!error) {
+      trackLogin('email');
+    }
+    
     return { error: error as Error | null };
   };
 

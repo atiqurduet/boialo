@@ -18,6 +18,7 @@ import { useCartContext } from "@/contexts/CartContext";
 import { format } from "date-fns";
 import { bn } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
+import { trackViewContent } from "@/lib/analytics";
 import {
   Dialog,
   DialogContent,
@@ -74,6 +75,20 @@ const ProductDetail = () => {
     },
     enabled: !!dbProduct?.category_id,
   });
+
+  // Track view content when product loads
+  useEffect(() => {
+    if (dbProduct) {
+      const images = dbProduct.images as string[] || [];
+      trackViewContent({
+        id: dbProduct.id,
+        name: dbProduct.title_bn || dbProduct.title_en,
+        price: dbProduct.price,
+        category: dbProduct.category?.name_bn,
+        brand: dbProduct.publisher_rel?.name_bn,
+      });
+    }
+  }, [dbProduct?.id]);
 
   // Fetch preorder message setting
   useEffect(() => {
