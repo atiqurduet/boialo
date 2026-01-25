@@ -22,13 +22,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Eye, FileText, Truck, Loader2, Printer, X, Clock, Package } from 'lucide-react';
+import { Search, Eye, FileText, Truck, Loader2, Printer, X, Clock, Package, RefreshCw } from 'lucide-react';
 import { OrderCourierBooking } from '@/components/admin/OrderCourierBooking';
 import { OrderStatusTimeline } from '@/components/admin/OrderStatusTimeline';
 import { BulkCourierBooking } from '@/components/admin/BulkCourierBooking';
 import { QuickCourierSend } from '@/components/admin/QuickCourierSend';
 import { OrderStatusPanel } from '@/components/admin/OrderStatusPanel';
 import { OrderTaskAssignment } from '@/components/admin/OrderTaskAssignment';
+import { BulkStatusUpdate } from '@/components/admin/BulkStatusUpdate';
 
 interface Order {
   id: string;
@@ -77,6 +78,7 @@ const AdminOrders = () => {
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [bulkPrinting, setBulkPrinting] = useState<'invoice' | 'delivery-slip' | null>(null);
   const [bulkCourierOpen, setBulkCourierOpen] = useState(false);
+  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
   const [statusNote, setStatusNote] = useState('');
   const { toast } = useToast();
 
@@ -465,6 +467,14 @@ const AdminOrders = () => {
                 <Package className="h-4 w-4 mr-2" />
                 বাল্ক কুরিয়ার বুক
               </Button>
+              <Button 
+                size="sm" 
+                variant="default"
+                onClick={() => setBulkStatusOpen(true)}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                বাল্ক স্ট্যাটাস আপডেট
+              </Button>
             </div>
             <Button size="sm" variant="ghost" onClick={clearSelection}>
               <X className="h-4 w-4 mr-1" />
@@ -478,6 +488,17 @@ const AdminOrders = () => {
           orderIds={Array.from(selectedOrderIds)}
           open={bulkCourierOpen}
           onOpenChange={setBulkCourierOpen}
+          onComplete={() => {
+            fetchOrders();
+            clearSelection();
+          }}
+        />
+
+        {/* Bulk Status Update Dialog */}
+        <BulkStatusUpdate
+          orderIds={Array.from(selectedOrderIds)}
+          open={bulkStatusOpen}
+          onOpenChange={setBulkStatusOpen}
           onComplete={() => {
             fetchOrders();
             clearSelection();
