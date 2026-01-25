@@ -27,6 +27,8 @@ import { OrderCourierBooking } from '@/components/admin/OrderCourierBooking';
 import { OrderStatusTimeline } from '@/components/admin/OrderStatusTimeline';
 import { BulkCourierBooking } from '@/components/admin/BulkCourierBooking';
 import { QuickCourierSend } from '@/components/admin/QuickCourierSend';
+import { OrderStatusPanel } from '@/components/admin/OrderStatusPanel';
+import { OrderTaskAssignment } from '@/components/admin/OrderTaskAssignment';
 
 interface Order {
   id: string;
@@ -41,12 +43,14 @@ interface Order {
   total: number;
   status: string;
   payment_method: string;
+  payment_status: string | null;
   transaction_id: string | null;
   notes: string | null;
   tracking_number: string | null;
   courier_provider: string | null;
   courier_status: string | null;
   priority: string | null;
+  assigned_to: string | null;
   created_at: string;
   shipped_at: string | null;
   delivered_at: string | null;
@@ -339,8 +343,46 @@ const AdminOrders = () => {
       shipped: { label: 'শিপড', className: 'bg-purple-100 text-purple-800' },
       delivered: { label: 'ডেলিভার্ড', className: 'bg-green-100 text-green-800' },
       cancelled: { label: 'বাতিল', className: 'bg-red-100 text-red-800' },
+      returned: { label: 'রিটার্ন', className: 'bg-orange-100 text-orange-800' },
     };
     const config = statusConfig[status] || { label: status, className: 'bg-gray-100 text-gray-800' };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.className}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  const getPaymentStatusBadge = (status: string | null) => {
+    const statusConfig: Record<string, { label: string; className: string }> = {
+      pending: { label: 'পেন্ডিং', className: 'bg-yellow-100 text-yellow-800' },
+      paid: { label: 'পেইড', className: 'bg-green-100 text-green-800' },
+      partial: { label: 'আংশিক', className: 'bg-blue-100 text-blue-800' },
+      cod_pending: { label: 'COD', className: 'bg-orange-100 text-orange-800' },
+      cod_collected: { label: 'কালেক্টেড', className: 'bg-green-100 text-green-800' },
+      refunded: { label: 'রিফান্ড', className: 'bg-gray-100 text-gray-800' },
+      failed: { label: 'ব্যর্থ', className: 'bg-red-100 text-red-800' },
+    };
+    const config = statusConfig[status || 'pending'] || { label: status || 'N/A', className: 'bg-gray-100 text-gray-800' };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.className}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  const getCourierStatusBadge = (status: string | null) => {
+    const statusConfig: Record<string, { label: string; className: string }> = {
+      not_booked: { label: 'বুক নেই', className: 'bg-gray-100 text-gray-800' },
+      booked: { label: 'বুকড', className: 'bg-blue-100 text-blue-800' },
+      picked_up: { label: 'পিকআপ', className: 'bg-indigo-100 text-indigo-800' },
+      in_transit: { label: 'ট্রানজিট', className: 'bg-purple-100 text-purple-800' },
+      out_for_delivery: { label: 'ডেলিভারিতে', className: 'bg-cyan-100 text-cyan-800' },
+      delivered: { label: 'ডেলিভার্ড', className: 'bg-green-100 text-green-800' },
+      failed: { label: 'ব্যর্থ', className: 'bg-red-100 text-red-800' },
+      returned: { label: 'রিটার্ন', className: 'bg-orange-100 text-orange-800' },
+    };
+    const config = statusConfig[status || 'not_booked'] || { label: status || 'N/A', className: 'bg-gray-100 text-gray-800' };
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.className}`}>
         {config.label}
@@ -463,7 +505,9 @@ const AdminOrders = () => {
                       <th className="text-left py-3 px-4 font-medium">অর্ডার নং</th>
                       <th className="text-left py-3 px-4 font-medium">গ্রাহক</th>
                       <th className="text-left py-3 px-4 font-medium">মোট</th>
-                      <th className="text-left py-3 px-4 font-medium">স্ট্যাটাস</th>
+                      <th className="text-left py-3 px-4 font-medium">অর্ডার</th>
+                      <th className="text-left py-3 px-4 font-medium">পেমেন্ট</th>
+                      <th className="text-left py-3 px-4 font-medium">কুরিয়ার</th>
                       <th className="text-left py-3 px-4 font-medium">তারিখ</th>
                       <th className="text-right py-3 px-4 font-medium">অ্যাকশন</th>
                     </tr>
@@ -484,6 +528,8 @@ const AdminOrders = () => {
                         </td>
                         <td className="py-3 px-4 font-medium">৳{Number(order.total).toLocaleString()}</td>
                         <td className="py-3 px-4">{getStatusBadge(order.status)}</td>
+                        <td className="py-3 px-4">{getPaymentStatusBadge(order.payment_status)}</td>
+                        <td className="py-3 px-4">{getCourierStatusBadge(order.courier_status)}</td>
                         <td className="py-3 px-4 text-sm text-muted-foreground">
                           {new Date(order.created_at).toLocaleDateString('bn-BD')}
                         </td>
@@ -556,42 +602,34 @@ const AdminOrders = () => {
                   </Button>
                 </div>
 
-                <Tabs defaultValue="details" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
+                <Tabs defaultValue="status" className="w-full">
+                  <TabsList className="grid w-full grid-cols-5">
+                    <TabsTrigger value="status">স্ট্যাটাস</TabsTrigger>
                     <TabsTrigger value="details">বিস্তারিত</TabsTrigger>
                     <TabsTrigger value="courier">কুরিয়ার</TabsTrigger>
+                    <TabsTrigger value="tasks">টাস্ক</TabsTrigger>
                     <TabsTrigger value="timeline">টাইমলাইন</TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="details" className="space-y-4 mt-4">
-                    {/* Status Update */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-4">
-                        <Label>স্ট্যাটাস:</Label>
-                        <Select
-                          value={selectedOrder.status}
-                          onValueChange={(value) => handleStatusChange(selectedOrder.id, value)}
-                        >
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">পেন্ডিং</SelectItem>
-                            <SelectItem value="processing">প্রসেসিং</SelectItem>
-                            <SelectItem value="shipped">শিপড</SelectItem>
-                            <SelectItem value="delivered">ডেলিভার্ড</SelectItem>
-                            <SelectItem value="cancelled">বাতিল</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Textarea
-                        placeholder="স্ট্যাটাস পরিবর্তনের নোট (ঐচ্ছিক)"
-                        value={statusNote}
-                        onChange={(e) => setStatusNote(e.target.value)}
-                        className="h-16"
-                      />
-                    </div>
+                  {/* Status Management Tab */}
+                  <TabsContent value="status" className="mt-4">
+                    <OrderStatusPanel
+                      orderId={selectedOrder.id}
+                      orderNumber={selectedOrder.order_number}
+                      currentStatus={selectedOrder.status}
+                      currentPaymentStatus={selectedOrder.payment_status}
+                      currentCourierStatus={selectedOrder.courier_status}
+                      paymentMethod={selectedOrder.payment_method}
+                      onStatusChange={() => {
+                        fetchOrders();
+                        const updated = orders.find(o => o.id === selectedOrder.id);
+                        if (updated) setSelectedOrder(updated);
+                      }}
+                    />
+                  </TabsContent>
 
+                  {/* Order Details Tab */}
+                  <TabsContent value="details" className="space-y-4 mt-4">
                     {/* Customer Info */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -678,6 +716,7 @@ const AdminOrders = () => {
                     </div>
                   </TabsContent>
 
+                  {/* Courier Tab */}
                   <TabsContent value="courier" className="mt-4">
                     <OrderCourierBooking
                       orderId={selectedOrder.id}
@@ -686,13 +725,21 @@ const AdminOrders = () => {
                       trackingNumber={selectedOrder.tracking_number}
                       onBookingComplete={() => {
                         fetchOrders();
-                        // Refresh selected order
                         const updated = orders.find(o => o.id === selectedOrder.id);
                         if (updated) setSelectedOrder(updated);
                       }}
                     />
                   </TabsContent>
 
+                  {/* Task Assignment Tab */}
+                  <TabsContent value="tasks" className="mt-4">
+                    <OrderTaskAssignment
+                      orderId={selectedOrder.id}
+                      orderNumber={selectedOrder.order_number}
+                    />
+                  </TabsContent>
+
+                  {/* Timeline Tab */}
                   <TabsContent value="timeline" className="mt-4">
                     <OrderStatusTimeline
                       orderId={selectedOrder.id}

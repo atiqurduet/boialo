@@ -1233,10 +1233,70 @@ export type Database = {
         }
         Relationships: []
       }
+      order_tasks: {
+        Row: {
+          assigned_by: string | null
+          assigned_to: string
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          priority: string
+          status: string
+          task_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          assigned_to: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          priority?: string
+          status?: string
+          task_type: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          assigned_to?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          priority?: string
+          status?: string
+          task_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_tasks_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           actual_weight: number | null
           address: string
+          assigned_to: string | null
           courier_provider: string | null
           courier_status: string | null
           created_at: string
@@ -1251,6 +1311,7 @@ export type Database = {
           notes: string | null
           order_number: string
           payment_method: string
+          payment_status: string | null
           phone: string
           phone_verified: boolean | null
           priority: string | null
@@ -1268,6 +1329,7 @@ export type Database = {
         Insert: {
           actual_weight?: number | null
           address: string
+          assigned_to?: string | null
           courier_provider?: string | null
           courier_status?: string | null
           created_at?: string
@@ -1282,6 +1344,7 @@ export type Database = {
           notes?: string | null
           order_number: string
           payment_method: string
+          payment_status?: string | null
           phone: string
           phone_verified?: boolean | null
           priority?: string | null
@@ -1299,6 +1362,7 @@ export type Database = {
         Update: {
           actual_weight?: number | null
           address?: string
+          assigned_to?: string | null
           courier_provider?: string | null
           courier_status?: string | null
           created_at?: string
@@ -1313,6 +1377,7 @@ export type Database = {
           notes?: string | null
           order_number?: string
           payment_method?: string
+          payment_status?: string | null
           phone?: string
           phone_verified?: boolean | null
           priority?: string | null
