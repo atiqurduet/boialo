@@ -131,6 +131,7 @@ const menuCategories: MenuCategory[] = [
     roles: ['admin', 'manager', 'support'],
     items: [
       { icon: Users, label: 'কাস্টমার', href: '/admin/customers', roles: ['admin', 'manager', 'support'] },
+      { icon: Users, label: 'এডমিন ইউজার', href: '/admin/users', roles: ['admin'] },
     ]
   },
   {
