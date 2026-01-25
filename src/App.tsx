@@ -64,6 +64,7 @@ import AdminUniversalProducts from "./pages/admin/AdminUniversalProducts";
 import AdminUniversalCategories from "./pages/admin/AdminUniversalCategories";
 import AdminOffers from "./pages/admin/AdminOffers";
 import AdminEmailMarketing from "./pages/admin/AdminEmailMarketing";
+import AdminTasks from "./pages/admin/AdminTasks";
 
 const queryClient = new QueryClient();
 
@@ -119,6 +120,7 @@ const App = () => (
                 <Route path="/admin/universal-products" element={<AdminUniversalProducts />} />
                 <Route path="/admin/universal-categories" element={<AdminUniversalCategories />} />
                 <Route path="/admin/orders" element={<AdminOrders />} />
+                <Route path="/admin/tasks" element={<AdminTasks />} />
                 <Route path="/admin/banners" element={<AdminBanners />} />
                 <Route path="/admin/coupons" element={<AdminCoupons />} />
                 <Route path="/admin/users" element={<AdminUsers />} />
