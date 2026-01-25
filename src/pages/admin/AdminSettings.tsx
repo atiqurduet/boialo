@@ -94,7 +94,8 @@ const AdminSettings = () => {
     contact: 'যোগাযোগ',
     social: 'সোশ্যাল মিডিয়া',
     seo: 'এসইও',
-    shipping: 'শিপিং'
+    shipping: 'শিপিং',
+    analytics: 'অ্যানালিটিক্স ও পিক্সেল',
   };
 
   return (
