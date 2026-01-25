@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { trackSearch } from '@/lib/analytics';
 
 interface Product {
   id: string;
@@ -71,6 +72,9 @@ export const useSearch = () => {
         });
 
         if (fnError) throw fnError;
+
+        // Track search event
+        trackSearch({ search_term: query });
 
         setResults(data || { products: [], categories: [], suggestions: [], totalProducts: 0 });
       } catch (err: any) {
