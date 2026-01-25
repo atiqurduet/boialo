@@ -36,7 +36,8 @@ import {
   Store,
   Megaphone,
   Truck,
-  CreditCard
+  CreditCard,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -87,6 +88,7 @@ const menuCategories: MenuCategory[] = [
     roles: ['admin', 'manager', 'support'],
     items: [
       { icon: ShoppingCart, label: 'অর্ডার', href: '/admin/orders', roles: ['admin', 'manager', 'support'] },
+      { icon: ClipboardList, label: 'টাস্ক ম্যানেজমেন্ট', href: '/admin/tasks', roles: ['admin', 'manager', 'support'] },
       { icon: ShoppingBag, label: 'অসম্পূর্ণ অর্ডার', href: '/admin/abandoned-carts', roles: ['admin', 'manager', 'support'] },
       { icon: BarChart3, label: 'চেকআউট অ্যানালিটিক্স', href: '/admin/checkout-analytics', roles: ['admin', 'manager'] },
       { icon: BarChart3, label: 'ফ্রড রিভিউ', href: '/admin/fraud-review', roles: ['admin', 'manager'] },
