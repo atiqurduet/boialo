@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
+import { PendingTasksWidget } from '@/components/admin/PendingTasksWidget';
 import {
   ShoppingCart,
   Package,
@@ -155,44 +156,46 @@ const AdminDashboard = () => {
               ))}
             </div>
 
-            {/* Recent Orders */}
-            <Card>
-              <CardHeader>
-                <CardTitle>সাম্প্রতিক অর্ডার</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {recentOrders.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">কোন অর্ডার নেই</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-3 px-4 font-medium">অর্ডার নং</th>
-                          <th className="text-left py-3 px-4 font-medium">গ্রাহক</th>
-                          <th className="text-left py-3 px-4 font-medium">মোট</th>
-                          <th className="text-left py-3 px-4 font-medium">স্ট্যাটাস</th>
-                          <th className="text-left py-3 px-4 font-medium">তারিখ</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentOrders.map((order) => (
-                          <tr key={order.id} className="border-b">
-                            <td className="py-3 px-4 font-mono text-sm">{order.order_number}</td>
-                            <td className="py-3 px-4">{order.full_name}</td>
-                            <td className="py-3 px-4">৳{Number(order.total).toLocaleString()}</td>
-                            <td className="py-3 px-4">{getStatusBadge(order.status)}</td>
-                            <td className="py-3 px-4 text-sm text-muted-foreground">
-                              {new Date(order.created_at).toLocaleDateString('bn-BD')}
-                            </td>
+            {/* Two Column Layout for Tasks and Recent Orders */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Pending Tasks Widget */}
+              <PendingTasksWidget />
+
+              {/* Recent Orders */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>সাম্প্রতিক অর্ডার</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {recentOrders.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">কোন অর্ডার নেই</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-3 px-2 font-medium text-sm">অর্ডার</th>
+                            <th className="text-left py-3 px-2 font-medium text-sm">গ্রাহক</th>
+                            <th className="text-left py-3 px-2 font-medium text-sm">মোট</th>
+                            <th className="text-left py-3 px-2 font-medium text-sm">স্ট্যাটাস</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                        </thead>
+                        <tbody>
+                          {recentOrders.map((order) => (
+                            <tr key={order.id} className="border-b">
+                              <td className="py-2 px-2 font-mono text-xs">{order.order_number}</td>
+                              <td className="py-2 px-2 text-sm">{order.full_name}</td>
+                              <td className="py-2 px-2 text-sm">৳{Number(order.total).toLocaleString()}</td>
+                              <td className="py-2 px-2">{getStatusBadge(order.status)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </>
         )}
       </div>
