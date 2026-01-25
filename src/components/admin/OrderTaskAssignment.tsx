@@ -285,21 +285,26 @@ export const OrderTaskAssignment = ({ orderId, orderNumber }: OrderTaskAssignmen
                     <SelectValue placeholder="টিম মেম্বার সিলেক্ট করুন" />
                   </SelectTrigger>
                   <SelectContent>
-                    {teamMembers.map((member) => (
-                      <SelectItem key={member.user_id} value={member.user_id}>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          <span>{member.full_name || member.email}</span>
-                          <Badge variant="outline" className="ml-2 text-xs">
-                            {member.role === "admin"
-                              ? "এডমিন"
-                              : member.role === "manager"
-                              ? "ম্যানেজার"
-                              : "সাপোর্ট"}
-                          </Badge>
+                    {/* Group by role */}
+                    {["admin", "manager", "support"].map((role) => {
+                      const roleMembers = teamMembers.filter((m) => m.role === role);
+                      if (roleMembers.length === 0) return null;
+                      return (
+                        <div key={role}>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                            {role === "admin" ? "এডমিন" : role === "manager" ? "ম্যানেজার" : "সাপোর্ট"}
+                          </div>
+                          {roleMembers.map((member) => (
+                            <SelectItem key={member.user_id} value={member.user_id}>
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4" />
+                                <span>{member.full_name || member.email}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
                         </div>
-                      </SelectItem>
-                    ))}
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>

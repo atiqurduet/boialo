@@ -22,7 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Eye, FileText, Truck, Loader2, Printer, X, Clock, Package, RefreshCw } from 'lucide-react';
+import { Search, Eye, FileText, Truck, Loader2, Printer, X, Clock, Package, RefreshCw, UserPlus } from 'lucide-react';
 import { OrderCourierBooking } from '@/components/admin/OrderCourierBooking';
 import { OrderStatusTimeline } from '@/components/admin/OrderStatusTimeline';
 import { BulkCourierBooking } from '@/components/admin/BulkCourierBooking';
@@ -30,6 +30,7 @@ import { QuickCourierSend } from '@/components/admin/QuickCourierSend';
 import { OrderStatusPanel } from '@/components/admin/OrderStatusPanel';
 import { OrderTaskAssignment } from '@/components/admin/OrderTaskAssignment';
 import { BulkStatusUpdate } from '@/components/admin/BulkStatusUpdate';
+import { QuickTaskAssign } from '@/components/admin/QuickTaskAssign';
 
 interface Order {
   id: string;
@@ -555,6 +556,12 @@ const AdminOrders = () => {
                           {new Date(order.created_at).toLocaleDateString('bn-BD')}
                         </td>
                         <td className="py-3 px-4 text-right space-x-1">
+                          <QuickTaskAssign
+                            orderId={order.id}
+                            orderNumber={order.order_number}
+                            assignedTo={order.assigned_to}
+                            onComplete={fetchOrders}
+                          />
                           <QuickCourierSend
                             orderId={order.id}
                             orderNumber={order.order_number}
