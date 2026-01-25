@@ -26,6 +26,7 @@ import { Search, Eye, FileText, Truck, Loader2, Printer, X, Clock, Package } fro
 import { OrderCourierBooking } from '@/components/admin/OrderCourierBooking';
 import { OrderStatusTimeline } from '@/components/admin/OrderStatusTimeline';
 import { BulkCourierBooking } from '@/components/admin/BulkCourierBooking';
+import { QuickCourierSend } from '@/components/admin/QuickCourierSend';
 
 interface Order {
   id: string;
@@ -487,6 +488,13 @@ const AdminOrders = () => {
                           {new Date(order.created_at).toLocaleDateString('bn-BD')}
                         </td>
                         <td className="py-3 px-4 text-right space-x-1">
+                          <QuickCourierSend
+                            orderId={order.id}
+                            orderNumber={order.order_number}
+                            currentCourier={order.courier_provider}
+                            trackingNumber={order.tracking_number}
+                            onComplete={fetchOrders}
+                          />
                           <Button variant="ghost" size="icon" onClick={() => handleViewOrder(order)} title="বিস্তারিত">
                             <Eye className="h-4 w-4" />
                           </Button>
