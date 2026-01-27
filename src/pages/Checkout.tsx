@@ -74,6 +74,47 @@ const Checkout = () => {
   const [otpError, setOtpError] = useState("");
   const [countdown, setCountdown] = useState(0);
   const [phoneVerified, setPhoneVerified] = useState(false);
+  
+  // OTP Settings
+  const [otpSettings, setOtpSettings] = useState({
+    otp_enabled: false,
+    otp_only_for_cod: false,
+    otp_required_for_cod: false,
+    otp_required_for_new_customers: false,
+  });
+
+  // Fetch OTP settings
+  useEffect(() => {
+    const fetchOtpSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("site_settings")
+          .select("setting_key, setting_value")
+          .eq("category", "security")
+          .in("setting_key", ["otp_enabled", "otp_only_for_cod", "otp_required_for_cod", "otp_required_for_new_customers"]);
+        
+        if (error) {
+          console.error("Error fetching OTP settings:", error);
+          return;
+        }
+        
+        if (data) {
+          const settings: Record<string, boolean> = {};
+          data.forEach(item => {
+            settings[item.setting_key] = item.setting_value === true || item.setting_value === "true";
+          });
+          setOtpSettings(prev => ({
+            ...prev,
+            ...settings,
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching OTP settings:", error);
+      }
+    };
+    
+    fetchOtpSettings();
+  }, []);
 
   // Track initiate checkout on load
   useEffect(() => {
@@ -428,7 +469,7 @@ const Checkout = () => {
           email: formData.email?.trim() || null,
           address: formData.address.trim(),
           notes: formData.notes?.trim() || null,
-          phone_verified: true,
+          phone_verified: phoneVerified || !isOtpRequired(),
         })
         .select()
         .single();
@@ -499,7 +540,26 @@ const Checkout = () => {
     }
   };
 
-  // Handle order button click - show OTP dialog
+  // Determine if OTP is required based on settings and payment method
+  const isOtpRequired = () => {
+    // If OTP is not globally enabled, skip
+    if (!otpSettings.otp_enabled) return false;
+    
+    // If "OTP only for COD" is enabled, only require for COD orders
+    if (otpSettings.otp_only_for_cod) {
+      return paymentMethod === "cod";
+    }
+    
+    // If "OTP required for COD" is enabled and payment is COD
+    if (otpSettings.otp_required_for_cod && paymentMethod === "cod") {
+      return true;
+    }
+    
+    // Default: OTP enabled means required for all
+    return true;
+  };
+
+  // Handle order button click - show OTP dialog if required
   const handlePlaceOrder = async () => {
     if (!validateForm() || !user) return;
 
@@ -513,14 +573,20 @@ const Checkout = () => {
       payment_method: paymentMethod,
     });
 
-    // Open OTP dialog
-    setShowOtpDialog(true);
-    setOtpValue("");
-    setOtpError("");
-    setOtpSent(false);
-    
-    // Auto-send OTP
-    await sendOtp();
+    // Check if OTP is required
+    if (isOtpRequired() && !phoneVerified) {
+      // Open OTP dialog
+      setShowOtpDialog(true);
+      setOtpValue("");
+      setOtpError("");
+      setOtpSent(false);
+      
+      // Auto-send OTP
+      await sendOtp();
+    } else {
+      // Skip OTP and place order directly
+      await placeOrder();
+    }
   };
 
   const deliveryCharge = deliveryArea === "inside" ? 60 : 120;
@@ -601,7 +667,10 @@ const Checkout = () => {
                   {errors.fullName && <p className="text-destructive text-xs mt-1">{errors.fullName}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="phone">মোবাইল নম্বর * (OTP যাচাই হবে)</Label>
+                  <Label htmlFor="phone">
+                    মোবাইল নম্বর * 
+                    {isOtpRequired() && <span className="text-muted-foreground text-xs ml-1">(OTP যাচাই হবে)</span>}
+                  </Label>
                   <div className="relative mt-1">
                     <Input
                       id="phone"
