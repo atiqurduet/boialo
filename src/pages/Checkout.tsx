@@ -542,21 +542,31 @@ const Checkout = () => {
 
   // Determine if OTP is required based on settings and payment method
   const isOtpRequired = () => {
+    console.log("OTP Settings:", otpSettings);
+    console.log("Payment Method:", paymentMethod);
+    
     // Special case: If "OTP only for COD" is enabled, require OTP only for COD orders
     // This works independently of otp_enabled flag
-    if (otpSettings.otp_only_for_cod) {
-      return paymentMethod === "cod";
+    if (otpSettings.otp_only_for_cod === true) {
+      const required = paymentMethod === "cod";
+      console.log("OTP only for COD enabled, required:", required);
+      return required;
     }
     
     // If OTP is not globally enabled, skip
-    if (!otpSettings.otp_enabled) return false;
+    if (!otpSettings.otp_enabled) {
+      console.log("OTP globally disabled");
+      return false;
+    }
     
     // If "OTP required for COD" is enabled and payment is COD
     if (otpSettings.otp_required_for_cod && paymentMethod === "cod") {
+      console.log("OTP required for COD");
       return true;
     }
     
     // Default: OTP enabled means required for all payment methods
+    console.log("OTP enabled for all");
     return true;
   };
 
