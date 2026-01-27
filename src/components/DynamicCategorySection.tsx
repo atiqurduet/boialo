@@ -53,7 +53,7 @@ export const DynamicCategorySection = ({
   // Extract settings with defaults
   const maxCategories = settings.max_categories || 12;
   const imageSize = settings.image_size || 'medium';
-  const viewAllLink = settings.view_all_link || '/shop';
+  const viewAllLink = settings.view_all_link || '/categories';
   const showProductCount = settings.show_product_count !== false;
   const showSubcategoryIndicator = settings.show_subcategory_indicator !== false;
   const enableScrollArrows = settings.enable_scroll_arrows !== false;
