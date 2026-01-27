@@ -277,18 +277,18 @@ const OrderConfirmation = () => {
             </p>
             <div className="flex flex-wrap gap-4">
               <a
-                href="tel:09613000000"
+                href="tel:01714005986"
                 className="flex items-center gap-2 text-sm text-primary hover:underline"
               >
                 <Phone className="w-4 h-4" />
-                09613-000000
+                01714005986
               </a>
               <a
-                href="mailto:support@wafilife.com"
+                href="mailto:support@boialo.com"
                 className="flex items-center gap-2 text-sm text-primary hover:underline"
               >
                 <Mail className="w-4 h-4" />
-                support@wafilife.com
+                support@boialo.com
               </a>
             </div>
           </div>
