@@ -53,8 +53,8 @@ const Contact = () => {
                     </div>
                     <div>
                       <h3 className="font-medium">ফোন</h3>
-                      <p className="text-sm text-muted-foreground">+৮৮০ ১৭০০-০০০০০০</p>
-                      <p className="text-sm text-muted-foreground">+৮৮০ ১৮০০-০০০০০০</p>
+                      <p className="text-sm text-muted-foreground">+৮৮০ ১৭১৪-০০৫৯৮৬</p>
+                      <p className="text-sm text-muted-foreground">+৮৮০ ১৯১৮-৬০২০১৭</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
@@ -63,8 +63,8 @@ const Contact = () => {
                     </div>
                     <div>
                       <h3 className="font-medium">ইমেইল</h3>
-                      <p className="text-sm text-muted-foreground">info@wafilife.com</p>
-                      <p className="text-sm text-muted-foreground">support@wafilife.com</p>
+                      <p className="text-sm text-muted-foreground">info@boialo.com</p>
+                      <p className="text-sm text-muted-foreground">support@boialo.com</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
@@ -74,7 +74,7 @@ const Contact = () => {
                     <div>
                       <h3 className="font-medium">ঠিকানা</h3>
                       <p className="text-sm text-muted-foreground">
-                        ৬০/এ, পুরানা পল্টন, ঢাকা-১০০০, বাংলাদেশ
+                        141,1/বি, দক্ষিন পীরেরবাগ,মিরপুর, ঢাকা-১২১৬, বাংলাদেশ
                       </p>
                     </div>
                   </div>
