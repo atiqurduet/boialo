@@ -49,23 +49,23 @@ const ChatWidget = () => {
   useEffect(() => {
     const checkExistingConversation = async () => {
       const visitorId = getVisitorId();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("chat_conversations")
         .select("*")
         .eq("visitor_id", visitorId)
         .eq("status", "open")
         .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
 
-      if (data) {
-        setConversationId(data.id);
+      if (!error && data && data.length > 0) {
+        const conversation = data[0];
+        setConversationId(conversation.id);
         setVisitorInfo({
-          name: data.visitor_name || "",
-          phone: data.visitor_phone || "",
+          name: conversation.visitor_name || "",
+          phone: conversation.visitor_phone || "",
           submitted: true,
         });
-        fetchMessages(data.id);
+        fetchMessages(conversation.id);
       }
     };
 
