@@ -1,7 +1,8 @@
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface Category {
   id: string;
@@ -28,6 +29,7 @@ export const DynamicCategorySection = ({
   title = "জনপ্রিয় ক্যাটাগরি",
 }: DynamicCategorySectionProps) => {
   const [selectedParent, setSelectedParent] = useState<Category | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Calculate product counts for each category (including subcategory products in parent count)
   const categoryCounts = useMemo(() => {
@@ -49,7 +51,7 @@ export const DynamicCategorySection = ({
   }, [categories, products]);
 
   // Get parent categories only
-  const parentCategories = categories.filter(c => !c.parent_id).slice(0, 8);
+  const parentCategories = categories.filter(c => !c.parent_id).slice(0, 12);
   
   // Get subcategories for selected parent
   const subcategories = selectedParent 
@@ -68,6 +70,16 @@ export const DynamicCategorySection = ({
     if (!selectedParent && hasSubcategories(category.id)) {
       e.preventDefault();
       setSelectedParent(category);
+    }
+  };
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 200;
+      scrollContainerRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
     }
   };
 
@@ -107,48 +119,86 @@ export const DynamicCategorySection = ({
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {displayCategories.map((category) => (
-            <Link
-              key={category.id}
-              to={`/categories/${category.slug}`}
-              onClick={(e) => handleCategoryClick(category, e)}
-              className="category-card group"
-            >
-              <div className="relative w-20 h-24 md:w-24 md:h-32 rounded-lg overflow-hidden mb-2 shadow-md group-hover:shadow-lg transition-shadow bg-muted">
-                {category.image_url ? (
-                  <img
-                    src={category.image_url}
-                    alt={category.name_bn}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/placeholder.svg';
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                    <span className="text-3xl">📚</span>
+        <div className="relative group">
+          {/* Left Arrow */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => scroll('left')}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/95 shadow-lg border-border opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-primary hover:text-primary-foreground -ml-2"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+
+          {/* Categories Scroll Container */}
+          <div 
+            ref={scrollContainerRef}
+            className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth px-2 py-2"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {displayCategories.map((category) => (
+              <Link
+                key={category.id}
+                to={`/categories/${category.slug}`}
+                onClick={(e) => handleCategoryClick(category, e)}
+                className="flex flex-col items-center gap-3 flex-shrink-0 group/item"
+              >
+                {/* Circular Image Container */}
+                <div className="relative">
+                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5 p-1 shadow-md group-hover/item:shadow-xl transition-all duration-300 group-hover/item:scale-105">
+                    <div className="w-full h-full rounded-full overflow-hidden bg-muted">
+                      {category.image_url ? (
+                        <img
+                          src={category.image_url}
+                          alt={category.name_bn}
+                          className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-300"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/placeholder.svg';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/10 text-primary">
+                          <span className="text-3xl">📚</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-                {categoryCounts[category.id] > 0 && (
-                  <Badge 
-                    variant="secondary" 
-                    className="absolute top-1 left-1 text-xs px-1.5 py-0.5 bg-primary text-primary-foreground"
-                  >
-                    {categoryCounts[category.id]}
-                  </Badge>
-                )}
-                {!selectedParent && hasSubcategories(category.id) && (
-                  <div className="absolute bottom-1 right-1 bg-primary/80 text-primary-foreground rounded-full p-1">
-                    <ChevronRight className="w-3 h-3" />
-                  </div>
-                )}
-              </div>
-              <span className="text-sm text-center text-muted-foreground group-hover:text-primary transition-colors line-clamp-2">
-                {category.name_bn}
-              </span>
-            </Link>
-          ))}
+                  
+                  {/* Product Count Badge */}
+                  {categoryCounts[category.id] > 0 && (
+                    <Badge 
+                      variant="secondary" 
+                      className="absolute -top-1 -right-1 text-xs px-1.5 py-0.5 bg-primary text-primary-foreground shadow-md"
+                    >
+                      {categoryCounts[category.id]}
+                    </Badge>
+                  )}
+                  
+                  {/* Subcategory Indicator */}
+                  {!selectedParent && hasSubcategories(category.id) && (
+                    <div className="absolute -bottom-1 right-0 bg-primary text-primary-foreground rounded-full p-1 shadow-md">
+                      <ChevronRight className="w-3 h-3" />
+                    </div>
+                  )}
+                </div>
+                
+                {/* Category Name */}
+                <span className="text-sm text-center text-muted-foreground group-hover/item:text-primary transition-colors font-medium line-clamp-2 w-20 md:w-24">
+                  {category.name_bn}
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          {/* Right Arrow */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => scroll('right')}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/95 shadow-lg border-border opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-primary hover:text-primary-foreground -mr-2"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
         </div>
       )}
     </section>
