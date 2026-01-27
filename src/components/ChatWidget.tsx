@@ -52,8 +52,13 @@ const ChatWidget = () => {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  // Generate or get visitor ID
-  const getVisitorId = () => {
+  // Generate or get visitor ID based on phone
+  const getVisitorId = (phone?: string) => {
+    // If phone is provided, use it as unique identifier
+    if (phone) {
+      return `phone_${phone.replace(/\D/g, '')}`;
+    }
+    // Fallback to stored visitor ID
     let visitorId = localStorage.getItem("chat_visitor_id");
     if (!visitorId) {
       visitorId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -62,10 +67,12 @@ const ChatWidget = () => {
     return visitorId;
   };
 
-  // Check for existing conversation
+  // Check for existing conversation by stored visitor ID
   useEffect(() => {
     const checkExistingConversation = async () => {
-      const visitorId = getVisitorId();
+      const visitorId = localStorage.getItem("chat_visitor_id");
+      if (!visitorId) return;
+
       const { data, error } = await supabase
         .from("chat_conversations")
         .select("*")
@@ -88,6 +95,34 @@ const ChatWidget = () => {
 
     checkExistingConversation();
   }, []);
+
+  // Check for existing conversation by phone number
+  const checkExistingConversationByPhone = async (phone: string): Promise<boolean> => {
+    const phoneVisitorId = getVisitorId(phone);
+    
+    const { data, error } = await supabase
+      .from("chat_conversations")
+      .select("*")
+      .eq("visitor_id", phoneVisitorId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (!error && data && data.length > 0) {
+      const conversation = data[0];
+      // Store the phone-based visitor ID for future sessions
+      localStorage.setItem("chat_visitor_id", phoneVisitorId);
+      
+      setConversationId(conversation.id);
+      setVisitorInfo({
+        name: conversation.visitor_name || "",
+        phone: conversation.visitor_phone || "",
+        submitted: true,
+      });
+      fetchMessages(conversation.id);
+      return true;
+    }
+    return false;
+  };
 
   // Real-time subscription for messages
   useEffect(() => {
@@ -197,7 +232,18 @@ const ChatWidget = () => {
 
     setLoading(true);
     try {
-      const visitorId = getVisitorId();
+      // Check if user has existing conversation by phone number
+      const hasExisting = await checkExistingConversationByPhone(visitorInfo.phone.trim());
+      if (hasExisting) {
+        toast.success("আপনার আগের চ্যাট পাওয়া গেছে!");
+        setLoading(false);
+        return;
+      }
+
+      // Create phone-based visitor ID for new conversations
+      const visitorId = getVisitorId(visitorInfo.phone.trim());
+      // Store for future sessions
+      localStorage.setItem("chat_visitor_id", visitorId);
       
       const { data: convData, error: convError } = await supabase
         .from("chat_conversations")
