@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import EmojiPicker from "@/components/chat/EmojiPicker";
 import StagedAttachment from "@/components/chat/StagedAttachment";
+import TypingIndicator from "@/components/chat/TypingIndicator";
 
 interface Message {
   id: string;
@@ -45,8 +46,11 @@ const ChatWidget = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [stagedFile, setStagedFile] = useState<StagedFile | null>(null);
+  const [isAdminTyping, setIsAdminTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Generate or get visitor ID
   const getVisitorId = () => {
@@ -85,7 +89,7 @@ const ChatWidget = () => {
     checkExistingConversation();
   }, []);
 
-  // Real-time subscription
+  // Real-time subscription for messages
   useEffect(() => {
     if (!conversationId) return;
 
@@ -101,6 +105,8 @@ const ChatWidget = () => {
         },
         (payload) => {
           setMessages((prev) => [...prev, payload.new as Message]);
+          // Reset admin typing when new message arrives
+          setIsAdminTyping(false);
         }
       )
       .subscribe();
@@ -109,6 +115,57 @@ const ChatWidget = () => {
       supabase.removeChannel(channel);
     };
   }, [conversationId]);
+
+  // Typing indicator channel
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const typingChannel = supabase.channel(`typing-${conversationId}`);
+    
+    typingChannel
+      .on("broadcast", { event: "typing" }, (payload) => {
+        if (payload.payload?.sender_type === "admin") {
+          setIsAdminTyping(true);
+          // Auto-hide after 3 seconds
+          setTimeout(() => setIsAdminTyping(false), 3000);
+        }
+      })
+      .subscribe();
+
+    typingChannelRef.current = typingChannel;
+
+    return () => {
+      supabase.removeChannel(typingChannel);
+      typingChannelRef.current = null;
+    };
+  }, [conversationId]);
+
+  // Broadcast typing status
+  const broadcastTyping = useCallback(() => {
+    if (!typingChannelRef.current || !conversationId) return;
+    
+    typingChannelRef.current.send({
+      type: "broadcast",
+      event: "typing",
+      payload: { sender_type: "customer", conversation_id: conversationId },
+    });
+  }, [conversationId]);
+
+  // Handle input change with typing indicator
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    
+    // Broadcast typing
+    broadcastTyping();
+    
+    // Debounce typing broadcast
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    typingTimeoutRef.current = setTimeout(() => {
+      // Stop broadcasting after 2 seconds of no typing
+    }, 2000);
+  };
 
   // Scroll to bottom
   useEffect(() => {
@@ -476,6 +533,17 @@ const ChatWidget = () => {
                       </div>
                     </div>
                   ))}
+                  {/* Typing indicator */}
+                  {isAdminTyping && (
+                    <div className="flex justify-start">
+                      <Avatar className="h-8 w-8 mr-2">
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                          {siteName?.[0] || "ব"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <TypingIndicator />
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
@@ -514,7 +582,7 @@ const ChatWidget = () => {
                   <EmojiPicker onEmojiSelect={handleEmojiSelect} />
                   <Input
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={handleInputChange}
                     placeholder="মেসেজ লিখুন..."
                     className="flex-1"
                   />

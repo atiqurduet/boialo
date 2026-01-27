@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -70,6 +70,7 @@ import {
   Image as ImageIcon
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import TypingIndicator from "@/components/chat/TypingIndicator";
 
 interface Conversation {
   id: string;
@@ -120,7 +121,9 @@ const AdminChat = () => {
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [sortBy, setSortBy] = useState<"recent" | "oldest">("recent");
+  const [isCustomerTyping, setIsCustomerTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Fetch all conversations
   const { data: conversations, isLoading: loadingConversations, refetch: refetchConversations } = useQuery({
@@ -173,6 +176,8 @@ const AdminChat = () => {
         () => {
           queryClient.invalidateQueries({ queryKey: ["admin-chat-messages", selectedConversation] });
           queryClient.invalidateQueries({ queryKey: ["admin-chat-conversations"] });
+          // Reset customer typing when new message arrives
+          setIsCustomerTyping(false);
         }
       )
       .on(
@@ -188,6 +193,47 @@ const AdminChat = () => {
       supabase.removeChannel(channel);
     };
   }, [selectedConversation, queryClient]);
+
+  // Typing indicator channel for selected conversation
+  useEffect(() => {
+    if (!selectedConversation) return;
+
+    const typingChannel = supabase.channel(`typing-${selectedConversation}`);
+    
+    typingChannel
+      .on("broadcast", { event: "typing" }, (payload) => {
+        if (payload.payload?.sender_type === "customer") {
+          setIsCustomerTyping(true);
+          // Auto-hide after 3 seconds
+          setTimeout(() => setIsCustomerTyping(false), 3000);
+        }
+      })
+      .subscribe();
+
+    typingChannelRef.current = typingChannel;
+
+    return () => {
+      supabase.removeChannel(typingChannel);
+      typingChannelRef.current = null;
+    };
+  }, [selectedConversation]);
+
+  // Broadcast typing status
+  const broadcastTyping = useCallback(() => {
+    if (!typingChannelRef.current || !selectedConversation) return;
+    
+    typingChannelRef.current.send({
+      type: "broadcast",
+      event: "typing",
+      payload: { sender_type: "admin", conversation_id: selectedConversation },
+    });
+  }, [selectedConversation]);
+
+  // Handle input change with typing indicator
+  const handleAdminInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    broadcastTyping();
+  };
 
   // Scroll to bottom
   useEffect(() => {
@@ -814,6 +860,12 @@ const AdminChat = () => {
                           </div>
                         </div>
                       ))}
+                      {/* Typing indicator */}
+                      {isCustomerTyping && (
+                        <div className="flex justify-start">
+                          <TypingIndicator />
+                        </div>
+                      )}
                       <div ref={messagesEndRef} />
                     </div>
                   )}
@@ -824,7 +876,7 @@ const AdminChat = () => {
                   <form onSubmit={handleSendMessage} className="flex gap-2">
                     <Input
                       value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
+                      onChange={handleAdminInputChange}
                       placeholder={selectedConv?.status === "open" ? "মেসেজ লিখুন..." : "চ্যাট বন্ধ আছে - পুনরায় খুলুন"}
                       className="flex-1"
                       disabled={selectedConv?.status !== "open"}
