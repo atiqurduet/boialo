@@ -605,27 +605,94 @@ const AdminHomepage = () => {
         return (
           <div className="space-y-4 border-t pt-4 mt-4">
             <h4 className="font-medium">ক্যাটাগরি সেটিংস</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>সর্বোচ্চ ক্যাটাগরি সংখ্যা</Label>
+                <Input
+                  type="number"
+                  min={4}
+                  max={20}
+                  value={formData.settings.max_categories || 12}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, max_categories: Number(e.target.value) }
+                  })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">৪-২০ এর মধ্যে</p>
+              </div>
+              <div>
+                <Label>ইমেজ সাইজ</Label>
+                <Select
+                  value={formData.settings.image_size || 'medium'}
+                  onValueChange={(value) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, image_size: value }
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="সাইজ নির্বাচন করুন" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="small">ছোট (৬০px)</SelectItem>
+                    <SelectItem value="medium">মাঝারি (৮০px)</SelectItem>
+                    <SelectItem value="large">বড় (১০০px)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div>
-              <Label>কলাম সংখ্যা</Label>
+              <Label>View All লিংক</Label>
               <Input
-                type="number"
-                value={formData.settings.columns || 4}
+                value={formData.settings.view_all_link || '/shop'}
                 onChange={(e) => setFormData({
                   ...formData,
-                  settings: { ...formData.settings, columns: Number(e.target.value) }
+                  settings: { ...formData.settings, view_all_link: e.target.value }
                 })}
               />
             </div>
-            <div>
-              <Label>সর্বোচ্চ ক্যাটাগরি সংখ্যা</Label>
-              <Input
-                type="number"
-                value={formData.settings.max_categories || 8}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  settings: { ...formData.settings, max_categories: Number(e.target.value) }
-                })}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.settings.show_product_count !== false}
+                  onCheckedChange={(checked) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, show_product_count: checked }
+                  })}
+                />
+                <Label>পণ্য সংখ্যা দেখান</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.settings.show_subcategory_indicator !== false}
+                  onCheckedChange={(checked) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, show_subcategory_indicator: checked }
+                  })}
+                />
+                <Label>সাব-ক্যাটাগরি ইনডিকেটর</Label>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.settings.enable_scroll_arrows !== false}
+                  onCheckedChange={(checked) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, enable_scroll_arrows: checked }
+                  })}
+                />
+                <Label>স্ক্রল অ্যারো দেখান</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.settings.gradient_border || false}
+                  onCheckedChange={(checked) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, gradient_border: checked }
+                  })}
+                />
+                <Label>গ্র্যাডিয়েন্ট বর্ডার</Label>
+              </div>
             </div>
           </div>
         );

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useState, useMemo, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface Category {
   id: string;
@@ -17,19 +18,46 @@ interface ProductWithCategory {
   category_id: string | null;
 }
 
+interface CategorySettings {
+  max_categories?: number;
+  image_size?: 'small' | 'medium' | 'large';
+  view_all_link?: string;
+  show_product_count?: boolean;
+  show_subcategory_indicator?: boolean;
+  enable_scroll_arrows?: boolean;
+  gradient_border?: boolean;
+}
+
 interface DynamicCategorySectionProps {
   categories: Category[];
   products?: ProductWithCategory[];
   title?: string;
+  settings?: CategorySettings;
 }
+
+const imageSizeClasses = {
+  small: 'w-16 h-16 md:w-20 md:h-20',
+  medium: 'w-20 h-20 md:w-24 md:h-24',
+  large: 'w-24 h-24 md:w-28 md:h-28',
+};
 
 export const DynamicCategorySection = ({ 
   categories, 
   products = [],
   title = "জনপ্রিয় ক্যাটাগরি",
+  settings = {},
 }: DynamicCategorySectionProps) => {
   const [selectedParent, setSelectedParent] = useState<Category | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Extract settings with defaults
+  const maxCategories = settings.max_categories || 12;
+  const imageSize = settings.image_size || 'medium';
+  const viewAllLink = settings.view_all_link || '/shop';
+  const showProductCount = settings.show_product_count !== false;
+  const showSubcategoryIndicator = settings.show_subcategory_indicator !== false;
+  const enableScrollArrows = settings.enable_scroll_arrows !== false;
+  const gradientBorder = settings.gradient_border || false;
 
   // Calculate product counts for each category (including subcategory products in parent count)
   const categoryCounts = useMemo(() => {
@@ -51,7 +79,7 @@ export const DynamicCategorySection = ({
   }, [categories, products]);
 
   // Get parent categories only
-  const parentCategories = categories.filter(c => !c.parent_id).slice(0, 12);
+  const parentCategories = categories.filter(c => !c.parent_id).slice(0, maxCategories);
   
   // Get subcategories for selected parent
   const subcategories = selectedParent 
@@ -101,7 +129,7 @@ export const DynamicCategorySection = ({
           </h2>
         </div>
         <Link
-          to={selectedParent ? `/categories/${selectedParent.slug}` : "/shop"}
+          to={selectedParent ? `/categories/${selectedParent.slug}` : viewAllLink}
           className="text-primary text-sm font-medium hover:underline flex items-center gap-1"
         >
           সব দেখুন <ChevronRight className="w-4 h-4" />
@@ -121,14 +149,16 @@ export const DynamicCategorySection = ({
       ) : (
         <div className="relative group">
           {/* Left Arrow */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/95 shadow-lg border-border opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-primary hover:text-primary-foreground -ml-2"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
+          {enableScrollArrows && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => scroll('left')}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/95 shadow-lg border-border opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-primary hover:text-primary-foreground -ml-2"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          )}
 
           {/* Categories Scroll Container */}
           <div 
@@ -145,7 +175,13 @@ export const DynamicCategorySection = ({
               >
                 {/* Circular Image Container */}
                 <div className="relative">
-                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5 p-1 shadow-md group-hover/item:shadow-xl transition-all duration-300 group-hover/item:scale-105">
+                  <div className={cn(
+                    imageSizeClasses[imageSize],
+                    "rounded-full overflow-hidden p-1 shadow-md group-hover/item:shadow-xl transition-all duration-300 group-hover/item:scale-105",
+                    gradientBorder 
+                      ? "bg-gradient-to-br from-primary via-primary/60 to-primary/20" 
+                      : "bg-gradient-to-br from-primary/10 to-primary/5"
+                  )}>
                     <div className="w-full h-full rounded-full overflow-hidden bg-muted">
                       {category.image_url ? (
                         <img
@@ -165,7 +201,7 @@ export const DynamicCategorySection = ({
                   </div>
                   
                   {/* Product Count Badge */}
-                  {categoryCounts[category.id] > 0 && (
+                  {showProductCount && categoryCounts[category.id] > 0 && (
                     <Badge 
                       variant="secondary" 
                       className="absolute -top-1 -right-1 text-xs px-1.5 py-0.5 bg-primary text-primary-foreground shadow-md"
@@ -175,7 +211,7 @@ export const DynamicCategorySection = ({
                   )}
                   
                   {/* Subcategory Indicator */}
-                  {!selectedParent && hasSubcategories(category.id) && (
+                  {showSubcategoryIndicator && !selectedParent && hasSubcategories(category.id) && (
                     <div className="absolute -bottom-1 right-0 bg-primary text-primary-foreground rounded-full p-1 shadow-md">
                       <ChevronRight className="w-3 h-3" />
                     </div>
@@ -183,7 +219,10 @@ export const DynamicCategorySection = ({
                 </div>
                 
                 {/* Category Name */}
-                <span className="text-sm text-center text-muted-foreground group-hover/item:text-primary transition-colors font-medium line-clamp-2 w-20 md:w-24">
+                <span className={cn(
+                  "text-sm text-center text-muted-foreground group-hover/item:text-primary transition-colors font-medium line-clamp-2",
+                  imageSize === 'small' ? 'w-16 md:w-20' : imageSize === 'large' ? 'w-24 md:w-28' : 'w-20 md:w-24'
+                )}>
                   {category.name_bn}
                 </span>
               </Link>
@@ -191,14 +230,16 @@ export const DynamicCategorySection = ({
           </div>
 
           {/* Right Arrow */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/95 shadow-lg border-border opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-primary hover:text-primary-foreground -mr-2"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
+          {enableScrollArrows && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => scroll('right')}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/95 shadow-lg border-border opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-primary hover:text-primary-foreground -mr-2"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          )}
         </div>
       )}
     </section>
