@@ -6,9 +6,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { MessageCircle, X, Send, Minimize2, Paperclip, Image, FileText, Loader2 } from "lucide-react";
+import { MessageCircle, X, Send, Minimize2, Paperclip, FileText, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import EmojiPicker from "@/components/chat/EmojiPicker";
+import StagedAttachment from "@/components/chat/StagedAttachment";
 
 interface Message {
   id: string;
@@ -19,6 +21,11 @@ interface Message {
   attachment_url?: string | null;
   attachment_type?: string | null;
   attachment_name?: string | null;
+}
+
+interface StagedFile {
+  file: File;
+  previewUrl?: string;
 }
 
 const ChatWidget = () => {
@@ -37,6 +44,7 @@ const ChatWidget = () => {
   });
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [stagedFile, setStagedFile] = useState<StagedFile | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -212,59 +220,82 @@ const ChatWidget = () => {
     };
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !conversationId) return;
+    if (!file) return;
 
-    setUploading(true);
-    try {
-      const uploadResult = await uploadFile(file);
-      if (uploadResult) {
-        const { error } = await supabase.from("chat_messages").insert({
-          conversation_id: conversationId,
-          sender_type: "customer",
-          sender_name: visitorInfo.name,
-          message: uploadResult.type === 'image' ? '📷 ছবি পাঠানো হয়েছে' : '📄 PDF ফাইল পাঠানো হয়েছে',
-          attachment_url: uploadResult.url,
-          attachment_type: uploadResult.type,
-          attachment_name: uploadResult.name,
-        });
-
-        if (error) {
-          console.error("Message error:", error);
-          throw error;
-        }
-
-        await supabase
-          .from("chat_conversations")
-          .update({ last_message_at: new Date().toISOString() })
-          .eq("id", conversationId);
-
-        toast.success("ফাইল পাঠানো হয়েছে");
-      }
-    } catch (error) {
-      toast.error("ফাইল পাঠাতে সমস্যা হয়েছে");
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("শুধুমাত্র ছবি (JPG, PNG, GIF, WebP) এবং PDF ফাইল আপলোড করা যাবে");
+      return;
     }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("ফাইল সাইজ ১০MB এর বেশি হতে পারবে না");
+      return;
+    }
+
+    // Create preview URL for images
+    let previewUrl: string | undefined;
+    if (file.type.startsWith('image/')) {
+      previewUrl = URL.createObjectURL(file);
+    }
+
+    setStagedFile({ file, previewUrl });
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeStagedFile = () => {
+    if (stagedFile?.previewUrl) {
+      URL.revokeObjectURL(stagedFile.previewUrl);
+    }
+    setStagedFile(null);
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setNewMessage(prev => prev + emoji);
   };
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !conversationId) return;
+    if ((!newMessage.trim() && !stagedFile) || !conversationId) return;
 
     const messageText = newMessage.trim();
     setNewMessage("");
+    setUploading(true);
 
     try {
+      let attachmentData: { url: string; type: string; name: string } | null = null;
+
+      // Upload file if staged
+      if (stagedFile) {
+        attachmentData = await uploadFile(stagedFile.file);
+        if (!attachmentData && !messageText) {
+          setUploading(false);
+          return;
+        }
+        removeStagedFile();
+      }
+
+      // Determine message content
+      let finalMessage = messageText;
+      if (!finalMessage && attachmentData) {
+        finalMessage = attachmentData.type === 'image' ? '📷 ছবি পাঠানো হয়েছে' : '📄 PDF ফাইল পাঠানো হয়েছে';
+      }
+
       const { error } = await supabase.from("chat_messages").insert({
         conversation_id: conversationId,
         sender_type: "customer",
         sender_name: visitorInfo.name,
-        message: messageText,
+        message: finalMessage,
+        attachment_url: attachmentData?.url || null,
+        attachment_type: attachmentData?.type || null,
+        attachment_name: attachmentData?.name || null,
       });
 
       if (error) {
@@ -279,6 +310,8 @@ const ChatWidget = () => {
     } catch (error) {
       toast.error("মেসেজ পাঠাতে সমস্যা হয়েছে");
       setNewMessage(messageText);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -333,7 +366,7 @@ const ChatWidget = () => {
   return (
     <div
       className={`fixed bottom-6 right-6 z-50 w-[360px] bg-background border rounded-2xl shadow-2xl overflow-hidden transition-all ${
-        isMinimized ? "h-14" : "h-[500px]"
+        isMinimized ? "h-14" : "h-[520px]"
       }`}
     >
       {/* Header */}
@@ -406,7 +439,7 @@ const ChatWidget = () => {
           ) : (
             <>
               {/* Messages */}
-              <ScrollArea className="h-[380px] p-4">
+              <ScrollArea className="h-[360px] p-4">
                 <div className="space-y-4">
                   {messages.map((msg) => (
                     <div
@@ -447,9 +480,20 @@ const ChatWidget = () => {
                 </div>
               </ScrollArea>
 
+              {/* Staged Attachment Preview */}
+              {stagedFile && (
+                <div className="px-3 py-2 border-t bg-muted/30">
+                  <StagedAttachment
+                    file={stagedFile.file}
+                    previewUrl={stagedFile.previewUrl}
+                    onRemove={removeStagedFile}
+                  />
+                </div>
+              )}
+
               {/* Input */}
               <div className="p-3 border-t">
-                <form onSubmit={sendMessage} className="flex gap-2">
+                <form onSubmit={sendMessage} className="flex gap-2 items-center">
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -461,24 +505,29 @@ const ChatWidget = () => {
                     type="button" 
                     variant="ghost" 
                     size="icon"
-                    className="shrink-0"
+                    className="shrink-0 h-8 w-8"
                     disabled={uploading}
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    {uploading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Paperclip className="h-4 w-4" />
-                    )}
+                    <Paperclip className="h-4 w-4" />
                   </Button>
+                  <EmojiPicker onEmojiSelect={handleEmojiSelect} />
                   <Input
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="মেসেজ লিখুন..."
                     className="flex-1"
                   />
-                  <Button type="submit" size="icon" disabled={!newMessage.trim() || uploading}>
-                    <Send className="h-4 w-4" />
+                  <Button 
+                    type="submit" 
+                    size="icon" 
+                    disabled={(!newMessage.trim() && !stagedFile) || uploading}
+                  >
+                    {uploading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
                   </Button>
                 </form>
                 <p className="text-[10px] text-muted-foreground mt-1 text-center">
