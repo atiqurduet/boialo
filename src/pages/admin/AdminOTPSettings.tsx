@@ -27,7 +27,7 @@ const AdminOTPSettings = () => {
         .from("site_settings")
         .select("*")
         .eq("category", "security")
-        .in("setting_key", ["otp_enabled", "otp_required_for_cod", "otp_required_for_new_customers"]);
+        .in("setting_key", ["otp_enabled", "otp_required_for_cod", "otp_required_for_new_customers", "otp_only_for_cod"]);
       
       if (error) throw error;
       
@@ -72,6 +72,14 @@ const AdminOTPSettings = () => {
       icon: Shield,
       color: "text-primary",
       bgColor: "bg-primary/10",
+    },
+    {
+      key: "otp_only_for_cod",
+      title: "শুধুমাত্র COD অর্ডারে OTP",
+      description: "OTP শুধুমাত্র ক্যাশ অন ডেলিভারি অর্ডারের জন্য প্রযোজ্য (অন্যান্য পেমেন্ট মেথডে OTP লাগবে না)",
+      icon: Phone,
+      color: "text-blue-600",
+      bgColor: "bg-blue-100",
     },
     {
       key: "otp_required_for_cod",
