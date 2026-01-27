@@ -519,7 +519,7 @@ const AdminChat = () => {
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-12 gap-4 h-[calc(100vh-22rem)]">
+        <div className="grid grid-cols-12 gap-4 h-[calc(100vh-16rem)] min-h-[600px]">
           {/* Conversations List */}
           <Card className="col-span-12 lg:col-span-4 flex flex-col overflow-hidden">
             <CardHeader className="py-3 px-4 border-b space-y-3">
@@ -655,7 +655,7 @@ const AdminChat = () => {
                   {filteredConversations?.map((conv) => (
                     <div
                       key={conv.id}
-                      className={`flex items-start gap-2 p-3 hover:bg-muted/50 transition-colors ${
+                      className={`flex items-start gap-3 p-4 hover:bg-muted/50 transition-colors ${
                         selectedConversation === conv.id ? "bg-primary/5 border-l-4 border-primary" : ""
                       }`}
                     >
@@ -669,29 +669,29 @@ const AdminChat = () => {
                         className="flex-1 text-left"
                       >
                         <div className="flex items-start gap-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                              {conv.visitor_name?.[0]?.toUpperCase() || <User className="h-4 w-4" />}
+                          <Avatar className="h-10 w-10 shrink-0">
+                            <AvatarFallback className="bg-primary/10 text-primary text-base">
+                              {conv.visitor_name?.[0]?.toUpperCase() || <User className="h-5 w-5" />}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-medium text-sm truncate">
+                              <span className="font-semibold text-base truncate">
                                 {conv.visitor_name || "অতিথি"}
                               </span>
                               <Badge 
                                 variant={conv.status === "open" ? "default" : "secondary"}
-                                className="text-[10px] px-1.5"
+                                className="text-xs px-2 py-0.5"
                               >
                                 {conv.status === "open" ? "সক্রিয়" : "বন্ধ"}
                               </Badge>
                             </div>
                             {conv.visitor_phone && (
-                              <p className="text-xs text-muted-foreground truncate">
+                              <p className="text-sm text-muted-foreground truncate mt-0.5">
                                 {conv.visitor_phone}
                               </p>
                             )}
-                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                            <p className="text-xs text-muted-foreground mt-1">
                               {format(new Date(conv.last_message_at), "dd MMM yyyy, hh:mm a", { locale: bn })}
                             </p>
                           </div>
@@ -804,20 +804,20 @@ const AdminChat = () => {
                   ) : messages?.length === 0 ? (
                     <div className="text-center text-muted-foreground">কোনো মেসেজ নেই</div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-5">
                       {messages?.map((msg) => (
                         <div
                           key={msg.id}
                           className={`flex ${msg.sender_type === "admin" ? "justify-end" : "justify-start"}`}
                         >
                           <div
-                            className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                            className={`max-w-[75%] rounded-2xl px-5 py-3 ${
                               msg.sender_type === "admin"
                                 ? "bg-primary text-primary-foreground rounded-br-sm"
                                 : "bg-muted rounded-bl-sm"
                             }`}
                           >
-                            <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                            <p className="text-base whitespace-pre-wrap leading-relaxed">{msg.message}</p>
                             {/* Attachment display */}
                             {msg.attachment_url && msg.attachment_type === 'image' && (
                               <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" className="block mt-2">
@@ -843,10 +843,10 @@ const AdminChat = () => {
                                 <span className="text-sm truncate max-w-[150px]">{msg.attachment_name || "PDF ফাইল"}</span>
                               </a>
                             )}
-                            <div className={`flex items-center gap-1 mt-1 ${
+                            <div className={`flex items-center gap-1 mt-2 ${
                               msg.sender_type === "admin" ? "justify-end" : ""
                             }`}>
-                              <span className={`text-[10px] ${
+                              <span className={`text-xs ${
                                 msg.sender_type === "admin" ? "text-primary-foreground/70" : "text-muted-foreground"
                               }`}>
                                 {format(new Date(msg.created_at), "hh:mm a")}
