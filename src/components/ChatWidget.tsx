@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { MessageCircle, X, Send, Minimize2 } from "lucide-react";
+import { MessageCircle, X, Send, Minimize2, Paperclip, Image, FileText, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 
@@ -16,6 +16,9 @@ interface Message {
   sender_name: string | null;
   message: string;
   created_at: string;
+  attachment_url?: string | null;
+  attachment_type?: string | null;
+  attachment_name?: string | null;
 }
 
 const ChatWidget = () => {
@@ -33,7 +36,9 @@ const ChatWidget = () => {
     submitted: false,
   });
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Generate or get visitor ID
   const getVisitorId = () => {
@@ -129,7 +134,6 @@ const ChatWidget = () => {
     try {
       const visitorId = getVisitorId();
       
-      // Create conversation
       const { data: convData, error: convError } = await supabase
         .from("chat_conversations")
         .insert({
@@ -154,18 +158,12 @@ const ChatWidget = () => {
       setConversationId(convData.id);
       setVisitorInfo((prev) => ({ ...prev, submitted: true }));
 
-      // Send welcome message
-      const { error: msgError } = await supabase.from("chat_messages").insert({
+      await supabase.from("chat_messages").insert({
         conversation_id: convData.id,
         sender_type: "admin",
         sender_name: siteName,
         message: `স্বাগতম ${visitorInfo.name.trim()}! আপনাকে সাহায্য করতে পেরে আমরা খুশি। কীভাবে সাহায্য করতে পারি?`,
       });
-
-      if (msgError) {
-        console.error("Welcome message error:", msgError);
-        // Don't throw here, conversation is already created
-      }
 
       fetchMessages(convData.id);
       toast.success("চ্যাট শুরু হয়েছে!");
@@ -174,6 +172,83 @@ const ChatWidget = () => {
       toast.error(error.message || "চ্যাট শুরু করতে সমস্যা হয়েছে");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const uploadFile = async (file: File): Promise<{ url: string; type: string; name: string } | null> => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("শুধুমাত্র ছবি (JPG, PNG, GIF, WebP) এবং PDF ফাইল আপলোড করা যাবে");
+      return null;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("ফাইল সাইজ ১০MB এর বেশি হতে পারবে না");
+      return null;
+    }
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${conversationId}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+
+    const { data, error } = await supabase.storage
+      .from('chat-attachments')
+      .upload(fileName, file);
+
+    if (error) {
+      console.error("Upload error:", error);
+      toast.error("ফাইল আপলোড করতে সমস্যা হয়েছে");
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('chat-attachments')
+      .getPublicUrl(data.path);
+
+    return {
+      url: urlData.publicUrl,
+      type: file.type.startsWith('image/') ? 'image' : 'pdf',
+      name: file.name
+    };
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !conversationId) return;
+
+    setUploading(true);
+    try {
+      const uploadResult = await uploadFile(file);
+      if (uploadResult) {
+        const { error } = await supabase.from("chat_messages").insert({
+          conversation_id: conversationId,
+          sender_type: "customer",
+          sender_name: visitorInfo.name,
+          message: uploadResult.type === 'image' ? '📷 ছবি পাঠানো হয়েছে' : '📄 PDF ফাইল পাঠানো হয়েছে',
+          attachment_url: uploadResult.url,
+          attachment_type: uploadResult.type,
+          attachment_name: uploadResult.name,
+        });
+
+        if (error) {
+          console.error("Message error:", error);
+          throw error;
+        }
+
+        await supabase
+          .from("chat_conversations")
+          .update({ last_message_at: new Date().toISOString() })
+          .eq("id", conversationId);
+
+        toast.success("ফাইল পাঠানো হয়েছে");
+      }
+    } catch (error) {
+      toast.error("ফাইল পাঠাতে সমস্যা হয়েছে");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -197,7 +272,6 @@ const ChatWidget = () => {
         throw error;
       }
 
-      // Update conversation last_message_at
       await supabase
         .from("chat_conversations")
         .update({ last_message_at: new Date().toISOString() })
@@ -206,6 +280,42 @@ const ChatWidget = () => {
       toast.error("মেসেজ পাঠাতে সমস্যা হয়েছে");
       setNewMessage(messageText);
     }
+  };
+
+  const renderAttachment = (msg: Message) => {
+    if (!msg.attachment_url) return null;
+
+    if (msg.attachment_type === 'image') {
+      return (
+        <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" className="block mt-2">
+          <img 
+            src={msg.attachment_url} 
+            alt={msg.attachment_name || "Attachment"} 
+            className="max-w-full rounded-lg max-h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+          />
+        </a>
+      );
+    }
+
+    if (msg.attachment_type === 'pdf') {
+      return (
+        <a 
+          href={msg.attachment_url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className={`flex items-center gap-2 mt-2 p-2 rounded-lg ${
+            msg.sender_type === "customer" 
+              ? "bg-primary-foreground/20" 
+              : "bg-background/50"
+          } hover:opacity-80 transition-opacity`}
+        >
+          <FileText className="h-5 w-5" />
+          <span className="text-sm truncate max-w-[150px]">{msg.attachment_name || "PDF ফাইল"}</span>
+        </a>
+      );
+    }
+
+    return null;
   };
 
   if (!isOpen) {
@@ -320,6 +430,7 @@ const ChatWidget = () => {
                         }`}
                       >
                         <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                        {renderAttachment(msg)}
                         <p
                           className={`text-xs mt-1 ${
                             msg.sender_type === "customer"
@@ -339,16 +450,40 @@ const ChatWidget = () => {
               {/* Input */}
               <div className="p-3 border-t">
                 <form onSubmit={sendMessage} className="flex gap-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+                    className="hidden"
+                  />
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon"
+                    className="shrink-0"
+                    disabled={uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {uploading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Paperclip className="h-4 w-4" />
+                    )}
+                  </Button>
                   <Input
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="মেসেজ লিখুন..."
                     className="flex-1"
                   />
-                  <Button type="submit" size="icon" disabled={!newMessage.trim()}>
+                  <Button type="submit" size="icon" disabled={!newMessage.trim() || uploading}>
                     <Send className="h-4 w-4" />
                   </Button>
                 </form>
+                <p className="text-[10px] text-muted-foreground mt-1 text-center">
+                  📷 ছবি ও 📄 PDF পাঠাতে পারেন
+                </p>
               </div>
             </>
           )}
