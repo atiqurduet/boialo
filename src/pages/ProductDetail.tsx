@@ -307,7 +307,7 @@ const ProductDetail = () => {
                 <p>
                   <span className="text-muted-foreground">লেখক : </span>
                   <Link 
-                    to={`/writers/${getWriterSlug()}`} 
+                    to={`/authors/${getWriterSlug()}`} 
                     className="text-primary hover:underline"
                   >
                     {getWriterName()}
