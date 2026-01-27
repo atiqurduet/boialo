@@ -120,6 +120,10 @@ const ChatWidget = () => {
       toast.error("আপনার নাম দিন");
       return;
     }
+    if (!visitorInfo.phone.trim()) {
+      toast.error("ফোন নম্বর দিন");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -257,11 +261,12 @@ const ChatWidget = () => {
                 </div>
                 <div>
                   <Input
-                    placeholder="ফোন নম্বর (ঐচ্ছিক)"
+                    placeholder="ফোন নম্বর *"
                     value={visitorInfo.phone}
                     onChange={(e) =>
                       setVisitorInfo((prev) => ({ ...prev, phone: e.target.value }))
                     }
+                    required
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
