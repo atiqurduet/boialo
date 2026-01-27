@@ -1,7 +1,8 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Heart, User, Phone, Mail, ChevronRight } from "lucide-react";
+import { Heart, User, Phone, Mail, ChevronRight, Home, ShoppingBag, HelpCircle, Info, FileText, X } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { cn } from "@/lib/utils";
 
 interface DynamicMenuItem {
   name: string;
@@ -13,6 +14,8 @@ interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
   dynamicMenuItems?: DynamicMenuItem[];
+  siteName?: string;
+  siteLogo?: string;
 }
 
 // Fallback menu items
@@ -50,7 +53,9 @@ const defaultMenuItems = [
   { name: "স্টেশনারি", path: "/stationery", hasSubmenu: false },
 ];
 
-export const MobileMenu = ({ isOpen, onClose, dynamicMenuItems }: MobileMenuProps) => {
+export const MobileMenu = ({ isOpen, onClose, dynamicMenuItems, siteName = "বই স্টোর", siteLogo }: MobileMenuProps) => {
+  const location = useLocation();
+  
   // Use dynamic items if provided, otherwise use default
   const menuItems = dynamicMenuItems && dynamicMenuItems.length > 0
     ? dynamicMenuItems.map(item => ({ 
@@ -61,143 +66,191 @@ export const MobileMenu = ({ isOpen, onClose, dynamicMenuItems }: MobileMenuProp
       }))
     : defaultMenuItems;
 
+  const isActiveLink = (path: string) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0 bg-card">
-        <SheetHeader className="p-4 border-b border-border bg-primary text-primary-foreground">
-          <SheetTitle className="text-left text-primary-foreground flex items-center gap-2">
-            <svg viewBox="0 0 40 40" className="w-8 h-8" fill="none">
-              <circle cx="20" cy="20" r="18" className="fill-primary-foreground" />
-              <path
-                d="M12 28V14l8 7-8 7zm8-7l8-7v14l-8-7z"
-                className="fill-primary"
-              />
-            </svg>
-            WafiLife
+      <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0 bg-card border-r-0">
+        {/* Header with gradient */}
+        <SheetHeader className="p-4 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground relative overflow-hidden">
+          {/* Decorative circles */}
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+          
+          <SheetTitle className="text-left text-primary-foreground flex items-center gap-3 relative z-10">
+            {siteLogo ? (
+              <img src={siteLogo} alt={siteName} className="h-10 object-contain" />
+            ) : (
+              <div className="relative">
+                <div className="absolute inset-0 bg-white/20 rounded-full blur-md" />
+                <svg viewBox="0 0 40 40" className="w-10 h-10 relative" fill="none">
+                  <circle cx="20" cy="20" r="18" className="fill-primary-foreground" />
+                  <path
+                    d="M12 28V14l8 7-8 7zm8-7l8-7v14l-8-7z"
+                    className="fill-primary"
+                  />
+                </svg>
+              </div>
+            )}
+            <span className="text-xl font-bold">{siteName}</span>
           </SheetTitle>
         </SheetHeader>
 
         <div className="overflow-y-auto h-[calc(100vh-140px)]">
           {/* Quick Links */}
-          <div className="flex items-center gap-4 p-4 border-b border-border bg-muted/50">
+          <div className="flex items-center gap-3 p-4 border-b border-border bg-gradient-to-b from-muted/50 to-transparent">
             <Link
               to="/signin"
-              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-primary text-primary-foreground rounded-lg text-sm font-medium"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-xl text-sm font-medium shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all"
               onClick={onClose}
             >
               <User className="w-4 h-4" />
-              Sign In
+              লগইন করুন
             </Link>
             <Link
               to="/wishlist"
-              className="flex items-center justify-center gap-2 py-2 px-3 border border-border rounded-lg text-sm"
+              className="flex items-center justify-center gap-2 py-2.5 px-4 bg-card border border-border rounded-xl text-sm hover:bg-muted transition-all"
               onClick={onClose}
             >
-              <Heart className="w-4 h-4" />
-              উইশলিস্ট
+              <Heart className="w-4 h-4 text-primary" />
+              <span className="hidden xs:inline">উইশলিস্ট</span>
             </Link>
           </div>
 
           {/* Navigation */}
-          <Accordion type="single" collapsible className="w-full">
-            {menuItems.map((item, index) => {
-              const hasSubmenu = 'hasSubmenu' in item && item.hasSubmenu && 'submenu' in item;
-              
-              if (hasSubmenu && 'submenu' in item) {
-                return (
-                  <AccordionItem key={index} value={`item-${index}`} className="border-b border-border">
-                    <AccordionTrigger className="px-4 py-3 hover:bg-muted text-sm font-medium hover:no-underline">
-                      {item.name}
-                    </AccordionTrigger>
-                    <AccordionContent className="pb-0">
-                      <div className="bg-muted/50">
-                        <Link
-                          to={item.path}
-                          className="block px-6 py-2.5 text-sm text-primary hover:bg-muted transition-colors"
-                          onClick={onClose}
-                        >
-                          সব দেখুন
-                        </Link>
-                        {(item as any).submenu?.map((subItem: any, subIndex: number) => (
+          <div className="py-2">
+            <Accordion type="single" collapsible className="w-full">
+              {menuItems.map((item, index) => {
+                const hasSubmenu = 'hasSubmenu' in item && item.hasSubmenu && 'submenu' in item;
+                const isActive = isActiveLink(item.path);
+                
+                if (hasSubmenu && 'submenu' in item) {
+                  return (
+                    <AccordionItem key={index} value={`item-${index}`} className="border-b border-border/50">
+                      <AccordionTrigger className={cn(
+                        "px-4 py-3.5 hover:bg-muted text-sm font-medium hover:no-underline transition-all",
+                        isActive && "text-primary bg-primary/5"
+                      )}>
+                        <span className="flex items-center gap-3">
+                          {item.name}
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-0">
+                        <div className="bg-muted/30 py-1">
                           <Link
-                            key={subIndex}
-                            to={subItem.path}
-                            className="block px-6 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                            to={item.path}
+                            className="flex items-center gap-2 px-6 py-2.5 text-sm text-primary font-medium hover:bg-muted transition-colors"
                             onClick={onClose}
                           >
-                            {subItem.name}
+                            <ShoppingBag className="w-4 h-4" />
+                            সব দেখুন
                           </Link>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                );
-              }
+                          {(item as any).submenu?.map((subItem: any, subIndex: number) => (
+                            <Link
+                              key={subIndex}
+                              to={subItem.path}
+                              className={cn(
+                                "flex items-center justify-between px-6 py-2.5 text-sm transition-colors",
+                                isActiveLink(subItem.path) 
+                                  ? "text-primary bg-primary/5 font-medium" 
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                              )}
+                              onClick={onClose}
+                            >
+                              {subItem.name}
+                              <ChevronRight className="w-3.5 h-3.5 opacity-50" />
+                            </Link>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                }
 
-              const openInNewTab = 'openInNewTab' in item && item.openInNewTab;
-              
-              return openInNewTab ? (
-                <a
-                  key={index}
-                  href={item.path}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted transition-colors border-b border-border"
-                  onClick={onClose}
-                >
-                  {item.name}
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </a>
-              ) : (
-                <Link
-                  key={index}
-                  to={item.path}
-                  className="flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted transition-colors border-b border-border"
-                  onClick={onClose}
-                >
-                  {item.name}
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </Link>
-              );
-            })}
-          </Accordion>
+                const openInNewTab = 'openInNewTab' in item && item.openInNewTab;
+                
+                return openInNewTab ? (
+                  <a
+                    key={index}
+                    href={item.path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "flex items-center justify-between px-4 py-3.5 text-sm font-medium transition-all border-b border-border/50",
+                      "hover:bg-muted hover:text-primary"
+                    )}
+                    onClick={onClose}
+                  >
+                    {item.name}
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </a>
+                ) : (
+                  <Link
+                    key={index}
+                    to={item.path}
+                    className={cn(
+                      "flex items-center justify-between px-4 py-3.5 text-sm font-medium transition-all border-b border-border/50",
+                      isActive 
+                        ? "text-primary bg-primary/5 border-l-2 border-l-primary" 
+                        : "hover:bg-muted hover:text-primary"
+                    )}
+                    onClick={onClose}
+                  >
+                    {item.name}
+                    <ChevronRight className={cn(
+                      "w-4 h-4 transition-transform",
+                      isActive ? "text-primary" : "text-muted-foreground"
+                    )} />
+                  </Link>
+                );
+              })}
+            </Accordion>
+          </div>
 
           {/* Info Links */}
-          <div className="p-4 space-y-2 border-t border-border mt-4">
-            <Link
-              to="/about"
-              className="block py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              onClick={onClose}
-            >
-              আমাদের সম্পর্কে
-            </Link>
-            <Link
-              to="/contact"
-              className="block py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              onClick={onClose}
-            >
-              যোগাযোগ
-            </Link>
-            <Link
-              to="/faq"
-              className="block py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              onClick={onClose}
-            >
-              সাধারণ জিজ্ঞাসা
-            </Link>
+          <div className="p-4 space-y-1 border-t border-border mt-2">
+            <p className="text-xs text-muted-foreground font-medium mb-3 px-2">তথ্য ও সহায়তা</p>
+            {[
+              { to: "/about", icon: Info, label: "আমাদের সম্পর্কে" },
+              { to: "/contact", icon: Phone, label: "যোগাযোগ" },
+              { to: "/faq", icon: HelpCircle, label: "সাধারণ জিজ্ঞাসা" },
+              { to: "/terms", icon: FileText, label: "শর্তাবলী" },
+            ].map(({ to, icon: Icon, label }) => (
+              <Link
+                key={to}
+                to={to}
+                className={cn(
+                  "flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm transition-colors",
+                  isActiveLink(to)
+                    ? "text-primary bg-primary/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+                onClick={onClose}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </Link>
+            ))}
           </div>
 
           {/* Contact Info */}
-          <div className="p-4 bg-muted/50 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-3">যোগাযোগ করুন</p>
-            <div className="space-y-2">
-              <a href="tel:+8809613000000" className="flex items-center gap-2 text-sm text-foreground">
-                <Phone className="w-4 h-4 text-primary" />
+          <div className="p-4 bg-gradient-to-t from-muted/80 to-muted/30 border-t border-border">
+            <p className="text-xs text-muted-foreground font-medium mb-3">যোগাযোগ করুন</p>
+            <div className="space-y-3">
+              <a href="tel:+8809613000000" className="flex items-center gap-3 text-sm text-foreground hover:text-primary transition-colors group">
+                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <Phone className="w-4 h-4 text-primary" />
+                </div>
                 09613-000000
               </a>
-              <a href="mailto:info@wafilife.com" className="flex items-center gap-2 text-sm text-foreground">
-                <Mail className="w-4 h-4 text-primary" />
-                info@wafilife.com
+              <a href="mailto:info@example.com" className="flex items-center gap-3 text-sm text-foreground hover:text-primary transition-colors group">
+                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <Mail className="w-4 h-4 text-primary" />
+                </div>
+                info@example.com
               </a>
             </div>
           </div>
