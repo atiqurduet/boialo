@@ -63,7 +63,11 @@ import {
   History,
   ChevronDown,
   Eye,
-  RotateCcw
+  RotateCcw,
+  FileText,
+  Paperclip,
+  Loader2,
+  Image as ImageIcon
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -87,6 +91,9 @@ interface Message {
   message: string;
   is_read: boolean;
   created_at: string;
+  attachment_url?: string | null;
+  attachment_type?: string | null;
+  attachment_name?: string | null;
 }
 
 interface ChatStats {
@@ -765,6 +772,31 @@ const AdminChat = () => {
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                            {/* Attachment display */}
+                            {msg.attachment_url && msg.attachment_type === 'image' && (
+                              <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                                <img 
+                                  src={msg.attachment_url} 
+                                  alt={msg.attachment_name || "Attachment"} 
+                                  className="max-w-full rounded-lg max-h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                />
+                              </a>
+                            )}
+                            {msg.attachment_url && msg.attachment_type === 'pdf' && (
+                              <a 
+                                href={msg.attachment_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className={`flex items-center gap-2 mt-2 p-2 rounded-lg ${
+                                  msg.sender_type === "admin" 
+                                    ? "bg-primary-foreground/20" 
+                                    : "bg-background/50"
+                                } hover:opacity-80 transition-opacity`}
+                              >
+                                <FileText className="h-5 w-5" />
+                                <span className="text-sm truncate max-w-[150px]">{msg.attachment_name || "PDF ফাইল"}</span>
+                              </a>
+                            )}
                             <div className={`flex items-center gap-1 mt-1 ${
                               msg.sender_type === "admin" ? "justify-end" : ""
                             }`}>
