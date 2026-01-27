@@ -98,11 +98,19 @@ const Checkout = () => {
           return;
         }
         
+        console.log("Raw OTP settings from DB:", data);
+        
         if (data) {
           const settings: Record<string, boolean> = {};
           data.forEach(item => {
-            settings[item.setting_key] = item.setting_value === true || item.setting_value === "true";
+            // Handle various formats: boolean true, string "true", or JSON boolean
+            const val = item.setting_value;
+            settings[item.setting_key] = val === true || val === "true" || String(val) === "true";
+            console.log(`OTP Setting ${item.setting_key}:`, val, "->", settings[item.setting_key]);
           });
+          
+          console.log("Parsed OTP settings:", settings);
+          
           setOtpSettings(prev => ({
             ...prev,
             ...settings,
