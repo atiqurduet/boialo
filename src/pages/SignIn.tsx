@@ -21,6 +21,7 @@ import { Eye, EyeOff, Loader2, Phone, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 const SignIn = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -28,6 +29,7 @@ const SignIn = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user, signIn, signUp } = useAuth();
+  const { settings: siteSettings } = useSiteSettings();
 
   // Form states
   const [email, setEmail] = useState("");
@@ -222,15 +224,19 @@ const SignIn = () => {
           <div className="bg-card rounded-xl p-8 shadow-sm">
             {/* Logo */}
             <div className="text-center mb-8">
-              <Link to="/" className="inline-flex items-center gap-1">
-                <svg viewBox="0 0 40 40" className="w-10 h-10" fill="none">
-                  <circle cx="20" cy="20" r="18" className="fill-primary" />
-                  <path
-                    d="M12 28V14l8 7-8 7zm8-7l8-7v14l-8-7z"
-                    className="fill-primary-foreground"
-                  />
-                </svg>
-                <span className="text-3xl font-bold text-primary">WafiLife</span>
+              <Link to="/" className="inline-flex items-center gap-2">
+                {siteSettings.header_logo ? (
+                  <img src={siteSettings.header_logo} alt={siteSettings.site_name} className="h-10 object-contain" />
+                ) : (
+                  <svg viewBox="0 0 40 40" className="w-10 h-10" fill="none">
+                    <circle cx="20" cy="20" r="18" className="fill-primary" />
+                    <path
+                      d="M12 28V14l8 7-8 7zm8-7l8-7v14l-8-7z"
+                      className="fill-primary-foreground"
+                    />
+                  </svg>
+                )}
+                <span className="text-3xl font-bold text-primary">{siteSettings.site_name}</span>
               </Link>
             </div>
 
@@ -401,7 +407,7 @@ const SignIn = () => {
                       onChange={(e) => setAgreeTerms(e.target.checked)}
                     />
                     <span>
-                      আমি WafiLife এর{" "}
+                      আমি {siteSettings.site_name} এর{" "}
                       <Link to="/terms" className="text-primary hover:underline">
                         শর্তাবলী
                       </Link>{" "}

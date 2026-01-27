@@ -9,11 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Loader2, ArrowLeft, Mail, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const { settings: siteSettings } = useSiteSettings();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,12 +47,16 @@ const ForgotPassword = () => {
         <div className="max-w-md mx-auto">
           <div className="bg-card rounded-xl p-8 shadow-sm">
             <div className="text-center mb-8">
-              <Link to="/" className="inline-flex items-center gap-1">
-                <svg viewBox="0 0 40 40" className="w-10 h-10" fill="none">
-                  <circle cx="20" cy="20" r="18" className="fill-primary" />
-                  <path d="M12 28V14l8 7-8 7zm8-7l8-7v14l-8-7z" className="fill-primary-foreground" />
-                </svg>
-                <span className="text-3xl font-bold text-primary">WafiLife</span>
+              <Link to="/" className="inline-flex items-center gap-2">
+                {siteSettings.header_logo ? (
+                  <img src={siteSettings.header_logo} alt={siteSettings.site_name} className="h-10 object-contain" />
+                ) : (
+                  <svg viewBox="0 0 40 40" className="w-10 h-10" fill="none">
+                    <circle cx="20" cy="20" r="18" className="fill-primary" />
+                    <path d="M12 28V14l8 7-8 7zm8-7l8-7v14l-8-7z" className="fill-primary-foreground" />
+                  </svg>
+                )}
+                <span className="text-3xl font-bold text-primary">{siteSettings.site_name}</span>
               </Link>
             </div>
 
