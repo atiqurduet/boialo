@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { MessageCircle, X, Send, Minimize2, User } from "lucide-react";
+import { MessageCircle, X, Send, Minimize2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 
@@ -128,34 +128,50 @@ const ChatWidget = () => {
     setLoading(true);
     try {
       const visitorId = getVisitorId();
-      const { data, error } = await supabase
+      
+      // Create conversation
+      const { data: convData, error: convError } = await supabase
         .from("chat_conversations")
         .insert({
           visitor_id: visitorId,
-          visitor_name: visitorInfo.name,
-          visitor_phone: visitorInfo.phone || null,
+          visitor_name: visitorInfo.name.trim(),
+          visitor_phone: visitorInfo.phone.trim(),
           user_id: user?.id || null,
           status: "open",
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (convError) {
+        console.error("Conversation creation error:", convError);
+        throw new Error(`কথোপকথন তৈরি করতে সমস্যা: ${convError.message}`);
+      }
 
-      setConversationId(data.id);
+      if (!convData) {
+        throw new Error("কথোপকথন তৈরি হয়নি");
+      }
+
+      setConversationId(convData.id);
       setVisitorInfo((prev) => ({ ...prev, submitted: true }));
 
       // Send welcome message
-      await supabase.from("chat_messages").insert({
-        conversation_id: data.id,
+      const { error: msgError } = await supabase.from("chat_messages").insert({
+        conversation_id: convData.id,
         sender_type: "admin",
-        sender_name: siteName || "বইআলো",
-        message: `স্বাগতম ${visitorInfo.name}! আপনাকে সাহায্য করতে পেরে আমরা খুশি। কীভাবে সাহায্য করতে পারি?`,
+        sender_name: siteName,
+        message: `স্বাগতম ${visitorInfo.name.trim()}! আপনাকে সাহায্য করতে পেরে আমরা খুশি। কীভাবে সাহায্য করতে পারি?`,
       });
 
-      fetchMessages(data.id);
-    } catch (error) {
-      toast.error("চ্যাট শুরু করতে সমস্যা হয়েছে");
+      if (msgError) {
+        console.error("Welcome message error:", msgError);
+        // Don't throw here, conversation is already created
+      }
+
+      fetchMessages(convData.id);
+      toast.success("চ্যাট শুরু হয়েছে!");
+    } catch (error: any) {
+      console.error("Chat start error:", error);
+      toast.error(error.message || "চ্যাট শুরু করতে সমস্যা হয়েছে");
     } finally {
       setLoading(false);
     }
@@ -176,7 +192,10 @@ const ChatWidget = () => {
         message: messageText,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Message send error:", error);
+        throw error;
+      }
 
       // Update conversation last_message_at
       await supabase
@@ -211,7 +230,7 @@ const ChatWidget = () => {
       <div className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-          <span className="font-medium">{siteName || "বইআলো"} সাপোর্ট</span>
+          <span className="font-medium">{siteName} সাপোর্ট</span>
         </div>
         <div className="flex items-center gap-1">
           <Button
