@@ -67,6 +67,9 @@ import AdminUniversalCategories from "./pages/admin/AdminUniversalCategories";
 import AdminOffers from "./pages/admin/AdminOffers";
 import AdminEmailMarketing from "./pages/admin/AdminEmailMarketing";
 import AdminTasks from "./pages/admin/AdminTasks";
+import AdminOTPSettings from "./pages/admin/AdminOTPSettings";
+import AdminChat from "./pages/admin/AdminChat";
+import ChatWidget from "./components/ChatWidget";
 
 const queryClient = new QueryClient();
 
@@ -142,9 +145,12 @@ const App = () => (
                 <Route path="/admin/checkout-analytics" element={<AdminCheckoutAnalytics />} />
                 <Route path="/admin/offers" element={<AdminOffers />} />
                 <Route path="/admin/email-marketing" element={<AdminEmailMarketing />} />
+                <Route path="/admin/otp-settings" element={<AdminOTPSettings />} />
+                <Route path="/admin/chat" element={<AdminChat />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              <ChatWidget />
               </AnalyticsProvider>
             </BrowserRouter>
           </TooltipProvider>
