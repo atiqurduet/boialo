@@ -85,6 +85,7 @@ const Index = () => {
             categories={categories}
             products={products}
             title={section.title_bn}
+            settings={settings}
           />
         ) : null;
 
