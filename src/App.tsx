@@ -69,6 +69,11 @@ import AdminEmailMarketing from "./pages/admin/AdminEmailMarketing";
 import AdminTasks from "./pages/admin/AdminTasks";
 import AdminOTPSettings from "./pages/admin/AdminOTPSettings";
 import AdminChat from "./pages/admin/AdminChat";
+import AdminRefundPolicy from "./pages/admin/AdminRefundPolicy";
+import AdminRefundRequests from "./pages/admin/AdminRefundRequests";
+import AdminStaffManagement from "./pages/admin/AdminStaffManagement";
+import AdminAutoAssign from "./pages/admin/AdminAutoAssign";
+import RefundPolicy from "./pages/RefundPolicy";
 import ChatWidget from "./components/ChatWidget";
 
 const queryClient = new QueryClient();
@@ -108,6 +113,7 @@ const App = () => (
                 <Route path="/faq" element={<FAQ />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
+                <Route path="/refund-policy" element={<RefundPolicy />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/categories/:slug" element={<CategoryDetail />} />
@@ -147,6 +153,10 @@ const App = () => (
                 <Route path="/admin/email-marketing" element={<AdminEmailMarketing />} />
                 <Route path="/admin/otp-settings" element={<AdminOTPSettings />} />
                 <Route path="/admin/chat" element={<AdminChat />} />
+                <Route path="/admin/refund-policy" element={<AdminRefundPolicy />} />
+                <Route path="/admin/refund-requests" element={<AdminRefundRequests />} />
+                <Route path="/admin/staff" element={<AdminStaffManagement />} />
+                <Route path="/admin/auto-assign" element={<AdminAutoAssign />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>

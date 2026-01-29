@@ -19,8 +19,9 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, UserPlus, User } from "lucide-react";
+import { Loader2, UserPlus, User, Zap } from "lucide-react";
 
 interface QuickTaskAssignProps {
   orderId: string;
@@ -64,6 +65,7 @@ export const QuickTaskAssign = ({
   const [selectedUser, setSelectedUser] = useState("");
   const [priority, setPriority] = useState("normal");
   const [title, setTitle] = useState("");
+  const [useAutoAssign, setUseAutoAssign] = useState(true);
 
   // Fetch team members grouped by role
   const { data: teamMembers = [] } = useQuery({
@@ -102,10 +104,33 @@ export const QuickTaskAssign = ({
       "অ্যাসাইনড"
     : null;
 
-  // Create task mutation
+  // Create task mutation with auto-assign support
   const createTaskMutation = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
+      
+      let assigneeId = selectedUser;
+      
+      // If auto-assign is enabled and no user is selected, use the database function
+      if (useAutoAssign && !selectedUser) {
+        const { data: autoAssignedId, error: rpcError } = await supabase
+          .rpc("auto_assign_task", { _task_type: taskType });
+        
+        if (rpcError) {
+          console.error("Auto-assign error:", rpcError);
+          throw new Error("অটো-অ্যাসাইন ব্যর্থ হয়েছে। ম্যানুয়ালি সিলেক্ট করুন।");
+        }
+        
+        if (!autoAssignedId) {
+          throw new Error("কোনো স্টাফ পাওয়া যায়নি। প্রথমে স্টাফ যোগ করুন।");
+        }
+        
+        assigneeId = autoAssignedId;
+      }
+      
+      if (!assigneeId) {
+        throw new Error("স্টাফ সিলেক্ট করুন অথবা অটো-অ্যাসাইন এনাবল করুন।");
+      }
       
       const taskTitle = title || `${TASK_TYPES.find(t => t.value === taskType)?.label} - ${orderNumber}`;
       
@@ -114,7 +139,7 @@ export const QuickTaskAssign = ({
         task_type: taskType,
         title: taskTitle,
         priority,
-        assigned_to: selectedUser,
+        assigned_to: assigneeId,
         assigned_by: user?.id || null,
       });
 
@@ -123,7 +148,7 @@ export const QuickTaskAssign = ({
       // Update order assigned_to
       await supabase
         .from("orders")
-        .update({ assigned_to: selectedUser })
+        .update({ assigned_to: assigneeId })
         .eq("id", orderId);
     },
     onSuccess: () => {
@@ -133,6 +158,7 @@ export const QuickTaskAssign = ({
       setSelectedUser("");
       setTaskType("order_processing");
       setPriority("normal");
+      setUseAutoAssign(true);
       queryClient.invalidateQueries({ queryKey: ["order-tasks", orderId] });
       onComplete?.();
     },
@@ -199,39 +225,59 @@ export const QuickTaskAssign = ({
             />
           </div>
 
-          {/* Assign To - Grouped by Role */}
-          <div className="space-y-2">
-            <Label>অ্যাসাইন করুন (রোল অনুযায়ী)</Label>
-            <Select value={selectedUser} onValueChange={setSelectedUser}>
-              <SelectTrigger>
-                <SelectValue placeholder="টিম মেম্বার সিলেক্ট করুন" />
-              </SelectTrigger>
-              <SelectContent>
-                {["admin", "manager", "support"].map((role) => {
-                  const roleMembers = teamMembers.filter((m) => m.role === role);
-                  if (roleMembers.length === 0) return null;
-                  return (
-                    <div key={role}>
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50 flex items-center gap-2">
-                        <Badge className={`text-xs ${getRoleBadgeColor(role)}`}>
-                          {role === "admin" ? "এডমিন" : role === "manager" ? "ম্যানেজার" : "সাপোর্ট"}
-                        </Badge>
-                        <span>({roleMembers.length} জন)</span>
-                      </div>
-                      {roleMembers.map((member) => (
-                        <SelectItem key={member.user_id} value={member.user_id}>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            <span>{member.full_name || member.email}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </div>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+          {/* Auto-assign toggle */}
+          <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/30">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-primary" />
+              <div>
+                <Label className="font-medium">অটো-অ্যাসাইন</Label>
+                <p className="text-xs text-muted-foreground">কম লোডেড স্টাফকে অটো অ্যাসাইন হবে</p>
+              </div>
+            </div>
+            <Switch
+              checked={useAutoAssign}
+              onCheckedChange={(checked) => {
+                setUseAutoAssign(checked);
+                if (checked) setSelectedUser("");
+              }}
+            />
           </div>
+
+          {/* Assign To - Grouped by Role (only show if auto-assign is off) */}
+          {!useAutoAssign && (
+            <div className="space-y-2">
+              <Label>অ্যাসাইন করুন (রোল অনুযায়ী)</Label>
+              <Select value={selectedUser} onValueChange={setSelectedUser}>
+                <SelectTrigger>
+                  <SelectValue placeholder="টিম মেম্বার সিলেক্ট করুন" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["admin", "manager", "support"].map((role) => {
+                    const roleMembers = teamMembers.filter((m) => m.role === role);
+                    if (roleMembers.length === 0) return null;
+                    return (
+                      <div key={role}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50 flex items-center gap-2">
+                          <Badge className={`text-xs ${getRoleBadgeColor(role)}`}>
+                            {role === "admin" ? "এডমিন" : role === "manager" ? "ম্যানেজার" : "সাপোর্ট"}
+                          </Badge>
+                          <span>({roleMembers.length} জন)</span>
+                        </div>
+                        {roleMembers.map((member) => (
+                          <SelectItem key={member.user_id} value={member.user_id}>
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              <span>{member.full_name || member.email}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Priority */}
           <div className="space-y-2">
@@ -253,13 +299,18 @@ export const QuickTaskAssign = ({
           {/* Submit */}
           <Button
             onClick={() => createTaskMutation.mutate()}
-            disabled={createTaskMutation.isPending || !selectedUser}
+            disabled={createTaskMutation.isPending || (!useAutoAssign && !selectedUser)}
             className="w-full"
           >
             {createTaskMutation.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 অ্যাসাইন হচ্ছে...
+              </>
+            ) : useAutoAssign ? (
+              <>
+                <Zap className="h-4 w-4 mr-2" />
+                অটো-অ্যাসাইন করুন
               </>
             ) : (
               <>

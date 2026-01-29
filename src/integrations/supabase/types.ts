@@ -1776,6 +1776,95 @@ export type Database = {
         }
         Relationships: []
       }
+      refund_policies: {
+        Row: {
+          content_bn: string
+          content_en: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          sort_order: number | null
+          title_bn: string
+          title_en: string | null
+          updated_at: string
+        }
+        Insert: {
+          content_bn: string
+          content_en?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          title_bn: string
+          title_en?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content_bn?: string
+          content_en?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          title_bn?: string
+          title_en?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      refund_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          description: string | null
+          id: string
+          order_id: string
+          processed_at: string | null
+          processed_by: string | null
+          reason: string
+          refund_amount: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_id: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason: string
+          refund_amount?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string
+          refund_amount?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refund_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           comment: string | null
@@ -1878,6 +1967,69 @@ export type Database = {
           provider?: string
           sort_order?: number | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      staff_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          invited_by: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token?: string
+        }
+        Relationships: []
+      }
+      task_auto_assign_rules: {
+        Row: {
+          assigned_role: Database["public"]["Enums"]["app_role"]
+          created_at: string
+          id: string
+          is_active: boolean | null
+          task_type: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_role?: Database["public"]["Enums"]["app_role"]
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          task_type: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_role?: Database["public"]["Enums"]["app_role"]
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          task_type?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2166,7 +2318,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_assign_task: { Args: { _task_type: string }; Returns: string }
       calculate_risk_score: { Args: { p_user_id: string }; Returns: number }
+      get_least_loaded_staff: {
+        Args: { _role: Database["public"]["Enums"]["app_role"] }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
