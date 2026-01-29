@@ -39,7 +39,9 @@ import {
   CreditCard,
   ClipboardList,
   MessageCircle,
-  Shield
+  Shield,
+  RefreshCw,
+  UserCog
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -91,6 +93,7 @@ const menuCategories: MenuCategory[] = [
     items: [
       { icon: ShoppingCart, label: 'অর্ডার', href: '/admin/orders', roles: ['admin', 'manager', 'support'] },
       { icon: ClipboardList, label: 'টাস্ক ম্যানেজমেন্ট', href: '/admin/tasks', roles: ['admin', 'manager', 'support'] },
+      { icon: RefreshCw, label: 'রিফান্ড রিকোয়েস্ট', href: '/admin/refund-requests', roles: ['admin', 'manager', 'support'] },
       { icon: MessageCircle, label: 'লাইভ চ্যাট', href: '/admin/chat', roles: ['admin', 'manager', 'support'] },
       { icon: ShoppingBag, label: 'অসম্পূর্ণ অর্ডার', href: '/admin/abandoned-carts', roles: ['admin', 'manager', 'support'] },
       { icon: BarChart3, label: 'চেকআউট অ্যানালিটিক্স', href: '/admin/checkout-analytics', roles: ['admin', 'manager'] },
@@ -134,6 +137,7 @@ const menuCategories: MenuCategory[] = [
     roles: ['admin', 'manager', 'support'],
     items: [
       { icon: Users, label: 'কাস্টমার', href: '/admin/customers', roles: ['admin', 'manager', 'support'] },
+      { icon: UserCog, label: 'স্টাফ ম্যানেজমেন্ট', href: '/admin/staff', roles: ['admin'] },
       { icon: Users, label: 'এডমিন ইউজার', href: '/admin/users', roles: ['admin'] },
     ]
   },
@@ -145,6 +149,8 @@ const menuCategories: MenuCategory[] = [
       { icon: Shield, label: 'OTP সেটিংস', href: '/admin/otp-settings', roles: ['admin'] },
       { icon: CreditCard, label: 'পেমেন্ট', href: '/admin/payments', roles: ['admin'] },
       { icon: Truck, label: 'কুরিয়ার', href: '/admin/couriers', roles: ['admin'] },
+      { icon: RefreshCw, label: 'অটো-অ্যাসাইন', href: '/admin/auto-assign', roles: ['admin'] },
+      { icon: FileText, label: 'রিফান্ড পলিসি', href: '/admin/refund-policy', roles: ['admin'] },
       { icon: Settings, label: 'সাইট সেটিংস', href: '/admin/settings', roles: ['admin'] },
     ]
   },
