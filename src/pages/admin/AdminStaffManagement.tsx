@@ -163,10 +163,49 @@ const AdminStaffManagement = () => {
       });
 
       if (error) throw error;
+
+      // Send invitation email
+      const inviteUrl = `${window.location.origin}/sign-in?invite=${token}`;
+      const roleLabels: Record<AppRole, string> = {
+        admin: "এডমিন",
+        manager: "ম্যানেজার",
+        support: "সাপোর্ট",
+      };
+
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #1e293b;">স্টাফ ইনভাইটেশন</h2>
+          <p>আপনাকে <strong>${roleLabels[role]}</strong> হিসেবে যোগদানের জন্য আমন্ত্রণ জানানো হয়েছে।</p>
+          <p>নিচের বাটনে ক্লিক করে সাইন আপ করুন:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${inviteUrl}" style="background-color: #0ea5e9; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              একাউন্ট তৈরি করুন
+            </a>
+          </div>
+          <p style="color: #64748b; font-size: 14px;">এই লিংক ৭ দিন পর্যন্ত বৈধ থাকবে।</p>
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+          <p style="color: #94a3b8; font-size: 12px;">যদি আপনি এই ইনভাইটেশন আশা না করে থাকেন, এই ইমেইল উপেক্ষা করুন।</p>
+        </div>
+      `;
+
+      const { error: emailError } = await supabase.functions.invoke("send-email", {
+        body: {
+          to: email,
+          subject: "স্টাফ ইনভাইটেশন - Boialo",
+          html: emailHtml,
+        },
+      });
+
+      if (emailError) {
+        console.error("Email sending failed:", emailError);
+        // Don't throw - invitation is created, just email failed
+        toast.warning("ইনভাইটেশন তৈরি হয়েছে কিন্তু ইমেইল পাঠাতে সমস্যা হয়েছে");
+      }
+
       return { email, token };
     },
     onSuccess: ({ email }) => {
-      toast.success(`${email} কে ইনভাইট পাঠানো হয়েছে`);
+      toast.success(`${email} কে ইনভাইট ইমেইল পাঠানো হয়েছে`);
       queryClient.invalidateQueries({ queryKey: ["staff-invitations"] });
       setInviteOpen(false);
       setInviteEmail("");
