@@ -126,6 +126,7 @@ const menuCategories: MenuCategory[] = [
     label: 'মার্কেটিং',
     roles: ['admin', 'manager'],
     items: [
+      { icon: Tag, label: 'অফার', href: '/admin/offers', roles: ['admin', 'manager'] },
       { icon: Ticket, label: 'কুপন', href: '/admin/coupons', roles: ['admin', 'manager'] },
       { icon: Mail, label: 'ইমেইল মার্কেটিং', href: '/admin/email-marketing', roles: ['admin', 'manager'] },
       { icon: FileText, label: 'SMS', href: '/admin/sms', roles: ['admin'] },

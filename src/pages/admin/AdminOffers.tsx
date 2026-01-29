@@ -26,6 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Tag, Gift, Clock, Users, Eye, Copy } from 'lucide-react';
 import { format } from 'date-fns';
+import { OfferBannerUpload } from '@/components/admin/OfferBannerUpload';
 
 interface Offer {
   id: string;
@@ -620,14 +621,11 @@ const AdminOffers = () => {
                       </div>
                     )}
 
-                    <div>
-                      <Label>ব্যানার ইমেজ URL</Label>
-                      <Input
-                        value={formData.banner_image}
-                        onChange={(e) => setFormData({ ...formData, banner_image: e.target.value })}
-                        placeholder="https://..."
-                      />
-                    </div>
+                    <OfferBannerUpload
+                      value={formData.banner_image}
+                      onChange={(url) => setFormData({ ...formData, banner_image: url })}
+                      label="ব্যানার ইমেজ"
+                    />
                   </TabsContent>
                 </Tabs>
 
