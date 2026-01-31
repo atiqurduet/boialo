@@ -134,7 +134,6 @@ export const menuCategories: MenuCategory[] = [
     roles: ['admin'],
     items: [
       { icon: Settings, label: 'সাইট সেটিংস', href: '/admin/settings', roles: ['admin'] },
-      { icon: Shield, label: 'OTP সেটিংস', href: '/admin/otp-settings', roles: ['admin'] },
       { icon: CreditCard, label: 'পেমেন্ট', href: '/admin/payments', roles: ['admin'] },
       { icon: Truck, label: 'কুরিয়ার', href: '/admin/couriers', roles: ['admin'] },
       { icon: RefreshCw, label: 'অটো-অ্যাসাইন', href: '/admin/auto-assign', roles: ['admin'] },

@@ -67,7 +67,6 @@ import AdminUniversalCategories from "./pages/admin/AdminUniversalCategories";
 import AdminOffers from "./pages/admin/AdminOffers";
 import AdminEmailMarketing from "./pages/admin/AdminEmailMarketing";
 import AdminTasks from "./pages/admin/AdminTasks";
-import AdminOTPSettings from "./pages/admin/AdminOTPSettings";
 import AdminChat from "./pages/admin/AdminChat";
 import AdminRefundPolicy from "./pages/admin/AdminRefundPolicy";
 import AdminRefundRequests from "./pages/admin/AdminRefundRequests";
@@ -153,7 +152,6 @@ const App = () => (
                 <Route path="/admin/checkout-analytics" element={<AdminCheckoutAnalytics />} />
                 <Route path="/admin/offers" element={<AdminOffers />} />
                 <Route path="/admin/email-marketing" element={<AdminEmailMarketing />} />
-                <Route path="/admin/otp-settings" element={<AdminOTPSettings />} />
                 <Route path="/admin/chat" element={<AdminChat />} />
                 <Route path="/admin/refund-policy" element={<AdminRefundPolicy />} />
                 <Route path="/admin/refund-requests" element={<AdminRefundRequests />} />
