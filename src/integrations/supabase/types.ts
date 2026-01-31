@@ -1049,6 +1049,54 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          email_enabled: boolean | null
+          email_template_id: string | null
+          event_name_bn: string
+          event_name_en: string
+          event_type: string
+          id: string
+          is_active: boolean | null
+          sms_enabled: boolean | null
+          sms_template: string | null
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          email_enabled?: boolean | null
+          email_template_id?: string | null
+          event_name_bn: string
+          event_name_en: string
+          event_type: string
+          id?: string
+          is_active?: boolean | null
+          sms_enabled?: boolean | null
+          sms_template?: string | null
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          email_enabled?: boolean | null
+          email_template_id?: string | null
+          event_name_bn?: string
+          event_name_en?: string
+          event_type?: string
+          id?: string
+          is_active?: boolean | null
+          sms_enabled?: boolean | null
+          sms_template?: string | null
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       offer_products: {
         Row: {
           created_at: string
