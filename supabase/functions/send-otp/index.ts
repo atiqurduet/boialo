@@ -15,16 +15,19 @@ interface SMSProvider {
   config: Record<string, string>;
 }
 
-// Twilio SMS sender
-async function sendViaTwilio(phone: string, message: string): Promise<boolean> {
-  const account_sid = Deno.env.get("TWILIO_ACCOUNT_SID");
-  const auth_token = Deno.env.get("TWILIO_AUTH_TOKEN");
-  const from_number = Deno.env.get("TWILIO_PHONE_NUMBER");
+// Twilio SMS sender - uses config from database or env variables
+async function sendViaTwilio(phone: string, message: string, config: Record<string, string>): Promise<boolean> {
+  // Try database config first, then fall back to environment variables
+  const account_sid = config.account_sid || Deno.env.get("TWILIO_ACCOUNT_SID");
+  const auth_token = config.auth_token || Deno.env.get("TWILIO_AUTH_TOKEN");
+  const from_number = config.from_number || Deno.env.get("TWILIO_PHONE_NUMBER");
   
   if (!account_sid || !auth_token || !from_number) {
-    console.error("Twilio environment variables not configured");
+    console.error("Twilio credentials not configured (neither in database nor environment)");
     return false;
   }
+
+  console.log("Using Twilio with account:", account_sid.substring(0, 8) + "...");
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${account_sid}/Messages.json`;
   const auth = btoa(`${account_sid}:${auth_token}`);
@@ -43,9 +46,10 @@ async function sendViaTwilio(phone: string, message: string): Promise<boolean> {
       }),
     });
 
+    const responseText = await response.text();
+    
     if (!response.ok) {
-      const error = await response.text();
-      console.error("Twilio error:", error);
+      console.error("Twilio error:", responseText);
       return false;
     }
 
@@ -162,11 +166,13 @@ async function sendViaBulkSMSBD(phone: string, message: string, config: Record<s
   return true;
 }
 
-// Main SMS sender function - now uses environment variables for Twilio
+// Main SMS sender function - supports all providers with database config
 async function sendSMS(phone: string, message: string, provider: SMSProvider): Promise<boolean> {
+  console.log(`Attempting to send SMS via ${provider.name} (${provider.provider})`);
+  
   switch (provider.provider) {
     case "twilio":
-      return sendViaTwilio(phone, message);
+      return sendViaTwilio(phone, message, provider.config);
     case "msg91":
       return sendViaMSG91(phone, message, provider.config);
     case "ssl_wireless":
