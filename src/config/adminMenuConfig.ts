@@ -28,6 +28,7 @@ import {
   RefreshCw,
   UserCog,
   AlertTriangle,
+  FilePlus,
   type LucideIcon
 } from 'lucide-react';
 
@@ -111,6 +112,7 @@ export const menuCategories: MenuCategory[] = [
     roles: ['admin', 'manager'],
     items: [
       { icon: Home, label: 'হোমপেজ', href: '/admin/homepage', roles: ['admin', 'manager'] },
+      { icon: FilePlus, label: 'পেজ ম্যানেজমেন্ট', href: '/admin/pages', roles: ['admin', 'manager'] },
       { icon: Palette, label: 'লোগো ও ব্র্যান্ডিং', href: '/admin/branding', roles: ['admin', 'manager'] },
       { icon: Image, label: 'ব্যানার', href: '/admin/banners', roles: ['admin', 'manager'] },
       { icon: Navigation, label: 'মেনু', href: '/admin/menu', roles: ['admin', 'manager'] },
