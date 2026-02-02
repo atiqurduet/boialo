@@ -75,8 +75,11 @@ import AdminStaffManagement from "./pages/admin/AdminStaffManagement";
 import AdminAutoAssign from "./pages/admin/AdminAutoAssign";
 import AdminRolePermissions from "./pages/admin/AdminRolePermissions";
 import AdminCartWishlistCustomers from "./pages/admin/AdminCartWishlistCustomers";
+import AdminPages from "./pages/admin/AdminPages";
+import AdminPageEditor from "./pages/admin/AdminPageEditor";
 import RefundPolicy from "./pages/RefundPolicy";
 import ChatWidget from "./components/ChatWidget";
+import DynamicPage from "./pages/DynamicPage";
 
 const queryClient = new QueryClient();
 
@@ -161,6 +164,11 @@ const App = () => (
                 <Route path="/admin/auto-assign" element={<AdminAutoAssign />} />
                 <Route path="/admin/role-permissions" element={<AdminRolePermissions />} />
                 <Route path="/admin/cart-wishlist-customers" element={<AdminCartWishlistCustomers />} />
+                <Route path="/admin/pages" element={<AdminPages />} />
+                <Route path="/admin/pages/:id" element={<AdminPageEditor />} />
+                
+                {/* Dynamic Page Route */}
+                <Route path="/page/:slug" element={<DynamicPage />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>

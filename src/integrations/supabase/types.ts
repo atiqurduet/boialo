@@ -1537,6 +1537,116 @@ export type Database = {
         }
         Relationships: []
       }
+      page_sections: {
+        Row: {
+          content: Json | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          page_id: string
+          section_type: string
+          settings: Json | null
+          sort_order: number | null
+          subtitle_bn: string | null
+          subtitle_en: string | null
+          title_bn: string | null
+          title_en: string | null
+          updated_at: string
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          page_id: string
+          section_type: string
+          settings?: Json | null
+          sort_order?: number | null
+          subtitle_bn?: string | null
+          subtitle_en?: string | null
+          title_bn?: string | null
+          title_en?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          page_id?: string
+          section_type?: string
+          settings?: Json | null
+          sort_order?: number | null
+          subtitle_bn?: string | null
+          subtitle_en?: string | null
+          title_bn?: string | null
+          title_en?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_sections_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pages: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description_bn: string | null
+          description_en: string | null
+          featured_image: string | null
+          id: string
+          is_homepage: boolean | null
+          meta_description: string | null
+          meta_title: string | null
+          slug: string
+          sort_order: number | null
+          status: string
+          title_bn: string
+          title_en: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description_bn?: string | null
+          description_en?: string | null
+          featured_image?: string | null
+          id?: string
+          is_homepage?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          slug: string
+          sort_order?: number | null
+          status?: string
+          title_bn: string
+          title_en?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description_bn?: string | null
+          description_en?: string | null
+          featured_image?: string | null
+          id?: string
+          is_homepage?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          slug?: string
+          sort_order?: number | null
+          status?: string
+          title_bn?: string
+          title_en?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payment_methods: {
         Row: {
           config: Json | null
