@@ -21,6 +21,7 @@ import { ArrowLeft, Save, Eye, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageSectionEditor } from '@/components/admin/page/PageSectionEditor';
 import { PageSectionList } from '@/components/admin/page/PageSectionList';
+import { SectionImageUpload } from '@/components/admin/page/SectionImageUpload';
 import type { Json } from '@/integrations/supabase/types';
 
 interface PageData {
@@ -468,20 +469,13 @@ const AdminPageEditor = () => {
                     <CardTitle>ফিচার্ড ইমেজ</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      <Input
-                        value={pageData.featured_image}
-                        onChange={(e) => setPageData({ ...pageData, featured_image: e.target.value })}
-                        placeholder="ইমেজ URL"
-                      />
-                      {pageData.featured_image && (
-                        <img
-                          src={pageData.featured_image}
-                          alt="Featured"
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                      )}
-                    </div>
+                    <SectionImageUpload
+                      value={pageData.featured_image}
+                      onChange={(url) => setPageData({ ...pageData, featured_image: url })}
+                      label=""
+                      folder="page-featured"
+                      aspectRatio="16/9"
+                    />
                   </CardContent>
                 </Card>
               </div>
@@ -554,7 +548,7 @@ const AdminPageEditor = () => {
                   <p className="text-sm font-medium text-primary">
                     {pageData.meta_title || pageData.title_bn || 'পেজ টাইটেল'}
                   </p>
-                  <p className="text-xs text-green-600">
+                  <p className="text-xs text-muted-foreground">
                     {window.location.origin}/page/{pageData.slug || 'page-slug'}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
