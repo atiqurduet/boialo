@@ -36,6 +36,16 @@ interface PageData {
   featured_image: string;
   status: string;
   is_homepage: boolean;
+  // New fields for private/coupon pages
+  page_type: string;
+  is_private: boolean;
+  access_code: string;
+  max_usage: number | null;
+  usage_per_user: number;
+  start_date: string;
+  end_date: string;
+  linked_offer_id: string;
+  linked_coupon_id: string;
 }
 
 interface PageSection {
@@ -63,6 +73,15 @@ const defaultPageData: PageData = {
   featured_image: '',
   status: 'draft',
   is_homepage: false,
+  page_type: 'landing',
+  is_private: false,
+  access_code: '',
+  max_usage: null,
+  usage_per_user: 1,
+  start_date: '',
+  end_date: '',
+  linked_offer_id: '',
+  linked_coupon_id: '',
 };
 
 const AdminPageEditor = () => {
@@ -124,6 +143,15 @@ const AdminPageEditor = () => {
         featured_image: existingPage.featured_image || '',
         status: existingPage.status || 'draft',
         is_homepage: existingPage.is_homepage || false,
+        page_type: (existingPage as any).page_type || 'landing',
+        is_private: (existingPage as any).is_private || false,
+        access_code: (existingPage as any).access_code || '',
+        max_usage: (existingPage as any).max_usage || null,
+        usage_per_user: (existingPage as any).usage_per_user || 1,
+        start_date: (existingPage as any).start_date ? new Date((existingPage as any).start_date).toISOString().slice(0, 16) : '',
+        end_date: (existingPage as any).end_date ? new Date((existingPage as any).end_date).toISOString().slice(0, 16) : '',
+        linked_offer_id: (existingPage as any).linked_offer_id || '',
+        linked_coupon_id: (existingPage as any).linked_coupon_id || '',
       });
     }
   }, [existingPage]);
@@ -151,21 +179,32 @@ const AdminPageEditor = () => {
         throw new Error('শিরোনাম এবং স্লাগ আবশ্যক');
       }
 
+      const pagePayload = {
+        title_bn: pageData.title_bn,
+        title_en: pageData.title_en || null,
+        slug: pageData.slug,
+        description_bn: pageData.description_bn || null,
+        description_en: pageData.description_en || null,
+        meta_title: pageData.meta_title || null,
+        meta_description: pageData.meta_description || null,
+        featured_image: pageData.featured_image || null,
+        status: pageData.status,
+        is_homepage: pageData.is_homepage,
+        page_type: pageData.page_type,
+        is_private: pageData.is_private,
+        access_code: pageData.access_code || null,
+        max_usage: pageData.max_usage,
+        usage_per_user: pageData.usage_per_user,
+        start_date: pageData.start_date ? new Date(pageData.start_date).toISOString() : null,
+        end_date: pageData.end_date ? new Date(pageData.end_date).toISOString() : null,
+        linked_offer_id: pageData.linked_offer_id || null,
+        linked_coupon_id: pageData.linked_coupon_id || null,
+      };
+
       if (isNew) {
         const { data, error } = await supabase
           .from('pages')
-          .insert({
-            title_bn: pageData.title_bn,
-            title_en: pageData.title_en || null,
-            slug: pageData.slug,
-            description_bn: pageData.description_bn || null,
-            description_en: pageData.description_en || null,
-            meta_title: pageData.meta_title || null,
-            meta_description: pageData.meta_description || null,
-            featured_image: pageData.featured_image || null,
-            status: pageData.status,
-            is_homepage: pageData.is_homepage,
-          })
+          .insert(pagePayload)
           .select()
           .single();
 
@@ -174,18 +213,7 @@ const AdminPageEditor = () => {
       } else {
         const { error } = await supabase
           .from('pages')
-          .update({
-            title_bn: pageData.title_bn,
-            title_en: pageData.title_en || null,
-            slug: pageData.slug,
-            description_bn: pageData.description_bn || null,
-            description_en: pageData.description_en || null,
-            meta_title: pageData.meta_title || null,
-            meta_description: pageData.meta_description || null,
-            featured_image: pageData.featured_image || null,
-            status: pageData.status,
-            is_homepage: pageData.is_homepage,
-          })
+          .update(pagePayload)
           .eq('id', id);
 
         if (error) throw error;
@@ -562,7 +590,128 @@ const AdminPageEditor = () => {
           <TabsContent value="settings" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>অ্যাডভান্সড সেটিংস</CardTitle>
+                <CardTitle>পেজ টাইপ</CardTitle>
+                <CardDescription>পেজের ধরণ এবং অ্যাক্সেস কন্ট্রোল সেটিংস</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>পেজ টাইপ</Label>
+                    <Select
+                      value={pageData.page_type}
+                      onValueChange={(value) => setPageData({ ...pageData, page_type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="landing">ল্যান্ডিং পেজ</SelectItem>
+                        <SelectItem value="offer">অফার পেজ</SelectItem>
+                        <SelectItem value="coupon">কুপন পেজ</SelectItem>
+                        <SelectItem value="campaign">ক্যাম্পেইন পেজ</SelectItem>
+                        <SelectItem value="promo">প্রোমো পেজ</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>স্ট্যাটাস</Label>
+                    <Select
+                      value={pageData.status}
+                      onValueChange={(value) => setPageData({ ...pageData, status: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">ড্রাফট</SelectItem>
+                        <SelectItem value="published">প্রকাশিত</SelectItem>
+                        <SelectItem value="archived">আর্কাইভ</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <Label>প্রাইভেট পেজ</Label>
+                    <p className="text-sm text-muted-foreground">
+                      শুধুমাত্র কোড সহ অ্যাক্সেস যোগ্য (সার্চে দেখাবে না)
+                    </p>
+                  </div>
+                  <Switch
+                    checked={pageData.is_private}
+                    onCheckedChange={(checked) => setPageData({ ...pageData, is_private: checked })}
+                  />
+                </div>
+
+                {pageData.is_private && (
+                  <div className="space-y-2 p-4 bg-muted rounded-lg">
+                    <Label>অ্যাক্সেস কোড</Label>
+                    <Input
+                      value={pageData.access_code}
+                      onChange={(e) => setPageData({ ...pageData, access_code: e.target.value.toUpperCase() })}
+                      placeholder="PROMO2024"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      ইউজারদের এই কোড দিয়ে পেজে প্রবেশ করতে হবে
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>ব্যবহার সীমা</CardTitle>
+                <CardDescription>পেজের ব্যবহার সীমাবদ্ধতা সেট করুন</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>সর্বোচ্চ ব্যবহার (মোট)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={pageData.max_usage || ''}
+                      onChange={(e) => setPageData({ ...pageData, max_usage: e.target.value ? parseInt(e.target.value) : null })}
+                      placeholder="সীমাহীন"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>প্রতি ইউজার ব্যবহার</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={pageData.usage_per_user}
+                      onChange={(e) => setPageData({ ...pageData, usage_per_user: parseInt(e.target.value) || 1 })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>শুরুর তারিখ</Label>
+                    <Input
+                      type="datetime-local"
+                      value={pageData.start_date}
+                      onChange={(e) => setPageData({ ...pageData, start_date: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>শেষ তারিখ</Label>
+                    <Input
+                      type="datetime-local"
+                      value={pageData.end_date}
+                      onChange={(e) => setPageData({ ...pageData, end_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>অন্যান্য সেটিংস</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">

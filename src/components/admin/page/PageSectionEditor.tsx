@@ -311,38 +311,48 @@ export const PageSectionEditor = ({ section, onSave, onClose }: PageSectionEdito
       case 'product_grid':
         return (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>ক্যাটাগরি</Label>
-              <Select
-                value={(sectionData.settings?.category_id as string) || ''}
-                onValueChange={(v) => updateSettings('category_id', v === 'all' ? '' : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="ক্যাটাগরি বাছুন" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">সব প্রোডাক্ট</SelectItem>
-                  {categories?.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name_bn}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Display Mode */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>প্রোডাক্ট সংখ্যা</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={24}
-                  value={(sectionData.settings?.limit as number) || 8}
-                  onChange={(e) => updateSettings('limit', parseInt(e.target.value))}
-                />
+                <Label>ডিসপ্লে মোড</Label>
+                <Select
+                  value={(sectionData.settings?.display_mode as string) || 'grid'}
+                  onValueChange={(v) => updateSettings('display_mode', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="grid">গ্রিড</SelectItem>
+                    <SelectItem value="carousel">ক্যারোসেল/স্লাইডার</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
-                <Label>কলাম সংখ্যা</Label>
+                <Label>ক্যাটাগরি</Label>
+                <Select
+                  value={(sectionData.settings?.category_id as string) || ''}
+                  onValueChange={(v) => updateSettings('category_id', v === 'all' ? '' : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="ক্যাটাগরি বাছুন" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">সব প্রোডাক্ট</SelectItem>
+                    {categories?.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name_bn}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {/* Grid Configuration */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>কলাম সংখ্যা (২-৮)</Label>
                 <Select
                   value={String((sectionData.settings?.columns as number) || 4)}
                   onValueChange={(v) => updateSettings('columns', parseInt(v))}
@@ -351,24 +361,117 @@ export const PageSectionEditor = ({ section, onSave, onClose }: PageSectionEdito
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="2">২ কলাম</SelectItem>
                     <SelectItem value="3">৩ কলাম</SelectItem>
                     <SelectItem value="4">৪ কলাম</SelectItem>
                     <SelectItem value="5">৫ কলাম</SelectItem>
+                    <SelectItem value="6">৬ কলাম</SelectItem>
+                    <SelectItem value="7">৭ কলাম</SelectItem>
+                    <SelectItem value="8">৮ কলাম</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>রো সংখ্যা (২-৮)</Label>
+                <Select
+                  value={String((sectionData.settings?.rows as number) || 2)}
+                  onValueChange={(v) => updateSettings('rows', parseInt(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">১ রো</SelectItem>
+                    <SelectItem value="2">২ রো</SelectItem>
+                    <SelectItem value="3">৩ রো</SelectItem>
+                    <SelectItem value="4">৪ রো</SelectItem>
+                    <SelectItem value="5">৫ রো</SelectItem>
+                    <SelectItem value="6">৬ রো</SelectItem>
+                    <SelectItem value="7">৭ রো</SelectItem>
+                    <SelectItem value="8">৮ রো</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>প্রোডাক্ট সংখ্যা</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={64}
+                  value={(sectionData.settings?.limit as number) || 8}
+                  onChange={(e) => updateSettings('limit', parseInt(e.target.value))}
+                />
+              </div>
+            </div>
+            
+            {/* Sorting & Filtering */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>সর্টিং</Label>
+                <Select
+                  value={(sectionData.settings?.sort_by as string) || 'latest'}
+                  onValueChange={(v) => updateSettings('sort_by', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="latest">সর্বশেষ</SelectItem>
+                    <SelectItem value="price_low">মূল্য (কম থেকে বেশি)</SelectItem>
+                    <SelectItem value="price_high">মূল্য (বেশি থেকে কম)</SelectItem>
+                    <SelectItem value="discount">সর্বোচ্চ ছাড়</SelectItem>
+                    <SelectItem value="popular">জনপ্রিয়</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>ফিল্টার</Label>
+                <Select
+                  value={(sectionData.settings?.filter as string) || 'all'}
+                  onValueChange={(v) => updateSettings('filter', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">সব প্রোডাক্ট</SelectItem>
+                    <SelectItem value="featured">ফিচার্ড</SelectItem>
+                    <SelectItem value="discount">ছাড় আছে</SelectItem>
+                    <SelectItem value="preorder">প্রি-অর্ডার</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
+            
             <DynamicLinkSelector
               value={(sectionData.settings?.view_all_link as string) || ''}
               onChange={(url) => updateSettings('view_all_link', url)}
               label="সব দেখুন লিংক"
             />
+            
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={(sectionData.settings?.show_cart_button as boolean) !== false}
+                  onCheckedChange={(v) => updateSettings('show_cart_button', v)}
+                />
+                <Label>কার্ট বাটন দেখান</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={(sectionData.settings?.show_wishlist_button as boolean) !== false}
+                  onCheckedChange={(v) => updateSettings('show_wishlist_button', v)}
+                />
+                <Label>উইশলিস্ট বাটন দেখান</Label>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <Switch
                 checked={(sectionData.settings?.show_discount as boolean) !== false}
                 onCheckedChange={(v) => updateSettings('show_discount', v)}
               />
-              <Label>ছাড় দেখান</Label>
+              <Label>ছাড় ব্যাজ দেখান</Label>
             </div>
           </div>
         );
@@ -434,11 +537,96 @@ export const PageSectionEditor = ({ section, onSave, onClose }: PageSectionEdito
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="2">২ কলাম</SelectItem>
                     <SelectItem value="3">৩ কলাম</SelectItem>
                     <SelectItem value="4">৪ কলাম</SelectItem>
                     <SelectItem value="5">৫ কলাম</SelectItem>
+                    <SelectItem value="6">৬ কলাম</SelectItem>
+                    <SelectItem value="7">৭ কলাম</SelectItem>
+                    <SelectItem value="8">৮ কলাম</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>রো সংখ্যা (২-৮)</Label>
+                <Select
+                  value={String((sectionData.settings?.rows as number) || 2)}
+                  onValueChange={(v) => updateSettings('rows', parseInt(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">১ রো</SelectItem>
+                    <SelectItem value="2">২ রো</SelectItem>
+                    <SelectItem value="3">৩ রো</SelectItem>
+                    <SelectItem value="4">৪ রো</SelectItem>
+                    <SelectItem value="5">৫ রো</SelectItem>
+                    <SelectItem value="6">৬ রো</SelectItem>
+                    <SelectItem value="7">৭ রো</SelectItem>
+                    <SelectItem value="8">৮ রো</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {/* Display Mode */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>ডিসপ্লে মোড</Label>
+                <Select
+                  value={(sectionData.settings?.display_mode as string) || 'grid'}
+                  onValueChange={(v) => updateSettings('display_mode', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="grid">গ্রিড</SelectItem>
+                    <SelectItem value="carousel">ক্যারোসেল/স্লাইডার</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>সর্টিং</Label>
+                <Select
+                  value={(sectionData.settings?.sort_by as string) || 'latest'}
+                  onValueChange={(v) => updateSettings('sort_by', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="latest">সর্বশেষ</SelectItem>
+                    <SelectItem value="price_low">মূল্য (কম থেকে বেশি)</SelectItem>
+                    <SelectItem value="price_high">মূল্য (বেশি থেকে কম)</SelectItem>
+                    <SelectItem value="discount">সর্বোচ্চ ছাড়</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <DynamicLinkSelector
+              value={(sectionData.settings?.view_all_link as string) || ''}
+              onChange={(url) => updateSettings('view_all_link', url)}
+              label="সব দেখুন লিংক"
+            />
+            
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={(sectionData.settings?.show_cart_button as boolean) !== false}
+                  onCheckedChange={(v) => updateSettings('show_cart_button', v)}
+                />
+                <Label>কার্ট বাটন দেখান</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={(sectionData.settings?.show_wishlist_button as boolean) !== false}
+                  onCheckedChange={(v) => updateSettings('show_wishlist_button', v)}
+                />
+                <Label>উইশলিস্ট বাটন দেখান</Label>
               </div>
             </div>
           </div>

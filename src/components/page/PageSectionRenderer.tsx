@@ -7,6 +7,8 @@ import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
 import { CountdownTimer } from '@/components/CountdownTimer';
+import { ProductSectionCard } from './ProductSectionCard';
+import { ProductCarousel } from './ProductCarousel';
 
 interface PageSection {
   id: string;
@@ -42,6 +44,7 @@ const formatProduct = (p: {
   originalPrice: p.original_price || undefined,
   discount: p.discount_percent || undefined,
   image: Array.isArray(p.images) && p.images.length > 0 ? String(p.images[0]) : '/placeholder.svg',
+  isUniversal: false,
 });
 
 // Helper to convert universal product to display format
@@ -63,6 +66,7 @@ const formatUniversalProduct = (p: {
   originalPrice: p.original_price || undefined,
   discount: p.discount_percent || undefined,
   image: Array.isArray(p.images) && p.images.length > 0 ? String(p.images[0]) : '/placeholder.svg',
+  isUniversal: true,
 });
 
 export const PageSectionRenderer = ({ section }: PageSectionRendererProps) => {
@@ -232,25 +236,51 @@ const ImageGallerySection = ({ section }: { section: PageSection }) => {
   );
 };
 
-// Product Grid Section
+// Product Grid Section - Enhanced with cart/wishlist buttons
 const ProductGridSection = ({ section }: { section: PageSection }) => {
   const { settings, title_bn, subtitle_bn } = section;
   const categoryId = settings?.category_id as string;
   const limit = (settings?.limit as number) || 8;
   const columns = (settings?.columns as number) || 4;
+  const rows = (settings?.rows as number) || 2;
   const viewAllLink = settings?.view_all_link as string;
+  const displayMode = (settings?.display_mode as string) || 'grid';
+  const sortBy = (settings?.sort_by as string) || 'latest';
+  const filter = (settings?.filter as string) || 'all';
+  const showCartButton = settings?.show_cart_button !== false;
+  const showWishlistButton = settings?.show_wishlist_button !== false;
 
   const { data: products } = useQuery({
-    queryKey: ['page-products', categoryId, limit],
+    queryKey: ['page-products', categoryId, limit, sortBy, filter],
     queryFn: async () => {
       let query = supabase
         .from('products')
-        .select('id, slug, title_bn, price, original_price, discount_percent, images, author')
+        .select('id, slug, title_bn, price, original_price, discount_percent, images, author, is_featured, is_preorder')
         .eq('is_active', true)
         .limit(limit);
 
       if (categoryId) {
         query = query.eq('category_id', categoryId);
+      }
+      
+      // Apply filter
+      if (filter === 'featured') {
+        query = query.eq('is_featured', true);
+      } else if (filter === 'discount') {
+        query = query.gt('discount_percent', 0);
+      } else if (filter === 'preorder') {
+        query = query.eq('is_preorder', true);
+      }
+      
+      // Apply sorting
+      if (sortBy === 'price_low') {
+        query = query.order('price', { ascending: true });
+      } else if (sortBy === 'price_high') {
+        query = query.order('price', { ascending: false });
+      } else if (sortBy === 'discount') {
+        query = query.order('discount_percent', { ascending: false, nullsFirst: false });
+      } else {
+        query = query.order('created_at', { ascending: false });
       }
 
       const { data } = await query;
@@ -259,6 +289,8 @@ const ProductGridSection = ({ section }: { section: PageSection }) => {
   });
 
   if (!products?.length) return null;
+
+  const formattedProducts = products.map(formatProduct);
 
   return (
     <section className="container py-8">
@@ -270,66 +302,78 @@ const ProductGridSection = ({ section }: { section: PageSection }) => {
           </div>
           {viewAllLink && (
             <Button variant="outline" asChild>
-              <Link to={viewAllLink}>সব দেখুন</Link>
+              <Link to={viewAllLink}>
+                সব দেখুন <ChevronRight className="ml-1 h-4 w-4" />
+              </Link>
             </Button>
           )}
         </div>
       )}
-      <div className="grid grid-cols-2 gap-4" style={{ gridTemplateColumns: `repeat(2, 1fr)` }}>
-        {products.map((product) => {
-          const formatted = formatProduct(product);
-          return (
-            <Link 
+      
+      {displayMode === 'carousel' ? (
+        <ProductCarousel
+          products={formattedProducts}
+          itemsPerView={columns}
+          showCartButton={showCartButton}
+          showWishlistButton={showWishlistButton}
+        />
+      ) : (
+        <div 
+          className="grid gap-4"
+          style={{ 
+            gridTemplateColumns: `repeat(2, 1fr)`,
+          }}
+        >
+          {formattedProducts.slice(0, columns * rows).map((product) => (
+            <ProductSectionCard
               key={product.id}
-              to={`/product/${product.slug}`}
-              className="bg-card rounded-lg p-4 border hover:shadow-md transition-shadow"
-            >
-              <div className="relative">
-                <img 
-                  src={formatted.image} 
-                  alt={formatted.title}
-                  className="w-full h-40 object-cover rounded mb-3"
-                  loading="lazy"
-                />
-                {formatted.discount && formatted.discount > 0 && (
-                  <span className="absolute top-2 right-2 bg-destructive text-white text-xs px-2 py-1 rounded">
-                    -{formatted.discount}%
-                  </span>
-                )}
-              </div>
-              <h3 className="font-medium line-clamp-2 mb-1">{formatted.title}</h3>
-              {formatted.author && (
-                <p className="text-sm text-muted-foreground mb-1">{formatted.author}</p>
-              )}
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-bold">৳{formatted.price}</span>
-                {formatted.originalPrice && formatted.originalPrice > formatted.price && (
-                  <span className="text-sm text-muted-foreground line-through">৳{formatted.originalPrice}</span>
-                )}
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-      <style>{`
-        @media (min-width: 768px) {
-          .grid { grid-template-columns: repeat(${columns}, 1fr) !important; }
-        }
-      `}</style>
+              product={product}
+              showCartButton={showCartButton}
+              showWishlistButton={showWishlistButton}
+            />
+          ))}
+        </div>
+      )}
+      
+      {displayMode !== 'carousel' && (
+        <style>{`
+          @media (min-width: 640px) {
+            section:has([data-product-grid]) .grid { 
+              grid-template-columns: repeat(${Math.min(columns, 3)}, 1fr) !important; 
+            }
+          }
+          @media (min-width: 768px) {
+            section:has([data-product-grid]) .grid { 
+              grid-template-columns: repeat(${Math.min(columns, 4)}, 1fr) !important; 
+            }
+          }
+          @media (min-width: 1024px) {
+            section:has([data-product-grid]) .grid { 
+              grid-template-columns: repeat(${columns}, 1fr) !important; 
+            }
+          }
+        `}</style>
+      )}
     </section>
   );
 };
 
-// Universal Product Grid Section
+// Universal Product Grid Section - Enhanced with cart/wishlist buttons
 const UniversalProductGridSection = ({ section }: { section: PageSection }) => {
   const { settings, title_bn, subtitle_bn } = section;
   const categoryId = settings?.category_id as string;
   const productType = settings?.product_type as string;
   const limit = (settings?.limit as number) || 8;
   const columns = (settings?.columns as number) || 4;
+  const rows = (settings?.rows as number) || 2;
+  const viewAllLink = settings?.view_all_link as string;
+  const displayMode = (settings?.display_mode as string) || 'grid';
+  const sortBy = (settings?.sort_by as string) || 'latest';
+  const showCartButton = settings?.show_cart_button !== false;
+  const showWishlistButton = settings?.show_wishlist_button !== false;
 
   const { data: products } = useQuery({
-    queryKey: ['page-universal-products', categoryId, productType, limit],
+    queryKey: ['page-universal-products', categoryId, productType, limit, sortBy],
     queryFn: async () => {
       let query = supabase
         .from('universal_products')
@@ -343,6 +387,17 @@ const UniversalProductGridSection = ({ section }: { section: PageSection }) => {
       if (productType) {
         query = query.eq('product_type', productType as 'food' | 'lifestyle' | 'stationery');
       }
+      
+      // Apply sorting
+      if (sortBy === 'price_low') {
+        query = query.order('price', { ascending: true });
+      } else if (sortBy === 'price_high') {
+        query = query.order('price', { ascending: false });
+      } else if (sortBy === 'discount') {
+        query = query.order('discount_percent', { ascending: false, nullsFirst: false });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
 
       const { data } = await query;
       return data || [];
@@ -351,55 +406,68 @@ const UniversalProductGridSection = ({ section }: { section: PageSection }) => {
 
   if (!products?.length) return null;
 
+  const formattedProducts = products.map(formatUniversalProduct);
+
   return (
     <section className="container py-8">
       {title_bn && (
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold">{title_bn}</h2>
-          {subtitle_bn && <p className="text-muted-foreground">{subtitle_bn}</p>}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold">{title_bn}</h2>
+            {subtitle_bn && <p className="text-muted-foreground">{subtitle_bn}</p>}
+          </div>
+          {viewAllLink && (
+            <Button variant="outline" asChild>
+              <Link to={viewAllLink}>
+                সব দেখুন <ChevronRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+          )}
         </div>
       )}
-      <div className="grid grid-cols-2 gap-4" style={{ gridTemplateColumns: `repeat(2, 1fr)` }}>
-        {products.map((product) => {
-          const formatted = formatUniversalProduct(product);
-          return (
-            <Link 
+      
+      {displayMode === 'carousel' ? (
+        <ProductCarousel
+          products={formattedProducts}
+          itemsPerView={columns}
+          showCartButton={showCartButton}
+          showWishlistButton={showWishlistButton}
+        />
+      ) : (
+        <div 
+          className="grid gap-4"
+          style={{ gridTemplateColumns: `repeat(2, 1fr)` }}
+        >
+          {formattedProducts.slice(0, columns * rows).map((product) => (
+            <ProductSectionCard
               key={product.id}
-              to={`/universal-product/${product.slug}`}
-              className="bg-card rounded-lg p-4 border hover:shadow-md transition-shadow"
-            >
-              <div className="relative">
-                <img 
-                  src={formatted.image} 
-                  alt={formatted.title}
-                  className="w-full h-40 object-cover rounded mb-3"
-                  loading="lazy"
-                />
-                {formatted.discount && formatted.discount > 0 && (
-                  <span className="absolute top-2 right-2 bg-destructive text-white text-xs px-2 py-1 rounded">
-                    -{formatted.discount}%
-                  </span>
-                )}
-              </div>
-              <h3 className="font-medium line-clamp-2 mb-1">{formatted.title}</h3>
-              {formatted.brand && (
-                <p className="text-sm text-muted-foreground mb-1">{formatted.brand}</p>
-              )}
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-bold">৳{formatted.price}</span>
-                {formatted.originalPrice && formatted.originalPrice > formatted.price && (
-                  <span className="text-sm text-muted-foreground line-through">৳{formatted.originalPrice}</span>
-                )}
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-      <style>{`
-        @media (min-width: 768px) {
-          .grid { grid-template-columns: repeat(${columns}, 1fr) !important; }
-        }
-      `}</style>
+              product={product}
+              showCartButton={showCartButton}
+              showWishlistButton={showWishlistButton}
+            />
+          ))}
+        </div>
+      )}
+      
+      {displayMode !== 'carousel' && (
+        <style>{`
+          @media (min-width: 640px) {
+            section:has([data-universal-product-grid]) .grid { 
+              grid-template-columns: repeat(${Math.min(columns, 3)}, 1fr) !important; 
+            }
+          }
+          @media (min-width: 768px) {
+            section:has([data-universal-product-grid]) .grid { 
+              grid-template-columns: repeat(${Math.min(columns, 4)}, 1fr) !important; 
+            }
+          }
+          @media (min-width: 1024px) {
+            section:has([data-universal-product-grid]) .grid { 
+              grid-template-columns: repeat(${columns}, 1fr) !important; 
+            }
+          }
+        `}</style>
+      )}
     </section>
   );
 };
@@ -605,13 +673,17 @@ const FeatureCardsSection = ({ section }: { section: PageSection }) => {
   );
 };
 
-// Flash Sale Section
+// Flash Sale Section - Enhanced with cart/wishlist buttons
 const FlashSaleSection = ({ section }: { section: PageSection }) => {
   const { settings, title_bn } = section;
   const minDiscount = (settings?.min_discount as number) || 20;
   const limit = (settings?.limit as number) || 8;
+  const columns = (settings?.columns as number) || 4;
   const endDate = settings?.end_date as string;
   const showCountdown = settings?.show_countdown !== false;
+  const displayMode = (settings?.display_mode as string) || 'grid';
+  const showCartButton = settings?.show_cart_button !== false;
+  const showWishlistButton = settings?.show_wishlist_button !== false;
 
   const { data: products } = useQuery({
     queryKey: ['flash-sale-products', minDiscount, limit],
@@ -621,12 +693,15 @@ const FlashSaleSection = ({ section }: { section: PageSection }) => {
         .select('id, slug, title_bn, price, original_price, discount_percent, images, author')
         .eq('is_active', true)
         .gte('discount_percent', minDiscount)
+        .order('discount_percent', { ascending: false })
         .limit(limit);
       return data || [];
     },
   });
 
   if (!products?.length) return null;
+
+  const formattedProducts = products.map(formatProduct);
 
   return (
     <section className="container py-8">
@@ -641,39 +716,26 @@ const FlashSaleSection = ({ section }: { section: PageSection }) => {
           )}
         </div>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {products.map((product) => {
-          const formatted = formatProduct(product);
-          return (
-            <Link 
+      
+      {displayMode === 'carousel' ? (
+        <ProductCarousel
+          products={formattedProducts}
+          itemsPerView={columns}
+          showCartButton={showCartButton}
+          showWishlistButton={showWishlistButton}
+        />
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {formattedProducts.map((product) => (
+            <ProductSectionCard
               key={product.id}
-              to={`/product/${product.slug}`}
-              className="bg-card rounded-lg p-4 border hover:shadow-md transition-shadow"
-            >
-              <div className="relative">
-                <img 
-                  src={formatted.image} 
-                  alt={formatted.title}
-                  className="w-full h-40 object-cover rounded mb-3"
-                  loading="lazy"
-                />
-                {formatted.discount && (
-                  <span className="absolute top-2 right-2 bg-destructive text-white text-xs px-2 py-1 rounded font-bold">
-                    -{formatted.discount}%
-                  </span>
-                )}
-              </div>
-              <h3 className="font-medium line-clamp-2 mb-1">{formatted.title}</h3>
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-bold">৳{formatted.price}</span>
-                {formatted.originalPrice && (
-                  <span className="text-sm text-muted-foreground line-through">৳{formatted.originalPrice}</span>
-                )}
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+              product={product}
+              showCartButton={showCartButton}
+              showWishlistButton={showWishlistButton}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 };
