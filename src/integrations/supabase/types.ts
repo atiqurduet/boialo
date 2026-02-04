@@ -1593,59 +1593,143 @@ export type Database = {
           },
         ]
       }
+      page_usage: {
+        Row: {
+          discount_applied: number | null
+          id: string
+          order_id: string | null
+          page_id: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          discount_applied?: number | null
+          id?: string
+          order_id?: string | null
+          page_id: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          discount_applied?: number | null
+          id?: string
+          order_id?: string | null
+          page_id?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_usage_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "page_usage_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pages: {
         Row: {
+          access_code: string | null
           created_at: string
           created_by: string | null
           description_bn: string | null
           description_en: string | null
+          end_date: string | null
           featured_image: string | null
           id: string
           is_homepage: boolean | null
+          is_private: boolean | null
+          linked_coupon_id: string | null
+          linked_offer_id: string | null
+          max_usage: number | null
           meta_description: string | null
           meta_title: string | null
+          page_type: string | null
           slug: string
           sort_order: number | null
+          start_date: string | null
           status: string
           title_bn: string
           title_en: string | null
           updated_at: string
+          usage_per_user: number | null
         }
         Insert: {
+          access_code?: string | null
           created_at?: string
           created_by?: string | null
           description_bn?: string | null
           description_en?: string | null
+          end_date?: string | null
           featured_image?: string | null
           id?: string
           is_homepage?: boolean | null
+          is_private?: boolean | null
+          linked_coupon_id?: string | null
+          linked_offer_id?: string | null
+          max_usage?: number | null
           meta_description?: string | null
           meta_title?: string | null
+          page_type?: string | null
           slug: string
           sort_order?: number | null
+          start_date?: string | null
           status?: string
           title_bn: string
           title_en?: string | null
           updated_at?: string
+          usage_per_user?: number | null
         }
         Update: {
+          access_code?: string | null
           created_at?: string
           created_by?: string | null
           description_bn?: string | null
           description_en?: string | null
+          end_date?: string | null
           featured_image?: string | null
           id?: string
           is_homepage?: boolean | null
+          is_private?: boolean | null
+          linked_coupon_id?: string | null
+          linked_offer_id?: string | null
+          max_usage?: number | null
           meta_description?: string | null
           meta_title?: string | null
+          page_type?: string | null
           slug?: string
           sort_order?: number | null
+          start_date?: string | null
           status?: string
           title_bn?: string
           title_en?: string | null
           updated_at?: string
+          usage_per_user?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pages_linked_coupon_id_fkey"
+            columns: ["linked_coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pages_linked_offer_id_fkey"
+            columns: ["linked_offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_methods: {
         Row: {
