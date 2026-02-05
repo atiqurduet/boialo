@@ -18,6 +18,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ArrowLeft, Save, Eye, Plus } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { PageSectionEditor } from '@/components/admin/page/PageSectionEditor';
 import { PageSectionList } from '@/components/admin/page/PageSectionList';
@@ -46,6 +49,10 @@ interface PageData {
   end_date: string;
   linked_offer_id: string;
   linked_coupon_id: string;
+  // Product/Category selection for coupon pages
+  selected_product_ids: string[];
+  selected_category_ids: string[];
+  show_in_offers_page: boolean;
 }
 
 interface PageSection {
@@ -82,6 +89,9 @@ const defaultPageData: PageData = {
   end_date: '',
   linked_offer_id: '',
   linked_coupon_id: '',
+  selected_product_ids: [],
+  selected_category_ids: [],
+  show_in_offers_page: false,
 };
 
 const AdminPageEditor = () => {
@@ -129,6 +139,33 @@ const AdminPageEditor = () => {
     enabled: !isNew,
   });
 
+  // Fetch categories for coupon page selection
+  const { data: allCategories } = useQuery({
+    queryKey: ['all-categories-for-pages'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('categories')
+        .select('id, name_bn')
+        .eq('is_active', true)
+        .order('name_bn');
+      return data || [];
+    },
+  });
+
+  // Fetch products for coupon page selection
+  const { data: allProducts } = useQuery({
+    queryKey: ['all-products-for-pages'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('products')
+        .select('id, title_bn, slug')
+        .eq('is_active', true)
+        .order('title_bn')
+        .limit(500);
+      return data || [];
+    },
+  });
+
   useEffect(() => {
     if (existingPage) {
       setPageData({
@@ -152,6 +189,9 @@ const AdminPageEditor = () => {
         end_date: (existingPage as any).end_date ? new Date((existingPage as any).end_date).toISOString().slice(0, 16) : '',
         linked_offer_id: (existingPage as any).linked_offer_id || '',
         linked_coupon_id: (existingPage as any).linked_coupon_id || '',
+        selected_product_ids: (existingPage as any).selected_product_ids || [],
+        selected_category_ids: (existingPage as any).selected_category_ids || [],
+        show_in_offers_page: (existingPage as any).show_in_offers_page ?? false,
       });
     }
   }, [existingPage]);
@@ -199,6 +239,9 @@ const AdminPageEditor = () => {
         end_date: pageData.end_date ? new Date(pageData.end_date).toISOString() : null,
         linked_offer_id: pageData.linked_offer_id || null,
         linked_coupon_id: pageData.linked_coupon_id || null,
+        selected_product_ids: pageData.selected_product_ids,
+        selected_category_ids: pageData.selected_category_ids,
+        show_in_offers_page: pageData.show_in_offers_page,
       };
 
       if (isNew) {
@@ -726,8 +769,144 @@ const AdminPageEditor = () => {
                     onCheckedChange={(checked) => setPageData({ ...pageData, is_homepage: checked })}
                   />
                 </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>অফার পেজে দেখাবে না</Label>
+                    <p className="text-sm text-muted-foreground">
+                      কুপন পেজ পাবলিক অফার লিস্টে দেখাবে না
+                    </p>
+                  </div>
+                  <Switch
+                    checked={!pageData.show_in_offers_page}
+                    onCheckedChange={(checked) => setPageData({ ...pageData, show_in_offers_page: !checked })}
+                  />
+                </div>
               </CardContent>
             </Card>
+
+            {/* Coupon Page - Product/Category Selection */}
+            {(pageData.page_type === 'coupon' || pageData.page_type === 'promo') && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>প্রোডাক্ট/ক্যাটাগরি সিলেকশন</CardTitle>
+                  <CardDescription>
+                    এই কুপন পেজ শুধুমাত্র সিলেক্টেড প্রোডাক্ট বা ক্যাটাগরিতে প্রযোজ্য হবে
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Category Selection */}
+                  <div className="space-y-3">
+                    <Label>ক্যাটাগরি সিলেক্ট করুন (ঐচ্ছিক)</Label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {pageData.selected_category_ids.map((catId) => {
+                        const cat = allCategories?.find(c => c.id === catId);
+                        return cat ? (
+                          <Badge 
+                            key={catId} 
+                            variant="secondary" 
+                            className="cursor-pointer"
+                            onClick={() => setPageData({
+                              ...pageData,
+                              selected_category_ids: pageData.selected_category_ids.filter(id => id !== catId)
+                            })}
+                          >
+                            {cat.name_bn} ✕
+                          </Badge>
+                        ) : null;
+                      })}
+                    </div>
+                    <ScrollArea className="h-40 border rounded-md p-3">
+                      <div className="space-y-2">
+                        {allCategories?.map((cat) => (
+                          <div key={cat.id} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`cat-${cat.id}`}
+                              checked={pageData.selected_category_ids.includes(cat.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setPageData({
+                                    ...pageData,
+                                    selected_category_ids: [...pageData.selected_category_ids, cat.id]
+                                  });
+                                } else {
+                                  setPageData({
+                                    ...pageData,
+                                    selected_category_ids: pageData.selected_category_ids.filter(id => id !== cat.id)
+                                  });
+                                }
+                              }}
+                            />
+                            <label htmlFor={`cat-${cat.id}`} className="text-sm cursor-pointer">
+                              {cat.name_bn}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+
+                  {/* Product Selection */}
+                  <div className="space-y-3">
+                    <Label>প্রোডাক্ট সিলেক্ট করুন (ঐচ্ছিক)</Label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {pageData.selected_product_ids.slice(0, 10).map((prodId) => {
+                        const prod = allProducts?.find(p => p.id === prodId);
+                        return prod ? (
+                          <Badge 
+                            key={prodId} 
+                            variant="outline" 
+                            className="cursor-pointer"
+                            onClick={() => setPageData({
+                              ...pageData,
+                              selected_product_ids: pageData.selected_product_ids.filter(id => id !== prodId)
+                            })}
+                          >
+                            {prod.title_bn.substring(0, 30)}... ✕
+                          </Badge>
+                        ) : null;
+                      })}
+                      {pageData.selected_product_ids.length > 10 && (
+                        <Badge variant="secondary">
+                          +{pageData.selected_product_ids.length - 10} টি আরও
+                        </Badge>
+                      )}
+                    </div>
+                    <ScrollArea className="h-48 border rounded-md p-3">
+                      <div className="space-y-2">
+                        {allProducts?.map((prod) => (
+                          <div key={prod.id} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`prod-${prod.id}`}
+                              checked={pageData.selected_product_ids.includes(prod.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setPageData({
+                                    ...pageData,
+                                    selected_product_ids: [...pageData.selected_product_ids, prod.id]
+                                  });
+                                } else {
+                                  setPageData({
+                                    ...pageData,
+                                    selected_product_ids: pageData.selected_product_ids.filter(id => id !== prod.id)
+                                  });
+                                }
+                              }}
+                            />
+                            <label htmlFor={`prod-${prod.id}`} className="text-sm cursor-pointer line-clamp-1">
+                              {prod.title_bn}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                    <p className="text-xs text-muted-foreground">
+                      কোনো সিলেকশন না থাকলে সব প্রোডাক্টে প্রযোজ্য হবে
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
 

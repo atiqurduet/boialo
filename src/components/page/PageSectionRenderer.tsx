@@ -319,10 +319,8 @@ const ProductGridSection = ({ section }: { section: PageSection }) => {
         />
       ) : (
         <div 
-          className="grid gap-4"
-          style={{ 
-            gridTemplateColumns: `repeat(2, 1fr)`,
-          }}
+          className="product-grid-section grid gap-4"
+          data-columns={columns}
         >
           {formattedProducts.slice(0, columns * rows).map((product) => (
             <ProductSectionCard
@@ -332,27 +330,32 @@ const ProductGridSection = ({ section }: { section: PageSection }) => {
               showWishlistButton={showWishlistButton}
             />
           ))}
+          <style>{`
+            .product-grid-section[data-columns="${columns}"] {
+              grid-template-columns: repeat(2, 1fr);
+            }
+            @media (min-width: 640px) {
+              .product-grid-section[data-columns="${columns}"] {
+                grid-template-columns: repeat(${Math.min(columns, 3)}, 1fr);
+              }
+            }
+            @media (min-width: 768px) {
+              .product-grid-section[data-columns="${columns}"] {
+                grid-template-columns: repeat(${Math.min(columns, 4)}, 1fr);
+              }
+            }
+            @media (min-width: 1024px) {
+              .product-grid-section[data-columns="${columns}"] {
+                grid-template-columns: repeat(${Math.min(columns, 6)}, 1fr);
+              }
+            }
+            @media (min-width: 1280px) {
+              .product-grid-section[data-columns="${columns}"] {
+                grid-template-columns: repeat(${columns}, 1fr);
+              }
+            }
+          `}</style>
         </div>
-      )}
-      
-      {displayMode !== 'carousel' && (
-        <style>{`
-          @media (min-width: 640px) {
-            section:has([data-product-grid]) .grid { 
-              grid-template-columns: repeat(${Math.min(columns, 3)}, 1fr) !important; 
-            }
-          }
-          @media (min-width: 768px) {
-            section:has([data-product-grid]) .grid { 
-              grid-template-columns: repeat(${Math.min(columns, 4)}, 1fr) !important; 
-            }
-          }
-          @media (min-width: 1024px) {
-            section:has([data-product-grid]) .grid { 
-              grid-template-columns: repeat(${columns}, 1fr) !important; 
-            }
-          }
-        `}</style>
       )}
     </section>
   );
@@ -435,8 +438,8 @@ const UniversalProductGridSection = ({ section }: { section: PageSection }) => {
         />
       ) : (
         <div 
-          className="grid gap-4"
-          style={{ gridTemplateColumns: `repeat(2, 1fr)` }}
+          className="universal-product-grid-section grid gap-4"
+          data-columns={columns}
         >
           {formattedProducts.slice(0, columns * rows).map((product) => (
             <ProductSectionCard
@@ -446,27 +449,32 @@ const UniversalProductGridSection = ({ section }: { section: PageSection }) => {
               showWishlistButton={showWishlistButton}
             />
           ))}
+          <style>{`
+            .universal-product-grid-section[data-columns="${columns}"] {
+              grid-template-columns: repeat(2, 1fr);
+            }
+            @media (min-width: 640px) {
+              .universal-product-grid-section[data-columns="${columns}"] {
+                grid-template-columns: repeat(${Math.min(columns, 3)}, 1fr);
+              }
+            }
+            @media (min-width: 768px) {
+              .universal-product-grid-section[data-columns="${columns}"] {
+                grid-template-columns: repeat(${Math.min(columns, 4)}, 1fr);
+              }
+            }
+            @media (min-width: 1024px) {
+              .universal-product-grid-section[data-columns="${columns}"] {
+                grid-template-columns: repeat(${Math.min(columns, 6)}, 1fr);
+              }
+            }
+            @media (min-width: 1280px) {
+              .universal-product-grid-section[data-columns="${columns}"] {
+                grid-template-columns: repeat(${columns}, 1fr);
+              }
+            }
+          `}</style>
         </div>
-      )}
-      
-      {displayMode !== 'carousel' && (
-        <style>{`
-          @media (min-width: 640px) {
-            section:has([data-universal-product-grid]) .grid { 
-              grid-template-columns: repeat(${Math.min(columns, 3)}, 1fr) !important; 
-            }
-          }
-          @media (min-width: 768px) {
-            section:has([data-universal-product-grid]) .grid { 
-              grid-template-columns: repeat(${Math.min(columns, 4)}, 1fr) !important; 
-            }
-          }
-          @media (min-width: 1024px) {
-            section:has([data-universal-product-grid]) .grid { 
-              grid-template-columns: repeat(${columns}, 1fr) !important; 
-            }
-          }
-        `}</style>
       )}
     </section>
   );
