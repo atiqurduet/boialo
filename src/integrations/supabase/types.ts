@@ -1653,6 +1653,9 @@ export type Database = {
           meta_description: string | null
           meta_title: string | null
           page_type: string | null
+          selected_category_ids: string[] | null
+          selected_product_ids: string[] | null
+          show_in_offers_page: boolean | null
           slug: string
           sort_order: number | null
           start_date: string | null
@@ -1679,6 +1682,9 @@ export type Database = {
           meta_description?: string | null
           meta_title?: string | null
           page_type?: string | null
+          selected_category_ids?: string[] | null
+          selected_product_ids?: string[] | null
+          show_in_offers_page?: boolean | null
           slug: string
           sort_order?: number | null
           start_date?: string | null
@@ -1705,6 +1711,9 @@ export type Database = {
           meta_description?: string | null
           meta_title?: string | null
           page_type?: string | null
+          selected_category_ids?: string[] | null
+          selected_product_ids?: string[] | null
+          show_in_offers_page?: boolean | null
           slug?: string
           sort_order?: number | null
           start_date?: string | null
