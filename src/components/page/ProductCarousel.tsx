@@ -1,7 +1,9 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProductSectionCard } from './ProductSectionCard';
+import useEmblaCarousel from 'embla-carousel-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ProductCardData {
   id: string;
@@ -30,84 +32,128 @@ export const ProductCarousel = ({
   itemsPerView = 4,
   showCartButton = true,
   showWishlistButton = true,
+  autoplay = false,
+  autoplaySpeed = 5000,
 }: ProductCarouselProps) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
+  const slidesToShow = isMobile ? 2 : itemsPerView;
+  
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: 'start',
+    slidesToScroll: 1,
+    containScroll: 'trimSnaps',
+    loop: false,
+  });
 
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const scrollAmount = scrollRef.current.clientWidth / itemsPerView;
-      scrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
-    }
-  };
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const scrollPrev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev();
+  }, [emblaApi]);
+
+  const scrollNext = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext();
+  }, [emblaApi]);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setCanScrollPrev(emblaApi.canScrollPrev());
+    setCanScrollNext(emblaApi.canScrollNext());
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    onSelect();
+    emblaApi.on('select', onSelect);
+    emblaApi.on('reInit', onSelect);
+    return () => {
+      emblaApi.off('select', onSelect);
+      emblaApi.off('reInit', onSelect);
+    };
+  }, [emblaApi, onSelect]);
+
+  // Autoplay
+  useEffect(() => {
+    if (!autoplay || !emblaApi) return;
+    const interval = setInterval(() => {
+      if (emblaApi.canScrollNext()) {
+        emblaApi.scrollNext();
+      } else {
+        emblaApi.scrollTo(0);
+      }
+    }, autoplaySpeed);
+    return () => clearInterval(interval);
+  }, [autoplay, autoplaySpeed, emblaApi]);
 
   if (!products.length) return null;
 
-  // Calculate item width based on items per view
-  const itemWidth = `calc(${100 / itemsPerView}% - ${((itemsPerView - 1) * 16) / itemsPerView}px)`;
-  const mobileItemWidth = 'calc(50% - 8px)';
+  // Calculate slide width based on items per view
+  const slideWidth = 100 / slidesToShow;
+  const scrollSnaps = emblaApi?.scrollSnapList() || [];
 
   return (
     <div className="relative group/carousel">
       {/* Navigation Buttons */}
-      <Button
-        variant="outline"
-        size="icon"
-        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 opacity-0 group-hover/carousel:opacity-100 transition-opacity bg-background shadow-lg hidden md:flex"
-        onClick={() => scroll('left')}
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="outline"
-        size="icon"
-        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 opacity-0 group-hover/carousel:opacity-100 transition-opacity bg-background shadow-lg hidden md:flex"
-        onClick={() => scroll('right')}
-      >
-        <ChevronRight className="h-4 w-4" />
-      </Button>
+      {canScrollPrev && (
+        <Button
+          variant="outline"
+          size="icon"
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 bg-background shadow-lg hidden md:flex"
+          onClick={scrollPrev}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+      )}
+      {canScrollNext && (
+        <Button
+          variant="outline"
+          size="icon"
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 bg-background shadow-lg hidden md:flex"
+          onClick={scrollNext}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      )}
 
       {/* Products Container */}
-      <div
-        ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
-        style={{ scrollSnapType: 'x mandatory' }}
-      >
-        {products.map((product) => (
-          <div
-            key={product.id}
-            className="flex-shrink-0"
-            style={{ 
-              width: mobileItemWidth,
-              scrollSnapAlign: 'start'
-            }}
-          >
-            <style>{`
-              @media (min-width: 768px) {
-                [data-product-carousel-item="${product.id}"] {
-                  width: ${itemWidth} !important;
-                }
-              }
-            `}</style>
-            <div data-product-carousel-item={product.id} style={{ width: '100%' }}>
+      <div className="overflow-hidden" ref={emblaRef}>
+        <div className="flex">
+          {products.map((product) => (
+            <div
+              key={product.id}
+              className="min-w-0 shrink-0 px-2"
+              style={{ flex: `0 0 ${slideWidth}%` }}
+            >
               <ProductSectionCard
                 product={product}
                 showCartButton={showCartButton}
                 showWishlistButton={showWishlistButton}
               />
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      {/* Scroll indicators for mobile */}
-      <div className="flex justify-center gap-1 mt-4 md:hidden">
-        {Array.from({ length: Math.ceil(products.length / 2) }).map((_, i) => (
-          <div key={i} className="w-2 h-2 rounded-full bg-muted" />
-        ))}
-      </div>
+      {/* Scroll indicators */}
+      {scrollSnaps.length > 1 && (
+        <div className="flex justify-center gap-1.5 mt-4">
+          {scrollSnaps.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => emblaApi?.scrollTo(i)}
+              className={`w-2 h-2 rounded-full transition-all ${
+                i === selectedIndex 
+                  ? 'bg-primary w-6' 
+                  : 'bg-muted hover:bg-muted-foreground/50'
+              }`}
+              aria-label={`Go to slide ${i + 1}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
