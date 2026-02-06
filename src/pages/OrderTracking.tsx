@@ -44,6 +44,7 @@ interface Order {
   created_at: string;
   shipped_at: string | null;
   delivered_at: string | null;
+  user_id: string;
 }
 
 interface OrderItem {
@@ -90,6 +91,9 @@ const OrderTracking = () => {
   const [loading, setLoading] = useState(false);
   const [isRealtime, setIsRealtime] = useState(false);
 
+  // Privacy: only show full details if logged-in user owns this order
+  const isOwner = !!(user && order && order.user_id === user.id);
+
   const fetchOrder = async (query: string) => {
     if (!query.trim()) return;
     
@@ -126,13 +130,17 @@ const OrderTracking = () => {
 
       setOrder(data);
       
-      // Fetch order items
-      const { data: items } = await supabase
-        .from('order_items')
-        .select('*')
-        .eq('order_id', data.id);
-      
-      setOrderItems(items || []);
+      // Only fetch order items if the user owns this order
+      if (user && data.user_id === user.id) {
+        const { data: items } = await supabase
+          .from('order_items')
+          .select('*')
+          .eq('order_id', data.id);
+        
+        setOrderItems(items || []);
+      } else {
+        setOrderItems([]);
+      }
     } catch (error: any) {
       console.error('Error fetching order:', error);
       toast({
@@ -437,97 +445,119 @@ const OrderTracking = () => {
                 </Card>
               )}
 
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Delivery Info */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5" />
-                      ডেলিভারি তথ্য
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground">নাম</p>
-                      <p className="font-medium">{order.full_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">ফোন</p>
-                      <p className="font-medium flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
-                        {order.phone}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">ঠিকানা</p>
-                      <p className="font-medium">{order.address}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">এলাকা</p>
-                      <p className="font-medium">{order.delivery_area}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+              {/* Private sections - only visible to order owner */}
+              {isOwner ? (
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Delivery Info */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5" />
+                        ডেলিভারি তথ্য
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <p className="text-sm text-muted-foreground">নাম</p>
+                        <p className="font-medium">{order.full_name}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">ফোন</p>
+                        <p className="font-medium flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          {order.phone}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">ঠিকানা</p>
+                        <p className="font-medium">{order.address}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">এলাকা</p>
+                        <p className="font-medium">{order.delivery_area}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                {/* Order Summary */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Package className="h-5 w-5" />
-                      অর্ডার সামারি
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {orderItems.map((item) => (
-                        <div key={item.id} className="flex items-center gap-3">
-                          {item.product_image && (
-                            <img 
-                              src={item.product_image} 
-                              alt={item.product_title}
-                              className="w-12 h-12 object-cover rounded"
-                            />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{item.product_title}</p>
-                            <p className="text-sm text-muted-foreground">
-                              ৳{item.price} × {item.quantity}
-                            </p>
+                  {/* Order Summary */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Package className="h-5 w-5" />
+                        অর্ডার সামারি
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {orderItems.map((item) => (
+                          <div key={item.id} className="flex items-center gap-3">
+                            {item.product_image && (
+                              <img 
+                                src={item.product_image} 
+                                alt={item.product_title}
+                                className="w-12 h-12 object-cover rounded"
+                              />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{item.product_title}</p>
+                              <p className="text-sm text-muted-foreground">
+                                ৳{item.price} × {item.quantity}
+                              </p>
+                            </div>
+                            <p className="font-medium">৳{item.price * item.quantity}</p>
                           </div>
-                          <p className="font-medium">৳{item.price * item.quantity}</p>
-                        </div>
-                      ))}
-                      
-                      <Separator />
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">সাবটোটাল</span>
-                          <span>৳{order.subtotal}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">ডেলিভারি চার্জ</span>
-                          <span>৳{order.delivery_charge}</span>
-                        </div>
+                        ))}
+                        
                         <Separator />
-                        <div className="flex justify-between font-bold text-lg">
-                          <span>মোট</span>
-                          <span className="text-primary">৳{order.total}</span>
+                        
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">সাবটোটাল</span>
+                            <span>৳{order.subtotal}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">ডেলিভারি চার্জ</span>
+                            <span>৳{order.delivery_charge}</span>
+                          </div>
+                          <Separator />
+                          <div className="flex justify-between font-bold text-lg">
+                            <span>মোট</span>
+                            <span className="text-primary">৳{order.total}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <Card className="border-dashed">
+                  <CardContent className="py-8 text-center">
+                    <Package className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground mb-1">
+                      গোপনীয়তার জন্য অর্ডার বিবরণ ও গ্রাহক তথ্য লুকানো আছে
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      সম্পূর্ণ তথ্য দেখতে আপনার অ্যাকাউন্টে লগইন করুন
+                    </p>
+                    {!user && (
+                      <Button asChild size="sm">
+                        <Link to="/signin">লগইন করুন</Link>
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
-              </div>
+              )}
 
               {/* Actions */}
               <div className="flex flex-wrap gap-3 justify-center">
-                <Button variant="outline" asChild>
-                  <Link to="/orders">
-                    <Package className="h-4 w-4 mr-2" />
-                    সব অর্ডার দেখুন
-                  </Link>
-                </Button>
+                {isOwner && (
+                  <Button variant="outline" asChild>
+                    <Link to="/orders">
+                      <Package className="h-4 w-4 mr-2" />
+                      সব অর্ডার দেখুন
+                    </Link>
+                  </Button>
+                )}
                 <Button variant="outline" asChild>
                   <Link to="/">
                     <Home className="h-4 w-4 mr-2" />
