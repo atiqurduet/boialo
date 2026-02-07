@@ -29,6 +29,9 @@ import {
   UserCog,
   AlertTriangle,
   FilePlus,
+  Activity,
+  HardDrive,
+  Paintbrush,
   type LucideIcon
 } from 'lucide-react';
 
@@ -113,6 +116,7 @@ export const menuCategories: MenuCategory[] = [
     items: [
       { icon: Home, label: 'হোমপেজ', href: '/admin/homepage', roles: ['admin', 'manager'] },
       { icon: FilePlus, label: 'পেজ ম্যানেজমেন্ট', href: '/admin/pages', roles: ['admin', 'manager'] },
+      { icon: Paintbrush, label: 'অ্যাপিয়ারেন্স', href: '/admin/appearance', roles: ['admin'] },
       { icon: Palette, label: 'লোগো ও ব্র্যান্ডিং', href: '/admin/branding', roles: ['admin', 'manager'] },
       { icon: Image, label: 'ব্যানার', href: '/admin/banners', roles: ['admin', 'manager'] },
       { icon: Navigation, label: 'মেনু', href: '/admin/menu', roles: ['admin', 'manager'] },
@@ -141,6 +145,8 @@ export const menuCategories: MenuCategory[] = [
       { icon: Truck, label: 'কুরিয়ার', href: '/admin/couriers', roles: ['admin'] },
       { icon: RefreshCw, label: 'অটো-অ্যাসাইন', href: '/admin/auto-assign', roles: ['admin'] },
       { icon: FileText, label: 'রিফান্ড পলিসি', href: '/admin/refund-policy', roles: ['admin'] },
+      { icon: HardDrive, label: 'ব্যাকআপ ও রিস্টোর', href: '/admin/backup', roles: ['admin'] },
+      { icon: Activity, label: 'অডিট লগ', href: '/admin/audit-log', roles: ['admin'] },
     ]
   },
 ];

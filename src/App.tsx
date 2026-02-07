@@ -77,6 +77,9 @@ import AdminRolePermissions from "./pages/admin/AdminRolePermissions";
 import AdminCartWishlistCustomers from "./pages/admin/AdminCartWishlistCustomers";
 import AdminPages from "./pages/admin/AdminPages";
 import AdminPageEditor from "./pages/admin/AdminPageEditor";
+import AdminAppearance from "./pages/admin/AdminAppearance";
+import AdminBackupRestore from "./pages/admin/AdminBackupRestore";
+import AdminAuditLog from "./pages/admin/AdminAuditLog";
 import RefundPolicy from "./pages/RefundPolicy";
 import ChatWidget from "./components/ChatWidget";
 import DynamicPage from "./pages/DynamicPage";
@@ -166,6 +169,9 @@ const App = () => (
                 <Route path="/admin/cart-wishlist-customers" element={<AdminCartWishlistCustomers />} />
                 <Route path="/admin/pages" element={<AdminPages />} />
                 <Route path="/admin/pages/:id" element={<AdminPageEditor />} />
+                <Route path="/admin/appearance" element={<AdminAppearance />} />
+                <Route path="/admin/backup" element={<AdminBackupRestore />} />
+                <Route path="/admin/audit-log" element={<AdminAuditLog />} />
                 
                 {/* Dynamic Page Route */}
                 <Route path="/page/:slug" element={<DynamicPage />} />
