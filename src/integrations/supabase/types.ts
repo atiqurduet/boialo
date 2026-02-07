@@ -161,6 +161,39 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_history: {
+        Row: {
+          backup_type: string
+          created_at: string
+          created_by: string | null
+          file_name: string | null
+          file_size: number | null
+          id: string
+          notes: string | null
+          status: string | null
+        }
+        Insert: {
+          backup_type: string
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          notes?: string | null
+          status?: string | null
+        }
+        Update: {
+          backup_type?: string
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          notes?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       banners: {
         Row: {
           created_at: string
@@ -959,6 +992,42 @@ export type Database = {
           title_bn?: string
           title_en?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      login_logs: {
+        Row: {
+          created_at: string
+          email: string | null
+          event_type: string
+          failure_reason: string | null
+          id: string
+          ip_address: string | null
+          success: boolean | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          event_type?: string
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          success?: boolean | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          event_type?: string
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          success?: boolean | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
