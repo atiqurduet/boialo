@@ -74,11 +74,14 @@ export const Header = () => {
 
   return (
     <>
-      <header className={cn(
+      <header style={{
+        backgroundColor: 'hsl(var(--header-bg, var(--card)))',
+        color: 'hsl(var(--header-text, var(--foreground)))',
+      }} className={cn(
         "sticky top-0 z-50 transition-all duration-300",
         isScrolled 
-          ? "bg-card/95 backdrop-blur-xl shadow-lg border-b border-border/50" 
-          : "bg-card border-b border-border"
+          ? "backdrop-blur-xl shadow-lg border-b border-border/50" 
+          : "border-b border-border"
       )}>
         {/* Main Header */}
         <div className="container py-3 md:py-4">

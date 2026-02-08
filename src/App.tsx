@@ -83,6 +83,7 @@ import AdminAuditLog from "./pages/admin/AdminAuditLog";
 import RefundPolicy from "./pages/RefundPolicy";
 import ChatWidget from "./components/ChatWidget";
 import DynamicPage from "./pages/DynamicPage";
+import { ThemeInitializer } from "./components/ThemeInitializer";
 
 const queryClient = new QueryClient();
 
@@ -94,6 +95,7 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
+            <ThemeInitializer />
             <BrowserRouter>
               <AnalyticsProvider>
               <Routes>
