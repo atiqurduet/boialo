@@ -54,11 +54,11 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        wafilife: {
-          red: "hsl(var(--wafilife-red))",
-          "dark-red": "hsl(var(--wafilife-dark-red))",
-          gray: "hsl(var(--wafilife-gray))",
-          dark: "hsl(var(--wafilife-dark))",
+        brand: {
+          primary: "hsl(var(--brand-primary))",
+          "primary-dark": "hsl(var(--brand-primary-dark))",
+          gray: "hsl(var(--brand-gray))",
+          dark: "hsl(var(--brand-dark))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",

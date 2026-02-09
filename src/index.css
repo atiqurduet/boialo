@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    /* WafiLife Color Scheme */
+    /* Color Scheme */
     --background: 0 0% 97%;
     --foreground: 0 0% 15%;
 
@@ -40,11 +40,11 @@
 
     --radius: 0.5rem;
 
-    /* Custom WafiLife tokens */
-    --wafilife-red: 4 82% 56%;
-    --wafilife-dark-red: 4 82% 45%;
-    --wafilife-gray: 0 0% 97%;
-    --wafilife-dark: 0 0% 20%;
+    /* Custom brand tokens */
+    --brand-primary: 4 82% 56%;
+    --brand-primary-dark: 4 82% 45%;
+    --brand-gray: 0 0% 97%;
+    --brand-dark: 0 0% 20%;
     --discount-badge: 120 60% 40%;
     --price-original: 0 0% 60%;
     --price-sale: 4 82% 50%;
