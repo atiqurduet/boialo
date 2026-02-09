@@ -97,8 +97,8 @@ const AdminAppearance = () => {
     set('--destructive', `${t.destructive_h} ${t.destructive_s}% ${t.destructive_l}%`);
     set('--muted', `${t.muted_h} ${t.muted_s}% ${t.muted_l}%`);
     set('--ring', `${t.primary_h} ${t.primary_s}% ${t.primary_l}%`);
-    set('--wafilife-red', `${t.primary_h} ${t.primary_s}% ${t.primary_l}%`);
-    set('--wafilife-dark-red', `${t.primary_h} ${t.primary_s}% ${Math.max(Number(t.primary_l) - 11, 0)}%`);
+    set('--brand-primary', `${t.primary_h} ${t.primary_s}% ${t.primary_l}%`);
+    set('--brand-primary-dark', `${t.primary_h} ${t.primary_s}% ${Math.max(Number(t.primary_l) - 11, 0)}%`);
     set('--card', `${t.background_h} ${t.background_s}% ${Math.min(Number(t.background_l) + 3, 100)}%`);
     set('--radius', `${t.border_radius}rem`);
     set('--header-bg', `${t.header_bg_h} ${t.header_bg_s}% ${t.header_bg_l}%`);

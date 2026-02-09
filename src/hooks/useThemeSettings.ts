@@ -138,9 +138,9 @@ function applyTheme(t: ThemeConfig) {
   set('--card', `${t.background_h} ${t.background_s}% ${Math.min(Number(t.background_l) + 3, 100)}%`);
   set('--popover', `${t.background_h} ${t.background_s}% ${Math.min(Number(t.background_l) + 3, 100)}%`);
 
-  // WafiLife custom tokens
-  set('--wafilife-red', `${t.primary_h} ${t.primary_s}% ${t.primary_l}%`);
-  set('--wafilife-dark-red', `${t.primary_h} ${t.primary_s}% ${Math.max(Number(t.primary_l) - 11, 0)}%`);
+  // Custom brand tokens
+  set('--brand-primary', `${t.primary_h} ${t.primary_s}% ${t.primary_l}%`);
+  set('--brand-primary-dark', `${t.primary_h} ${t.primary_s}% ${Math.max(Number(t.primary_l) - 11, 0)}%`);
 
   // Ring matches primary
   set('--ring', `${t.primary_h} ${t.primary_s}% ${t.primary_l}%`);

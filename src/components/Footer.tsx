@@ -16,7 +16,7 @@ export const Footer = () => {
   const contactInfo = contactSection?.content || {
     address: "৬০/এ, পুরানা পল্টন, ঢাকা-১০০০, বাংলাদেশ",
     phone: "+৮৮০ ১৭০০-০০০০০০",
-    email: "info@wafilife.com"
+    email: "info@boialo.com"
   };
 
   // Parse social links
@@ -155,7 +155,7 @@ export const Footer = () => {
         <div className="container py-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
-              {settingsLoading ? '© 2025 WafiLife' : siteSettings.copyright_text}
+              {settingsLoading ? '© 2025 বইআলো' : siteSettings.copyright_text}
             </p>
             <div className="flex items-center gap-4">
               <img

@@ -93,7 +93,7 @@ const Privacy = () => {
                 <h2 className="text-xl font-bold mb-4">৭. যোগাযোগ</h2>
                 <p className="text-muted-foreground">
                   গোপনীয়তা সংক্রান্ত কোনো প্রশ্ন থাকলে যোগাযোগ করুন:<br />
-                  ইমেইল: privacy@wafilife.com<br />
+                  ইমেইল: privacy@boialo.com<br />
                   ফোন: +৮৮০ ১৭০০-০০০০০০
                 </p>
               </section>

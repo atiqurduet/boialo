@@ -26,7 +26,7 @@ const slides = [
     subtitle: "বিশ্বস্ত প্রকাশনীর",
     discount: "৫০% পর্যন্ত ছাড়",
     date: "এখনই অর্ডার করুন",
-    bgColor: "from-wafilife-dark to-foreground/90",
+    bgColor: "from-brand-dark to-foreground/90",
     textColor: "text-primary-foreground",
   },
 ];
