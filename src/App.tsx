@@ -37,6 +37,9 @@ import CategoryDetail from "./pages/CategoryDetail";
 import UniversalProductDetail from "./pages/UniversalProductDetail";
 import BkashCallback from "./pages/BkashCallback";
 import Categories from "./pages/Categories";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
+import DigitalLibrary from "./pages/DigitalLibrary";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -83,6 +86,7 @@ import AdminAuditLog from "./pages/admin/AdminAuditLog";
 import RefundPolicy from "./pages/RefundPolicy";
 import ChatWidget from "./components/ChatWidget";
 import DynamicPage from "./pages/DynamicPage";
+import AdminBlog from "./pages/admin/AdminBlog";
 import { ThemeInitializer } from "./components/ThemeInitializer";
 
 const queryClient = new QueryClient();
@@ -131,6 +135,9 @@ const App = () => (
                 <Route path="/category/:productType/:categorySlug" element={<CategoryLanding />} />
                 <Route path="/universal-product/:slug" element={<UniversalProductDetail />} />
                 <Route path="/bkash/callback" element={<BkashCallback />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:slug" element={<BlogPost />} />
+                <Route path="/digital-library" element={<DigitalLibrary />} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminDashboard />} />
@@ -174,6 +181,7 @@ const App = () => (
                 <Route path="/admin/appearance" element={<AdminAppearance />} />
                 <Route path="/admin/backup" element={<AdminBackupRestore />} />
                 <Route path="/admin/audit-log" element={<AdminAuditLog />} />
+                <Route path="/admin/blog" element={<AdminBlog />} />
                 
                 {/* Dynamic Page Route */}
                 <Route path="/page/:slug" element={<DynamicPage />} />
