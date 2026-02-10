@@ -12,6 +12,7 @@ import { TrustBadges } from "@/components/TrustBadges";
 import { NewsletterSection } from "@/components/NewsletterSection";
 import { FeaturedOfferBanner } from "@/components/FeaturedOfferBanner";
 import { Footer } from "@/components/Footer";
+import { RecentlyViewed } from "@/components/RecentlyViewed";
 import { useHomepageData } from "@/hooks/useHomepageData";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -300,6 +301,9 @@ const Index = () => {
 
           {/* Render sections in order */}
           {sections.map(section => renderSection(section))}
+
+          {/* Recently Viewed Products */}
+          <RecentlyViewed />
         </div>
 
         {/* Newsletter Section - always show at bottom */}

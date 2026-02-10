@@ -10,6 +10,7 @@ import { ProductImageGallery } from "@/components/ProductImageGallery";
 import { SecurePdfViewer } from "@/components/SecurePdfViewer";
 import { SocialShare } from "@/components/SocialShare";
 import { ExpandableText } from "@/components/ExpandableText";
+import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { Button } from "@/components/ui/button";
 import { Heart, ChevronRight, BookOpen, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +33,7 @@ const ProductDetail = () => {
   const [preorderMessage, setPreorderMessage] = useState<string>("");
   const { isInWishlist, toggleWishlist } = useWishlistContext();
   const { addToCart } = useCartContext();
+  const { addItem: addRecentlyViewed } = useRecentlyViewed();
 
   // Fetch product from Supabase by slug
   const { data: dbProduct, isLoading } = useQuery({
@@ -76,7 +78,7 @@ const ProductDetail = () => {
     enabled: !!dbProduct?.category_id,
   });
 
-  // Track view content when product loads
+  // Track view content and add to recently viewed when product loads
   useEffect(() => {
     if (dbProduct) {
       const images = dbProduct.images as string[] || [];
@@ -86,6 +88,16 @@ const ProductDetail = () => {
         price: dbProduct.price,
         category: dbProduct.category?.name_bn,
         brand: dbProduct.publisher_rel?.name_bn,
+      });
+      addRecentlyViewed({
+        id: dbProduct.id,
+        slug: dbProduct.slug,
+        title: dbProduct.title_bn || dbProduct.title_en,
+        author: dbProduct.writer?.name_bn || dbProduct.author || 'অজানা লেখক',
+        price: dbProduct.price,
+        originalPrice: dbProduct.original_price || undefined,
+        discount: dbProduct.discount_percent || undefined,
+        image: images.length > 0 ? images[0] : '/placeholder.svg',
       });
     }
   }, [dbProduct?.id]);

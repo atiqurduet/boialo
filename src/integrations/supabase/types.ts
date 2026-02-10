@@ -236,6 +236,75 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_posts: {
+        Row: {
+          author_id: string | null
+          category: string | null
+          content_bn: string | null
+          content_en: string | null
+          created_at: string
+          excerpt_bn: string | null
+          excerpt_en: string | null
+          featured_image: string | null
+          id: string
+          is_featured: boolean | null
+          meta_description: string | null
+          meta_title: string | null
+          published_at: string | null
+          slug: string
+          status: string
+          tags: string[] | null
+          title_bn: string
+          title_en: string | null
+          updated_at: string
+          view_count: number | null
+        }
+        Insert: {
+          author_id?: string | null
+          category?: string | null
+          content_bn?: string | null
+          content_en?: string | null
+          created_at?: string
+          excerpt_bn?: string | null
+          excerpt_en?: string | null
+          featured_image?: string | null
+          id?: string
+          is_featured?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          published_at?: string | null
+          slug: string
+          status?: string
+          tags?: string[] | null
+          title_bn: string
+          title_en?: string | null
+          updated_at?: string
+          view_count?: number | null
+        }
+        Update: {
+          author_id?: string | null
+          category?: string | null
+          content_bn?: string | null
+          content_en?: string | null
+          created_at?: string
+          excerpt_bn?: string | null
+          excerpt_en?: string | null
+          featured_image?: string | null
+          id?: string
+          is_featured?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          published_at?: string | null
+          slug?: string
+          status?: string
+          tags?: string[] | null
+          title_bn?: string
+          title_en?: string | null
+          updated_at?: string
+          view_count?: number | null
+        }
+        Relationships: []
+      }
       brands: {
         Row: {
           created_at: string
@@ -641,6 +710,42 @@ export type Database = {
           successful_orders?: number | null
           total_orders?: number | null
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      digital_purchases: {
+        Row: {
+          created_at: string
+          download_count: number | null
+          expires_at: string | null
+          id: string
+          max_downloads: number | null
+          order_id: string | null
+          product_id: string
+          product_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          download_count?: number | null
+          expires_at?: string | null
+          id?: string
+          max_downloads?: number | null
+          order_id?: string | null
+          product_id: string
+          product_type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          download_count?: number | null
+          expires_at?: string | null
+          id?: string
+          max_downloads?: number | null
+          order_id?: string | null
+          product_id?: string
+          product_type?: string
           user_id?: string
         }
         Relationships: []
@@ -1916,10 +2021,13 @@ export type Database = {
           created_at: string
           description_bn: string | null
           description_en: string | null
+          digital_file_name: string | null
+          digital_file_url: string | null
           discount_percent: number | null
           id: string
           images: Json | null
           is_active: boolean | null
+          is_digital: boolean | null
           is_featured: boolean | null
           is_preorder: boolean | null
           isbn: string | null
@@ -1946,10 +2054,13 @@ export type Database = {
           created_at?: string
           description_bn?: string | null
           description_en?: string | null
+          digital_file_name?: string | null
+          digital_file_url?: string | null
           discount_percent?: number | null
           id?: string
           images?: Json | null
           is_active?: boolean | null
+          is_digital?: boolean | null
           is_featured?: boolean | null
           is_preorder?: boolean | null
           isbn?: string | null
@@ -1976,10 +2087,13 @@ export type Database = {
           created_at?: string
           description_bn?: string | null
           description_en?: string | null
+          digital_file_name?: string | null
+          digital_file_url?: string | null
           discount_percent?: number | null
           id?: string
           images?: Json | null
           is_active?: boolean | null
+          is_digital?: boolean | null
           is_featured?: boolean | null
           is_preorder?: boolean | null
           isbn?: string | null
@@ -2484,12 +2598,15 @@ export type Database = {
           category_id: string | null
           created_at: string
           delivery_time: string | null
+          digital_file_name: string | null
+          digital_file_url: string | null
           dimensions: string | null
           discount_percent: number | null
           id: string
           images: Json | null
           ingredients: string | null
           is_active: boolean | null
+          is_digital: boolean | null
           is_featured: boolean | null
           json_ld: Json | null
           long_description_bn: string | null
@@ -2523,12 +2640,15 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           delivery_time?: string | null
+          digital_file_name?: string | null
+          digital_file_url?: string | null
           dimensions?: string | null
           discount_percent?: number | null
           id?: string
           images?: Json | null
           ingredients?: string | null
           is_active?: boolean | null
+          is_digital?: boolean | null
           is_featured?: boolean | null
           json_ld?: Json | null
           long_description_bn?: string | null
@@ -2562,12 +2682,15 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           delivery_time?: string | null
+          digital_file_name?: string | null
+          digital_file_url?: string | null
           dimensions?: string | null
           discount_percent?: number | null
           id?: string
           images?: Json | null
           ingredients?: string | null
           is_active?: boolean | null
+          is_digital?: boolean | null
           is_featured?: boolean | null
           json_ld?: Json | null
           long_description_bn?: string | null

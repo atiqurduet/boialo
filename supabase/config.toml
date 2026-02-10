@@ -30,3 +30,9 @@ verify_jwt = false
 [functions.courier-booking]
 verify_jwt = false
 
+[functions.generate-sitemap]
+verify_jwt = false
+
+[functions.bkash-payment]
+verify_jwt = false
+
