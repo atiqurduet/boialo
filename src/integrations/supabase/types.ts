@@ -1055,6 +1055,95 @@ export type Database = {
         }
         Relationships: []
       }
+      gift_card_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          gift_card_id: string
+          id: string
+          order_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          gift_card_id: string
+          id?: string
+          order_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          gift_card_id?: string
+          id?: string
+          order_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gift_card_transactions_gift_card_id_fkey"
+            columns: ["gift_card_id"]
+            isOneToOne: false
+            referencedRelation: "gift_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gift_cards: {
+        Row: {
+          amount: number
+          balance: number
+          code: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          message: string | null
+          purchased_by: string | null
+          recipient_email: string | null
+          recipient_name: string | null
+          redeemed_by: string | null
+          sender_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          balance: number
+          code: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          message?: string | null
+          purchased_by?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          redeemed_by?: string | null
+          sender_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          balance?: number
+          code?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          message?: string | null
+          purchased_by?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          redeemed_by?: string | null
+          sender_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       homepage_sections: {
         Row: {
           content: Json | null
@@ -1133,6 +1222,63 @@ export type Database = {
           success?: boolean | null
           user_agent?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      loyalty_points: {
+        Row: {
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          points: number
+          reference_id: string | null
+          source: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          points?: number
+          reference_id?: string | null
+          source: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          points?: number
+          reference_id?: string | null
+          source?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      loyalty_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1220,6 +1366,45 @@ export type Database = {
           name?: string
           slug?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          email_enabled: boolean | null
+          id: string
+          order_updates: boolean | null
+          promotions: boolean | null
+          push_enabled: boolean | null
+          sms_enabled: boolean | null
+          updated_at: string
+          user_id: string
+          whatsapp_enabled: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          email_enabled?: boolean | null
+          id?: string
+          order_updates?: boolean | null
+          promotions?: boolean | null
+          push_enabled?: boolean | null
+          sms_enabled?: boolean | null
+          updated_at?: string
+          user_id: string
+          whatsapp_enabled?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          email_enabled?: boolean | null
+          id?: string
+          order_updates?: boolean | null
+          promotions?: boolean | null
+          push_enabled?: boolean | null
+          sms_enabled?: boolean | null
+          updated_at?: string
+          user_id?: string
+          whatsapp_enabled?: boolean | null
         }
         Relationships: []
       }
@@ -2337,6 +2522,7 @@ export type Database = {
           comment: string | null
           created_at: string
           id: string
+          images: string[] | null
           is_verified_purchase: boolean | null
           product_id: string
           rating: number
@@ -2348,6 +2534,7 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: string
+          images?: string[] | null
           is_verified_purchase?: boolean | null
           product_id: string
           rating: number
@@ -2359,6 +2546,7 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: string
+          images?: string[] | null
           is_verified_purchase?: boolean | null
           product_id?: string
           rating?: number

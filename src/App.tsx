@@ -87,6 +87,9 @@ import RefundPolicy from "./pages/RefundPolicy";
 import ChatWidget from "./components/ChatWidget";
 import DynamicPage from "./pages/DynamicPage";
 import AdminBlog from "./pages/admin/AdminBlog";
+import AdminGiftCards from "./pages/admin/AdminGiftCards";
+import AdminLoyaltyPoints from "./pages/admin/AdminLoyaltyPoints";
+import GiftCards from "./pages/GiftCards";
 import { ThemeInitializer } from "./components/ThemeInitializer";
 
 const queryClient = new QueryClient();
@@ -138,6 +141,7 @@ const App = () => (
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/digital-library" element={<DigitalLibrary />} />
+                <Route path="/gift-cards" element={<GiftCards />} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminDashboard />} />
@@ -182,6 +186,8 @@ const App = () => (
                 <Route path="/admin/backup" element={<AdminBackupRestore />} />
                 <Route path="/admin/audit-log" element={<AdminAuditLog />} />
                 <Route path="/admin/blog" element={<AdminBlog />} />
+                <Route path="/admin/gift-cards" element={<AdminGiftCards />} />
+                <Route path="/admin/loyalty-points" element={<AdminLoyaltyPoints />} />
                 
                 {/* Dynamic Page Route */}
                 <Route path="/page/:slug" element={<DynamicPage />} />

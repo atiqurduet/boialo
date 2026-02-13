@@ -105,6 +105,8 @@ export const menuCategories: MenuCategory[] = [
     items: [
       { icon: Tag, label: 'অফার', href: '/admin/offers', roles: ['admin', 'manager'] },
       { icon: Ticket, label: 'কুপন', href: '/admin/coupons', roles: ['admin', 'manager'] },
+      { icon: Tag, label: 'গিফট কার্ড', href: '/admin/gift-cards', roles: ['admin', 'manager'] },
+      { icon: Tag, label: 'লয়্যালটি পয়েন্ট', href: '/admin/loyalty-points', roles: ['admin'] },
       { icon: Mail, label: 'ইমেইল মার্কেটিং', href: '/admin/email-marketing', roles: ['admin', 'manager'] },
       { icon: FileText, label: 'SMS মার্কেটিং', href: '/admin/sms', roles: ['admin'] },
       { icon: Megaphone, label: 'নোটিফিকেশন', href: '/admin/notifications', roles: ['admin'] },
