@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Star, Loader2, User } from "lucide-react";
+import { Star, Loader2, User, Image as ImageIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { ReviewForm } from "./ReviewForm";
@@ -17,6 +18,7 @@ interface Review {
   comment: string | null;
   is_verified_purchase: boolean;
   created_at: string;
+  images: string[] | null;
   profile?: {
     full_name: string | null;
   };
@@ -33,6 +35,7 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
   const [showForm, setShowForm] = useState(false);
   const [userReview, setUserReview] = useState<Review | null>(null);
   const [hasPurchased, setHasPurchased] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchReviews();
@@ -51,7 +54,6 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
 
       if (error) throw error;
 
-      // Fetch profile names for reviews
       const reviewsWithProfiles = await Promise.all(
         (data || []).map(async (review) => {
           const { data: profile } = await supabase
@@ -66,7 +68,6 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
 
       setReviews(reviewsWithProfiles);
 
-      // Check if current user has a review
       if (user) {
         const existingReview = reviewsWithProfiles.find(r => r.user_id === user.id);
         setUserReview(existingReview || null);
@@ -80,9 +81,7 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
 
   const checkPurchaseStatus = async () => {
     if (!user) return;
-
     try {
-      // Get user's orders
       const { data: userOrders } = await supabase
         .from("orders")
         .select("id")
@@ -93,7 +92,6 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
         return;
       }
 
-      // Check if any order contains this product
       const orderIds = userOrders.map(o => o.id);
       const { data: orderItems } = await supabase
         .from("order_items")
@@ -151,6 +149,8 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
     );
   };
 
+  const reviewImages = reviews.flatMap(r => r.images || []);
+
   if (loading) {
     return (
       <Card>
@@ -170,7 +170,6 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Average Rating */}
             <div className="text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start gap-3">
                 <span className="text-5xl font-bold text-foreground">
@@ -185,22 +184,40 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
               </div>
             </div>
 
-            {/* Rating Breakdown */}
             <div className="space-y-2">
               {ratingCounts.map(({ rating, count, percentage }) => (
                 <div key={rating} className="flex items-center gap-2">
                   <span className="w-3 text-sm text-muted-foreground">{rating}</span>
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                   <Progress value={percentage} className="flex-1 h-2" />
-                  <span className="w-8 text-sm text-muted-foreground text-right">
-                    {count}
-                  </span>
+                  <span className="w-8 text-sm text-muted-foreground text-right">{count}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Write Review Button - Only for verified purchasers */}
+          {/* Customer Photos */}
+          {reviewImages.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-border">
+              <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                <ImageIcon className="w-4 h-4" />
+                কাস্টমারদের ছবি ({reviewImages.length})
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {reviewImages.slice(0, 10).map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setLightboxImage(img)}
+                    className="w-16 h-16 rounded-lg overflow-hidden border border-border hover:border-primary transition-colors"
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Write Review Button */}
           {user && !userReview && hasPurchased && (
             <div className="mt-6 pt-6 border-t border-border">
               {showForm ? (
@@ -210,9 +227,7 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
                   onCancel={() => setShowForm(false)}
                 />
               ) : (
-                <Button onClick={() => setShowForm(true)}>
-                  রিভিউ লিখুন
-                </Button>
+                <Button onClick={() => setShowForm(true)}>রিভিউ লিখুন</Button>
               )}
             </div>
           )}
@@ -264,9 +279,7 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
                         {review.profile?.full_name || "Anonymous"}
                       </span>
                       {review.is_verified_purchase && (
-                        <Badge variant="secondary" className="text-xs">
-                          যাচাইকৃত ক্রেতা
-                        </Badge>
+                        <Badge variant="secondary" className="text-xs">যাচাইকৃত ক্রেতা</Badge>
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
@@ -275,13 +288,24 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
                         {formatDate(review.created_at)}
                       </span>
                     </div>
-                    {review.title && (
-                      <h4 className="font-medium mt-2">{review.title}</h4>
-                    )}
+                    {review.title && <h4 className="font-medium mt-2">{review.title}</h4>}
                     {review.comment && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {review.comment}
-                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">{review.comment}</p>
+                    )}
+
+                    {/* Review Images */}
+                    {review.images && review.images.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {review.images.map((img, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setLightboxImage(img)}
+                            className="w-16 h-16 rounded-lg overflow-hidden border border-border hover:border-primary transition-colors"
+                          >
+                            <img src={img} alt="" className="w-full h-full object-cover" />
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -298,6 +322,15 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
           </CardContent>
         </Card>
       )}
+
+      {/* Image Lightbox */}
+      <Dialog open={!!lightboxImage} onOpenChange={() => setLightboxImage(null)}>
+        <DialogContent className="max-w-2xl p-2">
+          {lightboxImage && (
+            <img src={lightboxImage} alt="Review" className="w-full h-auto rounded-lg" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

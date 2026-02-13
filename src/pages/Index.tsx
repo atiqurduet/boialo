@@ -13,6 +13,7 @@ import { NewsletterSection } from "@/components/NewsletterSection";
 import { FeaturedOfferBanner } from "@/components/FeaturedOfferBanner";
 import { Footer } from "@/components/Footer";
 import { RecentlyViewed } from "@/components/RecentlyViewed";
+import { AIRecommendations } from "@/components/AIRecommendations";
 import { useHomepageData } from "@/hooks/useHomepageData";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -301,6 +302,9 @@ const Index = () => {
 
           {/* Render sections in order */}
           {sections.map(section => renderSection(section))}
+
+          {/* AI Recommendations */}
+          <AIRecommendations />
 
           {/* Recently Viewed Products */}
           <RecentlyViewed />
