@@ -36,9 +36,51 @@ serve(async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { to, subject, html, from, campaign_id, subscriber_ids }: EmailRequest = await req.json();
+    const body = await req.json();
 
-    console.log("Sending email to:", to);
+    // Input validation
+    const to = body.to;
+    const subject = typeof body.subject === 'string' ? body.subject.trim().slice(0, 500) : '';
+    const html = typeof body.html === 'string' ? body.html.slice(0, 500000) : '';
+    const from = typeof body.from === 'string' ? body.from.trim().slice(0, 255) : undefined;
+    const campaign_id = typeof body.campaign_id === 'string' ? body.campaign_id.trim() : undefined;
+    const subscriber_ids = Array.isArray(body.subscriber_ids) ? body.subscriber_ids : undefined;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const recipients = Array.isArray(to) ? to : (typeof to === 'string' ? [to] : []);
+    
+    if (recipients.length === 0 || recipients.length > 500) {
+      return new Response(
+        JSON.stringify({ error: "1 to 500 recipient emails required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    for (const email of recipients) {
+      if (typeof email !== 'string' || !emailRegex.test(email.trim())) {
+        return new Response(
+          JSON.stringify({ error: `Invalid email address: ${String(email).slice(0, 50)}` }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    }
+
+    if (!subject || !html) {
+      return new Response(
+        JSON.stringify({ error: "Subject and HTML content are required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Validate campaign_id as UUID if provided
+    if (campaign_id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(campaign_id)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid campaign ID format" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    console.log("Sending email to:", recipients.length, "recipients");
 
     // Get default provider
     const { data: provider, error: providerError } = await supabase
@@ -57,7 +99,6 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     const config = provider.config as ProviderConfig;
-    const recipients = Array.isArray(to) ? to : [to];
     const results: { email: string; success: boolean; error?: string }[] = [];
 
     for (const email of recipients) {

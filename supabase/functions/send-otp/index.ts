@@ -191,11 +191,26 @@ serve(async (req) => {
   }
 
   try {
-    const { phone, action, otp: userOtp } = await req.json();
+    const body = await req.json();
     
-    if (!phone) {
+    // Input validation
+    const phone = typeof body.phone === 'string' ? body.phone.trim().slice(0, 20) : '';
+    const action = typeof body.action === 'string' ? body.action.trim() : '';
+    const userOtp = typeof body.otp === 'string' ? body.otp.trim().slice(0, 6) : '';
+
+    // Validate phone format (Bangladesh: +880XXXXXXXXXX or 01XXXXXXXXX)
+    const phoneRegex = /^(\+?880|0)1[3-9]\d{8}$/;
+    if (!phone || !phoneRegex.test(phone.replace(/[\s-]/g, ''))) {
       return new Response(
-        JSON.stringify({ error: "Phone number is required" }),
+        JSON.stringify({ error: "Valid Bangladesh phone number is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate action
+    if (!['send', 'verify'].includes(action)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid action. Use 'send' or 'verify'." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

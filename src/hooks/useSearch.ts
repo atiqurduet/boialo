@@ -94,20 +94,21 @@ export const useSearch = () => {
   // Fallback local search when edge function is unavailable
   const fallbackSearch = async (query: string, limit: number) => {
     try {
-      const normalizedQuery = query.toLowerCase();
+      // Sanitize query to prevent injection via ilike patterns
+      const sanitizedQuery = query.replace(/[%_\\]/g, '\\$&').slice(0, 200);
       
       const { data: products } = await supabase
         .from('products')
         .select('id, title_bn, title_en, slug, price, original_price, discount_percent, author, publisher, images')
         .eq('is_active', true)
-        .or(`title_bn.ilike.%${query}%,title_en.ilike.%${query}%,author.ilike.%${query}%,publisher.ilike.%${query}%`)
+        .or(`title_bn.ilike.%${sanitizedQuery}%,title_en.ilike.%${sanitizedQuery}%,author.ilike.%${sanitizedQuery}%,publisher.ilike.%${sanitizedQuery}%`)
         .limit(limit);
 
       const { data: categories } = await supabase
         .from('categories')
         .select('id, name_bn, name_en, slug, image_url')
         .eq('is_active', true)
-        .or(`name_bn.ilike.%${query}%,name_en.ilike.%${query}%`)
+        .or(`name_bn.ilike.%${sanitizedQuery}%,name_en.ilike.%${sanitizedQuery}%`)
         .limit(5);
 
       setResults({
