@@ -31,7 +31,6 @@ interface CourierProvider {
   name_en: string;
   provider: string;
   is_active: boolean;
-  config: Record<string, string>;
   api_endpoint: string | null;
   sort_order: number;
 }
@@ -50,6 +49,7 @@ const AdminCouriers = () => {
   const queryClient = useQueryClient();
   const [editingCourier, setEditingCourier] = useState<CourierProvider | null>(null);
   const [config, setConfig] = useState<Record<string, string>>({});
+  const [configStatus, setConfigStatus] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState("bookings");
   const [providerFilter, setProviderFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -63,7 +63,7 @@ const AdminCouriers = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("courier_providers")
-        .select("*")
+        .select("id, name_bn, name_en, provider, is_active, api_endpoint, sort_order")
         .order("sort_order");
       if (error) throw error;
       return data as CourierProvider[];
@@ -200,9 +200,28 @@ const AdminCouriers = () => {
     updateMutation.mutate({ id: courier.id, updates: { is_active: !courier.is_active } });
   };
 
-  const saveConfig = () => {
+  const saveConfig = async () => {
     if (!editingCourier) return;
-    updateMutation.mutate({ id: editingCourier.id, updates: { config } });
+    try {
+      const response = await supabase.functions.invoke("update-provider-config", {
+        body: {
+          action: "update",
+          provider_table: "courier_providers",
+          provider_id: editingCourier.id,
+          provider_type: editingCourier.provider,
+          config,
+        },
+      });
+      if (response.error || !response.data?.success) {
+        toast.error("আপডেট ব্যর্থ: " + (response.data?.error || response.error?.message));
+        return;
+      }
+      toast.success("কুরিয়ার প্রোভাইডার কনফিগার হয়েছে");
+      setEditingCourier(null);
+      setConfig({});
+    } catch (err) {
+      toast.error("কনফিগারেশন সেভ ব্যর্থ");
+    }
   };
 
   const getProviderConfig = (provider: string) => {
@@ -215,9 +234,24 @@ const AdminCouriers = () => {
     }
   };
 
-  const openConfigDialog = (courier: CourierProvider) => {
+  const openConfigDialog = async (courier: CourierProvider) => {
     setEditingCourier(courier);
-    setConfig((courier.config as Record<string, string>) || {});
+    setConfig({});
+    setConfigStatus({});
+    try {
+      const response = await supabase.functions.invoke("update-provider-config", {
+        body: {
+          action: "get_status",
+          provider_table: "courier_providers",
+          provider_id: courier.id,
+        },
+      });
+      if (response.data?.success) {
+        setConfigStatus(response.data.config_status || {});
+      }
+    } catch (err) {
+      // Ignore
+    }
   };
 
   const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString("bn-BD", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -495,7 +529,7 @@ const AdminCouriers = () => {
                                       <span className="text-sm text-muted-foreground">{config[field] === "true" ? "Test Mode" : "Live Mode"}</span>
                                     </div>
                                   ) : (
-                                    <Input id={field} type={field.includes("secret") || field.includes("password") || field.includes("token") || field.includes("key") ? "password" : "text"} value={config[field] || ""} onChange={(e) => setConfig({ ...config, [field]: e.target.value })} placeholder={`Enter ${field.replace(/_/g, " ")}`} />
+                                    <Input id={field} type={field.includes("secret") || field.includes("password") || field.includes("token") || field.includes("key") ? "password" : "text"} value={config[field] || ""} onChange={(e) => setConfig({ ...config, [field]: e.target.value })} placeholder={configStatus[field] ? "••••••• (configured - enter new value to change)" : `Enter ${field.replace(/_/g, " ")}`} />
                                   )}
                                 </div>
                               ))}

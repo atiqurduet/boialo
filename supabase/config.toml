@@ -36,3 +36,6 @@ verify_jwt = false
 [functions.bkash-payment]
 verify_jwt = false
 
+[functions.update-provider-config]
+verify_jwt = false
+
