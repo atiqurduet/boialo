@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { SafeHTML } from "@/components/SafeHTML";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
@@ -192,9 +193,9 @@ const BlogPost = () => {
             )}
 
             {/* Content */}
-            <div
+            <SafeHTML
               className="prose prose-lg max-w-none text-foreground prose-headings:text-foreground prose-a:text-primary prose-img:rounded-lg prose-blockquote:border-primary"
-              dangerouslySetInnerHTML={{ __html: processedContent }}
+              html={processedContent}
             />
 
             {/* Share */}
