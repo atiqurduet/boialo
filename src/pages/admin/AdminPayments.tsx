@@ -31,7 +31,6 @@ interface PaymentMethod {
   name_en: string;
   provider: string;
   is_active: boolean;
-  config: Record<string, string>;
   sort_order: number;
 }
 
@@ -54,6 +53,7 @@ const AdminPayments = () => {
   const queryClient = useQueryClient();
   const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null);
   const [config, setConfig] = useState<Record<string, string>>({});
+  const [configStatus, setConfigStatus] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState("transactions");
   const [methodFilter, setMethodFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -68,7 +68,7 @@ const AdminPayments = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payment_methods")
-        .select("*")
+        .select("id, name_bn, name_en, provider, is_active, sort_order")
         .order("sort_order");
       if (error) throw error;
       return data as PaymentMethod[];
@@ -151,9 +151,28 @@ const AdminPayments = () => {
     updateMutation.mutate({ id: method.id, updates: { is_active: !method.is_active } });
   };
 
-  const saveConfig = () => {
+  const saveConfig = async () => {
     if (!editingMethod) return;
-    updateMutation.mutate({ id: editingMethod.id, updates: { config } });
+    try {
+      const response = await supabase.functions.invoke("update-provider-config", {
+        body: {
+          action: "update",
+          provider_table: "payment_methods",
+          provider_id: editingMethod.id,
+          provider_type: editingMethod.provider,
+          config,
+        },
+      });
+      if (response.error || !response.data?.success) {
+        toast.error("আপডেট ব্যর্থ: " + (response.data?.error || response.error?.message));
+        return;
+      }
+      toast.success("পেমেন্ট মেথড কনফিগার হয়েছে");
+      setEditingMethod(null);
+      setConfig({});
+    } catch (err) {
+      toast.error("কনফিগারেশন সেভ ব্যর্থ");
+    }
   };
 
   const getProviderConfig = (provider: string) => {
@@ -166,9 +185,24 @@ const AdminPayments = () => {
     }
   };
 
-  const openConfigDialog = (method: PaymentMethod) => {
+  const openConfigDialog = async (method: PaymentMethod) => {
     setEditingMethod(method);
-    setConfig((method.config as Record<string, string>) || {});
+    setConfig({});
+    setConfigStatus({});
+    try {
+      const response = await supabase.functions.invoke("update-provider-config", {
+        body: {
+          action: "get_status",
+          provider_table: "payment_methods",
+          provider_id: method.id,
+        },
+      });
+      if (response.data?.success) {
+        setConfigStatus(response.data.config_status || {});
+      }
+    } catch (err) {
+      // Ignore
+    }
   };
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString("bn-BD", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -401,7 +435,7 @@ const AdminPayments = () => {
                                       <span className="text-sm text-muted-foreground">{config[field] === "true" ? "Test Mode" : "Live Mode"}</span>
                                     </div>
                                   ) : (
-                                    <Input id={field} type={field.includes("secret") || field.includes("password") || field.includes("key") ? "password" : "text"} value={config[field] || ""} onChange={(e) => setConfig({ ...config, [field]: e.target.value })} placeholder={`Enter ${field.replace(/_/g, " ")}`} />
+                                    <Input id={field} type={field.includes("secret") || field.includes("password") || field.includes("key") ? "password" : "text"} value={config[field] || ""} onChange={(e) => setConfig({ ...config, [field]: e.target.value })} placeholder={configStatus[field] ? "••••••• (configured - enter new value to change)" : `Enter ${field.replace(/_/g, " ")}`} />
                                   )}
                                 </div>
                               ))}

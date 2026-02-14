@@ -32,6 +32,7 @@ const AdminSMS = () => {
   const queryClient = useQueryClient();
   const [editingProvider, setEditingProvider] = useState<SMSProvider | null>(null);
   const [config, setConfig] = useState<Record<string, string>>({});
+  const [configStatus, setConfigStatus] = useState<Record<string, boolean>>({});
   const [testPhone, setTestPhone] = useState("");
   const [testLoading, setTestLoading] = useState(false);
 
@@ -40,8 +41,7 @@ const AdminSMS = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sms_providers")
-        .select("*")
-        .order("sort_order");
+        .select("id, name, provider, is_active, is_default, sort_order");
       if (error) throw error;
       return data as SMSProvider[];
     },
@@ -90,12 +90,28 @@ const AdminSMS = () => {
     });
   };
 
-  const saveConfig = () => {
+  const saveConfig = async () => {
     if (!editingProvider) return;
-    updateMutation.mutate({
-      id: editingProvider.id,
-      updates: { config },
-    });
+    try {
+      const response = await supabase.functions.invoke("update-provider-config", {
+        body: {
+          action: "update",
+          provider_table: "sms_providers",
+          provider_id: editingProvider.id,
+          provider_type: editingProvider.provider,
+          config,
+        },
+      });
+      if (response.error || !response.data?.success) {
+        toast.error("Failed to save: " + (response.data?.error || response.error?.message));
+        return;
+      }
+      toast.success("SMS provider configured");
+      setEditingProvider(null);
+      setConfig({});
+    } catch (err) {
+      toast.error("Failed to save configuration");
+    }
   };
 
   const getProviderConfig = (provider: string) => {
@@ -113,9 +129,25 @@ const AdminSMS = () => {
     }
   };
 
-  const openConfigDialog = (provider: SMSProvider) => {
+  const openConfigDialog = async (provider: SMSProvider) => {
     setEditingProvider(provider);
-    setConfig((provider.config as Record<string, string>) || {});
+    setConfig({});
+    setConfigStatus({});
+    // Fetch config status (which fields are configured) without values
+    try {
+      const response = await supabase.functions.invoke("update-provider-config", {
+        body: {
+          action: "get_status",
+          provider_table: "sms_providers",
+          provider_id: provider.id,
+        },
+      });
+      if (response.data?.success) {
+        setConfigStatus(response.data.config_status || {});
+      }
+    } catch (err) {
+      // Ignore - just show empty status
+    }
   };
 
   const testSMS = async () => {
@@ -263,7 +295,7 @@ const AdminSMS = () => {
                             onChange={(e) =>
                               setConfig({ ...config, [field]: e.target.value })
                             }
-                            placeholder={`Enter ${field.replace(/_/g, " ")}`}
+                            placeholder={configStatus[field] ? "••••••• (configured - enter new value to change)" : `Enter ${field.replace(/_/g, " ")}`}
                           />
                         </div>
                       ))}
