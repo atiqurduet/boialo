@@ -104,10 +104,12 @@ serve(async (req) => {
       });
     }
 
-    const { orderId } = await req.json();
+    const body = await req.json();
+    const orderId = typeof body.orderId === 'string' ? body.orderId.trim() : '';
     
-    if (!orderId) {
-      return new Response(JSON.stringify({ error: "Order ID is required" }), {
+    // Validate orderId as UUID
+    if (!orderId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId)) {
+      return new Response(JSON.stringify({ error: "Valid Order ID is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

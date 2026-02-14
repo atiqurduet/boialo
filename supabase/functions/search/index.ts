@@ -81,7 +81,12 @@ serve(async (req) => {
   }
 
   try {
-    const { query, limit = 10, includeCategories = true } = await req.json();
+    const body = await req.json();
+    
+    // Input validation
+    const query = typeof body.query === 'string' ? body.query.trim().slice(0, 200) : '';
+    const limit = typeof body.limit === 'number' && body.limit >= 1 && body.limit <= 100 ? Math.floor(body.limit) : 10;
+    const includeCategories = typeof body.includeCategories === 'boolean' ? body.includeCategories : true;
     
     if (!query || query.length < 1) {
       return new Response(JSON.stringify({ products: [], categories: [], suggestions: [] }), {
@@ -89,7 +94,7 @@ serve(async (req) => {
       });
     }
 
-    console.log("Search query:", query);
+    console.log("Search query:", query.substring(0, 50));
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
