@@ -54,11 +54,9 @@ const ChatWidget = () => {
 
   // Generate or get visitor ID based on phone
   const getVisitorId = (phone?: string) => {
-    // If phone is provided, use it as unique identifier
     if (phone) {
       return `phone_${phone.replace(/\D/g, '')}`;
     }
-    // Fallback to stored visitor ID
     let visitorId = localStorage.getItem("chat_visitor_id");
     if (!visitorId) {
       visitorId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -67,49 +65,39 @@ const ChatWidget = () => {
     return visitorId;
   };
 
-  // Check for existing conversation by stored visitor ID
+  // Check for existing conversation using secure RPC
   useEffect(() => {
     const checkExistingConversation = async () => {
       const visitorId = localStorage.getItem("chat_visitor_id");
       if (!visitorId) return;
 
       const { data, error } = await supabase
-        .from("chat_conversations")
-        .select("*")
-        .eq("visitor_id", visitorId)
-        .eq("status", "open")
-        .order("created_at", { ascending: false })
-        .limit(1);
+        .rpc("get_visitor_conversations", { p_visitor_id: visitorId });
 
       if (!error && data && data.length > 0) {
-        const conversation = data[0];
+        const conversation = data.find((c: any) => c.status === 'open') || data[0];
         setConversationId(conversation.id);
         setVisitorInfo({
           name: conversation.visitor_name || "",
           phone: conversation.visitor_phone || "",
           submitted: true,
         });
-        fetchMessages(conversation.id);
+        fetchMessages(conversation.id, visitorId);
       }
     };
 
     checkExistingConversation();
   }, []);
 
-  // Check for existing conversation by phone number
+  // Check for existing conversation by phone number using secure RPC
   const checkExistingConversationByPhone = async (phone: string): Promise<boolean> => {
     const phoneVisitorId = getVisitorId(phone);
     
     const { data, error } = await supabase
-      .from("chat_conversations")
-      .select("*")
-      .eq("visitor_id", phoneVisitorId)
-      .order("created_at", { ascending: false })
-      .limit(1);
+      .rpc("get_visitor_conversations", { p_visitor_id: phoneVisitorId });
 
     if (!error && data && data.length > 0) {
       const conversation = data[0];
-      // Store the phone-based visitor ID for future sessions
       localStorage.setItem("chat_visitor_id", phoneVisitorId);
       
       setConversationId(conversation.id);
@@ -118,7 +106,7 @@ const ChatWidget = () => {
         phone: conversation.visitor_phone || "",
         submitted: true,
       });
-      fetchMessages(conversation.id);
+      fetchMessages(conversation.id, phoneVisitorId);
       return true;
     }
     return false;
@@ -140,7 +128,6 @@ const ChatWidget = () => {
         },
         (payload) => {
           setMessages((prev) => [...prev, payload.new as Message]);
-          // Reset admin typing when new message arrives
           setIsAdminTyping(false);
         }
       )
@@ -161,7 +148,6 @@ const ChatWidget = () => {
       .on("broadcast", { event: "typing" }, (payload) => {
         if (payload.payload?.sender_type === "admin") {
           setIsAdminTyping(true);
-          // Auto-hide after 3 seconds
           setTimeout(() => setIsAdminTyping(false), 3000);
         }
       })
@@ -175,7 +161,6 @@ const ChatWidget = () => {
     };
   }, [conversationId]);
 
-  // Broadcast typing status
   const broadcastTyping = useCallback(() => {
     if (!typingChannelRef.current || !conversationId) return;
     
@@ -186,33 +171,28 @@ const ChatWidget = () => {
     });
   }, [conversationId]);
 
-  // Handle input change with typing indicator
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMessage(e.target.value);
-    
-    // Broadcast typing
     broadcastTyping();
     
-    // Debounce typing broadcast
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-    typingTimeoutRef.current = setTimeout(() => {
-      // Stop broadcasting after 2 seconds of no typing
-    }, 2000);
+    typingTimeoutRef.current = setTimeout(() => {}, 2000);
   };
 
-  // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const fetchMessages = async (convId: string) => {
+  // Fetch messages using secure RPC
+  const fetchMessages = async (convId: string, visitorId?: string) => {
+    const vId = visitorId || localStorage.getItem("chat_visitor_id") || "";
     const { data } = await supabase
-      .from("chat_messages")
-      .select("*")
-      .eq("conversation_id", convId)
-      .order("created_at", { ascending: true });
+      .rpc("get_visitor_chat_messages", { 
+        p_conversation_id: convId, 
+        p_visitor_id: vId 
+      });
 
     if (data) {
       setMessages(data);
@@ -232,7 +212,6 @@ const ChatWidget = () => {
 
     setLoading(true);
     try {
-      // Check if user has existing conversation by phone number
       const hasExisting = await checkExistingConversationByPhone(visitorInfo.phone.trim());
       if (hasExisting) {
         toast.success("আপনার আগের চ্যাট পাওয়া গেছে!");
@@ -240,22 +219,17 @@ const ChatWidget = () => {
         return;
       }
 
-      // Create phone-based visitor ID for new conversations
       const visitorId = getVisitorId(visitorInfo.phone.trim());
-      // Store for future sessions
       localStorage.setItem("chat_visitor_id", visitorId);
       
+      // Use secure RPC to create conversation
       const { data: convData, error: convError } = await supabase
-        .from("chat_conversations")
-        .insert({
-          visitor_id: visitorId,
-          visitor_name: visitorInfo.name.trim(),
-          visitor_phone: visitorInfo.phone.trim(),
-          user_id: user?.id || null,
-          status: "open",
-        })
-        .select()
-        .single();
+        .rpc("create_visitor_conversation", {
+          p_visitor_id: visitorId,
+          p_visitor_name: visitorInfo.name.trim(),
+          p_visitor_phone: visitorInfo.phone.trim(),
+          p_user_id: user?.id || null,
+        });
 
       if (convError) {
         console.error("Conversation creation error:", convError);
@@ -269,14 +243,16 @@ const ChatWidget = () => {
       setConversationId(convData.id);
       setVisitorInfo((prev) => ({ ...prev, submitted: true }));
 
-      await supabase.from("chat_messages").insert({
-        conversation_id: convData.id,
-        sender_type: "admin",
-        sender_name: siteName,
-        message: `স্বাগতম ${visitorInfo.name.trim()}! আপনাকে সাহায্য করতে পেরে আমরা খুশি। কীভাবে সাহায্য করতে পারি?`,
+      // Insert welcome message via RPC
+      await supabase.rpc("insert_visitor_chat_message", {
+        p_conversation_id: convData.id,
+        p_visitor_id: visitorId,
+        p_sender_type: "admin",
+        p_sender_name: siteName,
+        p_message: `স্বাগতম ${visitorInfo.name.trim()}! আপনাকে সাহায্য করতে পেরে আমরা খুশি। কীভাবে সাহায্য করতে পারি?`,
       });
 
-      fetchMessages(convData.id);
+      fetchMessages(convData.id, visitorId);
       toast.success("চ্যাট শুরু হয়েছে!");
     } catch (error: any) {
       console.error("Chat start error:", error);
@@ -339,7 +315,6 @@ const ChatWidget = () => {
       return;
     }
 
-    // Create preview URL for images
     let previewUrl: string | undefined;
     if (file.type.startsWith('image/')) {
       previewUrl = URL.createObjectURL(file);
@@ -347,7 +322,6 @@ const ChatWidget = () => {
 
     setStagedFile({ file, previewUrl });
     
-    // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -375,7 +349,6 @@ const ChatWidget = () => {
     try {
       let attachmentData: { url: string; type: string; name: string } | null = null;
 
-      // Upload file if staged
       if (stagedFile) {
         attachmentData = await uploadFile(stagedFile.file);
         if (!attachmentData && !messageText) {
@@ -385,31 +358,29 @@ const ChatWidget = () => {
         removeStagedFile();
       }
 
-      // Determine message content
       let finalMessage = messageText;
       if (!finalMessage && attachmentData) {
         finalMessage = attachmentData.type === 'image' ? '📷 ছবি পাঠানো হয়েছে' : '📄 PDF ফাইল পাঠানো হয়েছে';
       }
 
-      const { error } = await supabase.from("chat_messages").insert({
-        conversation_id: conversationId,
-        sender_type: "customer",
-        sender_name: visitorInfo.name,
-        message: finalMessage,
-        attachment_url: attachmentData?.url || null,
-        attachment_type: attachmentData?.type || null,
-        attachment_name: attachmentData?.name || null,
+      const visitorId = localStorage.getItem("chat_visitor_id") || "";
+
+      // Use secure RPC to insert message
+      const { error } = await supabase.rpc("insert_visitor_chat_message", {
+        p_conversation_id: conversationId,
+        p_visitor_id: visitorId,
+        p_sender_type: "customer",
+        p_sender_name: visitorInfo.name,
+        p_message: finalMessage,
+        p_attachment_url: attachmentData?.url || null,
+        p_attachment_type: attachmentData?.type || null,
+        p_attachment_name: attachmentData?.name || null,
       });
 
       if (error) {
         console.error("Message send error:", error);
         throw error;
       }
-
-      await supabase
-        .from("chat_conversations")
-        .update({ last_message_at: new Date().toISOString() })
-        .eq("id", conversationId);
     } catch (error) {
       toast.error("মেসেজ পাঠাতে সমস্যা হয়েছে");
       setNewMessage(messageText);
@@ -501,7 +472,6 @@ const ChatWidget = () => {
       {!isMinimized && (
         <>
           {!visitorInfo.submitted ? (
-            /* Start Chat Form */
             <div className="p-6">
               <div className="text-center mb-6">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -541,7 +511,6 @@ const ChatWidget = () => {
             </div>
           ) : (
             <>
-              {/* Messages */}
               <ScrollArea className="h-[360px] p-4">
                 <div className="space-y-4">
                   {messages.map((msg) => (
@@ -579,7 +548,6 @@ const ChatWidget = () => {
                       </div>
                     </div>
                   ))}
-                  {/* Typing indicator */}
                   {isAdminTyping && (
                     <div className="flex justify-start">
                       <Avatar className="h-8 w-8 mr-2">
@@ -594,7 +562,6 @@ const ChatWidget = () => {
                 </div>
               </ScrollArea>
 
-              {/* Staged Attachment Preview */}
               {stagedFile && (
                 <div className="px-3 py-2 border-t bg-muted/30">
                   <StagedAttachment
@@ -605,7 +572,6 @@ const ChatWidget = () => {
                 </div>
               )}
 
-              {/* Input */}
               <div className="p-3 border-t">
                 <form onSubmit={sendMessage} className="flex gap-2 items-center">
                   <input
