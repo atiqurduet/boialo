@@ -3,12 +3,24 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { ProductCard } from "@/components/ProductCard";
-import { Heart, Trash2, Loader2 } from "lucide-react";
+import { Heart, Trash2, Loader2, Share2, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWishlistContext } from "@/contexts/WishlistContext";
+import { useWishlistSharing } from "@/hooks/useWishlistSharing";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
 
 const Wishlist = () => {
   const { wishlistItems, loading, removeFromWishlist, clearWishlist } = useWishlistContext();
+  const { copyShareLink, sharing } = useWishlistSharing();
+  const { user } = useAuth();
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    await copyShareLink();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   if (loading) {
     return (
@@ -60,14 +72,27 @@ const Wishlist = () => {
             <h1 className="text-2xl font-bold mb-1">আমার উইশলিস্ট</h1>
             <p className="text-muted-foreground">{wishlistItems.length} টি আইটেম</p>
           </div>
-          <Button
-            variant="outline"
-            className="gap-2 text-destructive hover:text-destructive"
-            onClick={clearWishlist}
-          >
-            <Trash2 className="w-4 h-4" />
-            সব মুছুন
-          </Button>
+          <div className="flex items-center gap-2">
+            {user && wishlistItems.length > 0 && (
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={handleShare}
+                disabled={sharing}
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                {copied ? "কপি হয়েছে" : "শেয়ার করুন"}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              className="gap-2 text-destructive hover:text-destructive"
+              onClick={clearWishlist}
+            >
+              <Trash2 className="w-4 h-4" />
+              সব মুছুন
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">

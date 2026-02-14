@@ -139,6 +139,27 @@ export const SearchDropdown = ({
               </div>
             )}
 
+            {/* Autocomplete Suggestions */}
+            {results.autocomplete && results.autocomplete.length > 0 && (
+              <div className="p-3 border-b border-border">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                  <Search className="w-3 h-3" />
+                  <span>আপনি কি খুঁজছেন?</span>
+                </div>
+                <div className="space-y-1">
+                  {results.autocomplete.map((item, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSuggestionClick(item)}
+                      className="block w-full text-left px-3 py-1.5 text-sm hover:bg-muted rounded transition-colors"
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Suggestions Section */}
             {results.suggestions.length > 0 && (
               <div className="p-3 border-b border-border">

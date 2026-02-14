@@ -10,6 +10,8 @@ import { ProductImageGallery } from "@/components/ProductImageGallery";
 import { SecurePdfViewer } from "@/components/SecurePdfViewer";
 import { SocialShare } from "@/components/SocialShare";
 import { ExpandableText } from "@/components/ExpandableText";
+import { ProductVariantSelector } from "@/components/ProductVariantSelector";
+import { useProductVariants, ProductVariant } from "@/hooks/useProductVariants";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { Button } from "@/components/ui/button";
 import { Heart, ChevronRight, BookOpen, ShoppingCart } from "lucide-react";
@@ -31,6 +33,7 @@ const ProductDetail = () => {
   const { slug } = useParams();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [preorderMessage, setPreorderMessage] = useState<string>("");
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const { isInWishlist, toggleWishlist } = useWishlistContext();
   const { addToCart } = useCartContext();
   const { addItem: addRecentlyViewed } = useRecentlyViewed();
@@ -371,17 +374,24 @@ const ProductDetail = () => {
                 </div>
               )}
 
+              {/* Variants */}
+              <VariantSection productId={dbProduct?.id} selectedVariant={selectedVariant} onSelect={setSelectedVariant} />
+
               {/* Price */}
               <div className="flex items-baseline gap-3">
-                <span className="text-3xl font-bold text-primary">৳{product.price}</span>
-                {hasDiscount && (
+                <span className="text-3xl font-bold text-primary">
+                  ৳{selectedVariant ? selectedVariant.price : product.price}
+                </span>
+                {(selectedVariant?.original_price || hasDiscount) && (
                   <>
                     <span className="text-xl text-muted-foreground line-through">
-                      ৳{product.originalPrice}
+                      ৳{selectedVariant?.original_price || product.originalPrice}
                     </span>
-                    <span className="text-primary font-medium">
-                      ({product.discount}% ছাড়ে)
-                    </span>
+                    {!selectedVariant && product.discount && (
+                      <span className="text-primary font-medium">
+                        ({product.discount}% ছাড়ে)
+                      </span>
+                    )}
                   </>
                 )}
               </div>
@@ -517,6 +527,13 @@ const ProductDetail = () => {
       </Dialog>
     </div>
   );
+};
+
+// Variant section sub-component
+const VariantSection = ({ productId, selectedVariant, onSelect }: { productId: string | undefined; selectedVariant: ProductVariant | null; onSelect: (v: ProductVariant | null) => void }) => {
+  const { data: variants = [] } = useProductVariants(productId);
+  if (variants.length === 0) return null;
+  return <ProductVariantSelector variants={variants} selectedVariant={selectedVariant} onSelect={onSelect} />;
 };
 
 export default ProductDetail;
