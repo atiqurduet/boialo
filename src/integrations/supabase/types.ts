@@ -3013,9 +3013,82 @@ export type Database = {
     Functions: {
       auto_assign_task: { Args: { _task_type: string }; Returns: string }
       calculate_risk_score: { Args: { p_user_id: string }; Returns: number }
+      create_visitor_conversation: {
+        Args: {
+          p_user_id?: string
+          p_visitor_id: string
+          p_visitor_name: string
+          p_visitor_phone: string
+        }
+        Returns: {
+          assigned_to: string | null
+          created_at: string
+          id: string
+          last_message_at: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+          visitor_email: string | null
+          visitor_id: string
+          visitor_name: string | null
+          visitor_phone: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "chat_conversations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_least_loaded_staff: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: string
+      }
+      get_order_tracking: { Args: { p_order_number: string }; Returns: Json }
+      get_visitor_chat_messages: {
+        Args: { p_conversation_id: string; p_visitor_id: string }
+        Returns: {
+          attachment_name: string | null
+          attachment_type: string | null
+          attachment_url: string | null
+          conversation_id: string
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          message_type: string
+          sender_id: string | null
+          sender_name: string | null
+          sender_type: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "chat_messages"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_visitor_conversations: {
+        Args: { p_visitor_id: string }
+        Returns: {
+          assigned_to: string | null
+          created_at: string
+          id: string
+          last_message_at: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+          visitor_email: string | null
+          visitor_id: string
+          visitor_name: string | null
+          visitor_phone: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "chat_conversations"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       has_permission: {
         Args: { _action: string; _module: string; _user_id: string }
@@ -3028,7 +3101,43 @@ export type Database = {
         }
         Returns: boolean
       }
+      insert_visitor_chat_message: {
+        Args: {
+          p_attachment_name?: string
+          p_attachment_type?: string
+          p_attachment_url?: string
+          p_conversation_id: string
+          p_message: string
+          p_sender_name: string
+          p_sender_type: string
+          p_visitor_id: string
+        }
+        Returns: {
+          attachment_name: string | null
+          attachment_type: string | null
+          attachment_url: string | null
+          conversation_id: string
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          message_type: string
+          sender_id: string | null
+          sender_name: string | null
+          sender_type: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "chat_messages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      update_visitor_conversation_timestamp: {
+        Args: { p_conversation_id: string; p_visitor_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "manager" | "support"

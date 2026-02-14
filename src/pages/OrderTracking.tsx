@@ -99,48 +99,67 @@ const OrderTracking = () => {
     
     setLoading(true);
     try {
-      let queryBuilder = supabase
-        .from('orders')
-        .select('*')
-        .eq('order_number', query.trim().toUpperCase());
+      const orderNumber = query.trim().toUpperCase();
 
-      // If user is logged in, also check user_id for their orders
+      // If user is logged in, try to fetch their own order first (full details via RLS)
       if (user) {
-        queryBuilder = supabase
+        const { data: ownOrder } = await supabase
           .from('orders')
           .select('*')
-          .or(`order_number.eq.${query.trim().toUpperCase()},and(user_id.eq.${user.id},order_number.ilike.%${query.trim()}%)`);
+          .eq('order_number', orderNumber)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (ownOrder) {
+          setOrder(ownOrder);
+          const { data: items } = await supabase
+            .from('order_items')
+            .select('*')
+            .eq('order_id', ownOrder.id);
+          setOrderItems(items || []);
+          return;
+        }
       }
 
-      const { data, error } = await queryBuilder.single();
+      // Public tracking: use secure RPC (returns limited info, no PII)
+      const { data: trackingData, error } = await supabase
+        .rpc('get_order_tracking', { p_order_number: orderNumber });
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          toast({
-            title: "অর্ডার পাওয়া যায়নি",
-            description: "এই অর্ডার নম্বর দিয়ে কোন অর্ডার খুঁজে পাওয়া যায়নি।",
-            variant: "destructive",
-          });
-        } else {
-          throw error;
-        }
+      if (error) throw error;
+
+      const tracking = trackingData as any;
+
+      if (!tracking || tracking.error) {
+        toast({
+          title: "অর্ডার পাওয়া যায়নি",
+          description: "এই অর্ডার নম্বর দিয়ে কোন অর্ডার খুঁজে পাওয়া যায়নি।",
+          variant: "destructive",
+        });
         setOrder(null);
         return;
       }
 
-      setOrder(data);
-      
-      // Only fetch order items if the user owns this order
-      if (user && data.user_id === user.id) {
-        const { data: items } = await supabase
-          .from('order_items')
-          .select('*')
-          .eq('order_id', data.id);
-        
-        setOrderItems(items || []);
-      } else {
-        setOrderItems([]);
-      }
+      setOrder({
+        id: '',
+        order_number: tracking.order_number,
+        status: tracking.status,
+        full_name: '',
+        phone: '',
+        address: '',
+        delivery_area: tracking.delivery_area || '',
+        subtotal: 0,
+        delivery_charge: 0,
+        total: 0,
+        payment_method: '',
+        courier_provider: tracking.courier_provider,
+        tracking_number: tracking.tracking_number,
+        courier_status: tracking.courier_status,
+        created_at: tracking.created_at,
+        shipped_at: tracking.shipped_at,
+        delivered_at: tracking.delivered_at,
+        user_id: '',
+      });
+      setOrderItems([]);
     } catch (error: any) {
       console.error('Error fetching order:', error);
       toast({
