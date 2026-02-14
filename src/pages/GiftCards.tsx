@@ -111,13 +111,16 @@ const GiftCards = () => {
     setChecking(true);
     setCardInfo(null);
 
-    const { data } = await supabase
-      .from("gift_cards")
-      .select("*")
-      .eq("code", redeemCode.trim().toUpperCase())
-      .maybeSingle();
+    const { data, error } = await supabase.rpc("validate_gift_card", {
+      p_code: redeemCode.trim().toUpperCase(),
+    });
 
-    setCardInfo(data);
+    const result = data as any;
+    if (result && result.valid) {
+      setCardInfo({ balance: result.balance, code: redeemCode.trim().toUpperCase(), is_active: true });
+    } else {
+      setCardInfo(null);
+    }
     setChecking(false);
 
     if (!data) {

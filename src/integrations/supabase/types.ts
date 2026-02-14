@@ -3138,6 +3138,7 @@ export type Database = {
         Args: { p_conversation_id: string; p_visitor_id: string }
         Returns: undefined
       }
+      validate_gift_card: { Args: { p_code: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "manager" | "support"
