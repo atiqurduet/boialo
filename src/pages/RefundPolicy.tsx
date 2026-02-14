@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { SafeHTML } from "@/components/SafeHTML";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -41,9 +42,9 @@ const RefundPolicy = () => {
             {policies.map((policy) => (
               <section key={policy.id} className="prose prose-lg max-w-none">
                 <h2 className="text-xl font-semibold mb-4">{policy.title_bn}</h2>
-                <div 
+                <SafeHTML 
                   className="text-muted-foreground whitespace-pre-wrap"
-                  dangerouslySetInnerHTML={{ __html: policy.content_bn }}
+                  html={policy.content_bn}
                 />
               </section>
             ))}

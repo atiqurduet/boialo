@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SafeHTML } from "@/components/SafeHTML";
 import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -393,7 +394,7 @@ const UniversalProductDetail = () => {
               </TabsList>
               <TabsContent value="description" className="mt-4 prose prose-sm max-w-none">
                 {product.long_description_bn ? (
-                  <div dangerouslySetInnerHTML={{ __html: product.long_description_bn.replace(/\n/g, '<br>') }} />
+                  <SafeHTML html={product.long_description_bn.replace(/\n/g, '<br>')} />
                 ) : (
                   <p className="text-muted-foreground">কোনো বিস্তারিত বিবরণ নেই</p>
                 )}

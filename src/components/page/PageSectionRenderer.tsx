@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { SafeHTML } from '@/components/SafeHTML';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { TrustBadges } from '@/components/TrustBadges';
@@ -104,9 +105,9 @@ export const PageSectionRenderer = ({ section }: PageSectionRendererProps) => {
         <section className={`${getContainerClass()} ${getPaddingClass()}`} style={bgStyle}>
           {title_bn && <h2 className="text-2xl font-bold mb-4">{title_bn}</h2>}
           {subtitle_bn && <p className="text-muted-foreground mb-6">{subtitle_bn}</p>}
-          <div 
+          <SafeHTML 
             className="prose prose-lg max-w-none dark:prose-invert"
-            dangerouslySetInnerHTML={{ __html: (content?.content_bn as string) || '' }}
+            html={(content?.content_bn as string) || ''}
           />
         </section>
       );
@@ -147,7 +148,7 @@ export const PageSectionRenderer = ({ section }: PageSectionRendererProps) => {
     case 'html_embed':
       return (
         <section className={`${getContainerClass()} ${getPaddingClass()}`} style={bgStyle}>
-          <div dangerouslySetInnerHTML={{ __html: (content?.html as string) || '' }} />
+          <SafeHTML html={(content?.html as string) || ''} allowRich />
         </section>
       );
 
