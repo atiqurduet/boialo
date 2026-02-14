@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Eye, Search, Star, ExternalLink, Copy } from "lucide-react";
 import { format } from "date-fns";
 import { bn } from "date-fns/locale";
+import { SafeHTML } from "@/components/SafeHTML";
 
 const AdminBlog = () => {
   const queryClient = useQueryClient();
@@ -470,10 +471,7 @@ const AdminBlog = () => {
           <DialogHeader>
             <DialogTitle>কনটেন্ট প্রিভিউ</DialogTitle>
           </DialogHeader>
-          <div
-            className="prose prose-lg max-w-none text-foreground"
-            dangerouslySetInnerHTML={{ __html: previewContent }}
-          />
+          <SafeHTML html={previewContent} className="prose prose-lg max-w-none text-foreground" allowRich={true} />
         </DialogContent>
       </Dialog>
     </AdminLayout>
