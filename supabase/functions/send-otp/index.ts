@@ -273,16 +273,14 @@ serve(async (req) => {
         }
       }
 
-      // Fallback: No provider configured or SMS failed
-      console.log(`OTP for ${phone}: ${otp} (SMS not sent - no active provider)`);
+      // Fallback: No provider configured
+      console.log(`OTP generated for ${phone} (SMS not sent - no active provider)`);
       
       return new Response(
         JSON.stringify({ 
           success: true, 
           message: "OTP generated",
-          warning: "No SMS provider configured. OTP logged for testing.",
-          // Remove debug_otp in production!
-          debug_otp: otp 
+          warning: "No SMS provider configured."
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
