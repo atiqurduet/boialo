@@ -27,6 +27,7 @@ interface SearchResults {
   products: Product[];
   categories: Category[];
   suggestions: string[];
+  autocomplete: string[];
   totalProducts: number;
 }
 
@@ -35,6 +36,7 @@ export const useSearch = () => {
     products: [],
     categories: [],
     suggestions: [],
+    autocomplete: [],
     totalProducts: 0,
   });
   const [loading, setLoading] = useState(false);
@@ -54,7 +56,7 @@ export const useSearch = () => {
     }
 
     if (!query || query.length < 1) {
-      setResults({ products: [], categories: [], suggestions: [], totalProducts: 0 });
+      setResults({ products: [], categories: [], suggestions: [], autocomplete: [], totalProducts: 0 });
       setLoading(false);
       return;
     }
@@ -76,7 +78,7 @@ export const useSearch = () => {
         // Track search event
         trackSearch({ search_term: query });
 
-        setResults(data || { products: [], categories: [], suggestions: [], totalProducts: 0 });
+        setResults(data || { products: [], categories: [], suggestions: [], autocomplete: [], totalProducts: 0 });
       } catch (err: any) {
         if (err.name !== 'AbortError') {
           console.error('Search error:', err);
@@ -115,6 +117,7 @@ export const useSearch = () => {
         products: products || [],
         categories: categories || [],
         suggestions: [],
+        autocomplete: [],
         totalProducts: products?.length || 0,
       });
     } catch (err) {
@@ -123,7 +126,7 @@ export const useSearch = () => {
   };
 
   const clearResults = useCallback(() => {
-    setResults({ products: [], categories: [], suggestions: [], totalProducts: 0 });
+    setResults({ products: [], categories: [], suggestions: [], autocomplete: [], totalProducts: 0 });
     setError(null);
   }, []);
 

@@ -353,6 +353,38 @@ export type Database = {
         }
         Relationships: []
       }
+      bundle_items: {
+        Row: {
+          bundle_id: string
+          id: string
+          product_id: string
+          quantity: number
+          sort_order: number | null
+        }
+        Insert: {
+          bundle_id: string
+          id?: string
+          product_id: string
+          quantity?: number
+          sort_order?: number | null
+        }
+        Update: {
+          bundle_id?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bundle_items_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "product_bundles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cart_items: {
         Row: {
           created_at: string
@@ -361,6 +393,7 @@ export type Database = {
           quantity: number
           updated_at: string
           user_id: string
+          variant_id: string | null
         }
         Insert: {
           created_at?: string
@@ -369,6 +402,7 @@ export type Database = {
           quantity?: number
           updated_at?: string
           user_id: string
+          variant_id?: string | null
         }
         Update: {
           created_at?: string
@@ -377,8 +411,17 @@ export type Database = {
           quantity?: number
           updated_at?: string
           user_id?: string
+          variant_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       categories: {
         Row: {
@@ -2198,6 +2241,113 @@ export type Database = {
         }
         Relationships: []
       }
+      product_bundles: {
+        Row: {
+          bundle_price: number
+          created_at: string
+          description_bn: string | null
+          description_en: string | null
+          discount_percent: number | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          is_featured: boolean | null
+          name_bn: string
+          name_en: string | null
+          original_total: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          bundle_price: number
+          created_at?: string
+          description_bn?: string | null
+          description_en?: string | null
+          discount_percent?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          name_bn: string
+          name_en?: string | null
+          original_total?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          bundle_price?: number
+          created_at?: string
+          description_bn?: string | null
+          description_en?: string | null
+          discount_percent?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          name_bn?: string
+          name_en?: string | null
+          original_total?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      product_variants: {
+        Row: {
+          created_at: string
+          id: string
+          images: Json | null
+          is_active: boolean | null
+          original_price: number | null
+          price: number
+          product_id: string
+          sku: string | null
+          sort_order: number | null
+          stock_quantity: number
+          updated_at: string
+          variant_name: string
+          variant_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          images?: Json | null
+          is_active?: boolean | null
+          original_price?: number | null
+          price: number
+          product_id: string
+          sku?: string | null
+          sort_order?: number | null
+          stock_quantity?: number
+          updated_at?: string
+          variant_name: string
+          variant_type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          images?: Json | null
+          is_active?: boolean | null
+          original_price?: number | null
+          price?: number
+          product_id?: string
+          sku?: string | null
+          sort_order?: number | null
+          stock_quantity?: number
+          updated_at?: string
+          variant_name?: string
+          variant_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           author: string | null
@@ -2428,6 +2578,39 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          is_active: boolean | null
+          p256dh: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          is_active?: boolean | null
+          p256dh: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          is_active?: boolean | null
+          p256dh?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       refund_policies: {
         Row: {
           content_bn: string
@@ -2584,6 +2767,71 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      saved_cart_items: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          user_id: string
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          user_id: string
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          user_id?: string
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_cart_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_wishlists: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          share_code: string
+          title: string | null
+          updated_at: string
+          user_id: string
+          view_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          share_code: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+          view_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          share_code?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+          view_count?: number | null
+        }
+        Relationships: []
       }
       site_settings: {
         Row: {

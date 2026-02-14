@@ -3,11 +3,15 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus, Minus, ShoppingBag, Loader2 } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingBag, Loader2, Bookmark, ShoppingCart } from "lucide-react";
 import { useCartContext } from "@/contexts/CartContext";
+import { useSavedCart } from "@/hooks/useSavedCart";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Cart = () => {
-  const { cartItems, loading, updateQuantity, removeFromCart, subtotal } = useCartContext();
+  const { cartItems, loading, updateQuantity, removeFromCart, subtotal, addToCart } = useCartContext();
+  const { savedItems, saveForLater, removeSavedItem } = useSavedCart();
+  const { user } = useAuth();
   
   const shipping = subtotal >= 499 ? 0 : 60;
   const total = subtotal + shipping;
@@ -109,16 +113,64 @@ const Cart = () => {
                         <Plus className="w-4 h-4" />
                       </button>
                     </div>
-                    <button
-                      onClick={() => removeFromCart(item.id)}
-                      className="text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {user && (
+                        <button
+                          onClick={async () => {
+                            await saveForLater(item.productId);
+                            await removeFromCart(item.id);
+                          }}
+                          className="text-muted-foreground hover:text-primary transition-colors"
+                          title="পরে কেনার জন্য সেভ করুন"
+                        >
+                          <Bookmark className="w-5 h-5" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
+
+            {/* Saved for Later */}
+            {user && savedItems.length > 0 && (
+              <div className="mt-8">
+                <h2 className="text-lg font-bold mb-4">পরে কেনার জন্য সেভ করা ({savedItems.length})</h2>
+                <div className="space-y-3">
+                  {savedItems.map((item) => (
+                    <div key={item.id} className="bg-card rounded-xl p-4 shadow-sm flex gap-4">
+                      <Link to={`/product/${item.product.slug}`} className="shrink-0">
+                        <img src={item.product.image} alt={item.product.title} className="w-16 h-20 object-cover rounded-lg" />
+                      </Link>
+                      <div className="flex-1 min-w-0">
+                        <Link to={`/product/${item.product.slug}`} className="font-medium hover:text-primary line-clamp-1 text-sm">
+                          {item.product.title}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">{item.product.author}</p>
+                        <p className="text-primary font-bold text-sm mt-1">৳{item.product.price}</p>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Button size="sm" variant="outline" onClick={async () => {
+                          await addToCart(item.productId);
+                          await removeSavedItem(item.id);
+                        }}>
+                          <ShoppingCart className="w-3 h-3 mr-1" /> কার্টে
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => removeSavedItem(item.id)}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Order Summary */}

@@ -40,7 +40,8 @@ import Categories from "./pages/Categories";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import DigitalLibrary from "./pages/DigitalLibrary";
-
+import Bundles from "./pages/Bundles";
+import SharedWishlist from "./pages/SharedWishlist";
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
@@ -84,6 +85,7 @@ import AdminAppearance from "./pages/admin/AdminAppearance";
 import AdminBackupRestore from "./pages/admin/AdminBackupRestore";
 import AdminAuditLog from "./pages/admin/AdminAuditLog";
 import RefundPolicy from "./pages/RefundPolicy";
+import RefundRequests from "./pages/RefundRequests";
 import ChatWidget from "./components/ChatWidget";
 import DynamicPage from "./pages/DynamicPage";
 import AdminBlog from "./pages/admin/AdminBlog";
@@ -131,6 +133,7 @@ const App = () => (
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/refund-policy" element={<RefundPolicy />} />
+                <Route path="/refund-requests" element={<RefundRequests />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/categories/:slug" element={<CategoryDetail />} />
@@ -142,6 +145,8 @@ const App = () => (
                 <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/digital-library" element={<DigitalLibrary />} />
                 <Route path="/gift-cards" element={<GiftCards />} />
+                <Route path="/bundles" element={<Bundles />} />
+                <Route path="/wishlist/shared/:shareCode" element={<SharedWishlist />} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminDashboard />} />
