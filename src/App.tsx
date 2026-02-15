@@ -90,6 +90,7 @@ import ChatWidget from "./components/ChatWidget";
 import DynamicPage from "./pages/DynamicPage";
 import AdminBlog from "./pages/admin/AdminBlog";
 import AdminGiftCards from "./pages/admin/AdminGiftCards";
+import AdminBundles from "./pages/admin/AdminBundles";
 import AdminLoyaltyPoints from "./pages/admin/AdminLoyaltyPoints";
 import GiftCards from "./pages/GiftCards";
 import { ThemeInitializer } from "./components/ThemeInitializer";
@@ -193,6 +194,7 @@ const App = () => (
                 <Route path="/admin/blog" element={<AdminBlog />} />
                 <Route path="/admin/gift-cards" element={<AdminGiftCards />} />
                 <Route path="/admin/loyalty-points" element={<AdminLoyaltyPoints />} />
+                <Route path="/admin/bundles" element={<AdminBundles />} />
                 
                 {/* Dynamic Page Route */}
                 <Route path="/page/:slug" element={<DynamicPage />} />
