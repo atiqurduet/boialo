@@ -13,15 +13,18 @@ import { ExpandableText } from "@/components/ExpandableText";
 import { ProductVariantSelector } from "@/components/ProductVariantSelector";
 import { useProductVariants, ProductVariant } from "@/hooks/useProductVariants";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
+import { useProductBundles } from "@/hooks/useProductBundles";
+import { useCartContext } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
-import { Heart, ChevronRight, BookOpen, ShoppingCart } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Heart, ChevronRight, BookOpen, ShoppingCart, Package, Clock, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWishlistContext } from "@/contexts/WishlistContext";
-import { useCartContext } from "@/contexts/CartContext";
 import { format } from "date-fns";
 import { bn } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trackViewContent } from "@/lib/analytics";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -452,44 +455,20 @@ const ProductDetail = () => {
             </div>
           </div>
 
-          {/* Sidebar - Related Products & Offers */}
+          {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
-            {/* Offers */}
-            <div className="bg-card rounded-xl p-5 shadow-sm">
-              <h3 className="font-semibold mb-4">অফারে আরো যা পাচ্ছেন</h3>
-              <div className="space-y-4">
-                <div className="border-b border-border pb-4">
-                  <p className="text-sm">
-                    একটি বই কিনি, একটি প্রিমিয়াম নোট বুক, একটি প্রিমিয়াম বুকমার্ক ও নাশনিক
-                    বুকমার্ক
-                  </p>
-                  <p className="text-sm mt-2">
-                    <span className="text-muted-foreground">সর্বনিম্ন কেনাকাটা:</span>{" "}
-                    <span className="text-primary font-medium">১ টাকা</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    মেয়াদ শেষ: ৩১ ডিসেম্বর, ২০২৫
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm">৪৯৯+ টাকার অর্ডার করলে ক্যালিগ্রাফি বুকমার্ক ফ্রি!</p>
-                  <p className="text-sm mt-2">
-                    <span className="text-muted-foreground">সর্বনিম্ন কেনাকাটা:</span>{" "}
-                    <span className="text-primary font-medium">৫০০ টাকা</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    মেয়াদ শেষ: ৩১ ডিসেম্বর, ২০২৫
-                  </p>
-                </div>
-              </div>
-            </div>
+            {/* Bundle Offers */}
+            <BundleSidebar productId={product.id} />
 
             {/* Related Products */}
             {relatedProducts.length > 0 && (
-              <div className="bg-card rounded-xl p-5 shadow-sm">
+              <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold">আরো দেখুন...</h3>
-                  <Link to="/shop" className="text-primary text-sm hover:underline">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <ArrowRight className="w-4 h-4 text-primary" />
+                    আরো দেখুন
+                  </h3>
+                  <Link to={`/shop?category=${getCategorySlug()}`} className="text-primary text-xs hover:underline">
                     সবগুলো দেখুন
                   </Link>
                 </div>
@@ -500,6 +479,9 @@ const ProductDetail = () => {
                 </div>
               </div>
             )}
+
+            {/* Recently Viewed */}
+            <RecentlyViewedSidebar currentProductId={product.id} />
           </div>
         </div>
 
@@ -534,6 +516,107 @@ const VariantSection = ({ productId, selectedVariant, onSelect }: { productId: s
   const { data: variants = [] } = useProductVariants(productId);
   if (variants.length === 0) return null;
   return <ProductVariantSelector variants={variants} selectedVariant={selectedVariant} onSelect={onSelect} />;
+};
+
+// Bundle sidebar sub-component
+const BundleSidebar = ({ productId }: { productId: string }) => {
+  const { data: bundles = [], isLoading } = useProductBundles(true);
+  const { addToCart } = useCartContext();
+
+  // Filter bundles that contain this product, or show featured bundles
+  const relevantBundles = bundles.filter(b => 
+    b.items.some(item => item.product_id === productId)
+  );
+  const displayBundles = relevantBundles.length > 0 ? relevantBundles : bundles.slice(0, 2);
+
+  if (isLoading || displayBundles.length === 0) return null;
+
+  const handleAddBundle = async (bundle: any) => {
+    for (const item of bundle.items) {
+      await addToCart(item.product_id, item.quantity);
+    }
+    toast.success("বান্ডেল কার্টে যোগ হয়েছে");
+  };
+
+  return (
+    <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
+      <h3 className="font-semibold flex items-center gap-2 mb-4">
+        <Package className="w-4 h-4 text-primary" />
+        বান্ডেল অফার
+      </h3>
+      <div className="space-y-4">
+        {displayBundles.map((bundle) => (
+          <div key={bundle.id} className="border border-border rounded-lg p-3 hover:border-primary/30 transition-colors">
+            <h4 className="font-medium text-sm mb-1">{bundle.name_bn}</h4>
+            <p className="text-xs text-muted-foreground mb-2">{bundle.items.length} টি পণ্য</p>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-primary font-bold">৳{bundle.bundle_price}</span>
+              <span className="text-muted-foreground line-through text-xs">৳{bundle.original_total}</span>
+              {bundle.discount_percent > 0 && (
+                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                  {bundle.discount_percent}% ছাড়
+                </Badge>
+              )}
+            </div>
+            <Button size="sm" className="w-full h-8 text-xs" onClick={() => handleAddBundle(bundle)}>
+              <ShoppingCart className="w-3 h-3 mr-1" />
+              কার্টে যোগ করুন
+            </Button>
+          </div>
+        ))}
+      </div>
+      <Link to="/bundles" className="text-primary text-xs hover:underline mt-3 inline-flex items-center gap-1">
+        সব বান্ডেল দেখুন <ArrowRight className="w-3 h-3" />
+      </Link>
+    </div>
+  );
+};
+
+// Recently viewed sidebar sub-component
+const RecentlyViewedSidebar = ({ currentProductId }: { currentProductId: string }) => {
+  const { items } = useRecentlyViewed();
+  const filtered = items.filter(i => i.id !== currentProductId).slice(0, 5);
+
+  if (filtered.length === 0) return null;
+
+  return (
+    <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
+      <h3 className="font-semibold flex items-center gap-2 mb-4">
+        <Clock className="w-4 h-4 text-primary" />
+        সম্প্রতি দেখা
+      </h3>
+      <div className="space-y-3">
+        {filtered.map((item) => (
+          <Link
+            key={item.id}
+            to={`/product/${item.slug}`}
+            className="flex gap-3 group hover:bg-muted/50 rounded-lg p-1.5 -mx-1.5 transition-colors"
+          >
+            <div className="w-12 h-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
+              <img
+                src={item.image}
+                alt={item.title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-xs font-medium line-clamp-2 group-hover:text-primary transition-colors">
+                {item.title}
+              </h4>
+              <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{item.author}</p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-xs text-primary font-bold">৳{item.price}</span>
+                {item.originalPrice && item.originalPrice > item.price && (
+                  <span className="text-[10px] text-muted-foreground line-through">৳{item.originalPrice}</span>
+                )}
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 export default ProductDetail;
