@@ -86,6 +86,7 @@ export const menuCategories: MenuCategory[] = [
       { icon: FolderTree, label: 'বই ক্যাটাগরি', href: '/admin/categories', roles: ['admin', 'manager'] },
       { icon: Users, label: 'লেখক', href: '/admin/writers', roles: ['admin', 'manager'] },
       { icon: FileText, label: 'প্রকাশনী', href: '/admin/publishers', roles: ['admin', 'manager'] },
+      { icon: Layers, label: 'বান্ডেল', href: '/admin/bundles', roles: ['admin', 'manager'] },
     ]
   },
   {
