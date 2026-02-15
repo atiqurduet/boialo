@@ -307,9 +307,10 @@ const Checkout = () => {
   };
 
   const generateOrderNumber = () => {
-    const timestamp = Date.now().toString(36).toUpperCase();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `WL-${timestamp}-${random}`;
+    const now = new Date();
+    const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const seq = Math.floor(Math.random() * 900000 + 100000);
+    return `ORD-${date}-${seq}`;
   };
 
   const validateForm = () => {
