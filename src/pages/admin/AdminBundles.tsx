@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -17,9 +17,94 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Plus, Pencil, Trash2, Package, Search, X, GripVertical,
   Star, Eye, EyeOff, Copy, ArrowUpDown, ImagePlus, Loader2,
-  ShoppingBag, TrendingUp, AlertCircle, Check
+  ShoppingBag, TrendingUp, AlertCircle, Check, Upload, Image as ImageIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Bundle Image Upload Component
+const BundleImageUpload = ({ imageUrl, onImageChange }: { imageUrl: string; onImageChange: (url: string) => void }) => {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('বৈধ ইমেজ নয়'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error('ফাইল ৫MB এর বেশি'); return; }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `bundles/${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
+
+      // Delete old image if exists
+      if (imageUrl) {
+        const parts = imageUrl.split('/product-images/');
+        if (parts.length > 1) {
+          await supabase.storage.from('product-images').remove([decodeURIComponent(parts[1])]);
+        }
+      }
+
+      const { error } = await supabase.storage.from('product-images').upload(path, file);
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
+      onImageChange(publicUrl);
+      toast.success('ইমেজ আপলোড হয়েছে');
+    } catch (err: any) {
+      toast.error(err.message || 'আপলোড ত্রুটি');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const handleRemove = async () => {
+    if (imageUrl) {
+      const parts = imageUrl.split('/product-images/');
+      if (parts.length > 1) {
+        await supabase.storage.from('product-images').remove([decodeURIComponent(parts[1])]);
+      }
+    }
+    onImageChange('');
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label className="flex items-center gap-2">
+        <ImageIcon className="h-4 w-4" /> ব্যানার ইমেজ
+      </Label>
+      <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+      {imageUrl ? (
+        <div className="relative group w-full max-w-sm">
+          <img src={imageUrl} alt="Bundle" className="w-full h-36 object-cover rounded-lg border" />
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+            <Button size="sm" variant="secondary" onClick={() => fileRef.current?.click()} disabled={uploading}>
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
+              পরিবর্তন
+            </Button>
+            <Button size="sm" variant="destructive" onClick={handleRemove}>
+              <Trash2 className="h-4 w-4 mr-1" /> মুছুন
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div
+          className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors max-w-sm"
+          onClick={() => fileRef.current?.click()}
+        >
+          {uploading ? (
+            <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary mb-2" />
+          ) : (
+            <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+          )}
+          <p className="text-sm text-muted-foreground">ক্লিক করে ইমেজ আপলোড করুন</p>
+          <p className="text-xs text-muted-foreground/70 mt-1">সর্বোচ্চ ৫MB • JPG, PNG, WEBP</p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface BundleItemForm {
   id?: string;
@@ -625,17 +710,10 @@ const AdminBundles = () => {
                     rows={3}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>ব্যানার ইমেজ URL</Label>
-                  <Input
-                    value={formData.image_url}
-                    onChange={e => setFormData(p => ({ ...p, image_url: e.target.value }))}
-                    placeholder="https://..."
-                  />
-                  {formData.image_url && (
-                    <img src={formData.image_url} alt="Preview" className="w-full max-w-xs h-32 object-cover rounded-lg border mt-2" />
-                  )}
-                </div>
+                <BundleImageUpload
+                  imageUrl={formData.image_url}
+                  onImageChange={(url) => setFormData(p => ({ ...p, image_url: url }))}
+                />
               </TabsContent>
 
               {/* Tab 2: Product Selection */}
