@@ -72,7 +72,7 @@ const AdminSettings = () => {
         .from("site_settings")
         .select("*")
         .eq("category", "security")
-        .in("setting_key", ["otp_enabled", "otp_required_for_cod", "otp_required_for_new_customers", "otp_only_for_cod"]);
+        .in("setting_key", ["otp_enabled", "otp_required_for_cod", "otp_required_for_new_customers", "otp_only_for_cod", "social_login_google_enabled", "social_login_apple_enabled"]);
       
       if (error) throw error;
       
@@ -498,6 +498,48 @@ const AdminSettings = () => {
                   })}
                 </div>
               )}
+
+              {/* Social Login Settings */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-primary" />
+                    সোশ্যাল লগইন সেটিংস
+                  </CardTitle>
+                  <CardDescription className="text-sm">সোশ্যাল মিডিয়া দিয়ে লগইন অপশন কনফিগার করুন</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {[
+                      { key: "social_login_google_enabled", title: "Google লগইন", description: "Google অ্যাকাউন্ট দিয়ে সাইন ইন", icon: Globe, color: "text-red-600", bgColor: "bg-red-100 dark:bg-red-900/30" },
+                      { key: "social_login_apple_enabled", title: "Apple লগইন", description: "Apple ID দিয়ে সাইন ইন", icon: Shield, color: "text-gray-800 dark:text-gray-200", bgColor: "bg-gray-100 dark:bg-gray-800" },
+                    ].map((config) => {
+                      const isEnabled = getOTPSetting(config.key);
+                      const Icon = config.icon;
+                      return (
+                        <Card key={config.key} className={`transition-all duration-200 hover:shadow-md ${isEnabled ? 'border-primary/50 ring-1 ring-primary/20' : 'hover:border-muted-foreground/30'}`}>
+                          <CardContent className="py-5">
+                            <div className="flex items-start gap-4">
+                              <div className={`p-3 rounded-xl ${config.bgColor}`}>
+                                <Icon className={`h-5 w-5 ${config.color}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold">{config.title}</h3>
+                                <p className="text-muted-foreground text-sm">{config.description}</p>
+                              </div>
+                              <Switch
+                                checked={isEnabled}
+                                onCheckedChange={() => toggleOTPSetting(config.key, isEnabled)}
+                                disabled={updateOTPMutation.isPending}
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Info Section */}
               <Card className="bg-muted/30 border-dashed">
