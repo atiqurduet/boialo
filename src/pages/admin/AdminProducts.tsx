@@ -107,14 +107,14 @@ const AdminProducts = () => {
     price: 0,
     original_price: 0,
     discount_percent: 0,
-    author: '',
-    publisher: '',
     stock_quantity: 0,
     is_active: true,
     is_preorder: false,
     is_featured: false,
     category_id: '',
     writer_id: '',
+    translator_id: '',
+    secondary_writer_ids: [] as string[],
     publisher_id: '',
     brand_id: '',
     description_bn: '',
@@ -234,14 +234,16 @@ const AdminProducts = () => {
         price: formData.price,
         original_price: formData.original_price || null,
         discount_percent: formData.discount_percent,
-        author: formData.author || null,
-        publisher: formData.publisher || null,
+        author: null,
+        publisher: null,
         stock_quantity: formData.stock_quantity,
         is_active: formData.is_active,
         is_preorder: formData.is_preorder,
         is_featured: formData.is_featured,
         category_id: formData.category_id || null,
         writer_id: formData.writer_id || null,
+        translator_id: formData.translator_id || null,
+        secondary_writer_ids: formData.secondary_writer_ids.length > 0 ? formData.secondary_writer_ids : null,
         publisher_id: formData.publisher_id || null,
         brand_id: formData.brand_id || null,
         description_bn: formData.description_bn || null,
@@ -290,14 +292,14 @@ const AdminProducts = () => {
       price: product.price,
       original_price: product.original_price || 0,
       discount_percent: product.discount_percent,
-      author: product.author || '',
-      publisher: product.publisher || '',
       stock_quantity: product.stock_quantity,
       is_active: product.is_active,
       is_preorder: product.is_preorder,
       is_featured: product.is_featured,
       category_id: product.category_id || '',
       writer_id: product.writer_id || '',
+      translator_id: (product as any).translator_id || '',
+      secondary_writer_ids: (product as any).secondary_writer_ids || [],
       publisher_id: product.publisher_id || '',
       brand_id: product.brand_id || '',
       description_bn: product.description_bn || '',
@@ -335,14 +337,14 @@ const AdminProducts = () => {
       price: 0,
       original_price: 0,
       discount_percent: 0,
-      author: '',
-      publisher: '',
       stock_quantity: 0,
       is_active: true,
       is_preorder: false,
       is_featured: false,
       category_id: '',
       writer_id: '',
+      translator_id: '',
+      secondary_writer_ids: [],
       publisher_id: '',
       brand_id: '',
       description_bn: '',
@@ -550,13 +552,63 @@ const AdminProducts = () => {
                       </Select>
                     </div>
                     <div>
-                      <Label>লেখক (ডাটাবেস থেকে)</Label>
+                      <Label>মূল লেখক (ডাটাবেস থেকে)</Label>
                       <Select value={formData.writer_id || "none"} onValueChange={(value) => setFormData({ ...formData, writer_id: value === "none" ? "" : value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="লেখক নির্বাচন করুন" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">কোন লেখক নেই</SelectItem>
+                          {writers.map((w) => (
+                            <SelectItem key={w.id} value={w.id}>{w.name_bn} ({w.name_en})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* সহ-লেখক (Multiple Authors) */}
+                    <div>
+                      <Label>সহ-লেখক (একাধিক লেখক থাকলে)</Label>
+                      <div className="space-y-2 mt-1">
+                        {formData.secondary_writer_ids.map((wId, idx) => {
+                          const w = writers.find(wr => wr.id === wId);
+                          return (
+                            <div key={idx} className="flex items-center gap-2">
+                              <Select value={wId} onValueChange={(value) => {
+                                const updated = [...formData.secondary_writer_ids];
+                                updated[idx] = value;
+                                setFormData({ ...formData, secondary_writer_ids: updated });
+                              }}>
+                                <SelectTrigger className="flex-1">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {writers.map((wr) => (
+                                    <SelectItem key={wr.id} value={wr.id}>{wr.name_bn} ({wr.name_en})</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button type="button" variant="ghost" size="icon" className="h-9 w-9" onClick={() => {
+                                setFormData({ ...formData, secondary_writer_ids: formData.secondary_writer_ids.filter((_, i) => i !== idx) });
+                              }}>
+                                <X className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          );
+                        })}
+                        <Button type="button" variant="outline" size="sm" onClick={() => setFormData({ ...formData, secondary_writer_ids: [...formData.secondary_writer_ids, ''] })}>
+                          <Plus className="h-3 w-3 mr-1" /> সহ-লেখক যোগ করুন
+                        </Button>
+                      </div>
+                    </div>
+                    {/* অনুবাদক (Translator) */}
+                    <div>
+                      <Label>অনুবাদক</Label>
+                      <Select value={formData.translator_id || "none"} onValueChange={(value) => setFormData({ ...formData, translator_id: value === "none" ? "" : value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="অনুবাদক নির্বাচন করুন" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">কোন অনুবাদক নেই</SelectItem>
                           {writers.map((w) => (
                             <SelectItem key={w.id} value={w.id}>{w.name_bn} ({w.name_en})</SelectItem>
                           ))}
@@ -590,16 +642,6 @@ const AdminProducts = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>লেখক (টেক্সট)</Label>
-                        <Input value={formData.author} onChange={(e) => setFormData({ ...formData, author: e.target.value })} placeholder="লেখকের নাম" />
-                      </div>
-                      <div>
-                        <Label>প্রকাশক (টেক্সট)</Label>
-                        <Input value={formData.publisher} onChange={(e) => setFormData({ ...formData, publisher: e.target.value })} placeholder="প্রকাশকের নাম" />
-                      </div>
                     </div>
                   </TabsContent>
 

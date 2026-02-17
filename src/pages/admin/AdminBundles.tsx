@@ -143,6 +143,7 @@ const AdminBundles = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [productSearch, setProductSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [productSource, setProductSource] = useState<'books' | 'universal'>('books');
   const [showProductPicker, setShowProductPicker] = useState(false);
   const [tab, setTab] = useState('details');
 
@@ -179,7 +180,7 @@ const AdminBundles = () => {
     },
   });
 
-  // Fetch categories
+  // Fetch book categories
   const { data: categories = [] } = useQuery({
     queryKey: ['admin-categories-list'],
     queryFn: async () => {
@@ -192,26 +193,61 @@ const AdminBundles = () => {
     },
   });
 
-  // Fetch products for picker
-  const { data: products = [], isLoading: productsLoading } = useQuery({
-    queryKey: ['admin-products-picker', selectedCategory, productSearch],
+  // Fetch universal categories
+  const { data: universalCategories = [] } = useQuery({
+    queryKey: ['admin-universal-categories-list'],
     queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select('id, title_bn, title_en, price, images, category_id, author, stock_quantity')
+      const { data } = await supabase
+        .from('universal_categories')
+        .select('id, name_bn, name_en')
         .eq('is_active', true)
-        .order('title_bn');
-
-      if (selectedCategory && selectedCategory !== 'all') {
-        query = query.eq('category_id', selectedCategory);
-      }
-      if (productSearch.trim()) {
-        query = query.or(`title_bn.ilike.%${productSearch}%,title_en.ilike.%${productSearch}%`);
-      }
-      query = query.limit(50);
-
-      const { data } = await query;
+        .order('name_bn');
       return data || [];
+    },
+  });
+
+  // Fetch products for picker (books or universal)
+  const { data: products = [], isLoading: productsLoading } = useQuery({
+    queryKey: ['admin-products-picker', productSource, selectedCategory, productSearch],
+    queryFn: async () => {
+      if (productSource === 'books') {
+        let query = supabase
+          .from('products')
+          .select('id, title_bn, title_en, price, images, category_id, author, stock_quantity')
+          .eq('is_active', true)
+          .order('title_bn');
+
+        if (selectedCategory && selectedCategory !== 'all') {
+          query = query.eq('category_id', selectedCategory);
+        }
+        if (productSearch.trim()) {
+          query = query.or(`title_bn.ilike.%${productSearch}%,title_en.ilike.%${productSearch}%`);
+        }
+        query = query.limit(50);
+        const { data } = await query;
+        return (data || []).map((p: any) => ({ ...p, _source: 'book' }));
+      } else {
+        let query = supabase
+          .from('universal_products')
+          .select('id, name_bn, name_en, price, images, category_id, stock_quantity')
+          .eq('is_active', true)
+          .order('name_bn');
+
+        if (selectedCategory && selectedCategory !== 'all') {
+          query = query.eq('category_id', selectedCategory);
+        }
+        if (productSearch.trim()) {
+          query = query.or(`name_bn.ilike.%${productSearch}%,name_en.ilike.%${productSearch}%`);
+        }
+        query = query.limit(50);
+        const { data } = await query;
+        return (data || []).map((p: any) => ({ 
+          ...p, 
+          title_bn: p.name_bn, 
+          title_en: p.name_en, 
+          _source: 'universal' 
+        }));
+      }
     },
     enabled: showProductPicker,
   });
@@ -769,9 +805,28 @@ const AdminBundles = () => {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">পণ্য যোগ করুন</CardTitle>
-                    <CardDescription className="text-xs">ক্যাটাগরি ফিল্টার করে পণ্য নির্বাচন করুন</CardDescription>
+                    <CardDescription className="text-xs">বই বা সাধারণ প্রোডাক্ট থেকে পণ্য নির্বাচন করুন</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    {/* Source Toggle */}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={productSource === 'books' ? 'default' : 'outline'}
+                        onClick={() => { setProductSource('books'); setSelectedCategory('all'); setShowProductPicker(true); }}
+                      >
+                        📚 বই
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={productSource === 'universal' ? 'default' : 'outline'}
+                        onClick={() => { setProductSource('universal'); setSelectedCategory('all'); setShowProductPicker(true); }}
+                      >
+                        🛍️ সাধারণ প্রোডাক্ট
+                      </Button>
+                    </div>
                     <div className="flex flex-col sm:flex-row gap-2">
                       <Select value={selectedCategory} onValueChange={v => { setSelectedCategory(v); setShowProductPicker(true); }}>
                         <SelectTrigger className="w-full sm:w-[200px]">
@@ -779,7 +834,7 @@ const AdminBundles = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">সকল ক্যাটাগরি</SelectItem>
-                          {categories.map((cat: any) => (
+                          {(productSource === 'books' ? categories : universalCategories).map((cat: any) => (
                             <SelectItem key={cat.id} value={cat.id}>{cat.name_bn}</SelectItem>
                           ))}
                         </SelectContent>

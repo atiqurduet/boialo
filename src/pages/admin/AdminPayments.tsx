@@ -32,6 +32,10 @@ interface PaymentMethod {
   provider: string;
   is_active: boolean;
   sort_order: number;
+  manual_number?: string;
+  manual_type?: string;
+  manual_instructions?: string;
+  payment_mode?: string;
 }
 
 const paymentStatusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -68,10 +72,10 @@ const AdminPayments = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payment_methods")
-        .select("id, name_bn, name_en, provider, is_active, sort_order")
+        .select("*")
         .order("sort_order");
       if (error) throw error;
-      return data as PaymentMethod[];
+      return (data || []) as unknown as PaymentMethod[];
     },
   });
 
@@ -407,44 +411,100 @@ const AdminPayments = () => {
                       {method.is_active ? "Active" : "Inactive"}
                     </Badge>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground mb-4">{method.name_bn}</p>
+                  <CardContent className="space-y-4">
+                    <p className="text-muted-foreground">{method.name_bn}</p>
+                    
+                    {/* Enable/Disable Toggle */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Switch checked={method.is_active} onCheckedChange={() => toggleActive(method)} />
-                        <span className="text-sm">{method.is_active ? "Enabled" : "Disabled"}</span>
+                        <span className="text-sm">{method.is_active ? "সক্রিয় (কার্ট পেজে দেখাবে)" : "নিষ্ক্রিয় (কার্ট পেজে দেখাবে না)"}</span>
                       </div>
-                      {method.provider !== "cod" && (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" onClick={() => openConfigDialog(method)}>
-                              <Settings className="h-4 w-4 mr-2" /> Configure
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Configure {method.name_en}</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              {getProviderConfig(method.provider).map((field) => (
-                                <div key={field} className="space-y-2">
-                                  <Label htmlFor={field} className="capitalize">{field.replace(/_/g, " ")}</Label>
-                                  {field === "sandbox" ? (
-                                    <div className="flex items-center gap-2">
-                                      <Switch id={field} checked={config[field] === "true"} onCheckedChange={(checked) => setConfig({ ...config, [field]: checked.toString() })} />
-                                      <span className="text-sm text-muted-foreground">{config[field] === "true" ? "Test Mode" : "Live Mode"}</span>
-                                    </div>
-                                  ) : (
-                                    <Input id={field} type={field.includes("secret") || field.includes("password") || field.includes("key") ? "password" : "text"} value={config[field] || ""} onChange={(e) => setConfig({ ...config, [field]: e.target.value })} placeholder={configStatus[field] ? "••••••• (configured - enter new value to change)" : `Enter ${field.replace(/_/g, " ")}`} />
-                                  )}
-                                </div>
-                              ))}
-                              <Button onClick={saveConfig} className="w-full"><Save className="h-4 w-4 mr-2" /> Save Configuration</Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      )}
                     </div>
+
+                    {/* Manual Settings (for bkash, nagad) */}
+                    {(method.provider === "bkash" || method.provider === "nagad") && (
+                      <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
+                        <h4 className="text-sm font-semibold">ম্যানুয়াল সেটিং</h4>
+                        <div className="space-y-2">
+                          <Label className="text-xs">অ্যাকাউন্ট নম্বর</Label>
+                          <Input
+                            placeholder="01XXXXXXXXX"
+                            defaultValue={method.manual_number || ''}
+                            onBlur={(e) => {
+                              updateMutation.mutate({ id: method.id, updates: { manual_number: e.target.value } as any });
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">পেমেন্ট ধরণ</Label>
+                          <Select defaultValue={method.manual_type || 'send_money'} onValueChange={(val) => {
+                            updateMutation.mutate({ id: method.id, updates: { manual_type: val } as any });
+                          }}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="send_money">Send Money</SelectItem>
+                              <SelectItem value="payment">Payment</SelectItem>
+                              <SelectItem value="merchant">Merchant</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">নির্দেশনা</Label>
+                          <Input
+                            placeholder="যেমন: পেমেন্ট করে ট্রানজেকশন আইডি দিন"
+                            defaultValue={method.manual_instructions || ''}
+                            onBlur={(e) => {
+                              updateMutation.mutate({ id: method.id, updates: { manual_instructions: e.target.value } as any });
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">পেমেন্ট মোড</Label>
+                          <Select defaultValue={method.payment_mode || 'manual'} onValueChange={(val) => {
+                            updateMutation.mutate({ id: method.id, updates: { payment_mode: val } as any });
+                          }}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="manual">ম্যানুয়াল (নম্বর দেখানো হবে)</SelectItem>
+                              <SelectItem value="api">API (অটোমেটিক পেমেন্ট)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* API Configuration */}
+                    {method.provider !== "cod" && (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="w-full" onClick={() => openConfigDialog(method)}>
+                            <Settings className="h-4 w-4 mr-2" /> API কনফিগারেশন
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Configure {method.name_en} API</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            {getProviderConfig(method.provider).map((field) => (
+                              <div key={field} className="space-y-2">
+                                <Label htmlFor={field} className="capitalize">{field.replace(/_/g, " ")}</Label>
+                                {field === "sandbox" ? (
+                                  <div className="flex items-center gap-2">
+                                    <Switch id={field} checked={config[field] === "true"} onCheckedChange={(checked) => setConfig({ ...config, [field]: checked.toString() })} />
+                                    <span className="text-sm text-muted-foreground">{config[field] === "true" ? "Test Mode" : "Live Mode"}</span>
+                                  </div>
+                                ) : (
+                                  <Input id={field} type={field.includes("secret") || field.includes("password") || field.includes("key") ? "password" : "text"} value={config[field] || ""} onChange={(e) => setConfig({ ...config, [field]: e.target.value })} placeholder={configStatus[field] ? "••••••• (configured)" : `Enter ${field.replace(/_/g, " ")}`} />
+                                )}
+                              </div>
+                            ))}
+                            <Button onClick={saveConfig} className="w-full"><Save className="h-4 w-4 mr-2" /> Save Configuration</Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                   </CardContent>
                 </Card>
               ))}

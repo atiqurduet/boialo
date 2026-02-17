@@ -64,6 +64,7 @@ const Checkout = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [abandonedCheckoutId, setAbandonedCheckoutId] = useState<string | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [dbPaymentMethods, setDbPaymentMethods] = useState<any[]>([]);
 
   // OTP Verification States
   const [showOtpDialog, setShowOtpDialog] = useState(false);
@@ -317,8 +318,9 @@ const Checkout = () => {
     try {
       checkoutSchema.parse(formData);
       
-      // Additional validation for nagad (bKash is now API-based, no manual transaction ID needed)
-      if (paymentMethod === "nagad" && !formData.transactionId?.trim()) {
+      // Validate transaction ID for manual payment methods (not COD, not API bkash)
+      const selectedMethod = paymentMethods.find((m: any) => m.id === paymentMethod);
+      if (paymentMethod !== "cod" && selectedMethod?.manual_number && selectedMethod?.payment_mode !== "api" && !formData.transactionId?.trim()) {
         setErrors({ transactionId: "ট্রান্জেকশন আইডি দিন" });
         return false;
       }
@@ -613,32 +615,38 @@ const Checkout = () => {
   const couponDiscount = appliedCoupon?.discount_amount || 0;
   const total = subtotal - couponDiscount + deliveryCharge;
 
-  const paymentMethods = [
-    {
-      id: "cod",
-      name: "ক্যাশ অন ডেলিভারি",
-      description: "পণ্য হাতে পেয়ে টাকা প্রদান করুন",
-      icon: Truck,
-    },
-    {
-      id: "bkash",
-      name: "বিকাশ",
-      description: "বিকাশ মোবাইল ব্যাংকিং",
-      icon: Smartphone,
-    },
-    {
-      id: "nagad",
-      name: "নগদ",
-      description: "নগদ মোবাইল ব্যাংকিং",
-      icon: Smartphone,
-    },
-    {
-      id: "card",
-      name: "কার্ড পেমেন্ট",
-      description: "ভিসা, মাস্টারকার্ড, আমেক্স",
-      icon: CreditCard,
-    },
-  ];
+  // Fetch active payment methods from database
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      const { data } = await supabase
+        .from("payment_methods")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (data) setDbPaymentMethods(data);
+    };
+    fetchPaymentMethods();
+  }, []);
+
+  const iconMap: Record<string, any> = {
+    cod: Truck,
+    bkash: Smartphone,
+    nagad: Smartphone,
+    sslcommerz: CreditCard,
+    card: CreditCard,
+  };
+
+  const paymentMethods = dbPaymentMethods.map((m: any) => ({
+    id: m.provider,
+    name: m.name_bn,
+    description: m.provider === 'cod' ? 'পণ্য হাতে পেয়ে টাকা প্রদান করুন' : 
+      (m as any).manual_number ? `${m.name_bn} মোবাইল ব্যাংকিং` : `${m.name_bn}`,
+    icon: iconMap[m.provider] || CreditCard,
+    manual_number: (m as any).manual_number,
+    manual_type: (m as any).manual_type,
+    manual_instructions: (m as any).manual_instructions,
+    payment_mode: (m as any).payment_mode || 'manual',
+  }));
 
   if (authLoading || cartLoading) {
     return (
@@ -806,35 +814,49 @@ const Checkout = () => {
                 </div>
               </RadioGroup>
 
-              {paymentMethod === "bkash" && (
-                <div className="mt-4 p-4 bg-accent/50 rounded-lg border border-border">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Smartphone className="w-5 h-5 text-primary" />
-                    <p className="font-medium text-foreground">বিকাশ পেমেন্ট</p>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    অর্ডার সম্পন্ন করতে আপনাকে বিকাশ পেমেন্ট পেজে নিয়ে যাওয়া হবে। 
-                    সেখানে আপনার বিকাশ অ্যাকাউন্ট থেকে পেমেন্ট সম্পন্ন করুন।
-                  </p>
-                </div>
-              )}
+              {/* Dynamic payment method details */}
+              {paymentMethod !== "cod" && (() => {
+                const selectedMethod = paymentMethods.find(m => m.id === paymentMethod);
+                if (!selectedMethod) return null;
+                
+                // API mode for bkash
+                if (paymentMethod === "bkash" && selectedMethod.payment_mode === "api") {
+                  return (
+                    <div className="mt-4 p-4 bg-accent/50 rounded-lg border border-border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Smartphone className="w-5 h-5 text-primary" />
+                        <p className="font-medium text-foreground">বিকাশ পেমেন্ট</p>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        অর্ডার সম্পন্ন করতে আপনাকে বিকাশ পেমেন্ট পেজে নিয়ে যাওয়া হবে।
+                      </p>
+                    </div>
+                  );
+                }
 
-              {paymentMethod === "nagad" && (
-                <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                  <p className="text-sm text-orange-800 dark:text-orange-200">
-                    নগদ নম্বর: <strong>01XXX-XXXXXX</strong> (মার্চেন্ট)
-                    <br />
-                    Send Money করে ট্রান্জেকশন আইডি দিন
-                  </p>
-                  <Input
-                    placeholder="Transaction ID"
-                    className={`mt-3 ${errors.transactionId ? "border-destructive" : ""}`}
-                    value={formData.transactionId}
-                    onChange={(e) => handleInputChange("transactionId", e.target.value)}
-                  />
-                  {errors.transactionId && <p className="text-destructive text-xs mt-1">{errors.transactionId}</p>}
-                </div>
-              )}
+                // Manual mode - show account number and transaction ID input
+                if (selectedMethod.manual_number) {
+                  return (
+                    <div className="mt-4 p-4 bg-accent/50 rounded-lg border border-border">
+                      <p className="text-sm text-foreground">
+                        {selectedMethod.name} নম্বর: <strong>{selectedMethod.manual_number}</strong> ({selectedMethod.manual_type || 'Send Money'})
+                      </p>
+                      {selectedMethod.manual_instructions && (
+                        <p className="text-xs text-muted-foreground mt-1">{selectedMethod.manual_instructions}</p>
+                      )}
+                      <Input
+                        placeholder="Transaction ID"
+                        className={`mt-3 ${errors.transactionId ? "border-destructive" : ""}`}
+                        value={formData.transactionId}
+                        onChange={(e) => handleInputChange("transactionId", e.target.value)}
+                      />
+                      {errors.transactionId && <p className="text-destructive text-xs mt-1">{errors.transactionId}</p>}
+                    </div>
+                  );
+                }
+
+                return null;
+              })()}
             </div>
 
             {/* OTP Verification Info - Only show for COD when OTP is required */}
