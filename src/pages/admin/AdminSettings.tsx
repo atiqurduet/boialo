@@ -237,17 +237,9 @@ const AdminSettings = () => {
       bgColor: "bg-blue-100 dark:bg-blue-900/30",
     },
     {
-      key: "otp_required_for_cod",
-      title: "COD অর্ডারে OTP বাধ্যতামূলক",
-      description: "ক্যাশ অন ডেলিভারি অর্ডারের জন্য OTP ভেরিফিকেশন প্রয়োজন",
-      icon: Lock,
-      color: "text-orange-600",
-      bgColor: "bg-orange-100 dark:bg-orange-900/30",
-    },
-    {
       key: "otp_required_for_new_customers",
       title: "নতুন কাস্টমারদের জন্য OTP",
-      description: "শুধুমাত্র নতুন কাস্টমারদের জন্য OTP ভেরিফিকেশন প্রয়োজন",
+      description: "সক্রিয় হলে রেজিস্ট্রেশনে ফোন নম্বর ও OTP যাচাই বাধ্যতামূলক হবে",
       icon: UserCheck,
       color: "text-green-600",
       bgColor: "bg-green-100 dark:bg-green-900/30",
