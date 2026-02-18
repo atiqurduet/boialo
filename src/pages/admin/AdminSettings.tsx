@@ -119,6 +119,7 @@ const AdminSettings = () => {
         .from('site_settings')
         .select('*')
         .not('category', 'in', '("branding","invoice","security")')
+        .not('setting_key', 'like', 'theme_%')
         .order('category', { ascending: true });
 
       if (error) throw error;
