@@ -279,6 +279,18 @@ const Index = () => {
           />
         );
 
+      case 'ai_recommendations':
+        return (
+          <AIRecommendations
+            key={section.id}
+            limit={settings.limit || 10}
+            columns={settings.columns || 5}
+            title={section.title_bn}
+            subtitle={section.subtitle_bn || undefined}
+            viewAllLink={settings.view_all_link || "/shop"}
+          />
+        );
+
       default:
         return null;
     }
@@ -302,9 +314,6 @@ const Index = () => {
 
           {/* Render sections in order */}
           {sections.map(section => renderSection(section))}
-
-          {/* AI Recommendations */}
-          <AIRecommendations />
 
           {/* Recently Viewed Products */}
           <RecentlyViewed />

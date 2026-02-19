@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import { AIRecommendations } from "@/components/AIRecommendations";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -489,6 +490,16 @@ const ProductDetail = () => {
         <div className="mt-12">
           <ProductReviews productId={product.id} />
         </div>
+
+        {/* Recently Viewed - Full Width Below Reviews */}
+        <div className="mt-12">
+          <RecentlyViewedFullWidth currentProductId={product.id} />
+        </div>
+
+        {/* AI Recommendations Below Reviews */}
+        <div className="mt-4">
+          <AIRecommendations limit={8} columns={4} title="আপনার জন্য সাজেশন" subtitle="আপনার পছন্দ অনুযায়ী বাছাই করা" />
+        </div>
       </main>
 
       <Footer />
@@ -616,6 +627,53 @@ const RecentlyViewedSidebar = ({ currentProductId }: { currentProductId: string 
         ))}
       </div>
     </div>
+  );
+};
+
+// Full-width recently viewed for below reviews
+const RecentlyViewedFullWidth = ({ currentProductId }: { currentProductId: string }) => {
+  const { items } = useRecentlyViewed();
+  const filtered = items.filter(i => i.id !== currentProductId).slice(0, 10);
+
+  if (filtered.length === 0) return null;
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Clock className="w-5 h-5 text-primary" />
+          সম্প্রতি দেখা পণ্য
+        </h2>
+      </div>
+      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+        {filtered.map((item) => (
+          <Link
+            key={item.id}
+            to={`/product/${item.slug}`}
+            className="flex-shrink-0 w-36 group"
+          >
+            <div className="aspect-[3/4] rounded-lg overflow-hidden bg-muted mb-2">
+              <img
+                src={item.image}
+                alt={item.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                loading="lazy"
+              />
+            </div>
+            <h4 className="text-xs font-medium line-clamp-2 group-hover:text-primary transition-colors">
+              {item.title}
+            </h4>
+            <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{item.author}</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-xs text-primary font-bold">৳{item.price}</span>
+              {item.originalPrice && item.originalPrice > item.price && (
+                <span className="text-[10px] text-muted-foreground line-through">৳{item.originalPrice}</span>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 };
 

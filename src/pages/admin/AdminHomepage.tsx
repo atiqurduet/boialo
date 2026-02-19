@@ -52,6 +52,7 @@ const sectionTypeLabels: Record<string, string> = {
   universal_category_products: '🛍️ ইউনিভার্সাল ক্যাটাগরি প্রোডাক্ট',
   universal_category_grid: '🏷️ ইউনিভার্সাল ক্যাটাগরি গ্রিড',
   universal_flash_sale: '⚡ ইউনিভার্সাল ফ্ল্যাশ সেল',
+  ai_recommendations: '🤖 AI সাজেশন',
 };
 
 const sectionTypes = Object.entries(sectionTypeLabels).map(([value, label]) => ({
