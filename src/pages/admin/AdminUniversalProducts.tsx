@@ -24,15 +24,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Search, X, Package, Utensils, Pencil as PencilIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X, Package } from 'lucide-react';
 import { ProductImageUpload } from '@/components/admin/ProductImageUpload';
 import { UniversalProductBulkActions } from '@/components/admin/UniversalProductBulkActions';
+import { useProductTypes } from '@/hooks/useProductTypes';
 
-type ProductType = 'lifestyle' | 'stationery' | 'food';
+type ProductType = string;
 
 interface UniversalProduct {
   id: string;
-  product_type: ProductType;
+  product_type: string;
   name_bn: string;
   name_en: string;
   slug: string;
@@ -72,29 +73,24 @@ interface UniversalCategory {
   name_bn: string;
   name_en: string;
   slug: string;
-  product_type: ProductType;
+  product_type: string;
   parent_id: string | null;
 }
-
-const PRODUCT_TYPES: { value: ProductType; label: string; icon: any }[] = [
-  { value: 'lifestyle', label: 'লাইফস্টাইল', icon: Package },
-  { value: 'stationery', label: 'স্টেশনারী', icon: PencilIcon },
-  { value: 'food', label: 'ফুড', icon: Utensils },
-];
 
 const AdminUniversalProducts = () => {
   const [products, setProducts] = useState<UniversalProduct[]>([]);
   const [categories, setCategories] = useState<UniversalCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<ProductType | 'all'>('all');
+  const [filterType, setFilterType] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<UniversalProduct | null>(null);
   const [keywordInput, setKeywordInput] = useState('');
   const { toast } = useToast();
+  const { productTypes, getLabel: getProductTypeLabel } = useProductTypes();
 
   const [formData, setFormData] = useState({
-    product_type: 'lifestyle' as ProductType,
+    product_type: '',
     name_bn: '',
     name_en: '',
     slug: '',
@@ -291,7 +287,7 @@ const AdminUniversalProducts = () => {
   const resetForm = () => {
     setEditingProduct(null);
     setFormData({
-      product_type: 'lifestyle',
+      product_type: '',
       name_bn: '',
       name_en: '',
       slug: '',
@@ -348,9 +344,7 @@ const AdminUniversalProducts = () => {
     return matchesSearch && matchesType;
   });
 
-  const getProductTypeLabel = (type: ProductType) => {
-    return PRODUCT_TYPES.find(t => t.value === type)?.label || type;
-  };
+  // getProductTypeLabel provided by useProductTypes hook
 
   return (
     <AdminLayout>
@@ -358,7 +352,7 @@ const AdminUniversalProducts = () => {
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">ইউনিভার্সাল প্রোডাক্ট</h1>
-            <p className="text-muted-foreground">লাইফস্টাইল, স্টেশনারী ও ফুড প্রোডাক্ট ম্যানেজ করুন</p>
+            <p className="text-muted-foreground">সাধারণ প্রোডাক্ট ম্যানেজ করুন</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <UniversalProductBulkActions 
@@ -395,11 +389,11 @@ const AdminUniversalProducts = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {PRODUCT_TYPES.map(type => (
-                            <SelectItem key={type.value} value={type.value}>
+                          {productTypes.map(type => (
+                            <SelectItem key={type.type_key} value={type.type_key}>
                               <div className="flex items-center gap-2">
-                                <type.icon className="h-4 w-4" />
-                                {type.label}
+                                <Package className="h-4 w-4" />
+                                {type.name_bn}
                               </div>
                             </SelectItem>
                           ))}
@@ -630,8 +624,8 @@ const AdminUniversalProducts = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">সব টাইপ</SelectItem>
-              {PRODUCT_TYPES.map(type => (
-                <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+              {productTypes.map(type => (
+                <SelectItem key={type.type_key} value={type.type_key}>{type.name_bn}</SelectItem>
               ))}
             </SelectContent>
           </Select>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { SafeHTML } from "@/components/SafeHTML";
+import { useProductTypes } from "@/hooks/useProductTypes";
 import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -14,7 +15,7 @@ import { useWishlistContext } from "@/contexts/WishlistContext";
 import { toast } from "sonner";
 import { RelatedProducts } from "@/components/RelatedProducts";
 
-type ProductType = 'lifestyle' | 'stationery' | 'food';
+type ProductType = string;
 
 interface UniversalProduct {
   id: string;
@@ -59,7 +60,7 @@ interface UniversalCategory {
   product_type: ProductType;
 }
 
-const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
+const PRODUCT_TYPE_LABELS: Record<string, string> = {
   lifestyle: 'লাইফস্টাইল',
   stationery: 'স্টেশনারী',
   food: 'ফুড',
@@ -75,7 +76,7 @@ const UniversalProductDetail = () => {
   
   const { addToCart } = useCartContext();
   const { toggleWishlist, isInWishlist } = useWishlistContext();
-
+  const { getLabel: getTypeLabel } = useProductTypes();
   useEffect(() => {
     const fetchProduct = async () => {
       if (!slug) return;
@@ -214,7 +215,7 @@ const UniversalProductDetail = () => {
             <Link to="/" className="text-muted-foreground hover:text-primary">হোম</Link>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
             <Link to={`/category/${product.product_type}`} className="text-muted-foreground hover:text-primary">
-              {PRODUCT_TYPE_LABELS[product.product_type]}
+              {getTypeLabel(product.product_type) || PRODUCT_TYPE_LABELS[product.product_type]}
             </Link>
             {category && (
               <>
