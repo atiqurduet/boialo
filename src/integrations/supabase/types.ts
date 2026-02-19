@@ -2292,6 +2292,42 @@ export type Database = {
         }
         Relationships: []
       }
+      product_types: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name_bn: string
+          name_en: string
+          sort_order: number | null
+          type_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name_bn: string
+          name_en: string
+          sort_order?: number | null
+          type_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name_bn?: string
+          name_en?: string
+          sort_order?: number | null
+          type_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_variants: {
         Row: {
           created_at: string
@@ -2978,7 +3014,7 @@ export type Database = {
           name_bn: string
           name_en: string
           parent_id: string | null
-          product_type: Database["public"]["Enums"]["product_type"]
+          product_type: string
           slug: string
           sort_order: number | null
           updated_at: string
@@ -2995,7 +3031,7 @@ export type Database = {
           name_bn: string
           name_en: string
           parent_id?: string | null
-          product_type: Database["public"]["Enums"]["product_type"]
+          product_type: string
           slug: string
           sort_order?: number | null
           updated_at?: string
@@ -3012,7 +3048,7 @@ export type Database = {
           name_bn?: string
           name_en?: string
           parent_id?: string | null
-          product_type?: Database["public"]["Enums"]["product_type"]
+          product_type?: string
           slug?: string
           sort_order?: number | null
           updated_at?: string
@@ -3058,7 +3094,7 @@ export type Database = {
           og_title: string | null
           original_price: number | null
           price: number
-          product_type: Database["public"]["Enums"]["product_type"]
+          product_type: string
           return_policy: string | null
           short_description_bn: string | null
           short_description_en: string | null
@@ -3100,7 +3136,7 @@ export type Database = {
           og_title?: string | null
           original_price?: number | null
           price: number
-          product_type: Database["public"]["Enums"]["product_type"]
+          product_type: string
           return_policy?: string | null
           short_description_bn?: string | null
           short_description_en?: string | null
@@ -3142,7 +3178,7 @@ export type Database = {
           og_title?: string | null
           original_price?: number | null
           price?: number
-          product_type?: Database["public"]["Enums"]["product_type"]
+          product_type?: string
           return_policy?: string | null
           short_description_bn?: string | null
           short_description_en?: string | null
@@ -3390,7 +3426,6 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "manager" | "support"
-      product_type: "lifestyle" | "stationery" | "food"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3519,7 +3554,6 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "support"],
-      product_type: ["lifestyle", "stationery", "food"],
     },
   },
 } as const

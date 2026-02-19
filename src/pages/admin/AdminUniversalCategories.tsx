@@ -23,16 +23,17 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Package, Utensils, Pencil as PencilIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package } from 'lucide-react';
+import { useProductTypes } from '@/hooks/useProductTypes';
 
-type ProductType = 'lifestyle' | 'stationery' | 'food';
+type ProductType = string;
 
 interface UniversalCategory {
   id: string;
   name_bn: string;
   name_en: string;
   slug: string;
-  product_type: ProductType;
+  product_type: string;
   parent_id: string | null;
   image_url: string | null;
   description_bn: string | null;
@@ -43,25 +44,20 @@ interface UniversalCategory {
   is_active: boolean;
 }
 
-const PRODUCT_TYPES: { value: ProductType; label: string; icon: any }[] = [
-  { value: 'lifestyle', label: 'লাইফস্টাইল', icon: Package },
-  { value: 'stationery', label: 'স্টেশনারী', icon: PencilIcon },
-  { value: 'food', label: 'ফুড', icon: Utensils },
-];
-
 const AdminUniversalCategories = () => {
   const [categories, setCategories] = useState<UniversalCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<UniversalCategory | null>(null);
-  const [filterType, setFilterType] = useState<ProductType | 'all'>('all');
+  const [filterType, setFilterType] = useState<string>('all');
   const { toast } = useToast();
+  const { productTypes, getLabel: getProductTypeLabel } = useProductTypes();
 
   const [formData, setFormData] = useState({
     name_bn: '',
     name_en: '',
     slug: '',
-    product_type: 'lifestyle' as ProductType,
+    product_type: '',
     parent_id: '',
     image_url: '',
     description_bn: '',
@@ -181,7 +177,7 @@ const AdminUniversalCategories = () => {
       name_bn: '',
       name_en: '',
       slug: '',
-      product_type: 'lifestyle',
+      product_type: '',
       parent_id: '',
       image_url: '',
       description_bn: '',
@@ -193,9 +189,7 @@ const AdminUniversalCategories = () => {
     });
   };
 
-  const getProductTypeLabel = (type: ProductType) => {
-    return PRODUCT_TYPES.find(t => t.value === type)?.label || type;
-  };
+  // getProductTypeLabel provided by useProductTypes hook
 
   const parentCategories = categories.filter(c => 
     c.product_type === formData.product_type && !c.parent_id && c.id !== editingCategory?.id
@@ -211,7 +205,7 @@ const AdminUniversalCategories = () => {
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">ইউনিভার্সাল ক্যাটাগরি</h1>
-            <p className="text-muted-foreground">লাইফস্টাইল, স্টেশনারী ও ফুড ক্যাটাগরি ম্যানেজ করুন</p>
+            <p className="text-muted-foreground">সাধারণ প্রোডাক্ট ক্যাটাগরি ম্যানেজ করুন</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
@@ -232,11 +226,11 @@ const AdminUniversalCategories = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {PRODUCT_TYPES.map(type => (
-                        <SelectItem key={type.value} value={type.value}>
+                      {productTypes.map(type => (
+                        <SelectItem key={type.type_key} value={type.type_key}>
                           <div className="flex items-center gap-2">
-                            <type.icon className="h-4 w-4" />
-                            {type.label}
+                            <Package className="h-4 w-4" />
+                            {type.name_bn}
                           </div>
                         </SelectItem>
                       ))}
@@ -320,8 +314,8 @@ const AdminUniversalCategories = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">সব টাইপ</SelectItem>
-              {PRODUCT_TYPES.map(type => (
-                <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+              {productTypes.map(type => (
+                <SelectItem key={type.type_key} value={type.type_key}>{type.name_bn}</SelectItem>
               ))}
             </SelectContent>
           </Select>

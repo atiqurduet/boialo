@@ -20,7 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Download, Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 
-type ProductType = 'lifestyle' | 'stationery' | 'food';
+type ProductType = string;
 
 interface UniversalCategory {
   id: string;
@@ -72,7 +72,7 @@ const CSV_HEADERS = [
   'meta_keywords',
 ];
 
-const VALID_PRODUCT_TYPES = ['lifestyle', 'stationery', 'food'];
+// Product types are now dynamic - validation removed from hardcoded list
 
 export const UniversalProductBulkActions = ({
   categories,
@@ -231,8 +231,6 @@ export const UniversalProductBulkActions = ({
         // Validate product_type
         if (!data.product_type?.trim()) {
           errors.push('প্রোডাক্ট টাইপ আবশ্যক');
-        } else if (!VALID_PRODUCT_TYPES.includes(data.product_type.toLowerCase())) {
-          errors.push(`অবৈধ প্রোডাক্ট টাইপ "${data.product_type}" (lifestyle/stationery/food)`);
         }
 
         if (!data.name_bn?.trim()) {

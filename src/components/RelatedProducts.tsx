@@ -15,13 +15,13 @@ interface RelatedProduct {
   discount_percent: number | null;
   brand: string | null;
   images: any;
-  product_type: 'lifestyle' | 'stationery' | 'food';
+  product_type: string;
 }
 
 interface RelatedProductsProps {
   currentProductId: string;
   categoryId: string | null;
-  productType: 'lifestyle' | 'stationery' | 'food';
+  productType: string;
   limit?: number;
 }
 

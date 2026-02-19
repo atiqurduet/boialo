@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useProductTypes } from "@/hooks/useProductTypes";
 import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -30,14 +31,14 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-type ProductType = 'lifestyle' | 'stationery' | 'food';
+type ProductType = string;
 
 interface UniversalCategory {
   id: string;
   name_bn: string;
   name_en: string;
   slug: string;
-  product_type: ProductType;
+  product_type: string;
   parent_id: string | null;
   description_bn: string | null;
   description_en: string | null;
@@ -58,11 +59,11 @@ interface UniversalProduct {
   brand: string | null;
   is_featured: boolean;
   category_id: string | null;
-  product_type: ProductType;
+  product_type: string;
   stock_quantity: number | null;
 }
 
-const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
+const PRODUCT_TYPE_LABELS: Record<string, string> = {
   lifestyle: 'লাইফস্টাইল',
   stationery: 'স্টেশনারী',
   food: 'ফুড',
@@ -71,7 +72,7 @@ const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
 const CategoryLanding = () => {
   const { productType: urlProductType, categorySlug } = useParams<{ productType: string; categorySlug?: string }>();
   const productType = urlProductType as ProductType;
-  
+  const { getLabel: getTypeLabel } = useProductTypes();
   const [categories, setCategories] = useState<UniversalCategory[]>([]);
   const [products, setProducts] = useState<UniversalProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -248,7 +249,7 @@ const CategoryLanding = () => {
     currentPage * productsPerPage
   );
 
-  const pageTitle = currentCategory?.name_bn || PRODUCT_TYPE_LABELS[productType] || 'প্রোডাক্ট';
+  const pageTitle = currentCategory?.name_bn || getTypeLabel(productType) || PRODUCT_TYPE_LABELS[productType] || 'প্রোডাক্ট';
   const pageDescription = currentCategory?.description_bn || `${pageTitle} - সেরা কালেকশন`;
 
   // Set document title for SEO
@@ -396,7 +397,7 @@ const CategoryLanding = () => {
             <Link to="/" className="text-muted-foreground hover:text-primary">হোম</Link>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
             <Link to={`/category/${productType}`} className="text-muted-foreground hover:text-primary">
-              {PRODUCT_TYPE_LABELS[productType]}
+              {getTypeLabel(productType) || PRODUCT_TYPE_LABELS[productType]}
             </Link>
             {currentCategory && (
               <>
