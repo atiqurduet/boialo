@@ -1,28 +1,39 @@
 import { useState, useEffect } from "react";
-import { Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { DynamicProductGrid } from "./DynamicProductGrid";
 
-export const AIRecommendations = () => {
+interface AIRecommendationsProps {
+  limit?: number;
+  columns?: number;
+  title?: string;
+  subtitle?: string;
+  viewAllLink?: string;
+}
+
+export const AIRecommendations = ({
+  limit = 10,
+  columns = 5,
+  title = "আপনার জন্য সাজেশন",
+  subtitle = "আপনার পছন্দ অনুযায়ী বাছাই করা",
+  viewAllLink = "/shop",
+}: AIRecommendationsProps) => {
   const { user } = useAuth();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchRecommendations();
-  }, [user]);
+  }, [user, limit]);
 
   const fetchRecommendations = async () => {
     try {
-      // Get recently viewed from localStorage
       const recentlyViewed = JSON.parse(localStorage.getItem("recently_viewed_products") || "[]");
       const viewedIds = recentlyViewed.map((item: any) => item.id).slice(0, 5);
 
       let categoryIds: string[] = [];
       let writerIds: string[] = [];
 
-      // If user is logged in, get their order history for better recommendations
       if (user) {
         const { data: orders } = await supabase
           .from("orders")
@@ -40,8 +51,6 @@ export const AIRecommendations = () => {
 
           if (orderItems) {
             const purchasedIds = orderItems.map(i => i.product_id);
-            
-            // Get categories and writers from purchased products
             const { data: purchasedProducts } = await supabase
               .from("products")
               .select("category_id, writer_id")
@@ -55,7 +64,6 @@ export const AIRecommendations = () => {
         }
       }
 
-      // Get categories from recently viewed
       if (viewedIds.length > 0) {
         const { data: viewedProducts } = await supabase
           .from("products")
@@ -68,18 +76,16 @@ export const AIRecommendations = () => {
         }
       }
 
-      // Fetch recommended products based on categories and writers
       let query = supabase
         .from("products")
         .select("*")
         .eq("is_active", true)
-        .limit(10);
+        .limit(limit);
 
       if (categoryIds.length > 0) {
         query = query.in("category_id", categoryIds);
       }
 
-      // Exclude already viewed/purchased
       const excludeIds = [...viewedIds];
       if (excludeIds.length > 0) {
         query = query.not("id", "in", `(${excludeIds.join(",")})`);
@@ -106,7 +112,7 @@ export const AIRecommendations = () => {
           .select("*")
           .eq("is_active", true)
           .eq("is_featured", true)
-          .limit(10);
+          .limit(limit);
 
         if (featured) {
           setProducts(featured.map(p => ({
@@ -136,10 +142,10 @@ export const AIRecommendations = () => {
     <div className="my-8">
       <DynamicProductGrid
         products={products}
-        title="আপনার জন্য সাজেশন"
-        subtitle="আপনার পছন্দ অনুযায়ী বাছাই করা"
-        viewAllLink="/shop"
-        columns={5}
+        title={title}
+        subtitle={subtitle}
+        viewAllLink={viewAllLink}
+        columns={columns}
       />
     </div>
   );
