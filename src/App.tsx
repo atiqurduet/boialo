@@ -68,6 +68,7 @@ import AdminAbandonedCarts from "./pages/admin/AdminAbandonedCarts";
 import AdminCheckoutAnalytics from "./pages/admin/AdminCheckoutAnalytics";
 import AdminUniversalProducts from "./pages/admin/AdminUniversalProducts";
 import AdminUniversalCategories from "./pages/admin/AdminUniversalCategories";
+import AdminProductTypes from "./pages/admin/AdminProductTypes";
 import AdminOffers from "./pages/admin/AdminOffers";
 import AdminEmailMarketing from "./pages/admin/AdminEmailMarketing";
 import AdminTasks from "./pages/admin/AdminTasks";
@@ -159,6 +160,7 @@ const App = () => (
                 <Route path="/admin/brands" element={<AdminBrands />} />
                 <Route path="/admin/universal-products" element={<AdminUniversalProducts />} />
                 <Route path="/admin/universal-categories" element={<AdminUniversalCategories />} />
+                <Route path="/admin/product-types" element={<AdminProductTypes />} />
                 <Route path="/admin/orders" element={<AdminOrders />} />
                 <Route path="/admin/tasks" element={<AdminTasks />} />
                 <Route path="/admin/banners" element={<AdminBanners />} />

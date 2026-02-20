@@ -2292,6 +2292,36 @@ export type Database = {
         }
         Relationships: []
       }
+      product_type_attribute_templates: {
+        Row: {
+          attribute_name_bn: string
+          attribute_name_en: string | null
+          created_at: string
+          id: string
+          is_required: boolean | null
+          sort_order: number | null
+          type_key: string
+        }
+        Insert: {
+          attribute_name_bn: string
+          attribute_name_en?: string | null
+          created_at?: string
+          id?: string
+          is_required?: boolean | null
+          sort_order?: number | null
+          type_key: string
+        }
+        Update: {
+          attribute_name_bn?: string
+          attribute_name_en?: string | null
+          created_at?: string
+          id?: string
+          is_required?: boolean | null
+          sort_order?: number | null
+          type_key?: string
+        }
+        Relationships: []
+      }
       product_types: {
         Row: {
           created_at: string
@@ -3059,6 +3089,106 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "universal_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      universal_product_attributes: {
+        Row: {
+          attribute_name_bn: string
+          attribute_name_en: string | null
+          attribute_value_bn: string
+          attribute_value_en: string | null
+          created_at: string
+          id: string
+          product_id: string
+          sort_order: number | null
+        }
+        Insert: {
+          attribute_name_bn: string
+          attribute_name_en?: string | null
+          attribute_value_bn: string
+          attribute_value_en?: string | null
+          created_at?: string
+          id?: string
+          product_id: string
+          sort_order?: number | null
+        }
+        Update: {
+          attribute_name_bn?: string
+          attribute_name_en?: string | null
+          attribute_value_bn?: string
+          attribute_value_en?: string | null
+          created_at?: string
+          id?: string
+          product_id?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "universal_product_attributes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "universal_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      universal_product_variants: {
+        Row: {
+          created_at: string
+          id: string
+          images: Json | null
+          is_active: boolean | null
+          original_price: number | null
+          price: number
+          product_id: string
+          sku: string | null
+          sort_order: number | null
+          stock_quantity: number
+          updated_at: string
+          variant_name_bn: string
+          variant_name_en: string | null
+          variant_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          images?: Json | null
+          is_active?: boolean | null
+          original_price?: number | null
+          price: number
+          product_id: string
+          sku?: string | null
+          sort_order?: number | null
+          stock_quantity?: number
+          updated_at?: string
+          variant_name_bn: string
+          variant_name_en?: string | null
+          variant_type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          images?: Json | null
+          is_active?: boolean | null
+          original_price?: number | null
+          price?: number
+          product_id?: string
+          sku?: string | null
+          sort_order?: number | null
+          stock_quantity?: number
+          updated_at?: string
+          variant_name_bn?: string
+          variant_name_en?: string | null
+          variant_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "universal_product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "universal_products"
             referencedColumns: ["id"]
           },
         ]

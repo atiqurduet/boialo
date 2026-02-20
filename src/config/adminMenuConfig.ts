@@ -96,6 +96,7 @@ export const menuCategories: MenuCategory[] = [
     items: [
       { icon: Layers, label: 'প্রোডাক্ট', href: '/admin/universal-products', roles: ['admin', 'manager'] },
       { icon: Grid3X3, label: 'ক্যাটাগরি', href: '/admin/universal-categories', roles: ['admin', 'manager'] },
+      { icon: Package, label: 'প্রোডাক্ট টাইপ', href: '/admin/product-types', roles: ['admin', 'manager'] },
       { icon: Tag, label: 'ব্র্যান্ড', href: '/admin/brands', roles: ['admin', 'manager'] },
     ]
   },
