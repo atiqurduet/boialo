@@ -28,6 +28,8 @@ import { Plus, Pencil, Trash2, Search, X, Package } from 'lucide-react';
 import { ProductImageUpload } from '@/components/admin/ProductImageUpload';
 import { UniversalProductBulkActions } from '@/components/admin/UniversalProductBulkActions';
 import { useProductTypes } from '@/hooks/useProductTypes';
+import { UniversalProductAttributeEditor } from '@/components/admin/UniversalProductAttributeEditor';
+import { UniversalProductVariantEditor, type ProductVariant } from '@/components/admin/UniversalProductVariantEditor';
 
 type ProductType = string;
 
@@ -86,6 +88,8 @@ const AdminUniversalProducts = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<UniversalProduct | null>(null);
   const [keywordInput, setKeywordInput] = useState('');
+  const [localAttributes, setLocalAttributes] = useState<any[]>([]);
+  const [localVariants, setLocalVariants] = useState<ProductVariant[]>([]);
   const { toast } = useToast();
   const { productTypes, getLabel: getProductTypeLabel } = useProductTypes();
 
@@ -205,21 +209,68 @@ const AdminUniversalProducts = () => {
         is_featured: formData.is_featured,
       };
 
+      let productId = editingProduct?.id;
+
       if (editingProduct) {
         const { error } = await supabase
           .from('universal_products')
           .update(productData)
           .eq('id', editingProduct.id);
-
         if (error) throw error;
         toast({ title: 'সফল', description: 'প্রোডাক্ট আপডেট হয়েছে' });
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('universal_products')
-          .insert([productData]);
-
+          .insert([productData])
+          .select('id')
+          .single();
         if (error) throw error;
+        productId = data.id;
         toast({ title: 'সফল', description: 'প্রোডাক্ট যোগ হয়েছে' });
+      }
+
+      // Save attributes
+      if (productId) {
+        // Delete existing attributes and re-insert
+        await supabase.from('universal_product_attributes').delete().eq('product_id', productId);
+        if (localAttributes.length > 0) {
+          const attrData = localAttributes
+            .filter(a => a.attribute_name_bn && a.attribute_value_bn)
+            .map((a, i) => ({
+              product_id: productId,
+              attribute_name_bn: a.attribute_name_bn,
+              attribute_name_en: a.attribute_name_en || null,
+              attribute_value_bn: a.attribute_value_bn,
+              attribute_value_en: a.attribute_value_en || null,
+              sort_order: i,
+            }));
+          if (attrData.length > 0) {
+            await supabase.from('universal_product_attributes').insert(attrData);
+          }
+        }
+
+        // Save variants
+        await supabase.from('universal_product_variants').delete().eq('product_id', productId);
+        if (localVariants.length > 0) {
+          const variantData = localVariants
+            .filter(v => v.variant_name_bn && v.price > 0)
+            .map((v, i) => ({
+              product_id: productId,
+              variant_name_bn: v.variant_name_bn,
+              variant_name_en: v.variant_name_en || null,
+              variant_type: v.variant_type,
+              sku: v.sku || null,
+              price: v.price,
+              original_price: v.original_price || null,
+              stock_quantity: v.stock_quantity,
+              images: v.images,
+              is_active: v.is_active,
+              sort_order: i,
+            }));
+          if (variantData.length > 0) {
+            await supabase.from('universal_product_variants').insert(variantData);
+          }
+        }
       }
 
       setDialogOpen(false);
@@ -267,6 +318,15 @@ const AdminUniversalProducts = () => {
       og_image: product.og_image || '',
       is_active: product.is_active,
       is_featured: product.is_featured,
+    });
+
+    // Load existing attributes
+    supabase.from('universal_product_attributes').select('*').eq('product_id', product.id).order('sort_order').then(({ data }) => {
+      setLocalAttributes(data || []);
+    });
+    // Load existing variants
+    supabase.from('universal_product_variants').select('*').eq('product_id', product.id).order('sort_order').then(({ data }) => {
+      setLocalVariants((data || []).map((v: any) => ({ ...v, images: Array.isArray(v.images) ? v.images : [] })));
     });
     setDialogOpen(true);
   };
@@ -322,6 +382,8 @@ const AdminUniversalProducts = () => {
       is_featured: false,
     });
     setKeywordInput('');
+    setLocalAttributes([]);
+    setLocalVariants([]);
   };
 
   const addKeyword = () => {
@@ -369,8 +431,11 @@ const AdminUniversalProducts = () => {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <Tabs defaultValue="basic">
-                  <TabsList className="grid w-full grid-cols-5">
+                  <TabsList className="grid w-full grid-cols-7">
                     <TabsTrigger value="basic">মূল তথ্য</TabsTrigger>
+                    <TabsTrigger value="images">ছবি</TabsTrigger>
+                    <TabsTrigger value="attributes">অ্যাট্রিবিউট</TabsTrigger>
+                    <TabsTrigger value="variants">ভেরিয়েন্ট</TabsTrigger>
                     <TabsTrigger value="pricing">মূল্য ও স্টক</TabsTrigger>
                     <TabsTrigger value="details">বিস্তারিত</TabsTrigger>
                     <TabsTrigger value="optional">অপশনাল</TabsTrigger>
@@ -446,6 +511,49 @@ const AdminUniversalProducts = () => {
                     </div>
                   </TabsContent>
 
+                  {/* Images Tab */}
+                  <TabsContent value="images" className="space-y-4 mt-4">
+                    <div>
+                      <Label className="text-base font-semibold">প্রোডাক্ট ছবি</Label>
+                      <p className="text-sm text-muted-foreground mb-3">প্রথম ছবিটি প্রধান ছবি হিসেবে দেখাবে।</p>
+                      <ProductImageUpload
+                        images={formData.images}
+                        onImagesChange={(images) => setFormData({ ...formData, images })}
+                      />
+                    </div>
+                    <div>
+                      <Label>ভিডিও URL</Label>
+                      <Input value={formData.video_url} onChange={(e) => setFormData({ ...formData, video_url: e.target.value })} placeholder="https://youtube.com/..." />
+                    </div>
+                  </TabsContent>
+
+                  {/* Attributes Tab */}
+                  <TabsContent value="attributes" className="space-y-3 mt-4">
+                    <div>
+                      <Label className="text-base font-semibold">অ্যাট্রিবিউট / বৈশিষ্ট্য</Label>
+                      <p className="text-sm text-muted-foreground">আনলিমিটেড কাস্টম বৈশিষ্ট্য — রং, উপাদান, ওজন ইত্যাদি।</p>
+                    </div>
+                    <UniversalProductAttributeEditor
+                      productId={editingProduct?.id}
+                      productType={formData.product_type}
+                      localAttributes={localAttributes}
+                      onChange={setLocalAttributes}
+                    />
+                  </TabsContent>
+
+                  {/* Variants Tab */}
+                  <TabsContent value="variants" className="space-y-3 mt-4">
+                    <div>
+                      <Label className="text-base font-semibold">মূল্য ভেরিয়েন্ট (ছবিসহ)</Label>
+                      <p className="text-sm text-muted-foreground">সাইজ, রং, ওজন ভেদে আলাদা দাম, স্টক ও ছবি।</p>
+                    </div>
+                    <UniversalProductVariantEditor
+                      variants={localVariants}
+                      onChange={setLocalVariants}
+                      productId={editingProduct?.id}
+                    />
+                  </TabsContent>
+
                   {/* Pricing Tab */}
                   <TabsContent value="pricing" className="space-y-4 mt-4">
                     <div className="grid grid-cols-3 gap-4">
@@ -485,17 +593,6 @@ const AdminUniversalProducts = () => {
                     <div>
                       <Label>Long Description (English)</Label>
                       <Textarea value={formData.long_description_en} onChange={(e) => setFormData({ ...formData, long_description_en: e.target.value })} rows={5} />
-                    </div>
-                    <div>
-                      <Label>প্রোডাক্ট ছবি</Label>
-                      <ProductImageUpload
-                        images={formData.images}
-                        onImagesChange={(images) => setFormData({ ...formData, images })}
-                      />
-                    </div>
-                    <div>
-                      <Label>ভিডিও URL (YouTube)</Label>
-                      <Input value={formData.video_url} onChange={(e) => setFormData({ ...formData, video_url: e.target.value })} placeholder="https://youtube.com/..." />
                     </div>
                   </TabsContent>
 
