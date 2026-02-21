@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LogoUpload } from "@/components/admin/LogoUpload";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -378,15 +379,13 @@ const AdminBlog = () => {
 
               <TabsContent value="media" className="space-y-4 mt-4">
                 <div>
-                  <Label>ফিচার ইমেজ URL</Label>
-                  <Input
+                  <Label>ফিচার ইমেজ</Label>
+                  <LogoUpload
                     value={form.featured_image}
-                    onChange={(e) => setForm({ ...form, featured_image: e.target.value })}
-                    placeholder="https://..."
+                    onChange={(url) => setForm({ ...form, featured_image: url })}
+                    label="ফিচার ইমেজ"
+                    folder="blog"
                   />
-                  {form.featured_image && (
-                    <img src={form.featured_image} alt="Preview" className="mt-2 rounded-lg max-h-40 object-cover" />
-                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
