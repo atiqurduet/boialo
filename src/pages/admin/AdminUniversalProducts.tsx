@@ -26,6 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Search, X, Package } from 'lucide-react';
 import { ProductImageUpload } from '@/components/admin/ProductImageUpload';
+import { LogoUpload } from '@/components/admin/LogoUpload';
 import { UniversalProductBulkActions } from '@/components/admin/UniversalProductBulkActions';
 import { useProductTypes } from '@/hooks/useProductTypes';
 import { UniversalProductAttributeEditor } from '@/components/admin/UniversalProductAttributeEditor';
@@ -686,8 +687,13 @@ const AdminUniversalProducts = () => {
                           <Textarea value={formData.og_description} onChange={(e) => setFormData({ ...formData, og_description: e.target.value })} rows={2} />
                         </div>
                         <div>
-                          <Label>OG Image URL</Label>
-                          <Input value={formData.og_image} onChange={(e) => setFormData({ ...formData, og_image: e.target.value })} placeholder="https://..." />
+                          <Label>OG Image</Label>
+                          <LogoUpload
+                            value={formData.og_image}
+                            onChange={(url) => setFormData({ ...formData, og_image: url })}
+                            label="OG Image"
+                            folder="og-images"
+                          />
                         </div>
                       </div>
                     </div>

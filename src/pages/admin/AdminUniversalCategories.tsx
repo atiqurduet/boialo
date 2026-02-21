@@ -3,6 +3,7 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { LogoUpload } from '@/components/admin/LogoUpload';
 import {
   Dialog,
   DialogContent,
@@ -268,8 +269,13 @@ const AdminUniversalCategories = () => {
                   </div>
                 </div>
                 <div>
-                  <Label>ছবি URL</Label>
-                  <Input value={formData.image_url} onChange={(e) => setFormData({ ...formData, image_url: e.target.value })} placeholder="https://..." />
+                  <Label>ছবি</Label>
+                  <LogoUpload
+                    value={formData.image_url}
+                    onChange={(url) => setFormData({ ...formData, image_url: url })}
+                    label="ক্যাটাগরি ছবি"
+                    folder="universal-categories"
+                  />
                 </div>
                 <div>
                   <Label>বিবরণ (বাংলা)</Label>
