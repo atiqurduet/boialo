@@ -4,7 +4,8 @@ import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronRight, Grid3X3, List, SlidersHorizontal, X } from "lucide-react";
+import { ChevronRight, Grid3X3, List, SlidersHorizontal, X, Package } from "lucide-react";
+import { PageHeroBanner } from "@/components/PageHeroBanner";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -391,46 +392,35 @@ const CategoryLanding = () => {
       <Header />
       
       <main className="flex-grow">
-        <div className="container mx-auto px-4 py-6">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm mb-6 flex-wrap">
-            <Link to="/" className="text-muted-foreground hover:text-primary">হোম</Link>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            <Link to={`/category/${productType}`} className="text-muted-foreground hover:text-primary">
-              {getTypeLabel(productType) || PRODUCT_TYPE_LABELS[productType]}
-            </Link>
-            {currentCategory && (
-              <>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground font-medium">{currentCategory.name_bn}</span>
-              </>
-            )}
-          </nav>
-
-          {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">{pageTitle}</h1>
-            <p className="text-muted-foreground">{pageDescription}</p>
-          </div>
-
-          {/* Subcategories */}
+        {/* Hero Banner */}
+        <PageHeroBanner
+          title={pageTitle}
+          subtitle={pageDescription}
+          breadcrumbs={[
+            { label: "হোম", href: "/" },
+            { label: getTypeLabel(productType) || PRODUCT_TYPE_LABELS[productType] || productType, href: `/category/${productType}` },
+            ...(currentCategory ? [{ label: currentCategory.name_bn }] : []),
+          ]}
+          productCount={sortedProducts.length}
+          image={currentCategory?.image_url}
+          icon={<Package className="w-6 h-6 md:w-7 md:h-7 text-primary" />}
+        >
           {subcategories.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-lg font-semibold mb-4">সাবক্যাটাগরি</h2>
-              <div className="flex flex-wrap gap-3">
-                {subcategories.map((subcat) => (
-                  <Link
-                    key={subcat.id}
-                    to={`/category/${productType}/${subcat.slug}`}
-                    className="px-4 py-2 bg-muted hover:bg-muted/80 rounded-lg transition-colors"
-                  >
-                    {subcat.name_bn}
-                  </Link>
-                ))}
-              </div>
+            <div className="flex flex-wrap gap-2">
+              {subcategories.map((subcat) => (
+                <Link
+                  key={subcat.id}
+                  to={`/category/${productType}/${subcat.slug}`}
+                  className="px-3 py-1.5 text-sm bg-card/80 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground rounded-full transition-all border border-border/50 shadow-sm"
+                >
+                  {subcat.name_bn}
+                </Link>
+              ))}
             </div>
           )}
+        </PageHeroBanner>
 
+        <div className="container mx-auto px-4 py-6">
           {/* Filters & Sort */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div className="flex items-center gap-3">

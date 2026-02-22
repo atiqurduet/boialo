@@ -30,6 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { PageHeroBanner } from "@/components/PageHeroBanner";
 import {
   Select,
   SelectContent,
@@ -829,15 +830,21 @@ const Shop = () => {
       <AnnouncementBar />
       <Header />
 
+      <PageHeroBanner
+        title={getCategoryTitle()}
+        subtitle={`${filteredProducts.length} টি পণ্য পাওয়া গেছে`}
+        breadcrumbs={[
+          { label: "হোম", href: "/" },
+          { label: "শপ", href: "/shop" },
+          ...(category ? [{ label: getCategoryInfo()?.name_bn || category }] : []),
+          ...(writer ? [{ label: getWriterInfo()?.name_bn || writer }] : []),
+          ...(publisher ? [{ label: getPublisherInfo()?.name_bn || publisher }] : []),
+        ]}
+        productCount={filteredProducts.length}
+        icon={<BookOpen className="w-6 h-6 md:w-7 md:h-7 text-primary" />}
+      />
+
       <main className="container py-6">
-        {/* Breadcrumb */}
-        <nav className="text-sm text-muted-foreground mb-6 flex flex-wrap items-center gap-1.5 bg-muted/30 px-4 py-2.5 rounded-lg">
-          <Link to="/" className="hover:text-primary transition-colors">হোম</Link>
-          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
-          <Link to="/shop" className="hover:text-primary transition-colors">শপ</Link>
-          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
-          {getBreadcrumb()}
-        </nav>
 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Mobile Filter & Sort Bar */}
