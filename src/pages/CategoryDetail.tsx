@@ -4,6 +4,7 @@ import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { ProductCard } from "@/components/ProductCard";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { ChevronRight, ArrowLeft, Grid3X3, List, BookOpen } from "lucide-react";
+import { PageHeroBanner } from "@/components/PageHeroBanner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -205,73 +206,38 @@ const CategoryDetail = () => {
       <AnnouncementBar />
       <Header />
 
-      <main className="container py-8">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-          <Link to="/" className="hover:text-primary">হোম</Link>
-          <ChevronRight className="w-4 h-4" />
-          <Link to="/shop" className="hover:text-primary">শপ</Link>
-          {parentCategory && (
-            <>
-              <ChevronRight className="w-4 h-4" />
-              <Link to={`/categories/${parentCategory.slug}`} className="hover:text-primary">
-                {parentCategory.name_bn}
-              </Link>
-            </>
-          )}
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-foreground font-medium">{category.name_bn}</span>
-        </nav>
-
-        {/* Category Header */}
-        <div className="bg-card rounded-xl p-6 mb-8">
-          <div className="flex items-start gap-6">
-            {category.image_url && (
-              <div className="w-24 h-28 rounded-lg overflow-hidden bg-muted shrink-0">
-                <img
-                  src={category.image_url}
-                  alt={category.name_bn}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-            <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">{category.name_bn}</h1>
-              {category.name_en && (
-                <p className="text-muted-foreground mb-2">{category.name_en}</p>
-              )}
-              <p className="text-sm text-muted-foreground">
-                মোট {sortedProducts.length} টি পণ্য
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Subcategories */}
+      <PageHeroBanner
+        title={category.name_bn}
+        subtitle={category.name_en || undefined}
+        breadcrumbs={[
+          { label: "হোম", href: "/" },
+          { label: "শপ", href: "/shop" },
+          ...(parentCategory ? [{ label: parentCategory.name_bn, href: `/categories/${parentCategory.slug}` }] : []),
+          { label: category.name_bn },
+        ]}
+        productCount={sortedProducts.length}
+        image={category.image_url}
+        icon={<BookOpen className="w-6 h-6 md:w-7 md:h-7 text-primary" />}
+      >
         {subcategories.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold mb-4">সাব-ক্যাটাগরি</h2>
-            <div className="flex flex-wrap gap-2">
-              {subcategories.map((sub: any) => (
-                <Link
-                  key={sub.id}
-                  to={`/categories/${sub.slug}`}
-                  className="flex items-center gap-2 px-4 py-2 bg-card rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
-                >
-                  {sub.image_url && (
-                    <img
-                      src={sub.image_url}
-                      alt={sub.name_bn}
-                      className="w-6 h-6 rounded object-cover"
-                    />
-                  )}
-                  <span className="text-sm font-medium">{sub.name_bn}</span>
-                </Link>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {subcategories.map((sub: any) => (
+              <Link
+                key={sub.id}
+                to={`/categories/${sub.slug}`}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-card/80 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground rounded-full transition-all border border-border/50 shadow-sm"
+              >
+                {sub.image_url && (
+                  <img src={sub.image_url} alt={sub.name_bn} className="w-5 h-5 rounded-full object-cover" />
+                )}
+                <span>{sub.name_bn}</span>
+              </Link>
+            ))}
           </div>
         )}
+      </PageHeroBanner>
 
+      <main className="container py-8">
         {/* Filters & Sorting */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex items-center gap-2">
