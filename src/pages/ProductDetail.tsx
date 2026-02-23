@@ -436,7 +436,7 @@ const ProductDetail = () => {
               )}
 
               {/* Wishlist & Share */}
-              <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-4 text-sm flex-wrap">
                 <button 
                   className={`flex items-center gap-2 transition-colors ${
                     inWishlist ? 'text-red-500' : 'text-muted-foreground hover:text-primary'
@@ -451,6 +451,8 @@ const ProductDetail = () => {
                   title={product.title}
                   description={product.description}
                   image={product.image}
+                  showWhatsAppOrder={true}
+                  price={selectedVariant ? selectedVariant.price : product.price}
                 />
               </div>
             </div>

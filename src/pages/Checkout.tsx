@@ -308,10 +308,12 @@ const Checkout = () => {
   };
 
   const generateOrderNumber = () => {
-    const now = new Date();
-    const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-    const seq = Math.floor(Math.random() * 900000 + 100000);
-    return `ORD-${date}-${seq}`;
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `ORD${code}`;
   };
 
   const validateForm = () => {
@@ -914,6 +916,8 @@ const Checkout = () => {
                     subtotal={subtotal}
                     onCouponApplied={setAppliedCoupon}
                     appliedCoupon={appliedCoupon}
+                    cartProductIds={cartItems.map(item => item.productId)}
+                    cartCategoryIds={cartItems.map(item => item.product.category || '').filter(Boolean)}
                   />
                 </div>
 
