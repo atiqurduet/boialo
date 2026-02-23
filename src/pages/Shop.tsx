@@ -23,7 +23,8 @@ import {
   Clock,
   Tag,
   BookOpen,
-  Package
+  Package,
+  Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -74,6 +75,7 @@ const Shop = () => {
   const [gridCols, setGridCols] = useState<3 | 4>(4);
   const productsPerPage = 12;
   const [showFilters, setShowFilters] = useState(false);
+  const [ratingFilter, setRatingFilter] = useState<number | null>(null);
   const [expandedSections, setExpandedSections] = useState({
     price: true,
     publisher: true,
@@ -81,6 +83,7 @@ const Shop = () => {
     writer: false,
     brand: false,
     category: true,
+    rating: false,
   });
 
   // Sync sortBy with URL
@@ -178,6 +181,29 @@ const Shop = () => {
         .eq('is_active', true)
         .order('created_at', { ascending: false });
       return data || [];
+    },
+  });
+
+  // Fetch average ratings for all products
+  const { data: productRatings = [] } = useQuery({
+    queryKey: ['product-ratings'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('reviews')
+        .select('product_id, rating');
+      if (!data) return [];
+      // Calculate average rating per product
+      const ratingMap: Record<string, { total: number; count: number }> = {};
+      data.forEach(r => {
+        if (!ratingMap[r.product_id]) ratingMap[r.product_id] = { total: 0, count: 0 };
+        ratingMap[r.product_id].total += r.rating;
+        ratingMap[r.product_id].count += 1;
+      });
+      return Object.entries(ratingMap).map(([pid, v]) => ({
+        product_id: pid,
+        avg: v.total / v.count,
+        count: v.count,
+      }));
     },
   });
 
@@ -305,6 +331,15 @@ const Shop = () => {
       (p) => p.price >= priceRange[0] && p.price <= priceRange[1]
     );
 
+    // Filter by rating
+    if (ratingFilter) {
+      const ratingMapLookup = new Map(productRatings.map(r => [r.product_id, r.avg]));
+      products = products.filter(p => {
+        const avg = ratingMapLookup.get(p.id);
+        return avg !== undefined && avg >= ratingFilter;
+      });
+    }
+
     // Sort products based on URL sort parameter
     switch (sortBy) {
       case "price-low":
@@ -328,7 +363,7 @@ const Shop = () => {
     }
 
     return products;
-  }, [searchQuery, category, writer, publisher, brand, preorder, priceRange, sortBy, dbProducts, categories, writers, dbPublishers, brands]);
+  }, [searchQuery, category, writer, publisher, brand, preorder, priceRange, sortBy, dbProducts, categories, writers, dbPublishers, brands, ratingFilter, productRatings]);
 
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
   const paginatedProducts = useMemo(() => {
@@ -388,9 +423,10 @@ const Shop = () => {
   const clearAllFilters = () => {
     setSearchParams({ sort: sortBy });
     setPriceRange([0, 30000]);
+    setRatingFilter(null);
   };
 
-  const hasActiveFilters = category || writer || publisher || brand || preorder || searchQuery || priceRange[0] > 0 || priceRange[1] < 30000;
+  const hasActiveFilters = category || writer || publisher || brand || preorder || searchQuery || priceRange[0] > 0 || priceRange[1] < 30000 || ratingFilter;
 
   const getBreadcrumb = () => {
     if (writer) {
@@ -819,6 +855,55 @@ const Shop = () => {
             ) : (
               <p className="text-sm text-muted-foreground py-2">কোনো ব্র্যান্ড নেই</p>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* Rating Filter */}
+      <div>
+        <button
+          onClick={() => toggleSection("rating")}
+          className="flex items-center justify-between w-full font-semibold mb-3 group"
+        >
+          <span className="flex items-center gap-2">
+            <Star className="w-4 h-4 text-primary" />
+            রেটিং
+          </span>
+          {expandedSections.rating ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          )}
+        </button>
+        {expandedSections.rating && (
+          <div className="space-y-1">
+            {[
+              { value: null, label: "সকল রেটিং", stars: 0 },
+              { value: 4, label: "৪★ ও তার বেশি", stars: 4 },
+              { value: 3, label: "৩★ ও তার বেশি", stars: 3 },
+              { value: 2, label: "২★ ও তার বেশি", stars: 2 },
+              { value: 1, label: "১★ ও তার বেশি", stars: 1 },
+            ].map((option) => (
+              <button
+                key={option.label}
+                onClick={() => setRatingFilter(option.value)}
+                className={cn(
+                  "w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-2",
+                  ratingFilter === option.value
+                    ? "bg-primary text-primary-foreground font-medium"
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {option.stars > 0 && (
+                  <span className="flex items-center gap-0.5">
+                    {Array.from({ length: option.stars }).map((_, i) => (
+                      <Star key={i} className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </span>
+                )}
+                <span>{option.label}</span>
+              </button>
+            ))}
           </div>
         )}
       </div>

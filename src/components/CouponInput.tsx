@@ -18,9 +18,11 @@ interface CouponInputProps {
   subtotal: number;
   onCouponApplied: (coupon: AppliedCoupon | null) => void;
   appliedCoupon: AppliedCoupon | null;
+  cartProductIds?: string[];
+  cartCategoryIds?: string[];
 }
 
-export const CouponInput = ({ subtotal, onCouponApplied, appliedCoupon }: CouponInputProps) => {
+export const CouponInput = ({ subtotal, onCouponApplied, appliedCoupon, cartProductIds = [], cartCategoryIds = [] }: CouponInputProps) => {
   const { user } = useAuth();
   const [couponCode, setCouponCode] = useState("");
   const [isApplying, setIsApplying] = useState(false);
@@ -81,6 +83,23 @@ export const CouponInput = ({ subtotal, onCouponApplied, appliedCoupon }: Coupon
       if (coupon.max_uses && coupon.used_count >= coupon.max_uses) {
         toast.error("এই কুপন সীমা অতিক্রম করেছে");
         return;
+      }
+
+      // Check product/category targeting
+      const appliesTo = (coupon as any).applies_to || 'all';
+      if (appliesTo === 'specific_products') {
+        const couponProductIds = (coupon as any).product_ids || [];
+        if (couponProductIds.length > 0 && !cartProductIds.some((id: string) => couponProductIds.includes(id))) {
+          toast.error("এই কুপন আপনার কার্টের পণ্যগুলোতে প্রযোজ্য নয়");
+          return;
+        }
+      }
+      if (appliesTo === 'specific_categories') {
+        const couponCategoryIds = (coupon as any).category_ids || [];
+        if (couponCategoryIds.length > 0 && !cartCategoryIds.some((id: string) => couponCategoryIds.includes(id))) {
+          toast.error("এই কুপন আপনার কার্টের ক্যাটাগরিতে প্রযোজ্য নয়");
+          return;
+        }
       }
 
       // Calculate discount

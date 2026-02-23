@@ -1,17 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ProductCard, Product } from "@/components/ProductCard";
 import { CountdownTimer } from "@/components/CountdownTimer";
-import { Flame, Tag, Ticket, Filter, ChevronDown, Copy, Gift } from "lucide-react";
+import { Flame, Tag, Ticket, Filter, ChevronDown, Copy, Gift, ArrowUpDown, Percent } from "lucide-react";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -61,6 +62,8 @@ const Offers = () => {
   const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState("");
   const [showCoupons, setShowCoupons] = useState(true);
+  const [discountRange, setDiscountRange] = useState<string>("all");
+  const [sortByDiscount, setSortByDiscount] = useState<string>("highest");
   const { toast } = useToast();
 
   // Set selected offer from URL
@@ -175,7 +178,32 @@ const Offers = () => {
     };
   };
 
-  const offerProducts = dbProducts.map(convertDbProduct);
+  // Apply discount range filter and sorting
+  const offerProducts = useMemo(() => {
+    let products = dbProducts.map(convertDbProduct);
+    
+    // Filter by discount range
+    if (discountRange !== 'all') {
+      const [min, max] = discountRange.split('-').map(Number);
+      products = products.filter(p => {
+        const d = p.discount || 0;
+        return max ? (d >= min && d < max) : (d >= min);
+      });
+    }
+
+    // Sort
+    if (sortByDiscount === 'highest') {
+      products.sort((a, b) => (b.discount || 0) - (a.discount || 0));
+    } else if (sortByDiscount === 'lowest') {
+      products.sort((a, b) => (a.discount || 0) - (b.discount || 0));
+    } else if (sortByDiscount === 'price-low') {
+      products.sort((a, b) => a.price - b.price);
+    } else if (sortByDiscount === 'price-high') {
+      products.sort((a, b) => b.price - a.price);
+    }
+
+    return products;
+  }, [dbProducts, discountRange, sortByDiscount]);
 
   const copyCouponCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -334,11 +362,11 @@ const Offers = () => {
         )}
 
         {/* Filters Row */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="flex items-center gap-2 flex-1">
+         <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex items-center gap-2 flex-1 flex-wrap">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="ক্যাটাগরি" />
               </SelectTrigger>
               <SelectContent>
@@ -346,6 +374,32 @@ const Offers = () => {
                 {categories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>{cat.name_bn}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={discountRange} onValueChange={setDiscountRange}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="ছাড়ের পরিমাণ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">সব ছাড়</SelectItem>
+                <SelectItem value="50-0">৫০%+ ছাড়</SelectItem>
+                <SelectItem value="40-50">৪০-৫০% ছাড়</SelectItem>
+                <SelectItem value="20-40">২০-৪০% ছাড়</SelectItem>
+                <SelectItem value="10-20">১০-২০% ছাড়</SelectItem>
+                <SelectItem value="1-10">১০% এর নিচে</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={sortByDiscount} onValueChange={setSortByDiscount}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="সর্ট করুন" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="highest">সর্বোচ্চ ছাড় আগে</SelectItem>
+                <SelectItem value="lowest">সর্বনিম্ন ছাড় আগে</SelectItem>
+                <SelectItem value="price-low">মূল্য: কম → বেশি</SelectItem>
+                <SelectItem value="price-high">মূল্য: বেশি → কম</SelectItem>
               </SelectContent>
             </Select>
 
@@ -361,20 +415,26 @@ const Offers = () => {
           </div>
         </div>
 
-        {/* Offer Categories */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {/* Offer Discount Range Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
           {[
-            { label: "৫০%+ ছাড়", count: offerProducts.filter(p => p.discount && p.discount >= 50).length, color: "bg-primary" },
-            { label: "৪০-৫০% ছাড়", count: offerProducts.filter(p => p.discount && p.discount >= 40 && p.discount < 50).length, color: "bg-accent" },
-            { label: "২০-৪০% ছাড়", count: offerProducts.filter(p => p.discount && p.discount >= 20 && p.discount < 40).length, color: "bg-orange-500" },
-            { label: "১০-২০% ছাড়", count: offerProducts.filter(p => p.discount && p.discount >= 10 && p.discount < 20).length, color: "bg-blue-500" },
-          ].map((category, index) => (
-            <div key={index} className="bg-card rounded-xl p-4 text-center hover:shadow-lg transition-shadow cursor-pointer border">
-              <div className={`w-12 h-12 ${category.color} text-white rounded-full flex items-center justify-center mx-auto mb-2 text-lg font-bold`}>
-                {category.count}
-              </div>
-              <p className="font-medium text-sm">{category.label}</p>
-            </div>
+            { label: "৫০%+", range: "50-0", count: dbProducts.filter(p => (p.discount_percent || 0) >= 50).length },
+            { label: "৪০-৫০%", range: "40-50", count: dbProducts.filter(p => { const d = p.discount_percent || 0; return d >= 40 && d < 50; }).length },
+            { label: "২০-৪০%", range: "20-40", count: dbProducts.filter(p => { const d = p.discount_percent || 0; return d >= 20 && d < 40; }).length },
+            { label: "১০-২০%", range: "10-20", count: dbProducts.filter(p => { const d = p.discount_percent || 0; return d >= 10 && d < 20; }).length },
+            { label: "<১০%", range: "1-10", count: dbProducts.filter(p => { const d = p.discount_percent || 0; return d >= 1 && d < 10; }).length },
+          ].map((item) => (
+            <button
+              key={item.range}
+              onClick={() => setDiscountRange(discountRange === item.range ? 'all' : item.range)}
+              className={cn(
+                "bg-card rounded-xl p-4 text-center hover:shadow-lg transition-all cursor-pointer border",
+                discountRange === item.range ? "ring-2 ring-primary border-primary" : "border-border"
+              )}
+            >
+              <div className="text-2xl font-bold text-primary mb-1">{item.count}</div>
+              <p className="font-medium text-sm">{item.label} ছাড়</p>
+            </button>
           ))}
         </div>
 

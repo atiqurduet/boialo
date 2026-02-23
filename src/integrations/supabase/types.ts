@@ -573,43 +573,58 @@ export type Database = {
       }
       coupons: {
         Row: {
+          applies_to: string | null
+          category_ids: string[] | null
           code: string
           created_at: string
+          description_bn: string | null
           discount_type: string
           discount_value: number
           end_date: string | null
           id: string
           is_active: boolean | null
+          max_discount_amount: number | null
           max_uses: number | null
           min_order_amount: number | null
+          product_ids: string[] | null
           start_date: string | null
           updated_at: string
           used_count: number | null
         }
         Insert: {
+          applies_to?: string | null
+          category_ids?: string[] | null
           code: string
           created_at?: string
+          description_bn?: string | null
           discount_type: string
           discount_value: number
           end_date?: string | null
           id?: string
           is_active?: boolean | null
+          max_discount_amount?: number | null
           max_uses?: number | null
           min_order_amount?: number | null
+          product_ids?: string[] | null
           start_date?: string | null
           updated_at?: string
           used_count?: number | null
         }
         Update: {
+          applies_to?: string | null
+          category_ids?: string[] | null
           code?: string
           created_at?: string
+          description_bn?: string | null
           discount_type?: string
           discount_value?: number
           end_date?: string | null
           id?: string
           is_active?: boolean | null
+          max_discount_amount?: number | null
           max_uses?: number | null
           min_order_amount?: number | null
+          product_ids?: string[] | null
           start_date?: string | null
           updated_at?: string
           used_count?: number | null

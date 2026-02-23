@@ -34,6 +34,11 @@ interface Coupon {
   is_active: boolean;
   start_date: string | null;
   end_date: string | null;
+  applies_to: string;
+  product_ids: string[];
+  category_ids: string[];
+  max_discount_amount: number | null;
+  description_bn: string | null;
 }
 
 const AdminCoupons = () => {
@@ -51,7 +56,12 @@ const AdminCoupons = () => {
     max_uses: '',
     is_active: true,
     start_date: '',
-    end_date: ''
+    end_date: '',
+    applies_to: 'all' as 'all' | 'specific_products' | 'specific_categories',
+    product_ids: '' as string,
+    category_ids: '' as string,
+    max_discount_amount: '',
+    description_bn: '',
   });
 
   useEffect(() => {
@@ -79,16 +89,7 @@ const AdminCoupons = () => {
     e.preventDefault();
     
     try {
-      const couponData: {
-        code: string;
-        discount_type: string;
-        discount_value: number;
-        min_order_amount: number;
-        max_uses: number | null;
-        is_active: boolean;
-        start_date: string | null;
-        end_date: string | null;
-      } = {
+      const couponData: Record<string, any> = {
         code: formData.code.toUpperCase(),
         discount_type: formData.discount_type,
         discount_value: formData.discount_value,
@@ -96,7 +97,12 @@ const AdminCoupons = () => {
         max_uses: formData.max_uses ? Number(formData.max_uses) : null,
         is_active: formData.is_active,
         start_date: formData.start_date || null,
-        end_date: formData.end_date || null
+        end_date: formData.end_date || null,
+        applies_to: formData.applies_to,
+        product_ids: formData.product_ids ? formData.product_ids.split(',').map(s => s.trim()).filter(Boolean) : [],
+        category_ids: formData.category_ids ? formData.category_ids.split(',').map(s => s.trim()).filter(Boolean) : [],
+        max_discount_amount: formData.max_discount_amount ? Number(formData.max_discount_amount) : null,
+        description_bn: formData.description_bn || null,
       };
 
       if (editingCoupon) {
@@ -110,7 +116,7 @@ const AdminCoupons = () => {
       } else {
         const { error } = await supabase
           .from('coupons')
-          .insert([couponData]);
+          .insert([couponData as any]);
 
         if (error) throw error;
         toast({ title: 'সফল', description: 'কুপন যোগ হয়েছে' });
@@ -135,7 +141,12 @@ const AdminCoupons = () => {
       max_uses: coupon.max_uses?.toString() || '',
       is_active: coupon.is_active,
       start_date: coupon.start_date?.split('T')[0] || '',
-      end_date: coupon.end_date?.split('T')[0] || ''
+      end_date: coupon.end_date?.split('T')[0] || '',
+      applies_to: (coupon.applies_to || 'all') as any,
+      product_ids: (coupon.product_ids || []).join(', '),
+      category_ids: (coupon.category_ids || []).join(', '),
+      max_discount_amount: coupon.max_discount_amount?.toString() || '',
+      description_bn: coupon.description_bn || '',
     });
     setDialogOpen(true);
   };
@@ -172,7 +183,12 @@ const AdminCoupons = () => {
       max_uses: '',
       is_active: true,
       start_date: '',
-      end_date: ''
+      end_date: '',
+      applies_to: 'all',
+      product_ids: '',
+      category_ids: '',
+      max_discount_amount: '',
+      description_bn: '',
     });
   };
 
@@ -270,6 +286,65 @@ const AdminCoupons = () => {
                       onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
                     />
                   </div>
+                </div>
+
+                {/* Advanced: Applies To */}
+                <div>
+                  <Label>প্রযোজ্যতা</Label>
+                  <Select
+                    value={formData.applies_to}
+                    onValueChange={(v) => setFormData({ ...formData, applies_to: v as any })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">সকল পণ্য</SelectItem>
+                      <SelectItem value="specific_products">নির্দিষ্ট পণ্য</SelectItem>
+                      <SelectItem value="specific_categories">নির্দিষ্ট ক্যাটাগরি</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.applies_to === 'specific_products' && (
+                  <div>
+                    <Label>পণ্য আইডি (কমা দিয়ে আলাদা)</Label>
+                    <Input
+                      value={formData.product_ids}
+                      onChange={(e) => setFormData({ ...formData, product_ids: e.target.value })}
+                      placeholder="uuid1, uuid2, ..."
+                    />
+                  </div>
+                )}
+
+                {formData.applies_to === 'specific_categories' && (
+                  <div>
+                    <Label>ক্যাটাগরি আইডি (কমা দিয়ে আলাদা)</Label>
+                    <Input
+                      value={formData.category_ids}
+                      onChange={(e) => setFormData({ ...formData, category_ids: e.target.value })}
+                      placeholder="uuid1, uuid2, ..."
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <Label>সর্বোচ্চ ছাড় সীমা (৳)</Label>
+                  <Input
+                    type="number"
+                    value={formData.max_discount_amount}
+                    onChange={(e) => setFormData({ ...formData, max_discount_amount: e.target.value })}
+                    placeholder="সীমাহীন"
+                  />
+                </div>
+
+                <div>
+                  <Label>বিবরণ (বাংলা)</Label>
+                  <Input
+                    value={formData.description_bn}
+                    onChange={(e) => setFormData({ ...formData, description_bn: e.target.value })}
+                    placeholder="কুপনের বিবরণ"
+                  />
                 </div>
 
                 <div className="flex items-center gap-2">
