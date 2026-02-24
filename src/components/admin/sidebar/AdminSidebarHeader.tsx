@@ -20,9 +20,9 @@ export const AdminSidebarHeader = ({ isCollapsed, onToggleCollapse }: AdminSideb
             <span className="text-primary-foreground font-bold text-xl">ব</span>
           </div>
           <div>
-            <h1 className="font-bold text-lg leading-tight">বইঘর</h1>
+            <h1 className="font-bold text-lg leading-tight">বইআলো</h1>
             <p className="text-xs text-muted-foreground">এডমিন প্যানেল</p>
-          </div>
+          </div> 
         </Link>
       )}
       
