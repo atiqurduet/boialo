@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Layers, BookOpen, ShoppingBag, Utensils, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Layers, BookOpen, ShoppingBag, Package } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
+import { useProductTypes } from '@/hooks/useProductTypes';
 interface Category {
   id: string;
   name_bn: string;
@@ -32,12 +32,6 @@ interface UniversalCategory {
 
 type CombinedCategory = (Category | UniversalCategory) & { type: 'book' | 'universal' };
 
-const productTypeConfig: Record<string, { label: string; icon: React.ReactNode }> = {
-  lifestyle: { label: 'লাইফস্টাইল', icon: <ShoppingBag className="w-4 h-4" /> },
-  stationery: { label: 'স্টেশনারি', icon: <Pencil className="w-4 h-4" /> },
-  food: { label: 'খাবার', icon: <Utensils className="w-4 h-4" /> },
-};
-
 const Categories = () => {
   const [bookCategories, setBookCategories] = useState<Category[]>([]);
   const [universalCategories, setUniversalCategories] = useState<UniversalCategory[]>([]);
@@ -46,6 +40,7 @@ const Categories = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const { productTypes: productTypesList, getLabel } = useProductTypes();
 
   useEffect(() => {
     fetchAllCategories();
@@ -151,8 +146,7 @@ const Categories = () => {
     if (category.type === 'book') {
       return <BookOpen className="w-6 h-6 text-muted-foreground" />;
     }
-    const productType = (category as UniversalCategory & { type: 'universal' }).product_type;
-    return productTypeConfig[productType]?.icon || <Layers className="w-6 h-6 text-muted-foreground" />;
+    return <Package className="w-6 h-6 text-muted-foreground" />;
   };
 
   const filteredCategories = getFilteredCategories();
@@ -200,8 +194,8 @@ const Categories = () => {
             </TabsTrigger>
             {productTypes.map(type => (
               <TabsTrigger key={type} value={type} className="flex items-center gap-2">
-                {productTypeConfig[type]?.icon}
-                {productTypeConfig[type]?.label || type}
+                <Package className="w-4 h-4" />
+                {getLabel(type)}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -216,7 +210,7 @@ const Categories = () => {
             <h2 className="text-xl md:text-2xl font-bold text-foreground">
               {activeTab === 'all' ? 'জনপ্রিয় ক্যাটাগরি' : 
                activeTab === 'books' ? 'বই ক্যাটাগরি' : 
-               productTypeConfig[activeTab]?.label + ' ক্যাটাগরি'}
+               getLabel(activeTab) + ' ক্যাটাগরি'}
             </h2>
           </div>
 
@@ -275,9 +269,7 @@ const Categories = () => {
                       {/* Type Badge */}
                       {activeTab === 'all' && (
                         <span className="absolute -top-1 -left-1 bg-secondary text-secondary-foreground text-[10px] font-medium px-1.5 py-0.5 rounded-full shadow-md">
-                          {category.type === 'book' ? '📚' : 
-                           (category as UniversalCategory & { type: 'universal' }).product_type === 'lifestyle' ? '🛍️' :
-                           (category as UniversalCategory & { type: 'universal' }).product_type === 'stationery' ? '✏️' : '🍽️'}
+                          {category.type === 'book' ? '📚' : '📦'}
                         </span>
                       )}
                     </div>
@@ -335,9 +327,7 @@ const Categories = () => {
                       {/* Type indicator */}
                       {activeTab === 'all' && (
                         <span className="absolute -top-1 -right-1 text-xs">
-                          {category.type === 'book' ? '📚' : 
-                           (category as UniversalCategory & { type: 'universal' }).product_type === 'lifestyle' ? '🛍️' :
-                           (category as UniversalCategory & { type: 'universal' }).product_type === 'stationery' ? '✏️' : '🍽️'}
+                          {category.type === 'book' ? '📚' : '📦'}
                         </span>
                       )}
                     </div>
@@ -354,7 +344,7 @@ const Categories = () => {
                           key={sub.id}
                           to={category.type === 'book' 
                             ? `/categories/${sub.slug}`
-                            : `/category/${(category as UniversalCategory & { type: 'universal' }).product_type}/${sub.slug}`
+                            : `/category/${(category as any).product_type}/${sub.slug}`
                           }
                           className="block text-xs text-muted-foreground hover:text-primary transition-colors truncate"
                         >

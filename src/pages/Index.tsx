@@ -81,10 +81,11 @@ const Index = () => {
         );
 
       case 'category_grid':
-        return categories.length > 0 ? (
+        return (categories.length > 0 || universalCategories.length > 0) ? (
           <DynamicCategorySection 
             key={section.id}
             categories={categories}
+            universalCategories={universalCategories}
             products={products}
             title={section.title_bn}
             settings={settings}

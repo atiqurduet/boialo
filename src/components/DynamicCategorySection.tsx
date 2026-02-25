@@ -13,6 +13,16 @@ interface Category {
   parent_id: string | null;
 }
 
+interface UniversalCategory {
+  id: string;
+  name_bn: string;
+  name_en: string;
+  slug: string;
+  image_url: string | null;
+  parent_id?: string | null;
+  product_type: string;
+}
+
 interface ProductWithCategory {
   category_id: string | null;
 }
@@ -27,8 +37,20 @@ interface CategorySettings {
   gradient_border?: boolean;
 }
 
+interface CombinedCategory {
+  id: string;
+  name_bn: string;
+  name_en: string;
+  slug: string;
+  image_url: string | null;
+  parent_id: string | null;
+  categoryType: 'book' | 'universal';
+  product_type?: string;
+}
+
 interface DynamicCategorySectionProps {
   categories: Category[];
+  universalCategories?: UniversalCategory[];
   products?: ProductWithCategory[];
   title?: string;
   settings?: CategorySettings;
@@ -42,23 +64,37 @@ const imageSizeClasses = {
 
 export const DynamicCategorySection = ({ 
   categories, 
+  universalCategories = [],
   products = [],
   title = "জনপ্রিয় ক্যাটাগরি",
   settings = {},
 }: DynamicCategorySectionProps) => {
-  const [selectedParent, setSelectedParent] = useState<Category | null>(null);
+  const [selectedParent, setSelectedParent] = useState<CombinedCategory | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
   // Extract settings with defaults
-  const maxCategories = settings.max_categories || 12;
+  const maxCategories = settings.max_categories || 20;
   const imageSize = settings.image_size || 'medium';
   const viewAllLink = settings.view_all_link || '/categories';
   const showProductCount = settings.show_product_count !== false;
   const showSubcategoryIndicator = settings.show_subcategory_indicator !== false;
   const enableScrollArrows = settings.enable_scroll_arrows !== false;
   const gradientBorder = settings.gradient_border !== false;
+
+  // Merge book + universal categories into combined list
+  const allCombined = useMemo((): CombinedCategory[] => {
+    const bookCats: CombinedCategory[] = categories.map(c => ({
+      ...c, categoryType: 'book' as const,
+    }));
+    const uniCats: CombinedCategory[] = universalCategories.map(c => ({
+      id: c.id, name_bn: c.name_bn, name_en: c.name_en, slug: c.slug,
+      image_url: c.image_url, parent_id: c.parent_id || null,
+      categoryType: 'universal' as const, product_type: c.product_type,
+    }));
+    return [...bookCats, ...uniCats];
+  }, [categories, universalCategories]);
 
   // Check scroll state
   const checkScrollability = () => {
@@ -82,25 +118,25 @@ export const DynamicCategorySection = ({
       }
       window.removeEventListener('resize', checkScrollability);
     };
-  }, [categories, selectedParent]);
+  }, [allCombined, selectedParent]);
 
   // Calculate product counts for each category
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    categories.forEach(cat => {
+    allCombined.forEach(cat => {
       counts[cat.id] = products.filter(p => p.category_id === cat.id).length;
     });
-    categories.forEach(cat => {
+    allCombined.forEach(cat => {
       if (cat.parent_id && counts[cat.parent_id] !== undefined) {
         counts[cat.parent_id] += counts[cat.id];
       }
     });
     return counts;
-  }, [categories, products]);
+  }, [allCombined, products]);
 
-  const parentCategories = categories.filter(c => !c.parent_id).slice(0, maxCategories);
+  const parentCategories = allCombined.filter(c => !c.parent_id).slice(0, maxCategories);
   const subcategories = selectedParent 
-    ? categories.filter(c => c.parent_id === selectedParent.id)
+    ? allCombined.filter(c => c.parent_id === selectedParent.id)
     : [];
 
   if (parentCategories.length === 0) {
@@ -109,9 +145,16 @@ export const DynamicCategorySection = ({
 
   const displayCategories = selectedParent ? subcategories : parentCategories;
   const hasSubcategories = (categoryId: string) => 
-    categories.some(c => c.parent_id === categoryId);
+    allCombined.some(c => c.parent_id === categoryId);
 
-  const handleCategoryClick = (category: Category, e: React.MouseEvent) => {
+  const getCategoryLink = (category: CombinedCategory): string => {
+    if (category.categoryType === 'book') {
+      return `/categories/${category.slug}`;
+    }
+    return `/category/${category.product_type}/${category.slug}`;
+  };
+
+  const handleCategoryClick = (category: CombinedCategory, e: React.MouseEvent) => {
     if (!selectedParent && hasSubcategories(category.id)) {
       e.preventDefault();
       setSelectedParent(category);
@@ -160,7 +203,7 @@ export const DynamicCategorySection = ({
           </div>
         </div>
         <Link
-          to={selectedParent ? `/categories/${selectedParent.slug}` : viewAllLink}
+          to={selectedParent ? getCategoryLink(selectedParent) : viewAllLink}
           className="group flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-sm font-medium transition-all duration-300"
         >
           সব দেখুন 
@@ -175,7 +218,7 @@ export const DynamicCategorySection = ({
           </div>
           <p className="mb-3">এই ক্যাটাগরিতে কোনো সাব-ক্যাটাগরি নেই</p>
           <Link 
-            to={`/categories/${selectedParent.slug}`}
+            to={getCategoryLink(selectedParent)}
             className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
           >
             সব পণ্য দেখুন <ChevronRight className="w-4 h-4" />
@@ -203,7 +246,7 @@ export const DynamicCategorySection = ({
             {displayCategories.map((category, index) => (
               <Link
                 key={category.id}
-                to={`/categories/${category.slug}`}
+                to={getCategoryLink(category)}
                 onClick={(e) => handleCategoryClick(category, e)}
                 className="flex flex-col items-center gap-3 flex-shrink-0 group/item animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
