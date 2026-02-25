@@ -113,6 +113,7 @@ export const menuCategories: MenuCategory[] = [
       { icon: Mail, label: 'ইমেইল মার্কেটিং', href: '/admin/email-marketing', roles: ['admin', 'manager'] },
       { icon: FileText, label: 'SMS মার্কেটিং', href: '/admin/sms', roles: ['admin'] },
       { icon: Megaphone, label: 'নোটিফিকেশন', href: '/admin/notifications', roles: ['admin'] },
+      { icon: Megaphone, label: 'অটো মার্কেটিং', href: '/admin/marketing-automation', roles: ['admin', 'manager'] },
       { icon: BookOpen, label: 'ব্লগ', href: '/admin/blog', roles: ['admin', 'manager'] },
     ]
   },

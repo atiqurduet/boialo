@@ -94,6 +94,7 @@ import AdminGiftCards from "./pages/admin/AdminGiftCards";
 import AdminBundles from "./pages/admin/AdminBundles";
 import AdminLoyaltyPoints from "./pages/admin/AdminLoyaltyPoints";
 import AdminContactMessages from "./pages/admin/AdminContactMessages";
+import AdminMarketingAutomation from "./pages/admin/AdminMarketingAutomation";
 import GiftCards from "./pages/GiftCards";
 import { ThemeInitializer } from "./components/ThemeInitializer";
 
@@ -199,6 +200,7 @@ const App = () => (
                 <Route path="/admin/loyalty-points" element={<AdminLoyaltyPoints />} />
                 <Route path="/admin/bundles" element={<AdminBundles />} />
                 <Route path="/admin/contact-messages" element={<AdminContactMessages />} />
+                <Route path="/admin/marketing-automation" element={<AdminMarketingAutomation />} />
                 
                 {/* Dynamic Page Route - must be before catch-all */}
                 <Route path="/:slug" element={<DynamicPage />} />

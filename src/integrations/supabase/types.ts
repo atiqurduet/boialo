@@ -161,6 +161,50 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_logs: {
+        Row: {
+          automation_id: string
+          channel: string
+          created_at: string
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          recipient: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          automation_id: string
+          channel: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          recipient: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          automation_id?: string
+          channel?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          recipient?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_logs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       backup_history: {
         Row: {
           backup_type: string
@@ -1396,6 +1440,95 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      marketing_automations: {
+        Row: {
+          action_type: string
+          cooldown_hours: number | null
+          created_at: string
+          delay_minutes: number | null
+          description_bn: string | null
+          email_content: string | null
+          email_subject: string | null
+          email_template_id: string | null
+          id: string
+          is_active: boolean | null
+          last_triggered_at: string | null
+          max_sends_per_user: number | null
+          name_bn: string
+          name_en: string | null
+          priority: number | null
+          sms_template: string | null
+          target_segment: string | null
+          total_clicked: number | null
+          total_converted: number | null
+          total_opened: number | null
+          total_sent: number | null
+          trigger_config: Json | null
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          cooldown_hours?: number | null
+          created_at?: string
+          delay_minutes?: number | null
+          description_bn?: string | null
+          email_content?: string | null
+          email_subject?: string | null
+          email_template_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          max_sends_per_user?: number | null
+          name_bn: string
+          name_en?: string | null
+          priority?: number | null
+          sms_template?: string | null
+          target_segment?: string | null
+          total_clicked?: number | null
+          total_converted?: number | null
+          total_opened?: number | null
+          total_sent?: number | null
+          trigger_config?: Json | null
+          trigger_type: string
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          cooldown_hours?: number | null
+          created_at?: string
+          delay_minutes?: number | null
+          description_bn?: string | null
+          email_content?: string | null
+          email_subject?: string | null
+          email_template_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          max_sends_per_user?: number | null
+          name_bn?: string
+          name_en?: string | null
+          priority?: number | null
+          sms_template?: string | null
+          target_segment?: string | null
+          total_clicked?: number | null
+          total_converted?: number | null
+          total_opened?: number | null
+          total_sent?: number | null
+          trigger_config?: Json | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_automations_email_template_id_fkey"
+            columns: ["email_template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       menu_items: {
         Row: {
