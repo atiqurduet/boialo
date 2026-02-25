@@ -158,9 +158,15 @@ const AdminFooter = () => {
                     </div>
                   ) : section.section_type === 'social' ? (
                     <div className="text-sm text-muted-foreground space-y-1">
-                      <p>Facebook: {section.content?.facebook}</p>
-                      <p>YouTube: {section.content?.youtube}</p>
-                      <p>Instagram: {section.content?.instagram}</p>
+                      {Object.entries(section.content || {}).filter(([, v]) => v && String(v).trim()).map(([key, value]) => (
+                        <p key={key} className="flex items-center gap-2">
+                          <span className="font-medium capitalize">{key}:</span>
+                          <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">{String(value)}</a>
+                        </p>
+                      ))}
+                      {Object.entries(section.content || {}).filter(([, v]) => v && String(v).trim()).length === 0 && (
+                        <p className="text-muted-foreground italic">কোনো সোশ্যাল লিংক সেট করা হয়নি</p>
+                      )}
                     </div>
                   ) : null}
                 </CardContent>
@@ -193,11 +199,29 @@ const AdminFooter = () => {
                 </>
               )}
               {editingSection?.section_type === 'social' && (
-                <>
-                  <div><Label>Facebook URL</Label><Input value={sectionForm.content?.facebook || ''} onChange={(e) => setSectionForm({ ...sectionForm, content: { ...sectionForm.content, facebook: e.target.value } })} /></div>
-                  <div><Label>YouTube URL</Label><Input value={sectionForm.content?.youtube || ''} onChange={(e) => setSectionForm({ ...sectionForm, content: { ...sectionForm.content, youtube: e.target.value } })} /></div>
-                  <div><Label>Instagram URL</Label><Input value={sectionForm.content?.instagram || ''} onChange={(e) => setSectionForm({ ...sectionForm, content: { ...sectionForm.content, instagram: e.target.value } })} /></div>
-                </>
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">যেসব ফিল্ড ফাঁকা রাখবেন সেগুলো ফুটারে দেখাবে না</p>
+                  {[
+                    { key: 'facebook', label: 'Facebook URL', placeholder: 'https://facebook.com/yourpage' },
+                    { key: 'youtube', label: 'YouTube URL', placeholder: 'https://youtube.com/@yourchannel' },
+                    { key: 'instagram', label: 'Instagram URL', placeholder: 'https://instagram.com/yourprofile' },
+                    { key: 'twitter', label: 'Twitter/X URL', placeholder: 'https://x.com/yourhandle' },
+                    { key: 'linkedin', label: 'LinkedIn URL', placeholder: 'https://linkedin.com/company/yourcompany' },
+                    { key: 'tiktok', label: 'TikTok URL', placeholder: 'https://tiktok.com/@yourprofile' },
+                    { key: 'whatsapp', label: 'WhatsApp URL', placeholder: 'https://wa.me/8801XXXXXXXXX' },
+                    { key: 'telegram', label: 'Telegram URL', placeholder: 'https://t.me/yourchannel' },
+                    { key: 'pinterest', label: 'Pinterest URL', placeholder: 'https://pinterest.com/yourprofile' },
+                  ].map(({ key, label, placeholder }) => (
+                    <div key={key}>
+                      <Label>{label}</Label>
+                      <Input
+                        value={sectionForm.content?.[key] || ''}
+                        onChange={(e) => setSectionForm({ ...sectionForm, content: { ...sectionForm.content, [key]: e.target.value } })}
+                        placeholder={placeholder}
+                      />
+                    </div>
+                  ))}
+                </div>
               )}
               <Button type="submit" className="w-full">আপডেট করুন</Button>
             </form>
