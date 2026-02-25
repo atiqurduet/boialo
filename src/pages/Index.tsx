@@ -14,6 +14,9 @@ import { FeaturedOfferBanner } from "@/components/FeaturedOfferBanner";
 import { Footer } from "@/components/Footer";
 import { RecentlyViewed } from "@/components/RecentlyViewed";
 import { AIRecommendations } from "@/components/AIRecommendations";
+import { TopSellingProducts } from "@/components/TopSellingProducts";
+import { TopAuthorsSection } from "@/components/TopAuthorsSection";
+import { TopSellingUniversalProducts } from "@/components/TopSellingUniversalProducts";
 import { useHomepageData } from "@/hooks/useHomepageData";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -289,6 +292,36 @@ const Index = () => {
             title={section.title_bn}
             subtitle={section.subtitle_bn || undefined}
             viewAllLink={settings.view_all_link || "/shop"}
+          />
+        );
+
+      case 'top_selling_products':
+        return (
+          <TopSellingProducts
+            key={section.id}
+            limit={settings.limit || 10}
+            title={section.title_bn}
+            subtitle={section.subtitle_bn || undefined}
+          />
+        );
+
+      case 'top_authors':
+        return (
+          <TopAuthorsSection
+            key={section.id}
+            limit={settings.limit || 12}
+            title={section.title_bn}
+            subtitle={section.subtitle_bn || undefined}
+          />
+        );
+
+      case 'top_selling_universal_products':
+        return (
+          <TopSellingUniversalProducts
+            key={section.id}
+            limit={settings.limit || 10}
+            title={section.title_bn}
+            subtitle={section.subtitle_bn || undefined}
           />
         );
 
