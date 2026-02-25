@@ -118,6 +118,7 @@ export const menuCategories: MenuCategory[] = [
       { icon: Megaphone, label: 'নোটিফিকেশন', href: '/admin/notifications', roles: ['admin'] },
       { icon: Megaphone, label: 'অটো মার্কেটিং', href: '/admin/marketing-automation', roles: ['admin', 'manager'] },
       { icon: Megaphone, label: 'সোশ্যাল মিডিয়া', href: '/admin/social-media', roles: ['admin', 'manager'] },
+      { icon: Tag, label: 'ডায়নামিক প্রাইসিং', href: '/admin/dynamic-pricing', roles: ['admin'] },
       { icon: BookOpen, label: 'ব্লগ', href: '/admin/blog', roles: ['admin', 'manager'] },
       { icon: Users, label: 'রেফারাল প্রোগ্রাম', href: '/admin/referral', roles: ['admin', 'manager'] },
     ]

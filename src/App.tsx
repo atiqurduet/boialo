@@ -103,6 +103,7 @@ import AdminDeliveryZones from "./pages/admin/AdminDeliveryZones";
 import AdminReferralProgram from "./pages/admin/AdminReferralProgram";
 import AdminVisitorAnalytics from "./pages/admin/AdminVisitorAnalytics";
 import AdminSocialMedia from "./pages/admin/AdminSocialMedia";
+import AdminDynamicPricing from "./pages/admin/AdminDynamicPricing";
 import { ThemeInitializer } from "./components/ThemeInitializer";
 import { CompareFloatingBar } from "./components/CompareFloatingBar";
 
@@ -216,6 +217,7 @@ const App = () => (
                 <Route path="/admin/referral" element={<AdminReferralProgram />} />
                 <Route path="/admin/visitor-analytics" element={<AdminVisitorAnalytics />} />
                 <Route path="/admin/social-media" element={<AdminSocialMedia />} />
+                <Route path="/admin/dynamic-pricing" element={<AdminDynamicPricing />} />
                 
                 {/* Dynamic Page Route - must be before catch-all */}
                 <Route path="/:slug" element={<DynamicPage />} />
