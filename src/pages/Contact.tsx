@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Phone, Mail, MapPin, Clock, Send, MessageCircle } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, Send, MessageCircle, Loader2, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -17,11 +18,48 @@ const Contact = () => {
     subject: "",
     message: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("আপনার বার্তা পাঠানো হয়েছে। আমরা শীঘ্রই যোগাযোগ করব।");
-    setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
+    
+    // Basic validation
+    if (!formData.name.trim() || !formData.email.trim() || !formData.subject.trim() || !formData.message.trim()) {
+      toast.error("সকল প্রয়োজনীয় ফিল্ড পূরণ করুন।");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      toast.error("সঠিক ইমেইল দিন।");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from("contact_messages" as any).insert({
+        name: formData.name.trim().slice(0, 200),
+        email: formData.email.trim().slice(0, 255),
+        phone: formData.phone.trim().slice(0, 20) || null,
+        subject: formData.subject.trim().slice(0, 500),
+        message: formData.message.trim().slice(0, 5000),
+      } as any);
+
+      if (error) throw error;
+
+      setIsSubmitted(true);
+      setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
+      toast.success("আপনার বার্তা সফলভাবে পাঠানো হয়েছে। আমরা শীঘ্রই যোগাযোগ করব।");
+      
+      // Reset success state after 5 seconds
+      setTimeout(() => setIsSubmitted(false), 5000);
+    } catch (err) {
+      console.error("Contact form error:", err);
+      toast.error("বার্তা পাঠাতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -111,72 +149,98 @@ const Contact = () => {
             <div className="lg:col-span-2">
               <div className="bg-card rounded-xl p-6 md:p-8 shadow-sm">
                 <h2 className="font-bold text-xl mb-6">বার্তা পাঠান</h2>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name">আপনার নাম *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="পূর্ণ নাম"
-                        required
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">ইমেইল *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        placeholder="your@email.com"
-                        required
-                        className="mt-1"
-                      />
-                    </div>
+                
+                {isSubmitted ? (
+                  <div className="text-center py-12">
+                    <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold mb-2">বার্তা পাঠানো হয়েছে!</h3>
+                    <p className="text-muted-foreground">আমরা শীঘ্রই আপনার সাথে যোগাযোগ করব।</p>
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="phone">ফোন নম্বর</Label>
-                      <Input
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="০১৭XXXXXXXX"
-                        className="mt-1"
-                      />
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="name">আপনার নাম *</Label>
+                        <Input
+                          id="name"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          placeholder="পূর্ণ নাম"
+                          required
+                          maxLength={200}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="email">ইমেইল *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          placeholder="your@email.com"
+                          required
+                          maxLength={255}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="phone">ফোন নম্বর</Label>
+                        <Input
+                          id="phone"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          placeholder="০১৭XXXXXXXX"
+                          maxLength={20}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="subject">বিষয় *</Label>
+                        <Input
+                          id="subject"
+                          value={formData.subject}
+                          onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                          placeholder="বার্তার বিষয়"
+                          required
+                          maxLength={500}
+                          className="mt-1"
+                        />
+                      </div>
                     </div>
                     <div>
-                      <Label htmlFor="subject">বিষয় *</Label>
-                      <Input
-                        id="subject"
-                        value={formData.subject}
-                        onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                        placeholder="বার্তার বিষয়"
+                      <Label htmlFor="message">বার্তা *</Label>
+                      <Textarea
+                        id="message"
+                        value={formData.message}
+                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                        placeholder="আপনার বার্তা লিখুন..."
+                        rows={6}
                         required
+                        maxLength={5000}
                         className="mt-1"
                       />
+                      <p className="text-xs text-muted-foreground mt-1 text-right">
+                        {formData.message.length}/5000
+                      </p>
                     </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="message">বার্তা *</Label>
-                    <Textarea
-                      id="message"
-                      value={formData.message}
-                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      placeholder="আপনার বার্তা লিখুন..."
-                      rows={6}
-                      required
-                      className="mt-1"
-                    />
-                  </div>
-                  <Button type="submit" className="btn-primary gap-2">
-                    <Send className="w-4 h-4" />
-                    বার্তা পাঠান
-                  </Button>
-                </form>
+                    <Button type="submit" className="btn-primary gap-2" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          পাঠানো হচ্ছে...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          বার্তা পাঠান
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                )}
               </div>
             </div>
           </div>

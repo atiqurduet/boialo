@@ -75,6 +75,7 @@ export const menuCategories: MenuCategory[] = [
       { icon: RefreshCw, label: 'রিফান্ড রিকোয়েস্ট', href: '/admin/refund-requests', roles: ['admin', 'manager', 'support'] },
       { icon: AlertTriangle, label: 'ফ্রড রিভিউ', href: '/admin/fraud-review', roles: ['admin', 'manager'] },
       { icon: MessageCircle, label: 'লাইভ চ্যাট', href: '/admin/chat', roles: ['admin', 'manager', 'support'] },
+      { icon: Mail, label: 'কন্টাক্ট বার্তা', href: '/admin/contact-messages', roles: ['admin', 'manager', 'support'] },
     ]
   },
   {
