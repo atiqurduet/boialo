@@ -101,6 +101,7 @@ import Compare from "./pages/Compare";
 import AdminInventory from "./pages/admin/AdminInventory";
 import AdminDeliveryZones from "./pages/admin/AdminDeliveryZones";
 import AdminReferralProgram from "./pages/admin/AdminReferralProgram";
+import AdminVisitorAnalytics from "./pages/admin/AdminVisitorAnalytics";
 import { ThemeInitializer } from "./components/ThemeInitializer";
 import { CompareFloatingBar } from "./components/CompareFloatingBar";
 
@@ -212,6 +213,7 @@ const App = () => (
                 <Route path="/admin/inventory" element={<AdminInventory />} />
                 <Route path="/admin/delivery-zones" element={<AdminDeliveryZones />} />
                 <Route path="/admin/referral" element={<AdminReferralProgram />} />
+                <Route path="/admin/visitor-analytics" element={<AdminVisitorAnalytics />} />
                 
                 {/* Dynamic Page Route - must be before catch-all */}
                 <Route path="/:slug" element={<DynamicPage />} />

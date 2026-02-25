@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { initializePixels, trackPageView, setUserData } from '@/lib/analytics';
 import { useAuth } from '@/contexts/AuthContext';
+import { useVisitorTracking } from '@/hooks/useVisitorTracking';
 
 interface AnalyticsProviderProps {
   children: React.ReactNode;
@@ -11,6 +12,9 @@ interface AnalyticsProviderProps {
 export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => {
   const location = useLocation();
   const { user } = useAuth();
+
+  // Visitor tracking
+  useVisitorTracking();
 
   // Initialize pixels on mount
   useEffect(() => {
@@ -25,16 +29,13 @@ export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => {
         
         data?.forEach(setting => {
           let value = setting.setting_value;
-          // Handle JSON string values
           if (typeof value === 'string') {
             try {
               const parsed = JSON.parse(value);
               if (typeof parsed === 'string') {
                 value = parsed;
               }
-            } catch {
-              // Keep as-is if not valid JSON
-            }
+            } catch {}
           }
           
           const strValue = typeof value === 'string' ? value : '';
@@ -59,7 +60,6 @@ export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => {
 
   // Track page views on route change
   useEffect(() => {
-    // Small delay to ensure title is updated
     const timer = setTimeout(() => {
       trackPageView(location.pathname, document.title);
     }, 100);

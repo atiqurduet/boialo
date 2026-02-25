@@ -63,6 +63,7 @@ export const menuCategories: MenuCategory[] = [
       { icon: LayoutDashboard, label: 'ড্যাশবোর্ড', href: '/admin', roles: ['admin', 'manager', 'support'] },
       { icon: BarChart3, label: 'রিপোর্ট ও অ্যানালিটিক্স', href: '/admin/reports', roles: ['admin', 'manager'] },
       { icon: BarChart3, label: 'চেকআউট অ্যানালিটিক্স', href: '/admin/checkout-analytics', roles: ['admin', 'manager'] },
+      { icon: BarChart3, label: 'ভিজিটর অ্যানালিটিক্স', href: '/admin/visitor-analytics', roles: ['admin', 'manager'] },
     ]
   },
   {
