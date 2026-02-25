@@ -105,7 +105,7 @@ export const DynamicLinkSelector = ({
     let url = '';
     switch (type) {
       case 'page':
-        url = `/page/${selectedValue}`;
+        url = `/${selectedValue}`;
         break;
       case 'category':
         url = `/categories/${selectedValue}`;
