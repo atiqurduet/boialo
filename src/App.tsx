@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
+import { CompareProvider } from "@/contexts/CompareContext";
 import { AnalyticsProvider } from "@/components/AnalyticsProvider";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
@@ -96,10 +97,12 @@ import AdminLoyaltyPoints from "./pages/admin/AdminLoyaltyPoints";
 import AdminContactMessages from "./pages/admin/AdminContactMessages";
 import AdminMarketingAutomation from "./pages/admin/AdminMarketingAutomation";
 import GiftCards from "./pages/GiftCards";
+import Compare from "./pages/Compare";
 import AdminInventory from "./pages/admin/AdminInventory";
 import AdminDeliveryZones from "./pages/admin/AdminDeliveryZones";
 import AdminReferralProgram from "./pages/admin/AdminReferralProgram";
 import { ThemeInitializer } from "./components/ThemeInitializer";
+import { CompareFloatingBar } from "./components/CompareFloatingBar";
 
 const queryClient = new QueryClient();
 
@@ -108,6 +111,7 @@ const App = () => (
     <AuthProvider>
       <CartProvider>
         <WishlistProvider>
+          <CompareProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
@@ -153,6 +157,7 @@ const App = () => (
                 <Route path="/digital-library" element={<DigitalLibrary />} />
                 <Route path="/gift-cards" element={<GiftCards />} />
                 <Route path="/bundles" element={<Bundles />} />
+                <Route path="/compare" element={<Compare />} />
                 <Route path="/wishlist/shared/:shareCode" element={<SharedWishlist />} />
                 
                 {/* Admin Routes */}
@@ -214,9 +219,11 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <ChatWidget />
+              <CompareFloatingBar />
               </AnalyticsProvider>
             </BrowserRouter>
           </TooltipProvider>
+          </CompareProvider>
         </WishlistProvider>
       </CartProvider>
     </AuthProvider>

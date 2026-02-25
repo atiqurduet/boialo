@@ -26,6 +26,9 @@ import { bn } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trackViewContent } from "@/lib/analytics";
 import { toast } from "sonner";
+import { ProductQA } from "@/components/ProductQA";
+import { StockAlertButton } from "@/components/StockAlertButton";
+import { PriceDropAlert } from "@/components/PriceDropAlert";
 import {
   Dialog,
   DialogContent,
@@ -482,9 +485,20 @@ const ProductDetail = () => {
           </div>
         </div>
 
+        {/* Stock Alert & Price Drop */}
+        <div className="mt-8 flex flex-wrap gap-3">
+          <StockAlertButton productId={product.id} isOutOfStock={(dbProduct?.stock_quantity ?? 0) <= 0} />
+          <PriceDropAlert productId={product.id} currentPrice={product.price} />
+        </div>
+
         {/* Reviews Section */}
         <div className="mt-12">
           <ProductReviews productId={product.id} />
+        </div>
+
+        {/* Q&A Section */}
+        <div className="mt-12">
+          <ProductQA productId={product.id} />
         </div>
 
         {/* Bundle Offers - Below Reviews */}
