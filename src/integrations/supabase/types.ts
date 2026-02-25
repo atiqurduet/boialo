@@ -161,6 +161,56 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_ab_results: {
+        Row: {
+          automation_id: string
+          channel: string
+          clicked_at: string | null
+          converted_at: string | null
+          created_at: string
+          id: string
+          opened_at: string | null
+          revenue: number | null
+          status: string
+          user_id: string | null
+          variant: string
+        }
+        Insert: {
+          automation_id: string
+          channel?: string
+          clicked_at?: string | null
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          opened_at?: string | null
+          revenue?: number | null
+          status?: string
+          user_id?: string | null
+          variant?: string
+        }
+        Update: {
+          automation_id?: string
+          channel?: string
+          clicked_at?: string | null
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          opened_at?: string | null
+          revenue?: number | null
+          status?: string
+          user_id?: string | null
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_ab_results_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_logs: {
         Row: {
           automation_id: string
@@ -198,6 +248,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "automation_logs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_schedules: {
+        Row: {
+          automation_id: string
+          created_at: string
+          executed_at: string | null
+          id: string
+          recipients_count: number | null
+          scheduled_for: string
+          sent_count: number | null
+          status: string
+        }
+        Insert: {
+          automation_id: string
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          recipients_count?: number | null
+          scheduled_for: string
+          sent_count?: number | null
+          status?: string
+        }
+        Update: {
+          automation_id?: string
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          recipients_count?: number | null
+          scheduled_for?: string
+          sent_count?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_schedules_automation_id_fkey"
             columns: ["automation_id"]
             isOneToOne: false
             referencedRelation: "marketing_automations"
@@ -1443,7 +1534,18 @@ export type Database = {
       }
       marketing_automations: {
         Row: {
+          ab_split_percent: number | null
+          ab_test_enabled: boolean | null
+          ab_variant_a_converted: number | null
+          ab_variant_a_sent: number | null
+          ab_variant_b_content: string | null
+          ab_variant_b_converted: number | null
+          ab_variant_b_sent: number | null
+          ab_variant_b_sms: string | null
+          ab_variant_b_subject: string | null
+          ab_winner: string | null
           action_type: string
+          conditions: Json | null
           cooldown_hours: number | null
           created_at: string
           delay_minutes: number | null
@@ -1451,6 +1553,8 @@ export type Database = {
           email_content: string | null
           email_subject: string | null
           email_template_id: string | null
+          exclude_segments: string[] | null
+          funnel_steps: Json | null
           id: string
           is_active: boolean | null
           last_triggered_at: string | null
@@ -1458,18 +1562,37 @@ export type Database = {
           name_bn: string
           name_en: string | null
           priority: number | null
+          schedule_days: string[] | null
+          schedule_time_end: string | null
+          schedule_time_start: string | null
+          schedule_type: string | null
+          send_limit_per_day: number | null
           sms_template: string | null
+          tags: string[] | null
           target_segment: string | null
           total_clicked: number | null
           total_converted: number | null
           total_opened: number | null
+          total_revenue: number | null
           total_sent: number | null
+          total_unsubscribed: number | null
           trigger_config: Json | null
           trigger_type: string
           updated_at: string
         }
         Insert: {
+          ab_split_percent?: number | null
+          ab_test_enabled?: boolean | null
+          ab_variant_a_converted?: number | null
+          ab_variant_a_sent?: number | null
+          ab_variant_b_content?: string | null
+          ab_variant_b_converted?: number | null
+          ab_variant_b_sent?: number | null
+          ab_variant_b_sms?: string | null
+          ab_variant_b_subject?: string | null
+          ab_winner?: string | null
           action_type: string
+          conditions?: Json | null
           cooldown_hours?: number | null
           created_at?: string
           delay_minutes?: number | null
@@ -1477,6 +1600,8 @@ export type Database = {
           email_content?: string | null
           email_subject?: string | null
           email_template_id?: string | null
+          exclude_segments?: string[] | null
+          funnel_steps?: Json | null
           id?: string
           is_active?: boolean | null
           last_triggered_at?: string | null
@@ -1484,18 +1609,37 @@ export type Database = {
           name_bn: string
           name_en?: string | null
           priority?: number | null
+          schedule_days?: string[] | null
+          schedule_time_end?: string | null
+          schedule_time_start?: string | null
+          schedule_type?: string | null
+          send_limit_per_day?: number | null
           sms_template?: string | null
+          tags?: string[] | null
           target_segment?: string | null
           total_clicked?: number | null
           total_converted?: number | null
           total_opened?: number | null
+          total_revenue?: number | null
           total_sent?: number | null
+          total_unsubscribed?: number | null
           trigger_config?: Json | null
           trigger_type: string
           updated_at?: string
         }
         Update: {
+          ab_split_percent?: number | null
+          ab_test_enabled?: boolean | null
+          ab_variant_a_converted?: number | null
+          ab_variant_a_sent?: number | null
+          ab_variant_b_content?: string | null
+          ab_variant_b_converted?: number | null
+          ab_variant_b_sent?: number | null
+          ab_variant_b_sms?: string | null
+          ab_variant_b_subject?: string | null
+          ab_winner?: string | null
           action_type?: string
+          conditions?: Json | null
           cooldown_hours?: number | null
           created_at?: string
           delay_minutes?: number | null
@@ -1503,6 +1647,8 @@ export type Database = {
           email_content?: string | null
           email_subject?: string | null
           email_template_id?: string | null
+          exclude_segments?: string[] | null
+          funnel_steps?: Json | null
           id?: string
           is_active?: boolean | null
           last_triggered_at?: string | null
@@ -1510,12 +1656,20 @@ export type Database = {
           name_bn?: string
           name_en?: string | null
           priority?: number | null
+          schedule_days?: string[] | null
+          schedule_time_end?: string | null
+          schedule_time_start?: string | null
+          schedule_type?: string | null
+          send_limit_per_day?: number | null
           sms_template?: string | null
+          tags?: string[] | null
           target_segment?: string | null
           total_clicked?: number | null
           total_converted?: number | null
           total_opened?: number | null
+          total_revenue?: number | null
           total_sent?: number | null
+          total_unsubscribed?: number | null
           trigger_config?: Json | null
           trigger_type?: string
           updated_at?: string
