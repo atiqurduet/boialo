@@ -181,6 +181,11 @@ const Profile = () => {
 
       if (error) throw error;
 
+      // Also update auth user metadata so header reflects new name immediately
+      await supabase.auth.updateUser({
+        data: { full_name: profile.full_name }
+      });
+
       toast.success("প্রোফাইল আপডেট হয়েছে!");
     } catch (error) {
       console.error("Error updating profile:", error);

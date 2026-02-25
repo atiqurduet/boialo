@@ -132,8 +132,10 @@ export const Header = () => {
             </Link>
 
             {/* Search - Desktop */}
-            <div className="hidden md:block flex-1 max-w-xl mx-4">
-              <SearchDropdown query={searchQuery} onQueryChange={setSearchQuery} className="w-full" />
+            <div className="hidden md:flex flex-1 justify-center mx-4">
+              <div className="w-full max-w-xl">
+                <SearchDropdown query={searchQuery} onQueryChange={setSearchQuery} className="w-full" />
+              </div>
             </div>
 
             {/* Spacer for mobile */}
