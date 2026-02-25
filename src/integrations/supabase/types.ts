@@ -739,6 +739,51 @@ export type Database = {
           },
         ]
       }
+      checkout_form_fields: {
+        Row: {
+          created_at: string
+          field_group: string | null
+          field_label_bn: string
+          field_name: string
+          field_type: string
+          id: string
+          is_active: boolean | null
+          is_required: boolean | null
+          options: Json | null
+          placeholder: string | null
+          sort_order: number | null
+          validation_regex: string | null
+        }
+        Insert: {
+          created_at?: string
+          field_group?: string | null
+          field_label_bn: string
+          field_name: string
+          field_type?: string
+          id?: string
+          is_active?: boolean | null
+          is_required?: boolean | null
+          options?: Json | null
+          placeholder?: string | null
+          sort_order?: number | null
+          validation_regex?: string | null
+        }
+        Update: {
+          created_at?: string
+          field_group?: string | null
+          field_label_bn?: string
+          field_name?: string
+          field_type?: string
+          id?: string
+          is_active?: boolean | null
+          is_required?: boolean | null
+          options?: Json | null
+          placeholder?: string | null
+          sort_order?: number | null
+          validation_regex?: string | null
+        }
+        Relationships: []
+      }
       contact_messages: {
         Row: {
           admin_notes: string | null
@@ -1075,6 +1120,51 @@ export type Database = {
           product_id?: string
           product_type?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      dynamic_pricing_rules: {
+        Row: {
+          condition_config: Json
+          created_at: string
+          discount_type: string
+          discount_value: number
+          ends_at: string | null
+          id: string
+          is_active: boolean | null
+          name_bn: string
+          priority: number | null
+          rule_type: string
+          starts_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          condition_config?: Json
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name_bn: string
+          priority?: number | null
+          rule_type?: string
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          condition_config?: Json
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name_bn?: string
+          priority?: number | null
+          rule_type?: string
+          starts_at?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
