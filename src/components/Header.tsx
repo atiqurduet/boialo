@@ -92,7 +92,7 @@ export const Header = () => {
           <div className="container flex items-center justify-between py-1.5 text-xs text-muted-foreground">
             <span>📞 হেল্পলাইন: 01714-005986</span>
             <div className="flex items-center gap-4">
-              <Link to="/orders" className="hover:text-primary transition-colors">অর্ডার ট্র্যাক</Link>
+              <Link to="/track" className="hover:text-primary transition-colors">অর্ডার ট্র্যাক</Link>
               <Link to="/about" className="hover:text-primary transition-colors">আমাদের সম্পর্কে</Link>
               <Link to="/contact" className="hover:text-primary transition-colors">যোগাযোগ</Link>
             </div>
