@@ -3575,6 +3575,204 @@ export type Database = {
         }
         Relationships: []
       }
+      social_media_accounts: {
+        Row: {
+          access_token: string | null
+          account_id: string | null
+          account_name: string
+          channel_id: string | null
+          config: Json | null
+          connected_by: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          page_id: string | null
+          platform: string
+          refresh_token: string | null
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          account_id?: string | null
+          account_name: string
+          channel_id?: string | null
+          config?: Json | null
+          connected_by?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          page_id?: string | null
+          platform: string
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          account_id?: string | null
+          account_name?: string
+          channel_id?: string | null
+          config?: Json | null
+          connected_by?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          page_id?: string | null
+          platform?: string
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      social_media_post_results: {
+        Row: {
+          account_id: string | null
+          comments_count: number | null
+          created_at: string
+          error_message: string | null
+          external_post_id: string | null
+          external_url: string | null
+          id: string
+          likes_count: number | null
+          platform: string
+          post_id: string
+          posted_at: string | null
+          reach_count: number | null
+          shares_count: number | null
+          status: string
+          updated_at: string
+          views_count: number | null
+        }
+        Insert: {
+          account_id?: string | null
+          comments_count?: number | null
+          created_at?: string
+          error_message?: string | null
+          external_post_id?: string | null
+          external_url?: string | null
+          id?: string
+          likes_count?: number | null
+          platform: string
+          post_id: string
+          posted_at?: string | null
+          reach_count?: number | null
+          shares_count?: number | null
+          status?: string
+          updated_at?: string
+          views_count?: number | null
+        }
+        Update: {
+          account_id?: string | null
+          comments_count?: number | null
+          created_at?: string
+          error_message?: string | null
+          external_post_id?: string | null
+          external_url?: string | null
+          id?: string
+          likes_count?: number | null
+          platform?: string
+          post_id?: string
+          posted_at?: string | null
+          reach_count?: number | null
+          shares_count?: number | null
+          status?: string
+          updated_at?: string
+          views_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_media_post_results_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "social_media_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_media_post_results_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_media_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_media_posts: {
+        Row: {
+          content: string
+          content_bn: string | null
+          created_at: string
+          created_by: string | null
+          hashtags: string[] | null
+          id: string
+          link_url: string | null
+          media_urls: string[] | null
+          platforms: string[]
+          post_type: string | null
+          product_id: string | null
+          published_at: string | null
+          scheduled_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          content_bn?: string | null
+          created_at?: string
+          created_by?: string | null
+          hashtags?: string[] | null
+          id?: string
+          link_url?: string | null
+          media_urls?: string[] | null
+          platforms?: string[]
+          post_type?: string | null
+          product_id?: string | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          content_bn?: string | null
+          created_at?: string
+          created_by?: string | null
+          hashtags?: string[] | null
+          id?: string
+          link_url?: string | null
+          media_urls?: string[] | null
+          platforms?: string[]
+          post_type?: string | null
+          product_id?: string | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      social_media_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       staff_invitations: {
         Row: {
           accepted_at: string | null
