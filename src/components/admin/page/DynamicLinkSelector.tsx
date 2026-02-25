@@ -25,7 +25,7 @@ interface DynamicLinkSelectorProps {
   placeholder?: string;
 }
 
-type LinkType = 'custom' | 'page' | 'category' | 'product' | 'universal_category' | 'offer';
+type LinkType = 'custom' | 'page' | 'category' | 'product' | 'universal_category' | 'offer' | 'blog';
 
 export const DynamicLinkSelector = ({
   value,
@@ -88,6 +88,19 @@ export const DynamicLinkSelector = ({
     },
   });
 
+  // Fetch blog posts
+  const { data: blogPosts } = useQuery({
+    queryKey: ['selector-blog-posts'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('blog_posts')
+        .select('id, title_bn, slug')
+        .eq('status', 'published')
+        .order('title_bn');
+      return data || [];
+    },
+  });
+
   const handleSelectLink = (type: LinkType, selectedValue: string) => {
     let url = '';
     switch (type) {
@@ -103,6 +116,9 @@ export const DynamicLinkSelector = ({
       case 'offer':
         url = `/offers/${selectedValue}`;
         break;
+      case 'blog':
+        url = `/blog/${selectedValue}`;
+        break;
       default:
         url = selectedValue;
     }
@@ -116,6 +132,7 @@ export const DynamicLinkSelector = ({
     category: 'বই ক্যাটাগরি',
     universal_category: 'প্রোডাক্ট ক্যাটাগরি',
     offer: 'অফার',
+    blog: 'ব্লগ পোস্ট',
     product: 'প্রোডাক্ট',
   };
 
@@ -261,6 +278,31 @@ export const DynamicLinkSelector = ({
                         {offer.name_bn}
                       </Button>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {linkType === 'blog' && (
+                <div className="space-y-2">
+                  <Label>ব্লগ পোস্ট সিলেক্ট করুন</Label>
+                  <div className="max-h-48 overflow-y-auto space-y-1">
+                    {blogPosts?.map((post) => (
+                      <Button
+                        key={post.id}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={() => handleSelectLink('blog', post.slug)}
+                      >
+                        {post.title_bn}
+                      </Button>
+                    ))}
+                    {!blogPosts?.length && (
+                      <p className="text-sm text-muted-foreground text-center py-2">
+                        কোনো পাবলিশড ব্লগ পোস্ট নেই
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
