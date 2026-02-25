@@ -458,11 +458,8 @@ const ProductDetail = () => {
             </div>
           </div>
 
-          {/* Sidebar */}
+          {/* Sidebar - Only Related Products */}
           <div className="lg:col-span-1 space-y-6">
-            {/* Bundle Offers */}
-            <BundleSidebar productId={product.id} />
-
             {/* Related Products */}
             {relatedProducts.length > 0 && (
               <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
@@ -482,9 +479,6 @@ const ProductDetail = () => {
                 </div>
               </div>
             )}
-
-            {/* Recently Viewed */}
-            <RecentlyViewedSidebar currentProductId={product.id} />
           </div>
         </div>
 
@@ -493,12 +487,17 @@ const ProductDetail = () => {
           <ProductReviews productId={product.id} />
         </div>
 
-        {/* Recently Viewed - Full Width Below Reviews */}
+        {/* Bundle Offers - Below Reviews */}
+        <div className="mt-12">
+          <BundleSidebar productId={product.id} />
+        </div>
+
+        {/* Recently Viewed - Full Width Below Bundle */}
         <div className="mt-12">
           <RecentlyViewedFullWidth currentProductId={product.id} />
         </div>
 
-        {/* AI Recommendations Below Reviews */}
+        {/* AI Recommendations */}
         <div className="mt-4">
           <AIRecommendations limit={8} columns={4} title="আপনার জন্য সাজেশন" subtitle="আপনার পছন্দ অনুযায়ী বাছাই করা" />
         </div>
@@ -531,16 +530,15 @@ const VariantSection = ({ productId, selectedVariant, onSelect }: { productId: s
   return <ProductVariantSelector variants={variants} selectedVariant={selectedVariant} onSelect={onSelect} />;
 };
 
-// Bundle sidebar sub-component
+// Bundle section - full width for below reviews
 const BundleSidebar = ({ productId }: { productId: string }) => {
   const { data: bundles = [], isLoading } = useProductBundles(true);
   const { addToCart } = useCartContext();
 
-  // Filter bundles that contain this product, or show featured bundles
   const relevantBundles = bundles.filter(b => 
     b.items.some(item => item.product_id === productId)
   );
-  const displayBundles = relevantBundles.length > 0 ? relevantBundles : bundles.slice(0, 2);
+  const displayBundles = relevantBundles.length > 0 ? relevantBundles : bundles.slice(0, 3);
 
   if (isLoading || displayBundles.length === 0) return null;
 
@@ -552,36 +550,38 @@ const BundleSidebar = ({ productId }: { productId: string }) => {
   };
 
   return (
-    <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
-      <h3 className="font-semibold flex items-center gap-2 mb-4">
-        <Package className="w-4 h-4 text-primary" />
-        বান্ডেল অফার
-      </h3>
-      <div className="space-y-4">
+    <section>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Package className="w-5 h-5 text-primary" />
+          বান্ডেল অফার
+        </h2>
+        <Link to="/bundles" className="text-primary text-sm hover:underline flex items-center gap-1">
+          সব দেখুন <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {displayBundles.map((bundle) => (
-          <div key={bundle.id} className="border border-border rounded-lg p-3 hover:border-primary/30 transition-colors">
-            <h4 className="font-medium text-sm mb-1">{bundle.name_bn}</h4>
-            <p className="text-xs text-muted-foreground mb-2">{bundle.items.length} টি পণ্য</p>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-primary font-bold">৳{bundle.bundle_price}</span>
-              <span className="text-muted-foreground line-through text-xs">৳{bundle.original_total}</span>
+          <div key={bundle.id} className="bg-card rounded-xl p-4 shadow-sm border border-border hover:border-primary/30 transition-colors">
+            <h4 className="font-semibold mb-1">{bundle.name_bn}</h4>
+            <p className="text-sm text-muted-foreground mb-3">{bundle.items.length} টি পণ্য</p>
+            <div className="flex items-baseline gap-2 mb-3">
+              <span className="text-xl font-bold text-primary">৳{bundle.bundle_price}</span>
+              <span className="text-muted-foreground line-through text-sm">৳{bundle.original_total}</span>
               {bundle.discount_percent > 0 && (
-                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                <Badge variant="destructive" className="text-xs">
                   {bundle.discount_percent}% ছাড়
                 </Badge>
               )}
             </div>
-            <Button size="sm" className="w-full h-8 text-xs" onClick={() => handleAddBundle(bundle)}>
-              <ShoppingCart className="w-3 h-3 mr-1" />
+            <Button size="sm" className="w-full" onClick={() => handleAddBundle(bundle)}>
+              <ShoppingCart className="w-4 h-4 mr-2" />
               কার্টে যোগ করুন
             </Button>
           </div>
         ))}
       </div>
-      <Link to="/bundles" className="text-primary text-xs hover:underline mt-3 inline-flex items-center gap-1">
-        সব বান্ডেল দেখুন <ArrowRight className="w-3 h-3" />
-      </Link>
-    </div>
+    </section>
   );
 };
 
