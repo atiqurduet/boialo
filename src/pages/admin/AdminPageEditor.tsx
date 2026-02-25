@@ -437,13 +437,15 @@ const AdminPageEditor = () => {
                           id="title_bn"
                           value={pageData.title_bn}
                           onChange={(e) => {
-                            setPageData({ ...pageData, title_bn: e.target.value });
-                            if (isNew && !pageData.slug) {
+                            const newTitle = e.target.value;
+                            if (isNew) {
                               setPageData((prev) => ({
                                 ...prev,
-                                title_bn: e.target.value,
-                                slug: generateSlug(e.target.value),
+                                title_bn: newTitle,
+                                slug: generateSlug(newTitle),
                               }));
+                            } else {
+                              setPageData({ ...pageData, title_bn: newTitle });
                             }
                           }}
                           placeholder="পেজের শিরোনাম"
@@ -454,7 +456,18 @@ const AdminPageEditor = () => {
                         <Input
                           id="title_en"
                           value={pageData.title_en}
-                          onChange={(e) => setPageData({ ...pageData, title_en: e.target.value })}
+                          onChange={(e) => {
+                            const newTitle = e.target.value;
+                            if (isNew) {
+                              setPageData((prev) => ({
+                                ...prev,
+                                title_en: newTitle,
+                                slug: newTitle ? generateSlug(newTitle) : generateSlug(prev.title_bn),
+                              }));
+                            } else {
+                              setPageData({ ...pageData, title_en: newTitle });
+                            }
+                          }}
                           placeholder="Page Title"
                         />
                       </div>
