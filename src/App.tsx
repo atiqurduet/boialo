@@ -96,6 +96,9 @@ import AdminLoyaltyPoints from "./pages/admin/AdminLoyaltyPoints";
 import AdminContactMessages from "./pages/admin/AdminContactMessages";
 import AdminMarketingAutomation from "./pages/admin/AdminMarketingAutomation";
 import GiftCards from "./pages/GiftCards";
+import AdminInventory from "./pages/admin/AdminInventory";
+import AdminDeliveryZones from "./pages/admin/AdminDeliveryZones";
+import AdminReferralProgram from "./pages/admin/AdminReferralProgram";
 import { ThemeInitializer } from "./components/ThemeInitializer";
 
 const queryClient = new QueryClient();
@@ -201,6 +204,9 @@ const App = () => (
                 <Route path="/admin/bundles" element={<AdminBundles />} />
                 <Route path="/admin/contact-messages" element={<AdminContactMessages />} />
                 <Route path="/admin/marketing-automation" element={<AdminMarketingAutomation />} />
+                <Route path="/admin/inventory" element={<AdminInventory />} />
+                <Route path="/admin/delivery-zones" element={<AdminDeliveryZones />} />
+                <Route path="/admin/referral" element={<AdminReferralProgram />} />
                 
                 {/* Dynamic Page Route - must be before catch-all */}
                 <Route path="/:slug" element={<DynamicPage />} />

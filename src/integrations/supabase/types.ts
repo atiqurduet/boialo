@@ -296,6 +296,39 @@ export type Database = {
           },
         ]
       }
+      back_in_stock_alerts: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          is_notified: boolean | null
+          notified_at: string | null
+          phone: string | null
+          product_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_notified?: boolean | null
+          notified_at?: string | null
+          phone?: string | null
+          product_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_notified?: boolean | null
+          notified_at?: string | null
+          phone?: string | null
+          product_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       backup_history: {
         Row: {
           backup_type: string
@@ -961,6 +994,51 @@ export type Database = {
           total_orders?: number | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      delivery_zones: {
+        Row: {
+          created_at: string
+          delivery_charge: number
+          districts: Json | null
+          division: string | null
+          estimated_days_max: number | null
+          estimated_days_min: number | null
+          id: string
+          is_active: boolean | null
+          sort_order: number | null
+          updated_at: string
+          zone_name_bn: string
+          zone_name_en: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivery_charge?: number
+          districts?: Json | null
+          division?: string | null
+          estimated_days_max?: number | null
+          estimated_days_min?: number | null
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          updated_at?: string
+          zone_name_bn: string
+          zone_name_en?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivery_charge?: number
+          districts?: Json | null
+          division?: string | null
+          estimated_days_max?: number | null
+          estimated_days_min?: number | null
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          updated_at?: string
+          zone_name_bn?: string
+          zone_name_en?: string | null
         }
         Relationships: []
       }
@@ -2600,6 +2678,39 @@ export type Database = {
         }
         Relationships: []
       }
+      price_drop_alerts: {
+        Row: {
+          created_at: string
+          id: string
+          is_notified: boolean | null
+          notified_at: string | null
+          original_price: number
+          product_id: string
+          target_price: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_notified?: boolean | null
+          notified_at?: string | null
+          original_price: number
+          product_id: string
+          target_price?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_notified?: boolean | null
+          notified_at?: string | null
+          original_price?: number
+          product_id?: string
+          target_price?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       product_bundles: {
         Row: {
           bundle_price: number
@@ -2648,6 +2759,48 @@ export type Database = {
           original_total?: number
           slug?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      product_questions: {
+        Row: {
+          answer: string | null
+          answered_at: string | null
+          answered_by: string | null
+          created_at: string
+          helpful_count: number | null
+          id: string
+          is_published: boolean | null
+          product_id: string
+          question: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string | null
+          answered_by?: string | null
+          created_at?: string
+          helpful_count?: number | null
+          id?: string
+          is_published?: boolean | null
+          product_id: string
+          question: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string | null
+          answered_by?: string | null
+          created_at?: string
+          helpful_count?: number | null
+          id?: string
+          is_published?: boolean | null
+          product_id?: string
+          question?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -3033,6 +3186,101 @@ export type Database = {
           p256dh?: string
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          total_earned: number | null
+          total_referrals: number | null
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          total_earned?: number | null
+          total_referrals?: number | null
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          total_earned?: number | null
+          total_referrals?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referral_rewards: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          referral_code_id: string
+          referred_id: string
+          referred_reward: number | null
+          referrer_id: string
+          referrer_reward: number | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          referral_code_id: string
+          referred_id: string
+          referred_reward?: number | null
+          referrer_id: string
+          referrer_reward?: number | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          referral_code_id?: string
+          referred_id?: string
+          referred_reward?: number | null
+          referrer_id?: string
+          referrer_reward?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_rewards_referral_code_id_fkey"
+            columns: ["referral_code_id"]
+            isOneToOne: false
+            referencedRelation: "referral_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
         }
         Relationships: []
       }

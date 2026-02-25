@@ -33,6 +33,7 @@ import {
   HardDrive,
   Paintbrush,
   BookOpen,
+  MapPin,
   type LucideIcon
 } from 'lucide-react';
 
@@ -88,6 +89,7 @@ export const menuCategories: MenuCategory[] = [
       { icon: Users, label: 'লেখক', href: '/admin/writers', roles: ['admin', 'manager'] },
       { icon: FileText, label: 'প্রকাশনী', href: '/admin/publishers', roles: ['admin', 'manager'] },
       { icon: Layers, label: 'বান্ডেল', href: '/admin/bundles', roles: ['admin', 'manager'] },
+      { icon: Package, label: 'ইনভেন্টরি', href: '/admin/inventory', roles: ['admin', 'manager'] },
     ]
   },
   {
@@ -115,6 +117,7 @@ export const menuCategories: MenuCategory[] = [
       { icon: Megaphone, label: 'নোটিফিকেশন', href: '/admin/notifications', roles: ['admin'] },
       { icon: Megaphone, label: 'অটো মার্কেটিং', href: '/admin/marketing-automation', roles: ['admin', 'manager'] },
       { icon: BookOpen, label: 'ব্লগ', href: '/admin/blog', roles: ['admin', 'manager'] },
+      { icon: Users, label: 'রেফারাল প্রোগ্রাম', href: '/admin/referral', roles: ['admin', 'manager'] },
     ]
   },
   {
@@ -151,6 +154,7 @@ export const menuCategories: MenuCategory[] = [
       { icon: Settings, label: 'সাইট সেটিংস', href: '/admin/settings', roles: ['admin'] },
       { icon: CreditCard, label: 'পেমেন্ট', href: '/admin/payments', roles: ['admin'] },
       { icon: Truck, label: 'কুরিয়ার', href: '/admin/couriers', roles: ['admin'] },
+      { icon: MapPin, label: 'ডেলিভারি জোন', href: '/admin/delivery-zones', roles: ['admin'] },
       { icon: RefreshCw, label: 'অটো-অ্যাসাইন', href: '/admin/auto-assign', roles: ['admin'] },
       { icon: FileText, label: 'রিফান্ড পলিসি', href: '/admin/refund-policy', roles: ['admin'] },
       { icon: HardDrive, label: 'ব্যাকআপ ও রিস্টোর', href: '/admin/backup', roles: ['admin'] },
