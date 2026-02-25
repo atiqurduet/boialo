@@ -63,8 +63,13 @@ serve(async (req) => {
 
         switch (platform) {
           case 'telegram': {
-            const chatId = account.channel_id || account.page_id;
+            let chatId = account.channel_id || account.page_id;
             if (!chatId) throw new Error('No channel_id configured');
+            // Telegram channels/supergroups need -100 prefix
+            const numericId = String(chatId).replace(/^-100/, '').replace(/^-/, '');
+            if (!String(chatId).startsWith('-') && !String(chatId).startsWith('@')) {
+              chatId = `-100${numericId}`;
+            }
             const res = await fetch(`https://api.telegram.org/bot${account.access_token}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
