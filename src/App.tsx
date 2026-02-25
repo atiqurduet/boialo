@@ -198,8 +198,8 @@ const App = () => (
                 <Route path="/admin/loyalty-points" element={<AdminLoyaltyPoints />} />
                 <Route path="/admin/bundles" element={<AdminBundles />} />
                 
-                {/* Dynamic Page Route */}
-                <Route path="/page/:slug" element={<DynamicPage />} />
+                {/* Dynamic Page Route - must be before catch-all */}
+                <Route path="/:slug" element={<DynamicPage />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
