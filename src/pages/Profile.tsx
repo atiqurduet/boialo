@@ -306,12 +306,44 @@ const Profile = () => {
                       {getInitials(profile.full_name)}
                     </AvatarFallback>
                   </Avatar>
-                  <button
-                    className="absolute bottom-0 right-0 p-1.5 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
-                    onClick={() => toast.info("Avatar upload coming soon!")}
+                  <label
+                    htmlFor="avatar-upload"
+                    className="absolute bottom-0 right-0 p-1.5 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors cursor-pointer"
                   >
                     <Camera className="w-4 h-4" />
-                  </button>
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file || !user) return;
+                        if (file.size > 2 * 1024 * 1024) {
+                          toast.error("ফাইল সাইজ ২MB এর বেশি হতে পারবে না");
+                          return;
+                        }
+                        try {
+                          const ext = file.name.split('.').pop();
+                          const path = `${user.id}/avatar.${ext}`;
+                          const { error: upErr } = await supabase.storage
+                            .from('avatars')
+                            .upload(path, file, { upsert: true });
+                          if (upErr) throw upErr;
+                          const { data: urlData } = supabase.storage
+                            .from('avatars')
+                            .getPublicUrl(path);
+                          const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+                          setProfile(prev => ({ ...prev, avatar_url: avatarUrl }));
+                          await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', user.id);
+                          toast.success("অবতার আপলোড হয়েছে!");
+                        } catch (err) {
+                          console.error(err);
+                          toast.error("অবতার আপলোড করতে সমস্যা হয়েছে");
+                        }
+                      }}
+                    />
+                  </label>
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground text-lg">{profile.full_name || "User"}</h3>

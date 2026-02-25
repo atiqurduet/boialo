@@ -13,6 +13,7 @@ import { Check, CreditCard, Smartphone, Truck, MapPin, ChevronLeft, Loader2, Shi
 import { useCartContext } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { AddressBookSelector } from "@/components/AddressBookSelector";
 import { toast } from "sonner";
 import { z } from "zod";
 import { trackInitiateCheckout, trackAddPaymentInfo, trackAddShippingInfo, trackPurchase } from "@/lib/analytics";
@@ -683,6 +684,20 @@ const Checkout = () => {
                 <MapPin className="w-5 h-5 text-primary" />
                 <h2 className="font-bold text-lg">ডেলিভারি ঠিকানা</h2>
               </div>
+
+              <AddressBookSelector onSelect={(addr) => {
+                setFormData(prev => ({
+                  ...prev,
+                  fullName: addr.fullName,
+                  phone: addr.phone,
+                  address: addr.address,
+                }));
+                if (addr.division && addr.division !== "ঢাকা") {
+                  setDeliveryArea("outside");
+                } else if (addr.division === "ঢাকা") {
+                  setDeliveryArea("inside");
+                }
+              }} />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

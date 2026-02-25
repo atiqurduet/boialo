@@ -14,6 +14,9 @@ import { useCartContext } from "@/contexts/CartContext";
 import { useWishlistContext } from "@/contexts/WishlistContext";
 import { toast } from "sonner";
 import { RelatedProducts } from "@/components/RelatedProducts";
+import { ProductQA } from "@/components/ProductQA";
+import { StockAlertButton } from "@/components/StockAlertButton";
+import { PriceDropAlert } from "@/components/PriceDropAlert";
 
 type ProductType = string;
 
@@ -431,6 +434,17 @@ const UniversalProductDetail = () => {
               </div>
             </div>
           )}
+
+          {/* Stock Alert & Price Drop */}
+          <div className="mt-8 flex flex-wrap gap-3">
+            <StockAlertButton productId={product.id} isOutOfStock={product.stock_quantity <= 0} />
+            <PriceDropAlert productId={product.id} currentPrice={product.price} />
+          </div>
+
+          {/* Q&A Section */}
+          <div className="mt-12">
+            <ProductQA productId={product.id} />
+          </div>
 
           {/* Related Products */}
           <RelatedProducts
