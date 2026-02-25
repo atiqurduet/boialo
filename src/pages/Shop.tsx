@@ -911,7 +911,7 @@ const Shop = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-page-in">
       <AnnouncementBar />
       <Header />
 
@@ -1184,7 +1184,6 @@ const Shop = () => {
           </div>
         </div>
       </main>
-
       <Footer />
     </div>
   );

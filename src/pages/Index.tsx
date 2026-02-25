@@ -46,19 +46,19 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background animate-page-in">
         <AnnouncementBar />
         <Header />
         <main>
-          <Skeleton className="h-[350px] w-full" />
-          <div className="container py-8 space-y-8">
-            <Skeleton className="h-[200px] w-full rounded-xl" />
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-[280px] rounded-xl" />
-              ))}
-            </div>
+        <Skeleton className="h-[350px] w-full" />
+        <div className="container py-8 space-y-8">
+          <Skeleton className="h-[200px] w-full rounded-xl" />
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-[280px] rounded-xl" />
+            ))}
           </div>
+        </div>
         </main>
         <Footer />
       </div>
@@ -331,32 +331,30 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-page-in">
       <AnnouncementBar />
       <Header />
-      
       <main>
-        {/* Dynamic Hero Slider */}
-        <DynamicHeroSlider banners={banners} />
+      {/* Dynamic Hero Slider */}
+      <DynamicHeroSlider banners={banners} />
 
-        {/* Trust Badges - always show at top */}
-        <TrustBadges />
+      {/* Trust Badges - always show at top */}
+      <TrustBadges />
 
-        <div className="container py-8">
-          {/* Featured Offer Banner */}
-          <FeaturedOfferBanner />
+      <div className="container py-8">
+        {/* Featured Offer Banner */}
+        <FeaturedOfferBanner />
 
-          {/* Render sections in order */}
-          {sections.map(section => renderSection(section))}
+        {/* Render sections in order */}
+        {sections.map(section => renderSection(section))}
 
-          {/* Recently Viewed Products */}
-          <RecentlyViewed />
-        </div>
+        {/* Recently Viewed Products */}
+        <RecentlyViewed />
+      </div>
 
-        {/* Newsletter Section - always show at bottom */}
-        <NewsletterSection />
+      {/* Newsletter Section - always show at bottom */}
+      <NewsletterSection />
       </main>
-
       <Footer />
     </div>
   );
