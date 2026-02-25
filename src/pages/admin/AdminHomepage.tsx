@@ -53,6 +53,9 @@ const sectionTypeLabels: Record<string, string> = {
   universal_category_grid: '🏷️ ইউনিভার্সাল ক্যাটাগরি গ্রিড',
   universal_flash_sale: '⚡ ইউনিভার্সাল ফ্ল্যাশ সেল',
   ai_recommendations: '🤖 AI সাজেশন',
+  top_selling_products: '🔥 টপ বিক্রিত বই',
+  top_authors: '👨‍🏫 টপ লেখক',
+  top_selling_universal_products: '📦 টপ বিক্রিত সাধারণ প্রোডাক্ট',
 };
 
 const sectionTypes = Object.entries(sectionTypeLabels).map(([value, label]) => ({
