@@ -22,6 +22,8 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Ticket, Copy } from 'lucide-react';
+import { DynamicProductSelector } from '@/components/admin/DynamicProductSelector';
+import { DynamicCategorySelector } from '@/components/admin/DynamicCategorySelector';
 
 interface Coupon {
   id: string;
@@ -58,8 +60,8 @@ const AdminCoupons = () => {
     start_date: '',
     end_date: '',
     applies_to: 'all' as 'all' | 'specific_products' | 'specific_categories',
-    product_ids: '' as string,
-    category_ids: '' as string,
+    product_ids: [] as string[],
+    category_ids: [] as string[],
     max_discount_amount: '',
     description_bn: '',
   });
@@ -99,8 +101,8 @@ const AdminCoupons = () => {
         start_date: formData.start_date || null,
         end_date: formData.end_date || null,
         applies_to: formData.applies_to,
-        product_ids: formData.product_ids ? formData.product_ids.split(',').map(s => s.trim()).filter(Boolean) : [],
-        category_ids: formData.category_ids ? formData.category_ids.split(',').map(s => s.trim()).filter(Boolean) : [],
+        product_ids: formData.product_ids,
+        category_ids: formData.category_ids,
         max_discount_amount: formData.max_discount_amount ? Number(formData.max_discount_amount) : null,
         description_bn: formData.description_bn || null,
       };
@@ -143,8 +145,8 @@ const AdminCoupons = () => {
       start_date: coupon.start_date?.split('T')[0] || '',
       end_date: coupon.end_date?.split('T')[0] || '',
       applies_to: (coupon.applies_to || 'all') as any,
-      product_ids: (coupon.product_ids || []).join(', '),
-      category_ids: (coupon.category_ids || []).join(', '),
+      product_ids: coupon.product_ids || [],
+      category_ids: coupon.category_ids || [],
       max_discount_amount: coupon.max_discount_amount?.toString() || '',
       description_bn: coupon.description_bn || '',
     });
@@ -185,8 +187,8 @@ const AdminCoupons = () => {
       start_date: '',
       end_date: '',
       applies_to: 'all',
-      product_ids: '',
-      category_ids: '',
+      product_ids: [],
+      category_ids: [],
       max_discount_amount: '',
       description_bn: '',
     });
@@ -207,7 +209,7 @@ const AdminCoupons = () => {
                 নতুন কুপন
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingCoupon ? 'কুপন এডিট' : 'নতুন কুপন'}</DialogTitle>
               </DialogHeader>
@@ -308,22 +310,20 @@ const AdminCoupons = () => {
 
                 {formData.applies_to === 'specific_products' && (
                   <div>
-                    <Label>পণ্য আইডি (কমা দিয়ে আলাদা)</Label>
-                    <Input
-                      value={formData.product_ids}
-                      onChange={(e) => setFormData({ ...formData, product_ids: e.target.value })}
-                      placeholder="uuid1, uuid2, ..."
+                    <Label>পণ্য নির্বাচন করুন</Label>
+                    <DynamicProductSelector
+                      selectedIds={formData.product_ids}
+                      onChange={(ids) => setFormData({ ...formData, product_ids: ids })}
                     />
                   </div>
                 )}
 
                 {formData.applies_to === 'specific_categories' && (
                   <div>
-                    <Label>ক্যাটাগরি আইডি (কমা দিয়ে আলাদা)</Label>
-                    <Input
-                      value={formData.category_ids}
-                      onChange={(e) => setFormData({ ...formData, category_ids: e.target.value })}
-                      placeholder="uuid1, uuid2, ..."
+                    <Label>ক্যাটাগরি নির্বাচন করুন</Label>
+                    <DynamicCategorySelector
+                      selectedIds={formData.category_ids}
+                      onChange={(ids) => setFormData({ ...formData, category_ids: ids })}
                     />
                   </div>
                 )}
