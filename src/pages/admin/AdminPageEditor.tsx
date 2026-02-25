@@ -402,7 +402,7 @@ const AdminPageEditor = () => {
           </div>
           <div className="flex items-center gap-2">
             {!isNew && (
-              <Button variant="outline" onClick={() => window.open(`/page/${pageData.slug}`, '_blank')}>
+              <Button variant="outline" onClick={() => window.open(`/${pageData.slug}`, '_blank')}>
                 <Eye className="h-4 w-4 mr-2" />
                 প্রিভিউ
               </Button>
@@ -463,7 +463,7 @@ const AdminPageEditor = () => {
                     <div className="space-y-2">
                       <Label htmlFor="slug">স্লাগ (URL) *</Label>
                       <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">/page/</span>
+                        <span className="text-muted-foreground">/</span>
                         <Input
                           id="slug"
                           value={pageData.slug}
@@ -620,7 +620,7 @@ const AdminPageEditor = () => {
                     {pageData.meta_title || pageData.title_bn || 'পেজ টাইটেল'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {window.location.origin}/page/{pageData.slug || 'page-slug'}
+                    {window.location.origin}/{pageData.slug || 'page-slug'}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {pageData.meta_description || pageData.description_bn || 'পেজের বিবরণ এখানে দেখাবে...'}
