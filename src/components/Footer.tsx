@@ -1,9 +1,22 @@
 import { Link } from "react-router-dom";
-import { Facebook, Youtube, Instagram, Phone, Mail, MapPin, ChevronRight, ArrowUp } from "lucide-react";
+import { Facebook, Youtube, Instagram, Phone, Mail, MapPin, ChevronRight, ArrowUp, Twitter, Linkedin, MessageCircle, Send as SendIcon } from "lucide-react";
 import { useFooterData } from "@/hooks/useFooterData";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { ReactNode } from "react";
+
+const SocialIcon = ({ href, label, children }: { href: string; label: string; children: ReactNode }) => (
+  <a
+    href={href}
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label={label}
+    className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all duration-200 hover:scale-110"
+  >
+    {children}
+  </a>
+);
 
 export const Footer = () => {
   const { sections, loading } = useFooterData();
@@ -76,23 +89,38 @@ export const Footer = () => {
             </p>
             
             {/* Social Icons */}
-            <div className="flex items-center gap-2.5">
-              {[
-                { href: socialLinks.facebook, icon: Facebook, label: 'Facebook' },
-                { href: socialLinks.youtube, icon: Youtube, label: 'YouTube' },
-                { href: socialLinks.instagram, icon: Instagram, label: 'Instagram' },
-              ].map(({ href, icon: Icon, label }) => (
-                <a
-                  key={label}
-                  href={href || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={label}
-                  className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all duration-200 hover:scale-110"
-                >
-                  <Icon className="w-4 h-4" />
-                </a>
-              ))}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {socialLinks.facebook && socialLinks.facebook !== '#' && socialLinks.facebook.trim() !== '' && (
+                <SocialIcon href={socialLinks.facebook} label="Facebook"><Facebook className="w-4 h-4" /></SocialIcon>
+              )}
+              {socialLinks.youtube && socialLinks.youtube !== '#' && socialLinks.youtube.trim() !== '' && (
+                <SocialIcon href={socialLinks.youtube} label="YouTube"><Youtube className="w-4 h-4" /></SocialIcon>
+              )}
+              {socialLinks.instagram && socialLinks.instagram !== '#' && socialLinks.instagram.trim() !== '' && (
+                <SocialIcon href={socialLinks.instagram} label="Instagram"><Instagram className="w-4 h-4" /></SocialIcon>
+              )}
+              {socialLinks.twitter && socialLinks.twitter.trim() !== '' && (
+                <SocialIcon href={socialLinks.twitter} label="Twitter/X"><Twitter className="w-4 h-4" /></SocialIcon>
+              )}
+              {socialLinks.linkedin && socialLinks.linkedin.trim() !== '' && (
+                <SocialIcon href={socialLinks.linkedin} label="LinkedIn"><Linkedin className="w-4 h-4" /></SocialIcon>
+              )}
+              {socialLinks.tiktok && socialLinks.tiktok.trim() !== '' && (
+                <SocialIcon href={socialLinks.tiktok} label="TikTok">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1 0-5.78 2.92 2.92 0 0 1 .88.13v-3.5a6.37 6.37 0 0 0-.88-.07 6.34 6.34 0 0 0 0 12.68 6.34 6.34 0 0 0 6.34-6.34V9.06a8.16 8.16 0 0 0 3.76.92V6.69z"/></svg>
+                </SocialIcon>
+              )}
+              {socialLinks.whatsapp && socialLinks.whatsapp.trim() !== '' && (
+                <SocialIcon href={socialLinks.whatsapp} label="WhatsApp"><MessageCircle className="w-4 h-4" /></SocialIcon>
+              )}
+              {socialLinks.telegram && socialLinks.telegram.trim() !== '' && (
+                <SocialIcon href={socialLinks.telegram} label="Telegram"><SendIcon className="w-4 h-4" /></SocialIcon>
+              )}
+              {socialLinks.pinterest && socialLinks.pinterest.trim() !== '' && (
+                <SocialIcon href={socialLinks.pinterest} label="Pinterest">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 0a12 12 0 0 0-4.37 23.17c-.1-.94-.2-2.4.04-3.44l1.4-5.96s-.36-.72-.36-1.78c0-1.67.97-2.92 2.17-2.92 1.02 0 1.52.77 1.52 1.7 0 1.03-.66 2.58-.99 4.01-.28 1.2.6 2.17 1.78 2.17 2.13 0 3.77-2.25 3.77-5.49 0-2.87-2.06-4.87-5.01-4.87-3.41 0-5.42 2.56-5.42 5.2 0 1.03.4 2.13.89 2.73.1.12.11.22.08.34l-.33 1.36c-.05.22-.18.27-.4.16-1.5-.7-2.43-2.88-2.43-4.64 0-3.78 2.75-7.25 7.92-7.25 4.16 0 7.4 2.97 7.4 6.93 0 4.14-2.6 7.46-6.22 7.46-1.22 0-2.36-.63-2.75-1.38l-.75 2.85c-.27 1.04-1 2.35-1.49 3.15A12 12 0 1 0 12 0z"/></svg>
+                </SocialIcon>
+              )}
             </div>
           </div>
 
