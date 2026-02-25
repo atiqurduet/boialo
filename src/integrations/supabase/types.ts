@@ -3961,6 +3961,75 @@ export type Database = {
         }
         Relationships: []
       }
+      visitor_analytics: {
+        Row: {
+          browser: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          device_type: string | null
+          duration_seconds: number | null
+          id: string
+          is_bounce: boolean | null
+          language: string | null
+          os: string | null
+          page_path: string
+          page_title: string | null
+          referrer: string | null
+          screen_resolution: string | null
+          search_query: string | null
+          session_id: string
+          user_id: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_bounce?: boolean | null
+          language?: string | null
+          os?: string | null
+          page_path: string
+          page_title?: string | null
+          referrer?: string | null
+          screen_resolution?: string | null
+          search_query?: string | null
+          session_id: string
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_bounce?: boolean | null
+          language?: string | null
+          os?: string | null
+          page_path?: string
+          page_title?: string | null
+          referrer?: string | null
+          screen_resolution?: string | null
+          search_query?: string | null
+          session_id?: string
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
       wishlist_items: {
         Row: {
           created_at: string
