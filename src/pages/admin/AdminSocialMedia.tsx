@@ -66,6 +66,7 @@ const AdminSocialMedia = () => {
   const [postLink, setPostLink] = useState('');
   const [scheduleDate, setScheduleDate] = useState('');
   const [editingPost, setEditingPost] = useState<any>(null);
+  const [editingAccount, setEditingAccount] = useState<any>(null);
 
   // Account form
   const [accPlatform, setAccPlatform] = useState('');
@@ -102,22 +103,37 @@ const AdminSocialMedia = () => {
   // Mutations
   const saveAccount = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('social_media_accounts').insert({
-        platform: accPlatform,
-        account_name: accName,
-        access_token: accToken || null,
-        page_id: accPageId || null,
-        channel_id: accChannelId || null,
-      });
-      if (error) throw error;
+      if (editingAccount) {
+        const updateData: any = {
+          platform: accPlatform,
+          account_name: accName,
+          page_id: accPageId || null,
+          channel_id: accChannelId || null,
+        };
+        // Only update token if user entered a new one
+        if (accToken) {
+          updateData.access_token = accToken;
+        }
+        const { error } = await supabase.from('social_media_accounts').update(updateData).eq('id', editingAccount.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('social_media_accounts').insert({
+          platform: accPlatform,
+          account_name: accName,
+          access_token: accToken || null,
+          page_id: accPageId || null,
+          channel_id: accChannelId || null,
+        });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
-      toast.success('অ্যাকাউন্ট যোগ হয়েছে');
+      toast.success(editingAccount ? 'অ্যাকাউন্ট আপডেট হয়েছে' : 'অ্যাকাউন্ট যোগ হয়েছে');
       queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
       setShowAccountDialog(false);
-      setAccPlatform(''); setAccName(''); setAccToken(''); setAccPageId(''); setAccChannelId('');
+      resetAccountForm();
     },
-    onError: () => toast.error('অ্যাকাউন্ট যোগ করতে ব্যর্থ'),
+    onError: () => toast.error('অ্যাকাউন্ট সেভ করতে ব্যর্থ'),
   });
 
   const toggleAccount = useMutation({
@@ -206,6 +222,21 @@ const AdminSocialMedia = () => {
     setShowComposer(false);
     setPostContent(''); setPostContentBn(''); setSelectedPlatforms([]); 
     setPostHashtags(''); setPostLink(''); setScheduleDate(''); setEditingPost(null);
+  };
+
+  const resetAccountForm = () => {
+    setAccPlatform(''); setAccName(''); setAccToken(''); setAccPageId(''); setAccChannelId('');
+    setEditingAccount(null);
+  };
+
+  const editAccount = (acc: any) => {
+    setEditingAccount(acc);
+    setAccPlatform(acc.platform);
+    setAccName(acc.account_name || '');
+    setAccToken(''); // Don't prefill token for security
+    setAccPageId(acc.page_id || '');
+    setAccChannelId(acc.channel_id || '');
+    setShowAccountDialog(true);
   };
 
   const editPost = (post: any) => {
@@ -481,12 +512,12 @@ const AdminSocialMedia = () => {
             <Card>
               <CardHeader className="flex-row items-center justify-between">
                 <CardTitle className="text-base">🔗 কানেক্টেড অ্যাকাউন্ট</CardTitle>
-                <Dialog open={showAccountDialog} onOpenChange={setShowAccountDialog}>
+                <Dialog open={showAccountDialog} onOpenChange={(open) => { setShowAccountDialog(open); if (!open) resetAccountForm(); }}>
                   <DialogTrigger asChild>
-                    <Button size="sm"><Plus className="w-4 h-4 mr-1" /> অ্যাকাউন্ট যোগ</Button>
+                    <Button size="sm" onClick={() => resetAccountForm()}><Plus className="w-4 h-4 mr-1" /> অ্যাকাউন্ট যোগ</Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <DialogHeader><DialogTitle>নতুন সোশ্যাল মিডিয়া অ্যাকাউন্ট</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>{editingAccount ? 'অ্যাকাউন্ট আপডেট করুন' : 'নতুন সোশ্যাল মিডিয়া অ্যাকাউন্ট'}</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <div>
                         <Label>প্ল্যাটফর্ম</Label>
@@ -507,7 +538,7 @@ const AdminSocialMedia = () => {
                       </div>
                       <div>
                         <Label>API Token / Access Token</Label>
-                        <Input type="password" value={accToken} onChange={e => setAccToken(e.target.value)} placeholder="API টোকেন দিন" />
+                        <Input type="password" value={accToken} onChange={e => setAccToken(e.target.value)} placeholder={editingAccount ? "নতুন টোকেন দিন (খালি রাখলে আগেরটা থাকবে)" : "API টোকেন দিন"} />
                         <p className="text-xs text-muted-foreground mt-1">প্ল্যাটফর্ম থেকে জেনারেট করা API টোকেন</p>
                       </div>
                       {(accPlatform === 'facebook' || accPlatform === 'instagram') && (
@@ -520,10 +551,13 @@ const AdminSocialMedia = () => {
                         <div>
                           <Label>Channel/Chat ID</Label>
                           <Input value={accChannelId} onChange={e => setAccChannelId(e.target.value)} placeholder="Channel বা Chat ID" />
+                          {accPlatform === 'telegram' && (
+                            <p className="text-xs text-muted-foreground mt-1">@channel_username অথবা -100xxxxxxx ফরম্যাটে দিন</p>
+                          )}
                         </div>
                       )}
                       <Button className="w-full" disabled={!accPlatform || !accName} onClick={() => saveAccount.mutate()}>
-                        সেভ করুন
+                        {editingAccount ? 'আপডেট করুন' : 'সেভ করুন'}
                       </Button>
                     </div>
                   </DialogContent>
@@ -557,9 +591,14 @@ const AdminSocialMedia = () => {
                           </TableCell>
                           <TableCell className="text-xs">{format(new Date(acc.created_at), 'dd/MM/yy')}</TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => deleteAccount.mutate(acc.id)}>
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => editAccount(acc)}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => deleteAccount.mutate(acc.id)}>
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
