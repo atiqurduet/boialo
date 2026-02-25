@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, GripVertical } from 'lucide-react';
+import { DynamicLinkSelector } from '@/components/admin/page/DynamicLinkSelector';
 
 interface MenuItem {
   id: string;
@@ -166,7 +167,7 @@ const AdminMenu = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div><Label>নাম (বাংলা)</Label><Input value={formData.title_bn} onChange={(e) => setFormData({ ...formData, title_bn: e.target.value })} required /></div>
               <div><Label>Name (English)</Label><Input value={formData.title_en} onChange={(e) => setFormData({ ...formData, title_en: e.target.value })} /></div>
-              <div><Label>URL</Label><Input value={formData.url} onChange={(e) => setFormData({ ...formData, url: e.target.value })} required /></div>
+              <DynamicLinkSelector value={formData.url} onChange={(url) => setFormData({ ...formData, url })} label="URL" placeholder="/shop" />
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2"><Switch checked={formData.is_active} onCheckedChange={(c) => setFormData({ ...formData, is_active: c })} /><Label>অ্যাক্টিভ</Label></div>
                 <div className="flex items-center gap-2"><Switch checked={formData.open_in_new_tab} onCheckedChange={(c) => setFormData({ ...formData, open_in_new_tab: c })} /><Label>নতুন ট্যাবে খুলুন</Label></div>
