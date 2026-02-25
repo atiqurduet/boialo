@@ -244,7 +244,10 @@ export const Header = () => {
         </div>
 
         {/* Navigation - Desktop */}
-        <nav className="hidden md:block border-t border-border/30 bg-gradient-to-b from-card/80 to-card/60">
+        <nav className={cn(
+          "hidden md:block border-t border-border/30 bg-gradient-to-b from-card/80 to-card/60 transition-opacity duration-200",
+          menuLoading ? "opacity-0 h-0 overflow-hidden" : "opacity-100"
+        )}>
           <div className="container">
             <ul className="flex items-center gap-0.5 overflow-x-auto py-0 scrollbar-hide">
               {navLinks.map((link, index) => {
