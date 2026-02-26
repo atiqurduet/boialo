@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -12,9 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -22,7 +23,8 @@ import {
   Send, Plus, Calendar, Clock, Hash, Trash2, Edit, Eye, RefreshCw,
   Facebook, Instagram, Twitter, MessageCircle, Linkedin, Youtube, Globe, Printer,
   TrendingUp, Heart, MessageSquare, Share2, BarChart3, Settings, Smartphone,
-  Search, Copy, Link2, Package, X, Check, AlertCircle, RotateCcw, Filter
+  Search, Copy, Link2, Package, X, Check, AlertCircle, RotateCcw, Filter,
+  Image as ImageIcon, Upload, BookOpen, ShoppingBag, FolderOpen, Sparkles
 } from "lucide-react";
 
 const PLATFORMS = [
@@ -52,6 +54,7 @@ const statusLabels: Record<string, string> = {
 
 const AdminSocialMedia = () => {
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAccountDialog, setShowAccountDialog] = useState(false);
   const [postContent, setPostContent] = useState('');
   const [postContentBn, setPostContentBn] = useState('');
@@ -62,10 +65,15 @@ const AdminSocialMedia = () => {
   const [editingPost, setEditingPost] = useState<any>(null);
   const [editingAccount, setEditingAccount] = useState<any>(null);
 
-  // Product selector
+  // Product/Category selector
   const [showProductSelector, setShowProductSelector] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectorTab, setSelectorTab] = useState<'books' | 'universal' | 'categories'>('books');
+
+  // Image upload
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   // History filters
   const [historySearch, setHistorySearch] = useState('');
@@ -111,9 +119,10 @@ const AdminSocialMedia = () => {
   const { data: products = [] } = useQuery({
     queryKey: ['social-products', productSearch],
     queryFn: async () => {
-      // @ts-ignore - deep chain type
-      const base = supabase.from('products').select('id, title_bn, title_en, slug, images, price, discount_price').eq('status', 'published').order('created_at', { ascending: false }).limit(20);
-      const final = productSearch ? base.or(`title_bn.ilike.%${productSearch}%,title_en.ilike.%${productSearch}%`) : base;
+      const sanitized = productSearch.replace(/[%_\\]/g, '\\$&').slice(0, 200);
+      // @ts-ignore
+      const base = supabase.from('products').select('id, title_bn, title_en, slug, images, price, discount_price, author').eq('is_active', true).order('created_at', { ascending: false }).limit(30);
+      const final = sanitized ? base.or(`title_bn.ilike.%${sanitized}%,title_en.ilike.%${sanitized}%,author.ilike.%${sanitized}%`) : base;
       const { data } = await final;
       return (data || []) as any[];
     }
@@ -122,9 +131,34 @@ const AdminSocialMedia = () => {
   const { data: universalProducts = [] } = useQuery({
     queryKey: ['social-universal-products', productSearch],
     queryFn: async () => {
-      // @ts-ignore - deep chain type
-      const base = supabase.from('universal_products').select('id, name_bn, name_en, slug, images, price, discount_price').eq('status', 'published').order('created_at', { ascending: false }).limit(20);
-      const final = productSearch ? base.or(`name_bn.ilike.%${productSearch}%,name_en.ilike.%${productSearch}%`) : base;
+      const sanitized = productSearch.replace(/[%_\\]/g, '\\$&').slice(0, 200);
+      // @ts-ignore
+      const base = supabase.from('universal_products').select('id, name_bn, name_en, slug, images, price, discount_price, product_type').eq('is_active', true).order('created_at', { ascending: false }).limit(30);
+      const final = sanitized ? base.or(`name_bn.ilike.%${sanitized}%,name_en.ilike.%${sanitized}%`) : base;
+      const { data } = await final;
+      return (data || []) as any[];
+    }
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ['social-categories', productSearch],
+    queryFn: async () => {
+      const sanitized = productSearch.replace(/[%_\\]/g, '\\$&').slice(0, 200);
+      // @ts-ignore
+      const base = supabase.from('categories').select('id, name_bn, name_en, slug, image_url').eq('is_active', true).order('name_bn').limit(30);
+      const final = sanitized ? base.or(`name_bn.ilike.%${sanitized}%,name_en.ilike.%${sanitized}%`) : base;
+      const { data } = await final;
+      return (data || []) as any[];
+    }
+  });
+
+  const { data: universalCategories = [] } = useQuery({
+    queryKey: ['social-universal-categories', productSearch],
+    queryFn: async () => {
+      const sanitized = productSearch.replace(/[%_\\]/g, '\\$&').slice(0, 200);
+      // @ts-ignore
+      const base = supabase.from('universal_categories').select('id, name_bn, name_en, slug, image_url, product_type').eq('is_active', true).order('name_bn').limit(30);
+      const final = sanitized ? base.or(`name_bn.ilike.%${sanitized}%,name_en.ilike.%${sanitized}%`) : base;
       const { data } = await final;
       return (data || []) as any[];
     }
@@ -142,6 +176,36 @@ const AdminSocialMedia = () => {
       return true;
     });
   }, [posts, historyStatusFilter, historyPlatformFilter, historySearch]);
+
+  // Image upload handler
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const newUrls: string[] = [];
+      for (const file of Array.from(files)) {
+        const ext = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from('social-media').upload(fileName, file);
+        if (error) throw error;
+        const { data: { publicUrl } } = supabase.storage.from('social-media').getPublicUrl(fileName);
+        newUrls.push(publicUrl);
+      }
+      setMediaUrls(prev => [...prev, ...newUrls]);
+      toast.success(`${newUrls.length}টি ছবি আপলোড হয়েছে`);
+    } catch (err) {
+      console.error(err);
+      toast.error('ছবি আপলোড করতে ব্যর্থ');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeMedia = (url: string) => {
+    setMediaUrls(prev => prev.filter(u => u !== url));
+  };
 
   // Mutations
   const saveAccount = useMutation({
@@ -181,6 +245,9 @@ const AdminSocialMedia = () => {
         platforms: selectedPlatforms,
         hashtags: postHashtags ? postHashtags.split(',').map(h => h.trim()) : [],
         link_url: postLink || null,
+        media_urls: mediaUrls.length > 0 ? mediaUrls : null,
+        product_id: selectedProduct?.id || null,
+        post_type: selectedProduct ? selectedProduct.type : null,
         status,
         scheduled_at: status === 'scheduled' && scheduleDate ? new Date(scheduleDate).toISOString() : null,
       };
@@ -188,15 +255,10 @@ const AdminSocialMedia = () => {
       if (editingPost) {
         const { error } = await supabase.from('social_media_posts').update(postData).eq('id', editingPost.id);
         if (error) throw error;
-
-        // If re-publishing an edited post
         if (status === 'published') {
-          // Delete old results and create new ones
           await supabase.from('social_media_post_results').delete().eq('post_id', editingPost.id);
           const results = selectedPlatforms.map(platform => ({
-            post_id: editingPost.id,
-            platform,
-            status: 'pending',
+            post_id: editingPost.id, platform, status: 'pending',
             account_id: accounts.find(a => a.platform === platform && a.is_active)?.id || null,
           }));
           await supabase.from('social_media_post_results').insert(results);
@@ -237,7 +299,6 @@ const AdminSocialMedia = () => {
 
   const retryPost = useMutation({
     mutationFn: async (postId: string) => {
-      // Reset failed results to pending
       await supabase.from('social_media_post_results').update({ status: 'pending', error_message: null }).eq('post_id', postId).eq('status', 'failed');
       await supabase.from('social_media_posts').update({ status: 'published' }).eq('id', postId);
       await supabase.functions.invoke('social-media-post', { body: { post_id: postId } });
@@ -253,7 +314,7 @@ const AdminSocialMedia = () => {
   const resetComposer = () => {
     setPostContent(''); setPostContentBn(''); setSelectedPlatforms([]);
     setPostHashtags(''); setPostLink(''); setScheduleDate(''); setEditingPost(null);
-    setSelectedProduct(null);
+    setSelectedProduct(null); setMediaUrls([]);
   };
 
   const resetAccountForm = () => {
@@ -275,6 +336,7 @@ const AdminSocialMedia = () => {
     setSelectedPlatforms(post.platforms || []);
     setPostHashtags((post.hashtags || []).join(', '));
     setPostLink(post.link_url || '');
+    setMediaUrls(post.media_urls || []);
     setScheduleDate(post.scheduled_at ? format(new Date(post.scheduled_at), "yyyy-MM-dd'T'HH:mm") : '');
     setSelectedProduct(null);
   };
@@ -286,24 +348,47 @@ const AdminSocialMedia = () => {
     setSelectedPlatforms(post.platforms || []);
     setPostHashtags((post.hashtags || []).join(', '));
     setPostLink(post.link_url || '');
+    setMediaUrls(post.media_urls || []);
     setScheduleDate('');
     setSelectedProduct(null);
     toast.info('পোস্ট কপি করা হয়েছে - এডিট করে পোস্ট করুন');
   };
 
+  const BASE_URL = 'https://boialo.lovable.app';
+
   const selectProduct = (product: any, type: 'book' | 'universal') => {
     const imgUrl = product.images?.[0] || null;
     setSelectedProduct({ ...product, type, image_url: imgUrl });
-    const baseUrl = 'https://boialo.lovable.app';
-    const url = type === 'book' ? `${baseUrl}/product/${product.slug}` : `${baseUrl}/universal-product/${product.slug}`;
+    const url = type === 'book' ? `${BASE_URL}/product/${product.slug}` : `${BASE_URL}/universal-product/${product.slug}`;
     setPostLink(url);
+    // Auto-add product image to media
+    if (imgUrl && !mediaUrls.includes(imgUrl)) {
+      setMediaUrls(prev => [...prev, imgUrl]);
+    }
     const name = type === 'book' ? (product.title_bn || product.title_en) : (product.name_bn || product.name_en);
+    const price = product.discount_price || product.price;
     if (!postContent && !postContentBn) {
-      const price = product.discount_price || product.price;
-      setPostContentBn(`📚 ${name}\n💰 মূল্য: ৳${price}\n\n🛒 এখনই অর্ডার করুন!`);
-      setPostContent(`📚 ${name}\n💰 Price: ৳${price}\n\n🛒 Order now!`);
+      setPostContentBn(`📚 ${name}\n💰 মূল্য: ৳${price}\n\n🛒 এখনই অর্ডার করুন!\n🔗 ${url}`);
+      setPostContent(`📚 ${name}\n💰 Price: ৳${price}\n\n🛒 Order now!\n🔗 ${url}`);
     }
     setShowProductSelector(false);
+    toast.success('প্রোডাক্ট সিলেক্ট হয়েছে');
+  };
+
+  const selectCategory = (cat: any, type: 'book' | 'universal') => {
+    const name = cat.name_bn || cat.name_en;
+    const url = type === 'book' ? `${BASE_URL}/categories/${cat.slug}` : `${BASE_URL}/category/${cat.product_type}/${cat.slug}`;
+    setPostLink(url);
+    setSelectedProduct({ id: cat.id, type: `category-${type}`, name_bn: name, image_url: cat.image_url, slug: cat.slug });
+    if (cat.image_url && !mediaUrls.includes(cat.image_url)) {
+      setMediaUrls(prev => [...prev, cat.image_url]);
+    }
+    if (!postContent && !postContentBn) {
+      setPostContentBn(`📂 ${name} ক্যাটাগরি\n\n🛒 সব পণ্য দেখুন!\n🔗 ${url}`);
+      setPostContent(`📂 ${name} Category\n\n🛒 Browse all products!\n🔗 ${url}`);
+    }
+    setShowProductSelector(false);
+    toast.success('ক্যাটাগরি সিলেক্ট হয়েছে');
   };
 
   // Analytics
@@ -403,55 +488,165 @@ const AdminSocialMedia = () => {
                   </div>
                 )}
 
-                <Card>
-                  <CardHeader><CardTitle className="text-base">✍️ পোস্ট কম্পোজার</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Product Selector */}
-                    <div>
-                      <Label className="flex items-center gap-1 mb-2"><Package className="w-3 h-3" /> প্রোডাক্ট সিলেক্ট করুন (ঐচ্ছিক)</Label>
+                <Card className="border-2 border-dashed border-primary/20 bg-gradient-to-br from-background to-muted/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                      পোস্ট কম্পোজার
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-5">
+                    {/* Dynamic Product/Category Selector */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1.5 text-sm font-semibold">
+                        <Package className="w-4 h-4 text-primary" />
+                        প্রোডাক্ট / ক্যাটাগরি সিলেক্ট করুন
+                        <Badge variant="secondary" className="text-[10px] ml-1">ঐচ্ছিক</Badge>
+                      </Label>
+
                       {selectedProduct ? (
-                        <div className="flex items-center gap-3 p-2 border rounded-lg bg-muted/30">
-                          {selectedProduct.image_url && (
-                            <img src={selectedProduct.image_url} alt="" className="w-10 h-10 object-cover rounded" />
+                        <div className="flex items-center gap-3 p-3 border-2 border-primary/30 rounded-xl bg-primary/5">
+                          {selectedProduct.image_url ? (
+                            <img src={selectedProduct.image_url} alt="" className="w-14 h-14 object-cover rounded-lg shadow-sm" />
+                          ) : (
+                            <div className="w-14 h-14 bg-muted rounded-lg flex items-center justify-center">
+                              <Package className="w-6 h-6 text-muted-foreground" />
+                            </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {selectedProduct.type === 'book' ? (selectedProduct.title_bn || selectedProduct.title_en) : (selectedProduct.name_bn || selectedProduct.name_en)}
+                            <p className="font-semibold text-sm truncate">
+                              {selectedProduct.title_bn || selectedProduct.name_bn || selectedProduct.title_en || selectedProduct.name_en}
                             </p>
-                            <p className="text-xs text-muted-foreground">৳{selectedProduct.discount_price || selectedProduct.price}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <Badge variant="outline" className="text-[10px]">
+                                {selectedProduct.type === 'book' ? '📚 বই' : selectedProduct.type === 'universal' ? '🛍️ প্রোডাক্ট' : '📂 ক্যাটাগরি'}
+                              </Badge>
+                              {selectedProduct.price && (
+                                <span className="text-xs text-muted-foreground">৳{selectedProduct.discount_price || selectedProduct.price}</span>
+                              )}
+                            </div>
                           </div>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedProduct(null); setPostLink(''); }}>
+                          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => { setSelectedProduct(null); setPostLink(''); }}>
                             <X className="w-4 h-4" />
                           </Button>
                         </div>
                       ) : (
-                        <Button variant="outline" className="w-full" onClick={() => { setShowProductSelector(true); setProductSearch(''); }}>
-                          <Search className="w-4 h-4 mr-2" /> প্রোডাক্ট খুঁজুন ও সিলেক্ট করুন
+                        <Button
+                          variant="outline"
+                          className="w-full h-12 border-dashed border-2 hover:border-primary hover:bg-primary/5 transition-all"
+                          onClick={() => { setShowProductSelector(true); setProductSearch(''); setSelectorTab('books'); }}
+                        >
+                          <Search className="w-4 h-4 mr-2 text-primary" />
+                          প্রোডাক্ট বা ক্যাটাগরি খুঁজুন ও সিলেক্ট করুন
                         </Button>
                       )}
                     </div>
 
-                    <div>
-                      <Label>পোস্ট কন্টেন্ট (English)</Label>
-                      <Textarea value={postContent} onChange={e => setPostContent(e.target.value)} placeholder="Write your post content..." rows={4} />
-                      <p className="text-xs text-muted-foreground mt-1">{postContent.length}/2200 characters</p>
+                    <Separator />
+
+                    {/* Content Fields */}
+                    <div className="space-y-1.5">
+                      <Label className="font-semibold text-sm">পোস্ট কন্টেন্ট (English)</Label>
+                      <Textarea
+                        value={postContent}
+                        onChange={e => setPostContent(e.target.value)}
+                        placeholder="Write your post content..."
+                        rows={4}
+                        className="resize-y"
+                      />
+                      <div className="flex justify-between">
+                        <p className="text-xs text-muted-foreground">{postContent.length}/2200 characters</p>
+                        {postContent.length > 2200 && <p className="text-xs text-destructive">সর্বোচ্চ ২২০০ অক্ষর</p>}
+                      </div>
                     </div>
-                    <div>
-                      <Label>পোস্ট কন্টেন্ট (বাংলা) - ঐচ্ছিক</Label>
-                      <Textarea value={postContentBn} onChange={e => setPostContentBn(e.target.value)} placeholder="বাংলায় পোস্ট লিখুন..." rows={3} />
+
+                    <div className="space-y-1.5">
+                      <Label className="font-semibold text-sm">পোস্ট কন্টেন্ট (বাংলা) <span className="text-muted-foreground font-normal">- ঐচ্ছিক</span></Label>
+                      <Textarea
+                        value={postContentBn}
+                        onChange={e => setPostContentBn(e.target.value)}
+                        placeholder="বাংলায় পোস্ট লিখুন..."
+                        rows={3}
+                        className="resize-y"
+                      />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="flex items-center gap-1"><Hash className="w-3 h-3" /> হ্যাশট্যাগ</Label>
+
+                    <Separator />
+
+                    {/* Image Upload Section */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1.5 text-sm font-semibold">
+                        <ImageIcon className="w-4 h-4 text-primary" />
+                        ছবি / মিডিয়া
+                        <Badge variant="secondary" className="text-[10px] ml-1">ঐচ্ছিক</Badge>
+                      </Label>
+
+                      {mediaUrls.length > 0 && (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                          {mediaUrls.map((url, i) => (
+                            <div key={i} className="relative group rounded-lg overflow-hidden border aspect-square">
+                              <img src={url} alt="" className="w-full h-full object-cover" />
+                              <button
+                                onClick={() => removeMedia(url)}
+                                className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={handleImageUpload}
+                      />
+                      <Button
+                        variant="outline"
+                        className="w-full border-dashed"
+                        disabled={uploading}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {uploading ? (
+                          <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> আপলোড হচ্ছে...</>
+                        ) : (
+                          <><Upload className="w-4 h-4 mr-2" /> ছবি আপলোড করুন</>
+                        )}
+                      </Button>
+                    </div>
+
+                    <Separator />
+
+                    {/* Hashtags, Link, Schedule */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="flex items-center gap-1 text-sm font-semibold"><Hash className="w-3.5 h-3.5 text-primary" /> হ্যাশট্যাগ</Label>
                         <Input value={postHashtags} onChange={e => setPostHashtags(e.target.value)} placeholder="#books, #reading, #বই" />
                       </div>
-                      <div>
-                        <Label className="flex items-center gap-1"><Link2 className="w-3 h-3" /> লিংক</Label>
-                        <Input value={postLink} onChange={e => setPostLink(e.target.value)} placeholder="https://boialo.lovable.app/product/..." />
+                      <div className="space-y-1.5">
+                        <Label className="flex items-center gap-1 text-sm font-semibold"><Link2 className="w-3.5 h-3.5 text-primary" /> লিংক</Label>
+                        <div className="relative">
+                          <Input
+                            value={postLink}
+                            onChange={e => setPostLink(e.target.value)}
+                            placeholder="https://boialo.lovable.app/..."
+                            className={postLink ? 'pr-8 border-primary/40 bg-primary/5' : ''}
+                            readOnly={!!selectedProduct}
+                          />
+                          {postLink && (
+                            <Check className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
+                          )}
+                        </div>
+                        {selectedProduct && <p className="text-[10px] text-muted-foreground">✨ অটো জেনারেটেড লিংক</p>}
                       </div>
                     </div>
-                    <div>
-                      <Label className="flex items-center gap-1"><Calendar className="w-3 h-3" /> শিডিউল (ঐচ্ছিক)</Label>
+
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-1 text-sm font-semibold"><Calendar className="w-3.5 h-3.5 text-primary" /> শিডিউল <span className="text-muted-foreground font-normal">- ঐচ্ছিক</span></Label>
                       <Input type="datetime-local" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} />
                     </div>
                   </CardContent>
@@ -461,16 +656,16 @@ const AdminSocialMedia = () => {
               {/* Platform selector + Actions */}
               <div className="space-y-4">
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="pb-3">
                     <CardTitle className="text-base">📱 চ্যানেল নির্বাচন</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-2">
                     {PLATFORMS.map(p => {
                       const activeAccounts = accounts.filter(a => a.platform === p.id && a.is_active);
                       const hasAccount = activeAccounts.length > 0;
                       const isSelected = selectedPlatforms.includes(p.id);
                       return (
-                        <label key={p.id} className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'} ${!hasAccount ? 'opacity-50' : ''}`}>
+                        <label key={p.id} className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border hover:border-primary/30'} ${!hasAccount ? 'opacity-40' : ''}`}>
                           <Checkbox
                             checked={isSelected}
                             disabled={!hasAccount}
@@ -490,7 +685,7 @@ const AdminSocialMedia = () => {
                         </label>
                       );
                     })}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 pt-1">
                       <Button variant="outline" size="sm" className="flex-1" onClick={() => setSelectedPlatforms(accounts.filter(a => a.is_active).map(a => a.platform).filter((v, i, arr) => arr.indexOf(v) === i))}>
                         সব সিলেক্ট
                       </Button>
@@ -517,16 +712,28 @@ const AdminSocialMedia = () => {
                   </CardContent>
                 </Card>
 
-                {/* Preview */}
-                {postContent && (
-                  <Card>
-                    <CardHeader><CardTitle className="text-base">👁️ প্রিভিউ</CardTitle></CardHeader>
+                {/* Live Preview */}
+                {(postContent || postContentBn || mediaUrls.length > 0) && (
+                  <Card className="border-primary/20">
+                    <CardHeader className="pb-2"><CardTitle className="text-sm">👁️ লাইভ প্রিভিউ</CardTitle></CardHeader>
                     <CardContent>
-                      <div className="bg-muted rounded-lg p-3 text-sm space-y-2">
-                        <p className="whitespace-pre-line">{postContentBn || postContent}</p>
-                        {postHashtags && <p className="text-primary text-xs">{postHashtags.split(',').map(h => h.trim().startsWith('#') ? h.trim() : `#${h.trim()}`).join(' ')}</p>}
-                        {postLink && <p className="text-xs text-blue-600 truncate">{postLink}</p>}
-                        {selectedProduct?.image_url && <img src={selectedProduct.image_url} alt="" className="w-full h-32 object-cover rounded mt-2" />}
+                      <div className="bg-muted rounded-xl p-3 text-sm space-y-2">
+                        {mediaUrls.length > 0 && (
+                          <div className={`grid gap-1 rounded-lg overflow-hidden ${mediaUrls.length === 1 ? '' : 'grid-cols-2'}`}>
+                            {mediaUrls.slice(0, 4).map((url, i) => (
+                              <img key={i} src={url} alt="" className={`w-full object-cover ${mediaUrls.length === 1 ? 'h-40 rounded-lg' : 'h-24'}`} />
+                            ))}
+                          </div>
+                        )}
+                        <p className="whitespace-pre-line text-xs leading-relaxed">{postContentBn || postContent}</p>
+                        {postHashtags && <p className="text-primary text-[10px]">{postHashtags.split(',').map(h => h.trim().startsWith('#') ? h.trim() : `#${h.trim()}`).join(' ')}</p>}
+                        {postLink && <p className="text-[10px] text-blue-600 truncate">{postLink}</p>}
+                        <div className="flex gap-1 pt-1">
+                          {selectedPlatforms.map(pid => {
+                            const plat = PLATFORMS.find(x => x.id === pid);
+                            return plat ? <plat.icon key={pid} className="w-3.5 h-3.5" style={{ color: plat.color }} /> : null;
+                          })}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -588,8 +795,13 @@ const AdminSocialMedia = () => {
                             {format(new Date(post.created_at), 'dd/MM/yy HH:mm')}
                           </TableCell>
                           <TableCell className="max-w-[200px]">
-                            <p className="truncate text-sm">{post.content_bn || post.content}</p>
-                            {post.link_url && <p className="text-[10px] text-blue-500 truncate">{post.link_url}</p>}
+                            <div className="flex items-center gap-2">
+                              {post.media_urls?.[0] && <img src={post.media_urls[0]} alt="" className="w-8 h-8 rounded object-cover shrink-0" />}
+                              <div className="min-w-0">
+                                <p className="truncate text-sm">{post.content_bn || post.content}</p>
+                                {post.link_url && <p className="text-[10px] text-blue-500 truncate">{post.link_url}</p>}
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1 flex-wrap">
@@ -635,11 +847,11 @@ const AdminSocialMedia = () => {
                                 <Copy className="w-4 h-4" />
                               </Button>
                               {hasFailed && (
-                                <Button variant="ghost" size="icon" title="পুনরায় চেষ্টা" onClick={() => retryPost.mutate(post.id)}>
+                                <Button variant="ghost" size="icon" title="রিট্রাই" onClick={() => retryPost.mutate(post.id)}>
                                   <RotateCcw className="w-4 h-4 text-orange-500" />
                                 </Button>
                               )}
-                              <Button variant="ghost" size="icon" title="মুছে ফেলুন" onClick={() => { if (confirm('পোস্টটি মুছে ফেলতে চান?')) deletePost.mutate(post.id); }}>
+                              <Button variant="ghost" size="icon" title="ডিলিট" onClick={() => { if (confirm('মুছে ফেলতে চান?')) deletePost.mutate(post.id); }}>
                                 <Trash2 className="w-4 h-4 text-destructive" />
                               </Button>
                             </div>
@@ -648,7 +860,7 @@ const AdminSocialMedia = () => {
                       );
                     })}
                     {filteredPosts.length === 0 && (
-                      <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">কোনো পোস্ট নেই</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">কোনো পোস্ট পাওয়া যায়নি</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
@@ -661,41 +873,38 @@ const AdminSocialMedia = () => {
             <Card>
               <CardHeader className="flex-row items-center justify-between">
                 <CardTitle className="text-base">🔗 কানেক্টেড অ্যাকাউন্ট</CardTitle>
-                <Dialog open={showAccountDialog} onOpenChange={(open) => { setShowAccountDialog(open); if (!open) resetAccountForm(); }}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" onClick={() => resetAccountForm()}><Plus className="w-4 h-4 mr-1" /> অ্যাকাউন্ট যোগ</Button>
-                  </DialogTrigger>
+                <Button size="sm" onClick={() => { resetAccountForm(); setShowAccountDialog(true); }}>
+                  <Plus className="w-4 h-4 mr-1" /> নতুন অ্যাকাউন্ট
+                </Button>
+
+                <Dialog open={showAccountDialog} onOpenChange={setShowAccountDialog}>
                   <DialogContent>
-                    <DialogHeader><DialogTitle>{editingAccount ? 'অ্যাকাউন্ট আপডেট করুন' : 'নতুন সোশ্যাল মিডিয়া অ্যাকাউন্ট'}</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>{editingAccount ? '✏️ অ্যাকাউন্ট আপডেট' : '➕ নতুন অ্যাকাউন্ট যোগ করুন'}</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <div>
                         <Label>প্ল্যাটফর্ম</Label>
                         <Select value={accPlatform} onValueChange={setAccPlatform}>
-                          <SelectTrigger><SelectValue placeholder="প্ল্যাটফর্ম নির্বাচন করুন" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="সিলেক্ট করুন" /></SelectTrigger>
                           <SelectContent>
-                            {PLATFORMS.map(p => (
-                              <SelectItem key={p.id} value={p.id}>
-                                <span className="flex items-center gap-2"><p.icon className="w-4 h-4" style={{ color: p.color }} /> {p.name}</span>
-                              </SelectItem>
-                            ))}
+                            {PLATFORMS.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label>অ্যাকাউন্টের নাম</Label>
-                        <Input value={accName} onChange={e => setAccName(e.target.value)} placeholder="যেমন: Boialo Official" />
+                        <Label>অ্যাকাউন্ট নাম</Label>
+                        <Input value={accName} onChange={e => setAccName(e.target.value)} placeholder="যেমন: My Page" />
                       </div>
                       <div>
-                        <Label>API Token / Access Token</Label>
-                        <Input type="password" value={accToken} onChange={e => setAccToken(e.target.value)} placeholder={editingAccount ? "নতুন টোকেন দিন (খালি রাখলে আগেরটা থাকবে)" : "API টোকেন দিন"} />
+                        <Label>{editingAccount ? 'নতুন API Token (পরিবর্তন করতে চাইলে)' : 'API Token / Access Token'}</Label>
+                        <Input type="password" value={accToken} onChange={e => setAccToken(e.target.value)} placeholder={editingAccount ? 'খালি রাখলে আগেরটা থাকবে' : 'Token দিন'} />
                       </div>
-                      {(accPlatform === 'facebook' || accPlatform === 'instagram') && (
+                      {['facebook', 'instagram', 'linkedin'].includes(accPlatform) && (
                         <div>
-                          <Label>Page ID</Label>
-                          <Input value={accPageId} onChange={e => setAccPageId(e.target.value)} placeholder="Facebook/Instagram Page ID" />
+                          <Label>Page/Organization ID</Label>
+                          <Input value={accPageId} onChange={e => setAccPageId(e.target.value)} placeholder="Page বা Organization ID" />
                         </div>
                       )}
-                      {(accPlatform === 'telegram' || accPlatform === 'whatsapp' || accPlatform === 'youtube') && (
+                      {['telegram', 'whatsapp'].includes(accPlatform) && (
                         <div>
                           <Label>Channel/Chat ID</Label>
                           <Input value={accChannelId} onChange={e => setAccChannelId(e.target.value)} placeholder="Channel বা Chat ID" />
@@ -862,47 +1071,163 @@ const AdminSocialMedia = () => {
         </Tabs>
       </div>
 
-      {/* Product Selector Dialog */}
+      {/* Dynamic Product/Category Selector Dialog */}
       <Dialog open={showProductSelector} onOpenChange={setShowProductSelector}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>📦 প্রোডাক্ট সিলেক্ট করুন</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5 text-primary" />
+              প্রোডাক্ট / ক্যাটাগরি সিলেক্ট করুন
+            </DialogTitle>
+          </DialogHeader>
           <div className="space-y-3">
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="প্রোডাক্ট খুঁজুন..." value={productSearch} onChange={e => setProductSearch(e.target.value)} className="pl-8" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="নাম দিয়ে খুঁজুন..."
+                value={productSearch}
+                onChange={e => setProductSearch(e.target.value)}
+                className="pl-9 h-10"
+                autoFocus
+              />
             </div>
+
+            {/* Tab Switcher */}
+            <div className="flex gap-1 bg-muted p-1 rounded-lg">
+              {[
+                { key: 'books' as const, label: '📚 বই', count: products.length },
+                { key: 'universal' as const, label: '🛍️ প্রোডাক্ট', count: universalProducts.length },
+                { key: 'categories' as const, label: '📂 ক্যাটাগরি', count: categories.length + universalCategories.length },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setSelectorTab(tab.key)}
+                  className={`flex-1 text-xs font-medium py-2 px-3 rounded-md transition-all ${selectorTab === tab.key ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  {tab.label} ({tab.count})
+                </button>
+              ))}
+            </div>
+
             <ScrollArea className="h-[350px]">
-              <div className="space-y-1">
-                {products.length > 0 && (
+              <div className="space-y-1 p-1">
+                {selectorTab === 'books' && (
                   <>
-                    <p className="text-xs font-semibold text-muted-foreground px-2 pt-2">📚 বই</p>
                     {products.map(p => (
-                      <button key={p.id} className="flex items-center gap-3 p-2 w-full text-left rounded-lg hover:bg-muted/50 transition-colors" onClick={() => selectProduct(p, 'book')}>
-                        {p.images?.[0] ? <img src={p.images[0]} alt="" className="w-10 h-14 object-cover rounded" /> : <div className="w-10 h-14 bg-muted rounded flex items-center justify-center"><Package className="w-4 h-4 text-muted-foreground" /></div>}
+                      <button
+                        key={p.id}
+                        className="flex items-center gap-3 p-2.5 w-full text-left rounded-lg hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-all"
+                        onClick={() => selectProduct(p, 'book')}
+                      >
+                        {p.images?.[0] ? (
+                          <img src={p.images[0]} alt="" className="w-12 h-16 object-cover rounded-md shadow-sm" />
+                        ) : (
+                          <div className="w-12 h-16 bg-muted rounded-md flex items-center justify-center">
+                            <BookOpen className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{p.title_bn || p.title_en}</p>
-                          <p className="text-xs text-muted-foreground">৳{p.discount_price || p.price}</p>
+                          {p.author && <p className="text-[11px] text-muted-foreground truncate">{p.author}</p>}
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs font-semibold text-primary">৳{p.discount_price || p.price}</span>
+                            {p.discount_price && p.price > p.discount_price && (
+                              <span className="text-[10px] text-muted-foreground line-through">৳{p.price}</span>
+                            )}
+                          </div>
                         </div>
+                        <Plus className="w-4 h-4 text-muted-foreground shrink-0" />
                       </button>
                     ))}
+                    {products.length === 0 && <p className="text-center text-muted-foreground py-8 text-sm">কোনো বই পাওয়া যায়নি</p>}
                   </>
                 )}
-                {universalProducts.length > 0 && (
+
+                {selectorTab === 'universal' && (
                   <>
-                    <p className="text-xs font-semibold text-muted-foreground px-2 pt-3">🛍️ ইউনিভার্সাল প্রোডাক্ট</p>
                     {universalProducts.map(p => (
-                      <button key={p.id} className="flex items-center gap-3 p-2 w-full text-left rounded-lg hover:bg-muted/50 transition-colors" onClick={() => selectProduct(p, 'universal')}>
-                        {p.images?.[0] ? <img src={p.images[0]} alt="" className="w-10 h-14 object-cover rounded" /> : <div className="w-10 h-14 bg-muted rounded flex items-center justify-center"><Package className="w-4 h-4 text-muted-foreground" /></div>}
+                      <button
+                        key={p.id}
+                        className="flex items-center gap-3 p-2.5 w-full text-left rounded-lg hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-all"
+                        onClick={() => selectProduct(p, 'universal')}
+                      >
+                        {p.images?.[0] ? (
+                          <img src={p.images[0]} alt="" className="w-12 h-12 object-cover rounded-md shadow-sm" />
+                        ) : (
+                          <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
+                            <ShoppingBag className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{p.name_bn || p.name_en}</p>
-                          <p className="text-xs text-muted-foreground">৳{p.discount_price || p.price}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <Badge variant="outline" className="text-[9px]">{p.product_type}</Badge>
+                            <span className="text-xs font-semibold text-primary">৳{p.discount_price || p.price}</span>
+                          </div>
                         </div>
+                        <Plus className="w-4 h-4 text-muted-foreground shrink-0" />
                       </button>
                     ))}
+                    {universalProducts.length === 0 && <p className="text-center text-muted-foreground py-8 text-sm">কোনো প্রোডাক্ট পাওয়া যায়নি</p>}
                   </>
                 )}
-                {products.length === 0 && universalProducts.length === 0 && (
-                  <p className="text-center text-muted-foreground py-6 text-sm">কোনো প্রোডাক্ট পাওয়া যায়নি</p>
+
+                {selectorTab === 'categories' && (
+                  <>
+                    {categories.length > 0 && (
+                      <>
+                        <p className="text-[11px] font-semibold text-muted-foreground px-2 py-1.5 uppercase tracking-wide">বই ক্যাটাগরি</p>
+                        {categories.map(c => (
+                          <button
+                            key={c.id}
+                            className="flex items-center gap-3 p-2.5 w-full text-left rounded-lg hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-all"
+                            onClick={() => selectCategory(c, 'book')}
+                          >
+                            {c.image_url ? (
+                              <img src={c.image_url} alt="" className="w-10 h-10 object-cover rounded-lg" />
+                            ) : (
+                              <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                                <FolderOpen className="w-4 h-4 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{c.name_bn}</p>
+                              {c.name_en && <p className="text-[10px] text-muted-foreground">{c.name_en}</p>}
+                            </div>
+                            <Plus className="w-4 h-4 text-muted-foreground shrink-0" />
+                          </button>
+                        ))}
+                      </>
+                    )}
+                    {universalCategories.length > 0 && (
+                      <>
+                        <p className="text-[11px] font-semibold text-muted-foreground px-2 py-1.5 pt-3 uppercase tracking-wide">ইউনিভার্সাল ক্যাটাগরি</p>
+                        {universalCategories.map(c => (
+                          <button
+                            key={c.id}
+                            className="flex items-center gap-3 p-2.5 w-full text-left rounded-lg hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-all"
+                            onClick={() => selectCategory(c, 'universal')}
+                          >
+                            {c.image_url ? (
+                              <img src={c.image_url} alt="" className="w-10 h-10 object-cover rounded-lg" />
+                            ) : (
+                              <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                                <FolderOpen className="w-4 h-4 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{c.name_bn}</p>
+                              <Badge variant="outline" className="text-[9px]">{c.product_type}</Badge>
+                            </div>
+                            <Plus className="w-4 h-4 text-muted-foreground shrink-0" />
+                          </button>
+                        ))}
+                      </>
+                    )}
+                    {categories.length === 0 && universalCategories.length === 0 && (
+                      <p className="text-center text-muted-foreground py-8 text-sm">কোনো ক্যাটাগরি পাওয়া যায়নি</p>
+                    )}
+                  </>
                 )}
               </div>
             </ScrollArea>
@@ -920,6 +1245,14 @@ const AdminSocialMedia = () => {
                 <Badge className={statusColors[viewingPost.status] || ''} variant="outline">{statusLabels[viewingPost.status] || viewingPost.status}</Badge>
                 <span className="text-xs text-muted-foreground">{format(new Date(viewingPost.created_at), 'dd/MM/yyyy HH:mm')}</span>
               </div>
+
+              {viewingPost.media_urls?.length > 0 && (
+                <div className={`grid gap-1 rounded-lg overflow-hidden ${viewingPost.media_urls.length === 1 ? '' : 'grid-cols-2'}`}>
+                  {viewingPost.media_urls.map((url: string, i: number) => (
+                    <img key={i} src={url} alt="" className="w-full h-32 object-cover" />
+                  ))}
+                </div>
+              )}
 
               {viewingPost.content && (
                 <div>
@@ -971,6 +1304,9 @@ const AdminSocialMedia = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Hidden file input */}
+      <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
     </AdminLayout>
   );
 };
