@@ -52,6 +52,200 @@ const statusLabels: Record<string, string> = {
   published: 'পাবলিশড', failed: 'ব্যর্থ', pending: 'পেন্ডিং', success: 'সফল',
 };
 
+const AutomationSettings = () => {
+  const queryClient = useQueryClient();
+  
+  const { data: settings = [], isLoading } = useQuery({
+    queryKey: ['auto-post-settings'],
+    queryFn: async () => {
+      // @ts-ignore
+      const { data } = await supabase.from('auto_post_settings').select('*').order('setting_key');
+      return data || [];
+    }
+  });
+
+  const smSetting = settings.find((s: any) => s.setting_key === 'social_media_auto_post');
+  const emailSetting = settings.find((s: any) => s.setting_key === 'email_new_product');
+  const smConfig = (smSetting?.setting_value || {}) as any;
+  const emailConfig = (emailSetting?.setting_value || {}) as any;
+
+  const updateSetting = useMutation({
+    mutationFn: async ({ id, is_active, setting_value }: { id: string; is_active?: boolean; setting_value?: any }) => {
+      const updates: any = {};
+      if (is_active !== undefined) updates.is_active = is_active;
+      if (setting_value !== undefined) updates.setting_value = setting_value;
+      updates.updated_at = new Date().toISOString();
+      // @ts-ignore
+      const { error } = await supabase.from('auto_post_settings').update(updates).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['auto-post-settings'] });
+      toast.success('সেটিংস আপডেট হয়েছে');
+    },
+    onError: () => toast.error('আপডেট ব্যর্থ'),
+  });
+
+  const togglePlatform = (platform: string) => {
+    if (!smSetting) return;
+    const current = smConfig.platforms || [];
+    const updated = current.includes(platform) ? current.filter((p: string) => p !== platform) : [...current, platform];
+    updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, platforms: updated } });
+  };
+
+  const updateTemplate = (template: string) => {
+    if (!smSetting) return;
+    updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, template_bn: template } });
+  };
+
+  const updateHashtags = (hashtagStr: string) => {
+    if (!smSetting) return;
+    const tags = hashtagStr.split(/[,\s]+/).filter(Boolean).map(t => t.replace(/^#/, ''));
+    updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, hashtags: tags } });
+  };
+
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">লোড হচ্ছে...</div>;
+
+  return (
+    <div className="grid md:grid-cols-2 gap-4">
+      {/* Social Media Auto Post */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between text-base">
+            <span className="flex items-center gap-2"><Send className="w-5 h-5 text-primary" /> অটো সোশ্যাল মিডিয়া পোস্ট</span>
+            {smSetting && (
+              <Switch
+                checked={smSetting.is_active && smConfig.enabled}
+                onCheckedChange={(checked) => updateSetting.mutate({
+                  id: smSetting.id,
+                  is_active: checked,
+                  setting_value: { ...smConfig, enabled: checked }
+                })}
+              />
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">নতুন পণ্য যোগ করলে স্বয়ংক্রিয়ভাবে সোশ্যাল মিডিয়ায় পোস্ট হবে।</p>
+          
+          <div>
+            <Label className="text-sm font-medium mb-2 block">প্ল্যাটফর্ম নির্বাচন</Label>
+            <div className="flex flex-wrap gap-2">
+              {PLATFORMS.map(p => (
+                <Badge
+                  key={p.id}
+                  variant={(smConfig.platforms || []).includes(p.id) ? 'default' : 'outline'}
+                  className="cursor-pointer gap-1.5 py-1.5 px-3"
+                  onClick={() => togglePlatform(p.id)}
+                >
+                  <p.icon className="w-3.5 h-3.5" />
+                  {p.name}
+                  {(smConfig.platforms || []).includes(p.id) && <Check className="w-3 h-3" />}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium">পোস্ট টেমপ্লেট (বাংলা)</Label>
+            <Textarea
+              value={smConfig.template_bn || ''}
+              onChange={e => updateTemplate(e.target.value)}
+              rows={6}
+              className="mt-1 text-sm font-mono"
+              placeholder="{{product_name}}, {{author}}, {{price}}, {{link}} ব্যবহার করুন"
+            />
+            <p className="text-xs text-muted-foreground mt-1">ভ্যারিয়েবল: {'{{product_name}}'}, {'{{author}}'}, {'{{price}}'}, {'{{link}}'}</p>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium">হ্যাশট্যাগ</Label>
+            <Input
+              value={(smConfig.hashtags || []).join(', ')}
+              onChange={e => updateHashtags(e.target.value)}
+              placeholder="নতুন_বই, বইআলো"
+              className="mt-1"
+            />
+          </div>
+
+          <div className="flex items-center gap-6">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={smConfig.include_price !== false}
+                onCheckedChange={(checked) => smSetting && updateSetting.mutate({
+                  id: smSetting.id,
+                  setting_value: { ...smConfig, include_price: !!checked }
+                })}
+              />
+              মূল্য দেখান
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={smConfig.include_image !== false}
+                onCheckedChange={(checked) => smSetting && updateSetting.mutate({
+                  id: smSetting.id,
+                  setting_value: { ...smConfig, include_image: !!checked }
+                })}
+              />
+              ছবি সংযুক্ত
+            </label>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Email Auto Notification */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between text-base">
+            <span className="flex items-center gap-2"><MessageCircle className="w-5 h-5 text-primary" /> অটো ইমেইল নোটিফিকেশন</span>
+            {emailSetting && (
+              <Switch
+                checked={emailSetting.is_active && emailConfig.enabled}
+                onCheckedChange={(checked) => updateSetting.mutate({
+                  id: emailSetting.id,
+                  is_active: checked,
+                  setting_value: { ...emailConfig, enabled: checked }
+                })}
+              />
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">নতুন পণ্য যোগ করলে সকল সাবস্ক্রাইবারকে ইমেইল পাঠানো হবে।</p>
+
+          <div>
+            <Label className="text-sm font-medium">ইমেইল সাবজেক্ট টেমপ্লেট</Label>
+            <Input
+              value={emailConfig.template_subject || ''}
+              onChange={e => emailSetting && updateSetting.mutate({
+                id: emailSetting.id,
+                setting_value: { ...emailConfig, template_subject: e.target.value }
+              })}
+              placeholder="🆕 নতুন পণ্য: {{product_name}}"
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">ভ্যারিয়েবল: {'{{product_name}}'}</p>
+          </div>
+
+          <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+            <h4 className="text-sm font-medium flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> অটোমেশন ফিচার
+            </h4>
+            <ul className="text-xs text-muted-foreground space-y-1.5">
+              <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> নতুন বই/পণ্য যোগ করলে অটো পোস্ট</li>
+              <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> সব অ্যাক্টিভ প্ল্যাটফর্মে একসাথে পোস্ট</li>
+              <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> পণ্যের ছবি ও লিংক অটো সংযুক্ত</li>
+              <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> সাবস্ক্রাইবারদের ইমেইল নোটিফিকেশন</li>
+              <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> হ্যাশট্যাগ ও টেমপ্লেট কাস্টমাইজেশন</li>
+              <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> অডিট লগে সব কার্যকলাপ রেকর্ড</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 const AdminSocialMedia = () => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -472,6 +666,7 @@ const AdminSocialMedia = () => {
             <TabsTrigger value="history"><Clock className="w-4 h-4 mr-1" /> হিস্ট্রি</TabsTrigger>
             <TabsTrigger value="accounts"><Settings className="w-4 h-4 mr-1" /> অ্যাকাউন্ট</TabsTrigger>
             <TabsTrigger value="analytics"><BarChart3 className="w-4 h-4 mr-1" /> অ্যানালিটিক্স</TabsTrigger>
+            <TabsTrigger value="automation"><Sparkles className="w-4 h-4 mr-1" /> অটোমেশন</TabsTrigger>
           </TabsList>
 
           {/* COMPOSE TAB */}
@@ -1067,6 +1262,11 @@ const AdminSocialMedia = () => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* AUTOMATION TAB */}
+          <TabsContent value="automation">
+            <AutomationSettings />
           </TabsContent>
         </Tabs>
       </div>
