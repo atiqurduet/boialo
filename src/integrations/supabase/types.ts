@@ -161,6 +161,30 @@ export type Database = {
         }
         Relationships: []
       }
+      auto_post_settings: {
+        Row: {
+          id: string
+          is_active: boolean | null
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean | null
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          is_active?: boolean | null
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       automation_ab_results: {
         Row: {
           automation_id: string
