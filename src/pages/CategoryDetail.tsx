@@ -113,9 +113,8 @@ const CategoryDetail = () => {
       const { data } = await supabase
         .from('products')
         .select(`
-          id, name_bn, slug, price, discount_price, image_url, rating,
-          is_preorder, discount_percentage, stock_quantity,
-          writer:writers(name_bn)
+          id, title_bn, slug, price, original_price, images,
+          is_preorder, discount_percent, stock_quantity, author
         `)
         .in('category_id', categoryIds)
         .eq('is_active', true)
@@ -130,13 +129,13 @@ const CategoryDetail = () => {
   const convertedProducts: Product[] = useMemo(() => {
     return products.map((p: any) => ({
       id: p.id,
-      title: p.name_bn,
+      title: p.title_bn,
       slug: p.slug,
-      author: p.writer?.name_bn || 'অজানা লেখক',
-      price: p.discount_price || p.price,
-      originalPrice: p.price,
-      image: p.image_url || '/placeholder.svg',
-      discount: p.discount_percentage || 0,
+      author: p.author || 'অজানা লেখক',
+      price: p.original_price && p.discount_percent ? Math.round(p.price) : p.price,
+      originalPrice: p.original_price || p.price,
+      image: Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : '/placeholder.svg',
+      discount: p.discount_percent || 0,
       isPreorder: p.is_preorder,
     }));
   }, [products]);
