@@ -121,7 +121,7 @@ const AdminSocialMedia = () => {
     queryFn: async () => {
       const sanitized = productSearch.replace(/[%_\\]/g, '\\$&').slice(0, 200);
       // @ts-ignore
-      const base = supabase.from('products').select('id, title_bn, title_en, slug, images, price, discount_price, author').eq('is_active', true).order('created_at', { ascending: false }).limit(30);
+      const base = supabase.from('products').select('id, title_bn, title_en, slug, images, price, original_price, discount_percent, author').eq('is_active', true).order('created_at', { ascending: false }).limit(30);
       const final = sanitized ? base.or(`title_bn.ilike.%${sanitized}%,title_en.ilike.%${sanitized}%,author.ilike.%${sanitized}%`) : base;
       const { data } = await final;
       return (data || []) as any[];
@@ -133,7 +133,7 @@ const AdminSocialMedia = () => {
     queryFn: async () => {
       const sanitized = productSearch.replace(/[%_\\]/g, '\\$&').slice(0, 200);
       // @ts-ignore
-      const base = supabase.from('universal_products').select('id, name_bn, name_en, slug, images, price, discount_price, product_type').eq('is_active', true).order('created_at', { ascending: false }).limit(30);
+      const base = supabase.from('universal_products').select('id, name_bn, name_en, slug, images, price, original_price, discount_percent, product_type').eq('is_active', true).order('created_at', { ascending: false }).limit(30);
       const final = sanitized ? base.or(`name_bn.ilike.%${sanitized}%,name_en.ilike.%${sanitized}%`) : base;
       const { data } = await final;
       return (data || []) as any[];
