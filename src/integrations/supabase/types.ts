@@ -3587,6 +3587,36 @@ export type Database = {
           },
         ]
       }
+      saved_hashtag_groups: {
+        Row: {
+          created_at: string
+          hashtags: string[]
+          id: string
+          is_default: boolean | null
+          name: string
+          updated_at: string
+          use_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          hashtags?: string[]
+          id?: string
+          is_default?: boolean | null
+          name: string
+          updated_at?: string
+          use_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          hashtags?: string[]
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          updated_at?: string
+          use_count?: number | null
+        }
+        Relationships: []
+      }
       shared_wishlists: {
         Row: {
           created_at: string
@@ -3688,6 +3718,122 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      social_automation_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          post_id: string | null
+          product_id: string | null
+          product_name: string | null
+          rule_id: string | null
+          status: string
+          trigger_type: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          post_id?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          rule_id?: string | null
+          status?: string
+          trigger_type: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          post_id?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          rule_id?: string | null
+          status?: string
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_automation_log_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "social_automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_automation_rules: {
+        Row: {
+          conditions: Json | null
+          created_at: string
+          delay_minutes: number | null
+          hashtag_group_id: string | null
+          id: string
+          is_active: boolean | null
+          last_triggered_at: string | null
+          name: string
+          platforms: string[] | null
+          send_email: boolean | null
+          send_sms: boolean | null
+          template_id: string | null
+          trigger_count: number | null
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          conditions?: Json | null
+          created_at?: string
+          delay_minutes?: number | null
+          hashtag_group_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          name: string
+          platforms?: string[] | null
+          send_email?: boolean | null
+          send_sms?: boolean | null
+          template_id?: string | null
+          trigger_count?: number | null
+          trigger_type: string
+          updated_at?: string
+        }
+        Update: {
+          conditions?: Json | null
+          created_at?: string
+          delay_minutes?: number | null
+          hashtag_group_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          name?: string
+          platforms?: string[] | null
+          send_email?: boolean | null
+          send_sms?: boolean | null
+          template_id?: string | null
+          trigger_count?: number | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_automation_rules_hashtag_group_id_fkey"
+            columns: ["hashtag_group_id"]
+            isOneToOne: false
+            referencedRelation: "saved_hashtag_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_automation_rules_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "social_post_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       social_media_accounts: {
         Row: {
@@ -3886,6 +4032,65 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      social_post_templates: {
+        Row: {
+          content_bn: string | null
+          content_en: string | null
+          created_at: string
+          hashtag_group_id: string | null
+          id: string
+          include_image: boolean | null
+          include_link: boolean | null
+          include_price: boolean | null
+          is_active: boolean | null
+          name: string
+          platforms: string[] | null
+          template_type: string
+          updated_at: string
+          use_count: number | null
+        }
+        Insert: {
+          content_bn?: string | null
+          content_en?: string | null
+          created_at?: string
+          hashtag_group_id?: string | null
+          id?: string
+          include_image?: boolean | null
+          include_link?: boolean | null
+          include_price?: boolean | null
+          is_active?: boolean | null
+          name: string
+          platforms?: string[] | null
+          template_type?: string
+          updated_at?: string
+          use_count?: number | null
+        }
+        Update: {
+          content_bn?: string | null
+          content_en?: string | null
+          created_at?: string
+          hashtag_group_id?: string | null
+          id?: string
+          include_image?: boolean | null
+          include_link?: boolean | null
+          include_price?: boolean | null
+          is_active?: boolean | null
+          name?: string
+          platforms?: string[] | null
+          template_type?: string
+          updated_at?: string
+          use_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_post_templates_hashtag_group_id_fkey"
+            columns: ["hashtag_group_id"]
+            isOneToOne: false
+            referencedRelation: "saved_hashtag_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       staff_invitations: {
         Row: {
