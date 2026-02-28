@@ -52,14 +52,99 @@ const statusLabels: Record<string, string> = {
   published: 'পাবলিশড', failed: 'ব্যর্থ', pending: 'পেন্ডিং', success: 'সফল',
 };
 
+const TRIGGER_TYPES = [
+  { id: 'new_product', label: 'নতুন পণ্য যোগ', icon: '📦' },
+  { id: 'product_update', label: 'পণ্য আপডেট', icon: '✏️' },
+  { id: 'new_offer', label: 'নতুন অফার', icon: '🏷️' },
+  { id: 'price_drop', label: 'মূল্য হ্রাস', icon: '📉' },
+  { id: 'back_in_stock', label: 'স্টকে ফিরেছে', icon: '📦' },
+  { id: 'flash_sale', label: 'ফ্ল্যাশ সেল', icon: '⚡' },
+];
+
+const TEMPLATE_TYPES = [
+  { id: 'general', label: 'সাধারণ' },
+  { id: 'new_product', label: 'নতুন পণ্য' },
+  { id: 'offer', label: 'অফার' },
+  { id: 'category', label: 'ক্যাটাগরি' },
+  { id: 'custom', label: 'কাস্টম' },
+];
+
 const AutomationSettings = () => {
   const queryClient = useQueryClient();
-  
-  const { data: settings = [], isLoading } = useQuery({
+  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'hashtags' | 'templates' | 'rules' | 'logs'>('overview');
+
+  // Saved hashtag groups
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupTags, setNewGroupTags] = useState('');
+  const [editingGroup, setEditingGroup] = useState<any>(null);
+
+  // Template form
+  const [showTemplateForm, setShowTemplateForm] = useState(false);
+  const [tplName, setTplName] = useState('');
+  const [tplType, setTplType] = useState('general');
+  const [tplContentBn, setTplContentBn] = useState('');
+  const [tplContentEn, setTplContentEn] = useState('');
+  const [tplPlatforms, setTplPlatforms] = useState<string[]>([]);
+  const [tplHashtagGroup, setTplHashtagGroup] = useState('');
+  const [tplIncludeImage, setTplIncludeImage] = useState(true);
+  const [tplIncludePrice, setTplIncludePrice] = useState(true);
+  const [tplIncludeLink, setTplIncludeLink] = useState(true);
+  const [editingTemplate, setEditingTemplate] = useState<any>(null);
+
+  // Rule form
+  const [showRuleForm, setShowRuleForm] = useState(false);
+  const [ruleName, setRuleName] = useState('');
+  const [ruleTrigger, setRuleTrigger] = useState('new_product');
+  const [rulePlatforms, setRulePlatforms] = useState<string[]>([]);
+  const [ruleTemplate, setRuleTemplate] = useState('');
+  const [ruleHashtagGroup, setRuleHashtagGroup] = useState('');
+  const [ruleDelay, setRuleDelay] = useState(0);
+  const [ruleSendEmail, setRuleSendEmail] = useState(false);
+  const [ruleSendSms, setRuleSendSms] = useState(false);
+  const [editingRule, setEditingRule] = useState<any>(null);
+
+  // Old settings
+  const { data: settings = [], isLoading: settingsLoading } = useQuery({
     queryKey: ['auto-post-settings'],
     queryFn: async () => {
       // @ts-ignore
       const { data } = await supabase.from('auto_post_settings').select('*').order('setting_key');
+      return data || [];
+    }
+  });
+
+  const { data: hashtagGroups = [], isLoading: hashtagsLoading } = useQuery({
+    queryKey: ['saved-hashtag-groups'],
+    queryFn: async () => {
+      // @ts-ignore
+      const { data } = await supabase.from('saved_hashtag_groups').select('*').order('use_count', { ascending: false });
+      return data || [];
+    }
+  });
+
+  const { data: templates = [] } = useQuery({
+    queryKey: ['social-post-templates'],
+    queryFn: async () => {
+      // @ts-ignore
+      const { data } = await supabase.from('social_post_templates').select('*').order('use_count', { ascending: false });
+      return data || [];
+    }
+  });
+
+  const { data: automationRules = [] } = useQuery({
+    queryKey: ['social-automation-rules'],
+    queryFn: async () => {
+      // @ts-ignore
+      const { data } = await supabase.from('social_automation_rules').select('*').order('created_at', { ascending: false });
+      return data || [];
+    }
+  });
+
+  const { data: automationLogs = [] } = useQuery({
+    queryKey: ['social-automation-log'],
+    queryFn: async () => {
+      // @ts-ignore
+      const { data } = await supabase.from('social_automation_log').select('*').order('created_at', { ascending: false }).limit(100);
       return data || [];
     }
   });
@@ -79,12 +164,156 @@ const AutomationSettings = () => {
       const { error } = await supabase.from('auto_post_settings').update(updates).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['auto-post-settings'] });
-      toast.success('সেটিংস আপডেট হয়েছে');
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['auto-post-settings'] }); toast.success('সেটিংস আপডেট হয়েছে'); },
     onError: () => toast.error('আপডেট ব্যর্থ'),
   });
+
+  // Hashtag group mutations
+  const saveHashtagGroup = useMutation({
+    mutationFn: async () => {
+      const tags = (editingGroup ? newGroupTags : newGroupTags).split(/[,\s]+/).filter(Boolean).map(t => t.replace(/^#/, ''));
+      if (editingGroup) {
+        // @ts-ignore
+        const { error } = await supabase.from('saved_hashtag_groups').update({ name: newGroupName, hashtags: tags, updated_at: new Date().toISOString() }).eq('id', editingGroup.id);
+        if (error) throw error;
+      } else {
+        // @ts-ignore
+        const { error } = await supabase.from('saved_hashtag_groups').insert({ name: newGroupName, hashtags: tags });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['saved-hashtag-groups'] }); toast.success('হ্যাশট্যাগ গ্রুপ সেভ হয়েছে'); setNewGroupName(''); setNewGroupTags(''); setEditingGroup(null); },
+    onError: () => toast.error('সেভ করতে ব্যর্থ'),
+  });
+
+  const deleteHashtagGroup = useMutation({
+    mutationFn: async (id: string) => {
+      // @ts-ignore
+      const { error } = await supabase.from('saved_hashtag_groups').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['saved-hashtag-groups'] }); toast.success('মুছে ফেলা হয়েছে'); },
+  });
+
+  const setDefaultGroup = useMutation({
+    mutationFn: async (id: string) => {
+      // @ts-ignore
+      await supabase.from('saved_hashtag_groups').update({ is_default: false }).neq('id', id);
+      // @ts-ignore
+      const { error } = await supabase.from('saved_hashtag_groups').update({ is_default: true }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['saved-hashtag-groups'] }); toast.success('ডিফল্ট সেট হয়েছে'); },
+  });
+
+  // Template mutations
+  const saveTemplate = useMutation({
+    mutationFn: async () => {
+      const data: any = {
+        name: tplName, template_type: tplType, content_bn: tplContentBn || null, content_en: tplContentEn || null,
+        platforms: tplPlatforms, hashtag_group_id: tplHashtagGroup || null,
+        include_image: tplIncludeImage, include_price: tplIncludePrice, include_link: tplIncludeLink,
+        updated_at: new Date().toISOString(),
+      };
+      if (editingTemplate) {
+        // @ts-ignore
+        const { error } = await supabase.from('social_post_templates').update(data).eq('id', editingTemplate.id);
+        if (error) throw error;
+      } else {
+        // @ts-ignore
+        const { error } = await supabase.from('social_post_templates').insert(data);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['social-post-templates'] }); toast.success('টেমপ্লেট সেভ হয়েছে'); resetTemplateForm(); },
+    onError: () => toast.error('সেভ করতে ব্যর্থ'),
+  });
+
+  const deleteTemplate = useMutation({
+    mutationFn: async (id: string) => {
+      // @ts-ignore
+      const { error } = await supabase.from('social_post_templates').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['social-post-templates'] }); toast.success('মুছে ফেলা হয়েছে'); },
+  });
+
+  const toggleTemplate = useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
+      // @ts-ignore
+      const { error } = await supabase.from('social_post_templates').update({ is_active: active }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['social-post-templates'] }),
+  });
+
+  // Rule mutations
+  const saveRule = useMutation({
+    mutationFn: async () => {
+      const data: any = {
+        name: ruleName, trigger_type: ruleTrigger, platforms: rulePlatforms,
+        template_id: ruleTemplate || null, hashtag_group_id: ruleHashtagGroup || null,
+        delay_minutes: ruleDelay, send_email: ruleSendEmail, send_sms: ruleSendSms,
+        updated_at: new Date().toISOString(),
+      };
+      if (editingRule) {
+        // @ts-ignore
+        const { error } = await supabase.from('social_automation_rules').update(data).eq('id', editingRule.id);
+        if (error) throw error;
+      } else {
+        // @ts-ignore
+        const { error } = await supabase.from('social_automation_rules').insert(data);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['social-automation-rules'] }); toast.success('রুল সেভ হয়েছে'); resetRuleForm(); },
+    onError: () => toast.error('সেভ করতে ব্যর্থ'),
+  });
+
+  const deleteRule = useMutation({
+    mutationFn: async (id: string) => {
+      // @ts-ignore
+      const { error } = await supabase.from('social_automation_rules').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['social-automation-rules'] }); toast.success('মুছে ফেলা হয়েছে'); },
+  });
+
+  const toggleRule = useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
+      // @ts-ignore
+      const { error } = await supabase.from('social_automation_rules').update({ is_active: active }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['social-automation-rules'] }),
+  });
+
+  const resetTemplateForm = () => {
+    setTplName(''); setTplType('general'); setTplContentBn(''); setTplContentEn('');
+    setTplPlatforms([]); setTplHashtagGroup(''); setTplIncludeImage(true); setTplIncludePrice(true);
+    setTplIncludeLink(true); setEditingTemplate(null); setShowTemplateForm(false);
+  };
+
+  const resetRuleForm = () => {
+    setRuleName(''); setRuleTrigger('new_product'); setRulePlatforms([]);
+    setRuleTemplate(''); setRuleHashtagGroup(''); setRuleDelay(0);
+    setRuleSendEmail(false); setRuleSendSms(false); setEditingRule(null); setShowRuleForm(false);
+  };
+
+  const editTemplateAction = (t: any) => {
+    setEditingTemplate(t); setTplName(t.name); setTplType(t.template_type);
+    setTplContentBn(t.content_bn || ''); setTplContentEn(t.content_en || '');
+    setTplPlatforms(t.platforms || []); setTplHashtagGroup(t.hashtag_group_id || '');
+    setTplIncludeImage(t.include_image !== false); setTplIncludePrice(t.include_price !== false);
+    setTplIncludeLink(t.include_link !== false); setShowTemplateForm(true);
+  };
+
+  const editRuleAction = (r: any) => {
+    setEditingRule(r); setRuleName(r.name); setRuleTrigger(r.trigger_type);
+    setRulePlatforms(r.platforms || []); setRuleTemplate(r.template_id || '');
+    setRuleHashtagGroup(r.hashtag_group_id || ''); setRuleDelay(r.delay_minutes || 0);
+    setRuleSendEmail(r.send_email || false); setRuleSendSms(r.send_sms || false); setShowRuleForm(true);
+  };
 
   const togglePlatform = (platform: string) => {
     if (!smSetting) return;
@@ -93,155 +322,473 @@ const AutomationSettings = () => {
     updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, platforms: updated } });
   };
 
-  const updateTemplate = (template: string) => {
-    if (!smSetting) return;
-    updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, template_bn: template } });
-  };
-
-  const updateHashtags = (hashtagStr: string) => {
-    if (!smSetting) return;
-    const tags = hashtagStr.split(/[,\s]+/).filter(Boolean).map(t => t.replace(/^#/, ''));
-    updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, hashtags: tags } });
-  };
-
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">লোড হচ্ছে...</div>;
+  if (settingsLoading) return <div className="p-8 text-center text-muted-foreground">লোড হচ্ছে...</div>;
 
   return (
-    <div className="grid md:grid-cols-2 gap-4">
-      {/* Social Media Auto Post */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between text-base">
-            <span className="flex items-center gap-2"><Send className="w-5 h-5 text-primary" /> অটো সোশ্যাল মিডিয়া পোস্ট</span>
-            {smSetting && (
-              <Switch
-                checked={smSetting.is_active && smConfig.enabled}
-                onCheckedChange={(checked) => updateSetting.mutate({
-                  id: smSetting.id,
-                  is_active: checked,
-                  setting_value: { ...smConfig, enabled: checked }
-                })}
-              />
+    <div className="space-y-4">
+      {/* Sub-tabs */}
+      <div className="flex gap-1 bg-muted p-1 rounded-lg flex-wrap">
+        {[
+          { key: 'overview' as const, label: '⚙️ ওভারভিউ' },
+          { key: 'hashtags' as const, label: `#️⃣ হ্যাশট্যাগ (${hashtagGroups.length})` },
+          { key: 'templates' as const, label: `📝 টেমপ্লেট (${templates.length})` },
+          { key: 'rules' as const, label: `🤖 রুলস (${automationRules.length})` },
+          { key: 'logs' as const, label: `📋 লগ (${automationLogs.length})` },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveSubTab(tab.key)}
+            className={`text-xs font-medium py-2 px-3 rounded-md transition-all ${activeSubTab === tab.key ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* OVERVIEW */}
+      {activeSubTab === 'overview' && (
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Social Media Auto Post */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-base">
+                <span className="flex items-center gap-2"><Send className="w-5 h-5 text-primary" /> অটো সোশ্যাল মিডিয়া পোস্ট</span>
+                {smSetting && (
+                  <Switch checked={smSetting.is_active && smConfig.enabled} onCheckedChange={(checked) => updateSetting.mutate({ id: smSetting.id, is_active: checked, setting_value: { ...smConfig, enabled: checked } })} />
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">নতুন পণ্য যোগ করলে স্বয়ংক্রিয়ভাবে সোশ্যাল মিডিয়ায় পোস্ট হবে।</p>
+              <div>
+                <Label className="text-sm font-medium mb-2 block">প্ল্যাটফর্ম নির্বাচন</Label>
+                <div className="flex flex-wrap gap-2">
+                  {PLATFORMS.map(p => (
+                    <Badge key={p.id} variant={(smConfig.platforms || []).includes(p.id) ? 'default' : 'outline'} className="cursor-pointer gap-1.5 py-1.5 px-3" onClick={() => togglePlatform(p.id)}>
+                      <p.icon className="w-3.5 h-3.5" /> {p.name}
+                      {(smConfig.platforms || []).includes(p.id) && <Check className="w-3 h-3" />}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">পোস্ট টেমপ্লেট (বাংলা)</Label>
+                <Textarea value={smConfig.template_bn || ''} onChange={e => smSetting && updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, template_bn: e.target.value } })} rows={4} className="mt-1 text-sm font-mono" placeholder="{{product_name}}, {{author}}, {{price}}, {{link}}" />
+                <p className="text-xs text-muted-foreground mt-1">ভ্যারিয়েবল: {'{{product_name}}'}, {'{{author}}'}, {'{{price}}'}, {'{{link}}'}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">হ্যাশট্যাগ গ্রুপ</Label>
+                <Select value={smConfig.hashtag_group_id || ''} onValueChange={val => smSetting && updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, hashtag_group_id: val, hashtags: hashtagGroups.find((g: any) => g.id === val)?.hashtags || [] } })}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="গ্রুপ সিলেক্ট করুন" /></SelectTrigger>
+                  <SelectContent>
+                    {hashtagGroups.map((g: any) => (
+                      <SelectItem key={g.id} value={g.id}>{g.name} ({g.hashtags?.length || 0} ট্যাগ)</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-6">
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox checked={smConfig.include_price !== false} onCheckedChange={(checked) => smSetting && updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, include_price: !!checked } })} />
+                  মূল্য দেখান
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox checked={smConfig.include_image !== false} onCheckedChange={(checked) => smSetting && updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, include_image: !!checked } })} />
+                  ছবি সংযুক্ত
+                </label>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Email Auto Notification */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-base">
+                <span className="flex items-center gap-2"><MessageCircle className="w-5 h-5 text-primary" /> অটো ইমেইল নোটিফিকেশন</span>
+                {emailSetting && (
+                  <Switch checked={emailSetting.is_active && emailConfig.enabled} onCheckedChange={(checked) => updateSetting.mutate({ id: emailSetting.id, is_active: checked, setting_value: { ...emailConfig, enabled: checked } })} />
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">নতুন পণ্য যোগ করলে সকল সাবস্ক্রাইবারকে ইমেইল পাঠানো হবে।</p>
+              <div>
+                <Label className="text-sm font-medium">ইমেইল সাবজেক্ট টেমপ্লেট</Label>
+                <Input value={emailConfig.template_subject || ''} onChange={e => emailSetting && updateSetting.mutate({ id: emailSetting.id, setting_value: { ...emailConfig, template_subject: e.target.value } })} placeholder="🆕 নতুন পণ্য: {{product_name}}" className="mt-1" />
+              </div>
+              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <h4 className="text-sm font-medium flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> অটোমেশন ফিচার</h4>
+                <ul className="text-xs text-muted-foreground space-y-1.5">
+                  <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> নতুন বই/পণ্য যোগে অটো পোস্ট</li>
+                  <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> সেভড হ্যাশট্যাগ গ্রুপ সিস্টেম</li>
+                  <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> রিইউজেবল কন্টেন্ট টেমপ্লেট</li>
+                  <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> মাল্টি-ট্রিগার অটোমেশন রুলস</li>
+                  <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> ইমেইল + SMS নোটিফিকেশন</li>
+                  <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> ডিলে/শিডিউল সাপোর্ট</li>
+                  <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> এক্সিকিউশন লগ ও ট্র্যাকিং</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Stats */}
+          <Card className="md:col-span-2">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {[
+                  { label: 'হ্যাশট্যাগ গ্রুপ', value: hashtagGroups.length, icon: Hash },
+                  { label: 'টেমপ্লেট', value: templates.length, icon: Copy },
+                  { label: 'অটোমেশন রুলস', value: automationRules.length, icon: Settings },
+                  { label: 'অ্যাক্টিভ রুলস', value: automationRules.filter((r: any) => r.is_active).length, icon: Check },
+                  { label: 'মোট এক্সিকিউশন', value: automationLogs.length, icon: BarChart3 },
+                ].map((s, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <s.icon className="w-5 h-5 text-primary shrink-0" />
+                    <div><p className="text-lg font-bold">{s.value}</p><p className="text-[10px] text-muted-foreground">{s.label}</p></div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* HASHTAGS */}
+      {activeSubTab === 'hashtags' && (
+        <div className="grid md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader><CardTitle className="text-base">#️⃣ {editingGroup ? 'গ্রুপ এডিট' : 'নতুন হ্যাশট্যাগ গ্রুপ'}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <Label className="text-sm">গ্রুপের নাম</Label>
+                <Input value={newGroupName} onChange={e => setNewGroupName(e.target.value)} placeholder="যেমন: বই প্রচার" className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-sm">হ্যাশট্যাগসমূহ (কমা দিয়ে আলাদা)</Label>
+                <Textarea value={newGroupTags} onChange={e => setNewGroupTags(e.target.value)} placeholder="নতুন_বই, বইআলো, পড়ুন, বাংলা_বই" rows={3} className="mt-1" />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={() => saveHashtagGroup.mutate()} disabled={!newGroupName || !newGroupTags || saveHashtagGroup.isPending} className="flex-1">
+                  {editingGroup ? 'আপডেট করুন' : 'সেভ করুন'}
+                </Button>
+                {editingGroup && (
+                  <Button variant="outline" onClick={() => { setEditingGroup(null); setNewGroupName(''); setNewGroupTags(''); }}>বাতিল</Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-base">সেভড হ্যাশট্যাগ গ্রুপ ({hashtagGroups.length})</CardTitle></CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[350px]">
+                <div className="space-y-2">
+                  {hashtagGroups.map((g: any) => (
+                    <div key={g.id} className={`p-3 border rounded-lg space-y-2 ${g.is_default ? 'border-primary/40 bg-primary/5' : ''}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">{g.name}</span>
+                          {g.is_default && <Badge variant="default" className="text-[9px]">ডিফল্ট</Badge>}
+                        </div>
+                        <div className="flex gap-0.5">
+                          {!g.is_default && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="ডিফল্ট করুন" onClick={() => setDefaultGroup.mutate(g.id)}>
+                              <Check className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingGroup(g); setNewGroupName(g.name); setNewGroupTags((g.hashtags || []).join(', ')); }}>
+                            <Edit className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { if (confirm('মুছে ফেলতে চান?')) deleteHashtagGroup.mutate(g.id); }}>
+                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {(g.hashtags || []).map((tag: string, i: number) => (
+                          <Badge key={i} variant="outline" className="text-[10px]">#{tag}</Badge>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">ব্যবহার: {g.use_count || 0} বার</p>
+                    </div>
+                  ))}
+                  {hashtagGroups.length === 0 && <p className="text-center text-muted-foreground py-6 text-sm">কোনো গ্রুপ নেই</p>}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* TEMPLATES */}
+      {activeSubTab === 'templates' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold">📝 কন্টেন্ট টেমপ্লেট</h3>
+            <Button size="sm" onClick={() => { resetTemplateForm(); setShowTemplateForm(true); }}><Plus className="w-4 h-4 mr-1" /> নতুন টেমপ্লেট</Button>
+          </div>
+
+          {showTemplateForm && (
+            <Card className="border-primary/30">
+              <CardHeader><CardTitle className="text-base">{editingTemplate ? '✏️ টেমপ্লেট এডিট' : '➕ নতুন টেমপ্লেট'}</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-sm">নাম</Label>
+                    <Input value={tplName} onChange={e => setTplName(e.target.value)} placeholder="টেমপ্লেটের নাম" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-sm">টাইপ</Label>
+                    <Select value={tplType} onValueChange={setTplType}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {TEMPLATE_TYPES.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm">কন্টেন্ট (বাংলা)</Label>
+                  <Textarea value={tplContentBn} onChange={e => setTplContentBn(e.target.value)} rows={4} className="mt-1 font-mono text-sm" placeholder="{{product_name}} - ৳{{price}}" />
+                </div>
+                <div>
+                  <Label className="text-sm">কন্টেন্ট (English)</Label>
+                  <Textarea value={tplContentEn} onChange={e => setTplContentEn(e.target.value)} rows={3} className="mt-1 font-mono text-sm" placeholder="{{product_name}} - ৳{{price}}" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-sm">হ্যাশট্যাগ গ্রুপ</Label>
+                    <Select value={tplHashtagGroup} onValueChange={setTplHashtagGroup}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">কোনোটি নয়</SelectItem>
+                        {hashtagGroups.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-sm">প্ল্যাটফর্ম</Label>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {PLATFORMS.map(p => (
+                        <Badge key={p.id} variant={tplPlatforms.includes(p.id) ? 'default' : 'outline'} className="cursor-pointer text-[10px] gap-1" onClick={() => setTplPlatforms(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])}>
+                          <p.icon className="w-3 h-3" /> {p.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6">
+                  <label className="flex items-center gap-2 text-sm"><Checkbox checked={tplIncludeImage} onCheckedChange={c => setTplIncludeImage(!!c)} /> ছবি</label>
+                  <label className="flex items-center gap-2 text-sm"><Checkbox checked={tplIncludePrice} onCheckedChange={c => setTplIncludePrice(!!c)} /> মূল্য</label>
+                  <label className="flex items-center gap-2 text-sm"><Checkbox checked={tplIncludeLink} onCheckedChange={c => setTplIncludeLink(!!c)} /> লিংক</label>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={() => saveTemplate.mutate()} disabled={!tplName || saveTemplate.isPending}>{editingTemplate ? 'আপডেট' : 'সেভ'}</Button>
+                  <Button variant="outline" onClick={resetTemplateForm}>বাতিল</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {templates.map((t: any) => (
+              <Card key={t.id} className={!t.is_active ? 'opacity-50' : ''}>
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{t.name}</span>
+                      <Badge variant="outline" className="text-[9px]">{TEMPLATE_TYPES.find(x => x.id === t.template_type)?.label || t.template_type}</Badge>
+                    </div>
+                    <Switch checked={t.is_active} onCheckedChange={checked => toggleTemplate.mutate({ id: t.id, active: checked })} />
+                  </div>
+                  {t.content_bn && <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-line">{t.content_bn}</p>}
+                  <div className="flex flex-wrap gap-1">
+                    {(t.platforms || []).map((pid: string) => {
+                      const plat = PLATFORMS.find(x => x.id === pid);
+                      return plat ? <plat.icon key={pid} className="w-3.5 h-3.5" style={{ color: plat.color }} /> : null;
+                    })}
+                  </div>
+                  <div className="flex gap-1 pt-1">
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => editTemplateAction(t)}><Edit className="w-3 h-3 mr-1" /> এডিট</Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => { if (confirm('মুছতে চান?')) deleteTemplate.mutate(t.id); }}><Trash2 className="w-3 h-3 mr-1" /> মুছুন</Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">ব্যবহার: {t.use_count || 0} বার</p>
+                </CardContent>
+              </Card>
+            ))}
+            {templates.length === 0 && !showTemplateForm && (
+              <Card className="md:col-span-3"><CardContent className="p-8 text-center text-muted-foreground"><p>কোনো টেমপ্লেট নেই। উপরের বাটনে ক্লিক করে তৈরি করুন।</p></CardContent></Card>
             )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">নতুন পণ্য যোগ করলে স্বয়ংক্রিয়ভাবে সোশ্যাল মিডিয়ায় পোস্ট হবে।</p>
-          
-          <div>
-            <Label className="text-sm font-medium mb-2 block">প্ল্যাটফর্ম নির্বাচন</Label>
-            <div className="flex flex-wrap gap-2">
-              {PLATFORMS.map(p => (
-                <Badge
-                  key={p.id}
-                  variant={(smConfig.platforms || []).includes(p.id) ? 'default' : 'outline'}
-                  className="cursor-pointer gap-1.5 py-1.5 px-3"
-                  onClick={() => togglePlatform(p.id)}
-                >
-                  <p.icon className="w-3.5 h-3.5" />
-                  {p.name}
-                  {(smConfig.platforms || []).includes(p.id) && <Check className="w-3 h-3" />}
-                </Badge>
-              ))}
-            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RULES */}
+      {activeSubTab === 'rules' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold">🤖 অটোমেশন রুলস</h3>
+            <Button size="sm" onClick={() => { resetRuleForm(); setShowRuleForm(true); }}><Plus className="w-4 h-4 mr-1" /> নতুন রুল</Button>
           </div>
 
-          <div>
-            <Label className="text-sm font-medium">পোস্ট টেমপ্লেট (বাংলা)</Label>
-            <Textarea
-              value={smConfig.template_bn || ''}
-              onChange={e => updateTemplate(e.target.value)}
-              rows={6}
-              className="mt-1 text-sm font-mono"
-              placeholder="{{product_name}}, {{author}}, {{price}}, {{link}} ব্যবহার করুন"
-            />
-            <p className="text-xs text-muted-foreground mt-1">ভ্যারিয়েবল: {'{{product_name}}'}, {'{{author}}'}, {'{{price}}'}, {'{{link}}'}</p>
-          </div>
+          {showRuleForm && (
+            <Card className="border-primary/30">
+              <CardHeader><CardTitle className="text-base">{editingRule ? '✏️ রুল এডিট' : '➕ নতুন অটোমেশন রুল'}</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-sm">রুলের নাম</Label>
+                    <Input value={ruleName} onChange={e => setRuleName(e.target.value)} placeholder="যেমন: নতুন বই অটো পোস্ট" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-sm">ট্রিগার টাইপ</Label>
+                    <Select value={ruleTrigger} onValueChange={setRuleTrigger}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {TRIGGER_TYPES.map(t => <SelectItem key={t.id} value={t.id}>{t.icon} {t.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-sm">কন্টেন্ট টেমপ্লেট</Label>
+                    <Select value={ruleTemplate} onValueChange={setRuleTemplate}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="টেমপ্লেট সিলেক্ট" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">কোনোটি নয়</SelectItem>
+                        {templates.filter((t: any) => t.is_active).map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-sm">হ্যাশট্যাগ গ্রুপ</Label>
+                    <Select value={ruleHashtagGroup} onValueChange={setRuleHashtagGroup}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="গ্রুপ সিলেক্ট" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">কোনোটি নয়</SelectItem>
+                        {hashtagGroups.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm">প্ল্যাটফর্ম</Label>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {PLATFORMS.map(p => (
+                      <Badge key={p.id} variant={rulePlatforms.includes(p.id) ? 'default' : 'outline'} className="cursor-pointer text-[10px] gap-1" onClick={() => setRulePlatforms(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])}>
+                        <p.icon className="w-3 h-3" /> {p.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-sm">ডিলে (মিনিট)</Label>
+                    <Input type="number" value={ruleDelay} onChange={e => setRuleDelay(Number(e.target.value))} min={0} className="mt-1" />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm pt-6">
+                    <Checkbox checked={ruleSendEmail} onCheckedChange={c => setRuleSendEmail(!!c)} /> ইমেইল পাঠান
+                  </label>
+                  <label className="flex items-center gap-2 text-sm pt-6">
+                    <Checkbox checked={ruleSendSms} onCheckedChange={c => setRuleSendSms(!!c)} /> SMS পাঠান
+                  </label>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={() => saveRule.mutate()} disabled={!ruleName || saveRule.isPending}>{editingRule ? 'আপডেট' : 'সেভ'}</Button>
+                  <Button variant="outline" onClick={resetRuleForm}>বাতিল</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          <div>
-            <Label className="text-sm font-medium">হ্যাশট্যাগ</Label>
-            <Input
-              value={(smConfig.hashtags || []).join(', ')}
-              onChange={e => updateHashtags(e.target.value)}
-              placeholder="নতুন_বই, বইআলো"
-              className="mt-1"
-            />
-          </div>
-
-          <div className="flex items-center gap-6">
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={smConfig.include_price !== false}
-                onCheckedChange={(checked) => smSetting && updateSetting.mutate({
-                  id: smSetting.id,
-                  setting_value: { ...smConfig, include_price: !!checked }
-                })}
-              />
-              মূল্য দেখান
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={smConfig.include_image !== false}
-                onCheckedChange={(checked) => smSetting && updateSetting.mutate({
-                  id: smSetting.id,
-                  setting_value: { ...smConfig, include_image: !!checked }
-                })}
-              />
-              ছবি সংযুক্ত
-            </label>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Email Auto Notification */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between text-base">
-            <span className="flex items-center gap-2"><MessageCircle className="w-5 h-5 text-primary" /> অটো ইমেইল নোটিফিকেশন</span>
-            {emailSetting && (
-              <Switch
-                checked={emailSetting.is_active && emailConfig.enabled}
-                onCheckedChange={(checked) => updateSetting.mutate({
-                  id: emailSetting.id,
-                  is_active: checked,
-                  setting_value: { ...emailConfig, enabled: checked }
-                })}
-              />
+          <div className="space-y-2">
+            {automationRules.map((r: any) => {
+              const trigger = TRIGGER_TYPES.find(t => t.id === r.trigger_type);
+              const tpl = templates.find((t: any) => t.id === r.template_id);
+              const hGroup = hashtagGroups.find((g: any) => g.id === r.hashtag_group_id);
+              return (
+                <Card key={r.id} className={!r.is_active ? 'opacity-50' : ''}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{trigger?.icon || '🔔'}</span>
+                        <div>
+                          <p className="font-medium text-sm">{r.name}</p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <Badge variant="outline" className="text-[9px]">{trigger?.label || r.trigger_type}</Badge>
+                            {tpl && <Badge variant="secondary" className="text-[9px]">📝 {tpl.name}</Badge>}
+                            {hGroup && <Badge variant="secondary" className="text-[9px]">#️⃣ {hGroup.name}</Badge>}
+                            {r.delay_minutes > 0 && <Badge variant="secondary" className="text-[9px]">⏱️ {r.delay_minutes} মিনিট</Badge>}
+                            {r.send_email && <Badge variant="secondary" className="text-[9px]">📧 ইমেইল</Badge>}
+                            {r.send_sms && <Badge variant="secondary" className="text-[9px]">📱 SMS</Badge>}
+                          </div>
+                          <div className="flex gap-1 mt-1">
+                            {(r.platforms || []).map((pid: string) => {
+                              const plat = PLATFORMS.find(x => x.id === pid);
+                              return plat ? <plat.icon key={pid} className="w-3 h-3" style={{ color: plat.color }} /> : null;
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground">{r.trigger_count || 0} বার চালু</span>
+                        <Switch checked={r.is_active} onCheckedChange={checked => toggleRule.mutate({ id: r.id, active: checked })} />
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => editRuleAction(r)}><Edit className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { if (confirm('মুছতে চান?')) deleteRule.mutate(r.id); }}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {automationRules.length === 0 && !showRuleForm && (
+              <Card><CardContent className="p-8 text-center text-muted-foreground"><p>কোনো অটোমেশন রুল নেই। উপরের বাটনে ক্লিক করে তৈরি করুন।</p></CardContent></Card>
             )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">নতুন পণ্য যোগ করলে সকল সাবস্ক্রাইবারকে ইমেইল পাঠানো হবে।</p>
-
-          <div>
-            <Label className="text-sm font-medium">ইমেইল সাবজেক্ট টেমপ্লেট</Label>
-            <Input
-              value={emailConfig.template_subject || ''}
-              onChange={e => emailSetting && updateSetting.mutate({
-                id: emailSetting.id,
-                setting_value: { ...emailConfig, template_subject: e.target.value }
-              })}
-              placeholder="🆕 নতুন পণ্য: {{product_name}}"
-              className="mt-1"
-            />
-            <p className="text-xs text-muted-foreground mt-1">ভ্যারিয়েবল: {'{{product_name}}'}</p>
           </div>
+        </div>
+      )}
 
-          <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-            <h4 className="text-sm font-medium flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" /> অটোমেশন ফিচার
-            </h4>
-            <ul className="text-xs text-muted-foreground space-y-1.5">
-              <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> নতুন বই/পণ্য যোগ করলে অটো পোস্ট</li>
-              <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> সব অ্যাক্টিভ প্ল্যাটফর্মে একসাথে পোস্ট</li>
-              <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> পণ্যের ছবি ও লিংক অটো সংযুক্ত</li>
-              <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> সাবস্ক্রাইবারদের ইমেইল নোটিফিকেশন</li>
-              <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> হ্যাশট্যাগ ও টেমপ্লেট কাস্টমাইজেশন</li>
-              <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> অডিট লগে সব কার্যকলাপ রেকর্ড</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
+      {/* LOGS */}
+      {activeSubTab === 'logs' && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">📋 অটোমেশন এক্সিকিউশন লগ ({automationLogs.length})</CardTitle></CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>তারিখ</TableHead>
+                  <TableHead>ট্রিগার</TableHead>
+                  <TableHead>পণ্য</TableHead>
+                  <TableHead>স্ট্যাটাস</TableHead>
+                  <TableHead>বিবরণ</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {automationLogs.map((log: any) => {
+                  const trigger = TRIGGER_TYPES.find(t => t.id === log.trigger_type);
+                  return (
+                    <TableRow key={log.id}>
+                      <TableCell className="text-xs whitespace-nowrap">{format(new Date(log.created_at), 'dd/MM/yy HH:mm')}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-[9px]">{trigger?.icon} {trigger?.label || log.trigger_type}</Badge></TableCell>
+                      <TableCell className="text-sm max-w-[200px] truncate">{log.product_name || '-'}</TableCell>
+                      <TableCell>
+                        <Badge className={log.status === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : log.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : log.status === 'skipped' ? 'bg-yellow-100 text-yellow-800' : 'bg-muted text-muted-foreground'} variant="outline">
+                          {log.status === 'success' ? '✓ সফল' : log.status === 'failed' ? '✗ ব্যর্থ' : log.status === 'skipped' ? '⏭ স্কিপ' : '⏳ পেন্ডিং'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">{log.error_message || '-'}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                {automationLogs.length === 0 && (
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">কোনো লগ নেই</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
@@ -355,6 +902,26 @@ const AdminSocialMedia = () => {
       const final = sanitized ? base.or(`name_bn.ilike.%${sanitized}%,name_en.ilike.%${sanitized}%`) : base;
       const { data } = await final;
       return (data || []) as any[];
+    }
+  });
+
+  // Saved hashtag groups for composer
+  const { data: composerHashtagGroups = [] } = useQuery({
+    queryKey: ['saved-hashtag-groups'],
+    queryFn: async () => {
+      // @ts-ignore
+      const { data } = await supabase.from('saved_hashtag_groups').select('*').order('use_count', { ascending: false });
+      return data || [];
+    }
+  });
+
+  // Saved templates for quick use in composer
+  const { data: composerTemplates = [] } = useQuery({
+    queryKey: ['social-post-templates'],
+    queryFn: async () => {
+      // @ts-ignore
+      const { data } = await supabase.from('social_post_templates').select('*').eq('is_active', true).order('use_count', { ascending: false });
+      return data || [];
     }
   });
 
@@ -739,6 +1306,36 @@ const AdminSocialMedia = () => {
 
                     <Separator />
 
+                    {/* Quick Template Selector */}
+                    {composerTemplates.length > 0 && (
+                      <div className="space-y-1.5">
+                        <Label className="flex items-center gap-1 text-sm font-semibold"><Sparkles className="w-3.5 h-3.5 text-primary" /> দ্রুত টেমপ্লেট</Label>
+                        <div className="flex flex-wrap gap-1">
+                          {composerTemplates.slice(0, 6).map((t: any) => (
+                            <Badge
+                              key={t.id}
+                              variant="outline"
+                              className="cursor-pointer text-[10px] hover:bg-primary/10 gap-0.5"
+                              onClick={() => {
+                                if (t.content_bn) setPostContentBn(t.content_bn);
+                                if (t.content_en) setPostContent(t.content_en);
+                                if (t.platforms?.length) setSelectedPlatforms(t.platforms);
+                                if (t.hashtag_group_id) {
+                                  const group = composerHashtagGroups.find((g: any) => g.id === t.hashtag_group_id);
+                                  if (group) setPostHashtags((group.hashtags || []).map((h: string) => `#${h}`).join(', '));
+                                }
+                                // @ts-ignore
+                                supabase.from('social_post_templates').update({ use_count: (t.use_count || 0) + 1 }).eq('id', t.id).then(() => {});
+                                toast.success(`টেমপ্লেট "${t.name}" প্রয়োগ হয়েছে`);
+                              }}
+                            >
+                              <Copy className="w-2.5 h-2.5" /> {t.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Content Fields */}
                     <div className="space-y-1.5">
                       <Label className="font-semibold text-sm">পোস্ট কন্টেন্ট (English)</Label>
@@ -821,6 +1418,27 @@ const AdminSocialMedia = () => {
                       <div className="space-y-1.5">
                         <Label className="flex items-center gap-1 text-sm font-semibold"><Hash className="w-3.5 h-3.5 text-primary" /> হ্যাশট্যাগ</Label>
                         <Input value={postHashtags} onChange={e => setPostHashtags(e.target.value)} placeholder="#books, #reading, #বই" />
+                        {composerHashtagGroups.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {composerHashtagGroups.map((g: any) => (
+                              <Badge
+                                key={g.id}
+                                variant="outline"
+                                className="cursor-pointer text-[9px] hover:bg-primary/10 gap-0.5"
+                                onClick={() => {
+                                  const existing = postHashtags ? postHashtags.split(',').map(t => t.trim()).filter(Boolean) : [];
+                                  const newTags = (g.hashtags || []).filter((t: string) => !existing.some(e => e.replace('#', '') === t));
+                                  const merged = [...existing, ...newTags.map((t: string) => `#${t}`)].join(', ');
+                                  setPostHashtags(merged);
+                                  // @ts-ignore
+                                  supabase.from('saved_hashtag_groups').update({ use_count: (g.use_count || 0) + 1 }).eq('id', g.id).then(() => {});
+                                }}
+                              >
+                                <Plus className="w-2.5 h-2.5" /> {g.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-1.5">
                         <Label className="flex items-center gap-1 text-sm font-semibold"><Link2 className="w-3.5 h-3.5 text-primary" /> লিংক</Label>
