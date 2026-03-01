@@ -558,10 +558,10 @@ const AutomationSettings = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-sm">হ্যাশট্যাগ গ্রুপ</Label>
-                    <Select value={tplHashtagGroup} onValueChange={setTplHashtagGroup}>
+                    <Select value={tplHashtagGroup || 'none'} onValueChange={v => setTplHashtagGroup(v === 'none' ? '' : v)}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">কোনোটি নয়</SelectItem>
+                        <SelectItem value="none">কোনোটি নয়</SelectItem>
                         {hashtagGroups.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -653,20 +653,20 @@ const AutomationSettings = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-sm">কন্টেন্ট টেমপ্লেট</Label>
-                    <Select value={ruleTemplate} onValueChange={setRuleTemplate}>
+                    <Select value={ruleTemplate || 'none'} onValueChange={v => setRuleTemplate(v === 'none' ? '' : v)}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder="টেমপ্লেট সিলেক্ট" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">কোনোটি নয়</SelectItem>
+                        <SelectItem value="none">কোনোটি নয়</SelectItem>
                         {templates.filter((t: any) => t.is_active).map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
                     <Label className="text-sm">হ্যাশট্যাগ গ্রুপ</Label>
-                    <Select value={ruleHashtagGroup} onValueChange={setRuleHashtagGroup}>
+                    <Select value={ruleHashtagGroup || 'none'} onValueChange={v => setRuleHashtagGroup(v === 'none' ? '' : v)}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder="গ্রুপ সিলেক্ট" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">কোনোটি নয়</SelectItem>
+                        <SelectItem value="none">কোনোটি নয়</SelectItem>
                         {hashtagGroups.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
