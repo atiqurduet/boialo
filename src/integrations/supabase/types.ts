@@ -3723,37 +3723,46 @@ export type Database = {
         Row: {
           created_at: string
           error_message: string | null
+          execution_time_ms: number | null
           id: string
           metadata: Json | null
+          platforms_posted: string[] | null
           post_id: string | null
           product_id: string | null
           product_name: string | null
           rule_id: string | null
           status: string
+          template_id: string | null
           trigger_type: string
         }
         Insert: {
           created_at?: string
           error_message?: string | null
+          execution_time_ms?: number | null
           id?: string
           metadata?: Json | null
+          platforms_posted?: string[] | null
           post_id?: string | null
           product_id?: string | null
           product_name?: string | null
           rule_id?: string | null
           status?: string
+          template_id?: string | null
           trigger_type: string
         }
         Update: {
           created_at?: string
           error_message?: string | null
+          execution_time_ms?: number | null
           id?: string
           metadata?: Json | null
+          platforms_posted?: string[] | null
           post_id?: string | null
           product_id?: string | null
           product_name?: string | null
           rule_id?: string | null
           status?: string
+          template_id?: string | null
           trigger_type?: string
         }
         Relationships: [
@@ -3771,14 +3780,22 @@ export type Database = {
           conditions: Json | null
           created_at: string
           delay_minutes: number | null
+          fail_count: number | null
           hashtag_group_id: string | null
           id: string
           is_active: boolean | null
+          last_executed_at: string | null
           last_triggered_at: string | null
+          max_executions_per_day: number | null
           name: string
           platforms: string[] | null
+          priority: number | null
+          schedule_days: string[] | null
+          schedule_time_end: string | null
+          schedule_time_start: string | null
           send_email: boolean | null
           send_sms: boolean | null
+          success_count: number | null
           template_id: string | null
           trigger_count: number | null
           trigger_type: string
@@ -3788,14 +3805,22 @@ export type Database = {
           conditions?: Json | null
           created_at?: string
           delay_minutes?: number | null
+          fail_count?: number | null
           hashtag_group_id?: string | null
           id?: string
           is_active?: boolean | null
+          last_executed_at?: string | null
           last_triggered_at?: string | null
+          max_executions_per_day?: number | null
           name: string
           platforms?: string[] | null
+          priority?: number | null
+          schedule_days?: string[] | null
+          schedule_time_end?: string | null
+          schedule_time_start?: string | null
           send_email?: boolean | null
           send_sms?: boolean | null
+          success_count?: number | null
           template_id?: string | null
           trigger_count?: number | null
           trigger_type: string
@@ -3805,14 +3830,22 @@ export type Database = {
           conditions?: Json | null
           created_at?: string
           delay_minutes?: number | null
+          fail_count?: number | null
           hashtag_group_id?: string | null
           id?: string
           is_active?: boolean | null
+          last_executed_at?: string | null
           last_triggered_at?: string | null
+          max_executions_per_day?: number | null
           name?: string
           platforms?: string[] | null
+          priority?: number | null
+          schedule_days?: string[] | null
+          schedule_time_end?: string | null
+          schedule_time_start?: string | null
           send_email?: boolean | null
           send_sms?: boolean | null
+          success_count?: number | null
           template_id?: string | null
           trigger_count?: number | null
           trigger_type?: string
@@ -4035,52 +4068,64 @@ export type Database = {
       }
       social_post_templates: {
         Row: {
+          category: string | null
           content_bn: string | null
           content_en: string | null
           created_at: string
+          description: string | null
           hashtag_group_id: string | null
           id: string
           include_image: boolean | null
           include_link: boolean | null
           include_price: boolean | null
           is_active: boolean | null
+          last_used_at: string | null
           name: string
           platforms: string[] | null
           template_type: string
           updated_at: string
           use_count: number | null
+          variables: string[] | null
         }
         Insert: {
+          category?: string | null
           content_bn?: string | null
           content_en?: string | null
           created_at?: string
+          description?: string | null
           hashtag_group_id?: string | null
           id?: string
           include_image?: boolean | null
           include_link?: boolean | null
           include_price?: boolean | null
           is_active?: boolean | null
+          last_used_at?: string | null
           name: string
           platforms?: string[] | null
           template_type?: string
           updated_at?: string
           use_count?: number | null
+          variables?: string[] | null
         }
         Update: {
+          category?: string | null
           content_bn?: string | null
           content_en?: string | null
           created_at?: string
+          description?: string | null
           hashtag_group_id?: string | null
           id?: string
           include_image?: boolean | null
           include_link?: boolean | null
           include_price?: boolean | null
           is_active?: boolean | null
+          last_used_at?: string | null
           name?: string
           platforms?: string[] | null
           template_type?: string
           updated_at?: string
           use_count?: number | null
+          variables?: string[] | null
         }
         Relationships: [
           {
