@@ -69,6 +69,30 @@ const TEMPLATE_TYPES = [
   { id: 'custom', label: 'কাস্টম' },
 ];
 
+const AVAILABLE_VARIABLES = [
+  { key: '{{product_name}}', label: 'পণ্যের নাম', icon: '📦' },
+  { key: '{{price}}', label: 'মূল্য', icon: '💰' },
+  { key: '{{discount_price}}', label: 'ছাড় মূল্য', icon: '🏷️' },
+  { key: '{{author}}', label: 'লেখক', icon: '✍️' },
+  { key: '{{category}}', label: 'ক্যাটাগরি', icon: '📂' },
+  { key: '{{link}}', label: 'লিংক', icon: '🔗' },
+  { key: '{{shop_name}}', label: 'দোকানের নাম', icon: '🏪' },
+  { key: '{{date}}', label: 'তারিখ', icon: '📅' },
+];
+
+const DAYS_OF_WEEK = [
+  { id: 'sat', label: 'শনি' }, { id: 'sun', label: 'রবি' }, { id: 'mon', label: 'সোম' },
+  { id: 'tue', label: 'মঙ্গল' }, { id: 'wed', label: 'বুধ' }, { id: 'thu', label: 'বৃহ' }, { id: 'fri', label: 'শুক্র' },
+];
+
+const CONDITION_TYPES = [
+  { id: 'min_price', label: 'সর্বনিম্ন মূল্য', type: 'number' },
+  { id: 'max_price', label: 'সর্বোচ্চ মূল্য', type: 'number' },
+  { id: 'category_match', label: 'নির্দিষ্ট ক্যাটাগরি', type: 'text' },
+  { id: 'has_discount', label: 'ডিসকাউন্ট আছে', type: 'boolean' },
+  { id: 'has_image', label: 'ছবি আছে', type: 'boolean' },
+];
+
 const AutomationSettings = () => {
   const queryClient = useQueryClient();
   const [activeSubTab, setActiveSubTab] = useState<'overview' | 'hashtags' | 'templates' | 'rules' | 'logs'>('overview');
@@ -89,7 +113,11 @@ const AutomationSettings = () => {
   const [tplIncludeImage, setTplIncludeImage] = useState(true);
   const [tplIncludePrice, setTplIncludePrice] = useState(true);
   const [tplIncludeLink, setTplIncludeLink] = useState(true);
+  const [tplDescription, setTplDescription] = useState('');
   const [editingTemplate, setEditingTemplate] = useState<any>(null);
+  const [templateSearch, setTemplateSearch] = useState('');
+  const [templateFilterType, setTemplateFilterType] = useState('all');
+  const [showPreview, setShowPreview] = useState(false);
 
   // Rule form
   const [showRuleForm, setShowRuleForm] = useState(false);
@@ -101,7 +129,22 @@ const AutomationSettings = () => {
   const [ruleDelay, setRuleDelay] = useState(0);
   const [ruleSendEmail, setRuleSendEmail] = useState(false);
   const [ruleSendSms, setRuleSendSms] = useState(false);
+  const [rulePriority, setRulePriority] = useState(0);
+  const [ruleScheduleDays, setRuleScheduleDays] = useState<string[]>([]);
+  const [ruleTimeStart, setRuleTimeStart] = useState('');
+  const [ruleTimeEnd, setRuleTimeEnd] = useState('');
+  const [ruleMaxExec, setRuleMaxExec] = useState<number | null>(null);
+  const [ruleConditions, setRuleConditions] = useState<any>({});
   const [editingRule, setEditingRule] = useState<any>(null);
+  const [ruleFilter, setRuleFilter] = useState('all');
+
+  // Log filters
+  const [logStatusFilter, setLogStatusFilter] = useState('all');
+  const [logTriggerFilter, setLogTriggerFilter] = useState('all');
+  const [logSearch, setLogSearch] = useState('');
+  const [logDateRange, setLogDateRange] = useState<'today' | '7d' | '30d' | 'all'>('all');
+
+  const tplContentRef = useRef<HTMLTextAreaElement>(null);
 
   // Old settings
   const { data: settings = [], isLoading: settingsLoading } = useQuery({
@@ -135,7 +178,7 @@ const AutomationSettings = () => {
     queryKey: ['social-automation-rules'],
     queryFn: async () => {
       // @ts-ignore
-      const { data } = await supabase.from('social_automation_rules').select('*').order('created_at', { ascending: false });
+      const { data } = await supabase.from('social_automation_rules').select('*').order('priority', { ascending: false });
       return data || [];
     }
   });
@@ -144,7 +187,7 @@ const AutomationSettings = () => {
     queryKey: ['social-automation-log'],
     queryFn: async () => {
       // @ts-ignore
-      const { data } = await supabase.from('social_automation_log').select('*').order('created_at', { ascending: false }).limit(100);
+      const { data } = await supabase.from('social_automation_log').select('*').order('created_at', { ascending: false }).limit(200);
       return data || [];
     }
   });
@@ -171,7 +214,7 @@ const AutomationSettings = () => {
   // Hashtag group mutations
   const saveHashtagGroup = useMutation({
     mutationFn: async () => {
-      const tags = (editingGroup ? newGroupTags : newGroupTags).split(/[,\s]+/).filter(Boolean).map(t => t.replace(/^#/, ''));
+      const tags = newGroupTags.split(/[,\s]+/).filter(Boolean).map(t => t.replace(/^#/, ''));
       if (editingGroup) {
         // @ts-ignore
         const { error } = await supabase.from('saved_hashtag_groups').update({ name: newGroupName, hashtags: tags, updated_at: new Date().toISOString() }).eq('id', editingGroup.id);
@@ -209,10 +252,12 @@ const AutomationSettings = () => {
   // Template mutations
   const saveTemplate = useMutation({
     mutationFn: async () => {
+      const usedVars = AVAILABLE_VARIABLES.filter(v => tplContentBn.includes(v.key) || tplContentEn.includes(v.key)).map(v => v.key);
       const data: any = {
         name: tplName, template_type: tplType, content_bn: tplContentBn || null, content_en: tplContentEn || null,
         platforms: tplPlatforms, hashtag_group_id: tplHashtagGroup || null,
         include_image: tplIncludeImage, include_price: tplIncludePrice, include_link: tplIncludeLink,
+        description: tplDescription || null, variables: usedVars,
         updated_at: new Date().toISOString(),
       };
       if (editingTemplate) {
@@ -247,6 +292,16 @@ const AutomationSettings = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['social-post-templates'] }),
   });
 
+  const duplicateTemplate = useMutation({
+    mutationFn: async (t: any) => {
+      const { id, created_at, updated_at, use_count, last_used_at, ...rest } = t;
+      // @ts-ignore
+      const { error } = await supabase.from('social_post_templates').insert({ ...rest, name: `${t.name} (কপি)`, use_count: 0 });
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['social-post-templates'] }); toast.success('টেমপ্লেট ডুপ্লিকেট হয়েছে'); },
+  });
+
   // Rule mutations
   const saveRule = useMutation({
     mutationFn: async () => {
@@ -254,6 +309,9 @@ const AutomationSettings = () => {
         name: ruleName, trigger_type: ruleTrigger, platforms: rulePlatforms,
         template_id: ruleTemplate || null, hashtag_group_id: ruleHashtagGroup || null,
         delay_minutes: ruleDelay, send_email: ruleSendEmail, send_sms: ruleSendSms,
+        priority: rulePriority, conditions: ruleConditions,
+        schedule_days: ruleScheduleDays, schedule_time_start: ruleTimeStart || null,
+        schedule_time_end: ruleTimeEnd || null, max_executions_per_day: ruleMaxExec,
         updated_at: new Date().toISOString(),
       };
       if (editingRule) {
@@ -288,16 +346,28 @@ const AutomationSettings = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['social-automation-rules'] }),
   });
 
+  const duplicateRule = useMutation({
+    mutationFn: async (r: any) => {
+      const { id, created_at, updated_at, trigger_count, success_count, fail_count, last_executed_at, ...rest } = r;
+      // @ts-ignore
+      const { error } = await supabase.from('social_automation_rules').insert({ ...rest, name: `${r.name} (কপি)`, trigger_count: 0, success_count: 0, fail_count: 0 });
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['social-automation-rules'] }); toast.success('রুল ডুপ্লিকেট হয়েছে'); },
+  });
+
   const resetTemplateForm = () => {
     setTplName(''); setTplType('general'); setTplContentBn(''); setTplContentEn('');
     setTplPlatforms([]); setTplHashtagGroup(''); setTplIncludeImage(true); setTplIncludePrice(true);
-    setTplIncludeLink(true); setEditingTemplate(null); setShowTemplateForm(false);
+    setTplIncludeLink(true); setTplDescription(''); setEditingTemplate(null); setShowTemplateForm(false); setShowPreview(false);
   };
 
   const resetRuleForm = () => {
     setRuleName(''); setRuleTrigger('new_product'); setRulePlatforms([]);
     setRuleTemplate(''); setRuleHashtagGroup(''); setRuleDelay(0);
-    setRuleSendEmail(false); setRuleSendSms(false); setEditingRule(null); setShowRuleForm(false);
+    setRuleSendEmail(false); setRuleSendSms(false); setRulePriority(0);
+    setRuleScheduleDays([]); setRuleTimeStart(''); setRuleTimeEnd('');
+    setRuleMaxExec(null); setRuleConditions({}); setEditingRule(null); setShowRuleForm(false);
   };
 
   const editTemplateAction = (t: any) => {
@@ -305,14 +375,46 @@ const AutomationSettings = () => {
     setTplContentBn(t.content_bn || ''); setTplContentEn(t.content_en || '');
     setTplPlatforms(t.platforms || []); setTplHashtagGroup(t.hashtag_group_id || '');
     setTplIncludeImage(t.include_image !== false); setTplIncludePrice(t.include_price !== false);
-    setTplIncludeLink(t.include_link !== false); setShowTemplateForm(true);
+    setTplIncludeLink(t.include_link !== false); setTplDescription(t.description || ''); setShowTemplateForm(true);
   };
 
   const editRuleAction = (r: any) => {
     setEditingRule(r); setRuleName(r.name); setRuleTrigger(r.trigger_type);
     setRulePlatforms(r.platforms || []); setRuleTemplate(r.template_id || '');
     setRuleHashtagGroup(r.hashtag_group_id || ''); setRuleDelay(r.delay_minutes || 0);
-    setRuleSendEmail(r.send_email || false); setRuleSendSms(r.send_sms || false); setShowRuleForm(true);
+    setRuleSendEmail(r.send_email || false); setRuleSendSms(r.send_sms || false);
+    setRulePriority(r.priority || 0); setRuleScheduleDays(r.schedule_days || []);
+    setRuleTimeStart(r.schedule_time_start || ''); setRuleTimeEnd(r.schedule_time_end || '');
+    setRuleMaxExec(r.max_executions_per_day || null); setRuleConditions(r.conditions || {});
+    setShowRuleForm(true);
+  };
+
+  const insertVariable = (varKey: string) => {
+    const textarea = tplContentRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newVal = tplContentBn.substring(0, start) + varKey + tplContentBn.substring(end);
+      setTplContentBn(newVal);
+      setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + varKey.length, start + varKey.length); }, 50);
+    } else {
+      setTplContentBn(prev => prev + varKey);
+    }
+  };
+
+  const getPreviewContent = () => {
+    let content = tplContentBn || 'কোনো কন্টেন্ট নেই';
+    content = content.replace(/\{\{product_name\}\}/g, 'আমার প্রথম বই')
+      .replace(/\{\{price\}\}/g, '৳350')
+      .replace(/\{\{discount_price\}\}/g, '৳280')
+      .replace(/\{\{author\}\}/g, 'লেখক নাম')
+      .replace(/\{\{category\}\}/g, 'উপন্যাস')
+      .replace(/\{\{link\}\}/g, 'https://boialo.com/book/example')
+      .replace(/\{\{shop_name\}\}/g, 'বইআলো')
+      .replace(/\{\{date\}\}/g, new Date().toLocaleDateString('bn-BD'));
+    const hGroup = hashtagGroups.find((g: any) => g.id === tplHashtagGroup);
+    if (hGroup) content += '\n\n' + (hGroup.hashtags || []).map((h: string) => `#${h}`).join(' ');
+    return content;
   };
 
   const togglePlatform = (platform: string) => {
@@ -322,6 +424,50 @@ const AutomationSettings = () => {
     updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, platforms: updated } });
   };
 
+  // Filtered templates
+  const filteredTemplates = useMemo(() => {
+    return templates.filter((t: any) => {
+      if (templateFilterType !== 'all' && t.template_type !== templateFilterType) return false;
+      if (templateSearch && !t.name?.toLowerCase().includes(templateSearch.toLowerCase()) && !t.content_bn?.toLowerCase().includes(templateSearch.toLowerCase())) return false;
+      return true;
+    });
+  }, [templates, templateFilterType, templateSearch]);
+
+  // Filtered rules
+  const filteredRules = useMemo(() => {
+    return automationRules.filter((r: any) => {
+      if (ruleFilter === 'active' && !r.is_active) return false;
+      if (ruleFilter === 'inactive' && r.is_active) return false;
+      return true;
+    });
+  }, [automationRules, ruleFilter]);
+
+  // Filtered logs
+  const filteredLogs = useMemo(() => {
+    return automationLogs.filter((log: any) => {
+      if (logStatusFilter !== 'all' && log.status !== logStatusFilter) return false;
+      if (logTriggerFilter !== 'all' && log.trigger_type !== logTriggerFilter) return false;
+      if (logSearch && !log.product_name?.toLowerCase().includes(logSearch.toLowerCase())) return false;
+      if (logDateRange !== 'all') {
+        const logDate = new Date(log.created_at);
+        const now = new Date();
+        if (logDateRange === 'today' && logDate.toDateString() !== now.toDateString()) return false;
+        if (logDateRange === '7d' && (now.getTime() - logDate.getTime()) > 7 * 86400000) return false;
+        if (logDateRange === '30d' && (now.getTime() - logDate.getTime()) > 30 * 86400000) return false;
+      }
+      return true;
+    });
+  }, [automationLogs, logStatusFilter, logTriggerFilter, logSearch, logDateRange]);
+
+  // Log stats
+  const logStats = useMemo(() => {
+    const total = filteredLogs.length;
+    const success = filteredLogs.filter((l: any) => l.status === 'success').length;
+    const failed = filteredLogs.filter((l: any) => l.status === 'failed').length;
+    const skipped = filteredLogs.filter((l: any) => l.status === 'skipped').length;
+    return { total, success, failed, skipped, successRate: total > 0 ? Math.round((success / total) * 100) : 0 };
+  }, [filteredLogs]);
+
   if (settingsLoading) return <div className="p-8 text-center text-muted-foreground">লোড হচ্ছে...</div>;
 
   return (
@@ -329,18 +475,18 @@ const AutomationSettings = () => {
       {/* Sub-tabs */}
       <div className="flex gap-1 bg-muted p-1 rounded-lg flex-wrap">
         {[
-          { key: 'overview' as const, label: '⚙️ ওভারভিউ' },
-          { key: 'hashtags' as const, label: `#️⃣ হ্যাশট্যাগ (${hashtagGroups.length})` },
-          { key: 'templates' as const, label: `📝 টেমপ্লেট (${templates.length})` },
-          { key: 'rules' as const, label: `🤖 রুলস (${automationRules.length})` },
-          { key: 'logs' as const, label: `📋 লগ (${automationLogs.length})` },
+          { key: 'overview' as const, label: '⚙️ ওভারভিউ', count: null },
+          { key: 'hashtags' as const, label: '#️⃣ হ্যাশট্যাগ', count: hashtagGroups.length },
+          { key: 'templates' as const, label: '📝 টেমপ্লেট', count: templates.length },
+          { key: 'rules' as const, label: '🤖 রুলস', count: automationRules.length },
+          { key: 'logs' as const, label: '📋 লগ', count: automationLogs.length },
         ].map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveSubTab(tab.key)}
             className={`text-xs font-medium py-2 px-3 rounded-md transition-all ${activeSubTab === tab.key ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            {tab.label}
+            {tab.label}{tab.count !== null ? ` (${tab.count})` : ''}
           </button>
         ))}
       </div>
@@ -348,7 +494,6 @@ const AutomationSettings = () => {
       {/* OVERVIEW */}
       {activeSubTab === 'overview' && (
         <div className="grid md:grid-cols-2 gap-4">
-          {/* Social Media Auto Post */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between text-base">
@@ -364,43 +509,19 @@ const AutomationSettings = () => {
                 <Label className="text-sm font-medium mb-2 block">প্ল্যাটফর্ম নির্বাচন</Label>
                 <div className="flex flex-wrap gap-2">
                   {PLATFORMS.map(p => (
-                    <Badge key={p.id} variant={(smConfig.platforms || []).includes(p.id) ? 'default' : 'outline'} className="cursor-pointer gap-1.5 py-1.5 px-3" onClick={() => togglePlatform(p.id)}>
+                    <Badge key={p.id} variant={(smConfig.platforms || []).includes(p.id) ? 'default' : 'outline'} className="cursor-pointer gap-1.5 text-xs py-1 px-2" onClick={() => togglePlatform(p.id)}>
                       <p.icon className="w-3.5 h-3.5" /> {p.name}
-                      {(smConfig.platforms || []).includes(p.id) && <Check className="w-3 h-3" />}
                     </Badge>
                   ))}
                 </div>
               </div>
               <div>
                 <Label className="text-sm font-medium">পোস্ট টেমপ্লেট (বাংলা)</Label>
-                <Textarea value={smConfig.template_bn || ''} onChange={e => smSetting && updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, template_bn: e.target.value } })} rows={4} className="mt-1 text-sm font-mono" placeholder="{{product_name}}, {{author}}, {{price}}, {{link}}" />
-                <p className="text-xs text-muted-foreground mt-1">ভ্যারিয়েবল: {'{{product_name}}'}, {'{{author}}'}, {'{{price}}'}, {'{{link}}'}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">হ্যাশট্যাগ গ্রুপ</Label>
-                <Select value={smConfig.hashtag_group_id || ''} onValueChange={val => smSetting && updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, hashtag_group_id: val, hashtags: hashtagGroups.find((g: any) => g.id === val)?.hashtags || [] } })}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="গ্রুপ সিলেক্ট করুন" /></SelectTrigger>
-                  <SelectContent>
-                    {hashtagGroups.map((g: any) => (
-                      <SelectItem key={g.id} value={g.id}>{g.name} ({g.hashtags?.length || 0} ট্যাগ)</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={smConfig.include_price !== false} onCheckedChange={(checked) => smSetting && updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, include_price: !!checked } })} />
-                  মূল্য দেখান
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={smConfig.include_image !== false} onCheckedChange={(checked) => smSetting && updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, include_image: !!checked } })} />
-                  ছবি সংযুক্ত
-                </label>
+                <Textarea value={smConfig.template_bn || ''} onChange={e => smSetting && updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, template_bn: e.target.value } })} rows={3} placeholder="📚 নতুন বই: {{product_name}} ..." className="mt-1 font-mono text-sm" />
               </div>
             </CardContent>
           </Card>
 
-          {/* Email Auto Notification */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between text-base">
@@ -416,34 +537,22 @@ const AutomationSettings = () => {
                 <Label className="text-sm font-medium">ইমেইল সাবজেক্ট টেমপ্লেট</Label>
                 <Input value={emailConfig.template_subject || ''} onChange={e => emailSetting && updateSetting.mutate({ id: emailSetting.id, setting_value: { ...emailConfig, template_subject: e.target.value } })} placeholder="🆕 নতুন পণ্য: {{product_name}}" className="mt-1" />
               </div>
-              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                <h4 className="text-sm font-medium flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> অটোমেশন ফিচার</h4>
-                <ul className="text-xs text-muted-foreground space-y-1.5">
-                  <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> নতুন বই/পণ্য যোগে অটো পোস্ট</li>
-                  <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> সেভড হ্যাশট্যাগ গ্রুপ সিস্টেম</li>
-                  <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> রিইউজেবল কন্টেন্ট টেমপ্লেট</li>
-                  <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> মাল্টি-ট্রিগার অটোমেশন রুলস</li>
-                  <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> ইমেইল + SMS নোটিফিকেশন</li>
-                  <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> ডিলে/শিডিউল সাপোর্ট</li>
-                  <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /> এক্সিকিউশন লগ ও ট্র্যাকিং</li>
-                </ul>
-              </div>
             </CardContent>
           </Card>
 
-          {/* Quick Stats */}
           <Card className="md:col-span-2">
             <CardContent className="p-4">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                 {[
-                  { label: 'হ্যাশট্যাগ গ্রুপ', value: hashtagGroups.length, icon: Hash },
-                  { label: 'টেমপ্লেট', value: templates.length, icon: Copy },
-                  { label: 'অটোমেশন রুলস', value: automationRules.length, icon: Settings },
-                  { label: 'অ্যাক্টিভ রুলস', value: automationRules.filter((r: any) => r.is_active).length, icon: Check },
-                  { label: 'মোট এক্সিকিউশন', value: automationLogs.length, icon: BarChart3 },
+                  { label: 'হ্যাশট্যাগ গ্রুপ', value: hashtagGroups.length, icon: Hash, color: 'text-blue-500' },
+                  { label: 'টেমপ্লেট', value: templates.length, icon: Copy, color: 'text-purple-500' },
+                  { label: 'অটোমেশন রুলস', value: automationRules.length, icon: Settings, color: 'text-orange-500' },
+                  { label: 'অ্যাক্টিভ রুলস', value: automationRules.filter((r: any) => r.is_active).length, icon: Check, color: 'text-green-500' },
+                  { label: 'মোট এক্সিকিউশন', value: automationLogs.length, icon: BarChart3, color: 'text-primary' },
+                  { label: 'সাফল্যের হার', value: `${logStats.successRate}%`, icon: TrendingUp, color: 'text-emerald-500' },
                 ].map((s, i) => (
                   <div key={i} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <s.icon className="w-5 h-5 text-primary shrink-0" />
+                    <s.icon className={`w-5 h-5 shrink-0 ${s.color}`} />
                     <div><p className="text-lg font-bold">{s.value}</p><p className="text-[10px] text-muted-foreground">{s.label}</p></div>
                   </div>
                 ))}
@@ -520,22 +629,46 @@ const AutomationSettings = () => {
         </div>
       )}
 
-      {/* TEMPLATES */}
+      {/* TEMPLATES - UPGRADED */}
       {activeSubTab === 'templates' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-semibold">📝 কন্টেন্ট টেমপ্লেট</h3>
-            <Button size="sm" onClick={() => { resetTemplateForm(); setShowTemplateForm(true); }}><Plus className="w-4 h-4 mr-1" /> নতুন টেমপ্লেট</Button>
+          {/* Header with search & filter */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-between">
+            <div className="flex items-center gap-2 flex-1">
+              <div className="relative flex-1 max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input placeholder="টেমপ্লেট খুঁজুন..." value={templateSearch} onChange={e => setTemplateSearch(e.target.value)} className="pl-9 h-9" />
+              </div>
+              <Select value={templateFilterType} onValueChange={setTemplateFilterType}>
+                <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">সব টাইপ</SelectItem>
+                  {TEMPLATE_TYPES.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Badge variant="secondary" className="text-xs py-1">মোট: {templates.length} | ফিল্টার: {filteredTemplates.length}</Badge>
+              <Button size="sm" onClick={() => { resetTemplateForm(); setShowTemplateForm(true); }}>
+                <Plus className="w-4 h-4 mr-1" /> নতুন টেমপ্লেট
+              </Button>
+            </div>
           </div>
 
+          {/* Template Form - Enhanced */}
           {showTemplateForm && (
-            <Card className="border-primary/30">
-              <CardHeader><CardTitle className="text-base">{editingTemplate ? '✏️ টেমপ্লেট এডিট' : '➕ নতুন টেমপ্লেট'}</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+            <Card className="border-primary/30 shadow-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  {editingTemplate ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  {editingTemplate ? 'টেমপ্লেট এডিট' : 'নতুন টেমপ্লেট তৈরি'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <Label className="text-sm">নাম</Label>
-                    <Input value={tplName} onChange={e => setTplName(e.target.value)} placeholder="টেমপ্লেটের নাম" className="mt-1" />
+                    <Label className="text-sm">টেমপ্লেটের নাম *</Label>
+                    <Input value={tplName} onChange={e => setTplName(e.target.value)} placeholder="যেমন: নতুন বই পোস্ট" className="mt-1" />
                   </div>
                   <div>
                     <Label className="text-sm">টাইপ</Label>
@@ -546,102 +679,206 @@ const AutomationSettings = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-                <div>
-                  <Label className="text-sm">কন্টেন্ট (বাংলা)</Label>
-                  <Textarea value={tplContentBn} onChange={e => setTplContentBn(e.target.value)} rows={4} className="mt-1 font-mono text-sm" placeholder="{{product_name}} - ৳{{price}}" />
-                </div>
-                <div>
-                  <Label className="text-sm">কন্টেন্ট (English)</Label>
-                  <Textarea value={tplContentEn} onChange={e => setTplContentEn(e.target.value)} rows={3} className="mt-1 font-mono text-sm" placeholder="{{product_name}} - ৳{{price}}" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-sm">হ্যাশট্যাগ গ্রুপ</Label>
                     <Select value={tplHashtagGroup || 'none'} onValueChange={v => setTplHashtagGroup(v === 'none' ? '' : v)}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">কোনোটি নয়</SelectItem>
-                        {hashtagGroups.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                        {hashtagGroups.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name} ({(g.hashtags || []).length})</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm">বিবরণ (ঐচ্ছিক)</Label>
+                  <Input value={tplDescription} onChange={e => setTplDescription(e.target.value)} placeholder="এই টেমপ্লেটটি কখন ব্যবহার করবেন..." className="mt-1" />
+                </div>
+
+                {/* Variable insertion buttons */}
+                <div>
+                  <Label className="text-sm mb-2 block">ভেরিয়েবল যোগ করুন</Label>
+                  <div className="flex flex-wrap gap-1">
+                    {AVAILABLE_VARIABLES.map(v => (
+                      <Button key={v.key} type="button" variant="outline" size="sm" className="h-7 text-[11px] gap-1" onClick={() => insertVariable(v.key)}>
+                        <span>{v.icon}</span> {v.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-sm">প্ল্যাটফর্ম</Label>
-                    <div className="flex flex-wrap gap-1 mt-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <Label className="text-sm">কন্টেন্ট (বাংলা) *</Label>
+                      <Button type="button" variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setShowPreview(!showPreview)}>
+                        <Eye className="w-3 h-3 mr-1" /> {showPreview ? 'এডিটর' : 'প্রিভিউ'}
+                      </Button>
+                    </div>
+                    {!showPreview ? (
+                      <Textarea ref={tplContentRef} value={tplContentBn} onChange={e => setTplContentBn(e.target.value)} rows={6} className="font-mono text-sm" placeholder="📚 নতুন বই!\n\n{{product_name}}\n✍️ {{author}}\n💰 মূল্য: {{price}}\n\n👉 {{link}}" />
+                    ) : (
+                      <div className="border rounded-md p-3 bg-muted/30 min-h-[150px] text-sm whitespace-pre-line">
+                        {getPreviewContent()}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <Label className="text-sm mb-1 block">কন্টেন্ট (English)</Label>
+                    <Textarea value={tplContentEn} onChange={e => setTplContentEn(e.target.value)} rows={6} className="font-mono text-sm" placeholder="📚 New Book!\n\n{{product_name}}\nPrice: {{price}}" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-sm mb-1 block">প্ল্যাটফর্ম</Label>
+                    <div className="flex flex-wrap gap-1.5">
                       {PLATFORMS.map(p => (
-                        <Badge key={p.id} variant={tplPlatforms.includes(p.id) ? 'default' : 'outline'} className="cursor-pointer text-[10px] gap-1" onClick={() => setTplPlatforms(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])}>
+                        <Badge key={p.id} variant={tplPlatforms.includes(p.id) ? 'default' : 'outline'} className="cursor-pointer text-[10px] gap-1 py-1" onClick={() => setTplPlatforms(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])}>
                           <p.icon className="w-3 h-3" /> {p.name}
                         </Badge>
                       ))}
                     </div>
                   </div>
+                  <div className="flex items-center gap-6 pt-4">
+                    <label className="flex items-center gap-2 text-sm"><Checkbox checked={tplIncludeImage} onCheckedChange={c => setTplIncludeImage(!!c)} /> ছবি সংযুক্ত</label>
+                    <label className="flex items-center gap-2 text-sm"><Checkbox checked={tplIncludePrice} onCheckedChange={c => setTplIncludePrice(!!c)} /> মূল্য দেখান</label>
+                    <label className="flex items-center gap-2 text-sm"><Checkbox checked={tplIncludeLink} onCheckedChange={c => setTplIncludeLink(!!c)} /> লিংক দিন</label>
+                  </div>
                 </div>
-                <div className="flex items-center gap-6">
-                  <label className="flex items-center gap-2 text-sm"><Checkbox checked={tplIncludeImage} onCheckedChange={c => setTplIncludeImage(!!c)} /> ছবি</label>
-                  <label className="flex items-center gap-2 text-sm"><Checkbox checked={tplIncludePrice} onCheckedChange={c => setTplIncludePrice(!!c)} /> মূল্য</label>
-                  <label className="flex items-center gap-2 text-sm"><Checkbox checked={tplIncludeLink} onCheckedChange={c => setTplIncludeLink(!!c)} /> লিংক</label>
-                </div>
+
+                <Separator />
                 <div className="flex gap-2">
-                  <Button onClick={() => saveTemplate.mutate()} disabled={!tplName || saveTemplate.isPending}>{editingTemplate ? 'আপডেট' : 'সেভ'}</Button>
+                  <Button onClick={() => saveTemplate.mutate()} disabled={!tplName || !tplContentBn || saveTemplate.isPending}>
+                    {saveTemplate.isPending ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : null}
+                    {editingTemplate ? 'আপডেট করুন' : 'সেভ করুন'}
+                  </Button>
                   <Button variant="outline" onClick={resetTemplateForm}>বাতিল</Button>
                 </div>
               </CardContent>
             </Card>
           )}
 
+          {/* Template Grid - Professional Cards */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {templates.map((t: any) => (
-              <Card key={t.id} className={!t.is_active ? 'opacity-50' : ''}>
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{t.name}</span>
-                      <Badge variant="outline" className="text-[9px]">{TEMPLATE_TYPES.find(x => x.id === t.template_type)?.label || t.template_type}</Badge>
+            {filteredTemplates.map((t: any) => {
+              const hGroup = hashtagGroups.find((g: any) => g.id === t.hashtag_group_id);
+              return (
+                <Card key={t.id} className={`group transition-all hover:shadow-md ${!t.is_active ? 'opacity-50 grayscale' : ''}`}>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-sm truncate">{t.name}</h4>
+                          <Badge variant="outline" className="text-[9px] shrink-0">{TEMPLATE_TYPES.find(x => x.id === t.template_type)?.label || t.template_type}</Badge>
+                        </div>
+                        {t.description && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{t.description}</p>}
+                      </div>
+                      <Switch checked={t.is_active !== false} onCheckedChange={checked => toggleTemplate.mutate({ id: t.id, active: checked })} />
                     </div>
-                    <Switch checked={t.is_active} onCheckedChange={checked => toggleTemplate.mutate({ id: t.id, active: checked })} />
-                  </div>
-                  {t.content_bn && <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-line">{t.content_bn}</p>}
-                  <div className="flex flex-wrap gap-1">
-                    {(t.platforms || []).map((pid: string) => {
-                      const plat = PLATFORMS.find(x => x.id === pid);
-                      return plat ? <plat.icon key={pid} className="w-3.5 h-3.5" style={{ color: plat.color }} /> : null;
-                    })}
-                  </div>
-                  <div className="flex gap-1 pt-1">
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => editTemplateAction(t)}><Edit className="w-3 h-3 mr-1" /> এডিট</Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => { if (confirm('মুছতে চান?')) deleteTemplate.mutate(t.id); }}><Trash2 className="w-3 h-3 mr-1" /> মুছুন</Button>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground">ব্যবহার: {t.use_count || 0} বার</p>
+
+                    {t.content_bn && (
+                      <div className="bg-muted/40 rounded-md p-2.5 border border-border/50">
+                        <p className="text-xs text-foreground/80 line-clamp-4 whitespace-pre-line">{t.content_bn}</p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-1.5">
+                        {(t.platforms || []).map((pid: string) => {
+                          const plat = PLATFORMS.find(x => x.id === pid);
+                          return plat ? <plat.icon key={pid} className="w-3.5 h-3.5" style={{ color: plat.color }} /> : null;
+                        })}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {t.include_image && <Badge variant="secondary" className="text-[8px] py-0">📷</Badge>}
+                        {t.include_price && <Badge variant="secondary" className="text-[8px] py-0">💰</Badge>}
+                        {t.include_link && <Badge variant="secondary" className="text-[8px] py-0">🔗</Badge>}
+                      </div>
+                    </div>
+
+                    {hGroup && (
+                      <div className="flex flex-wrap gap-1">
+                        {(hGroup.hashtags || []).slice(0, 4).map((tag: string, i: number) => (
+                          <span key={i} className="text-[10px] text-primary">#{tag}</span>
+                        ))}
+                        {(hGroup.hashtags || []).length > 4 && <span className="text-[10px] text-muted-foreground">+{(hGroup.hashtags || []).length - 4}</span>}
+                      </div>
+                    )}
+
+                    {(t.variables || []).length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {(t.variables || []).map((v: string, i: number) => (
+                          <Badge key={i} variant="outline" className="text-[8px] py-0 font-mono">{v}</Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-muted-foreground">ব্যবহার: {t.use_count || 0} বার</span>
+                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => editTemplateAction(t)} title="এডিট"><Edit className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateTemplate.mutate(t)} title="ডুপ্লিকেট"><Copy className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { if (confirm('মুছতে চান?')) deleteTemplate.mutate(t.id); }} title="মুছুন"><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {filteredTemplates.length === 0 && !showTemplateForm && (
+              <Card className="md:col-span-3">
+                <CardContent className="p-12 text-center">
+                  <Sparkles className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+                  <p className="text-muted-foreground font-medium">কোনো টেমপ্লেট পাওয়া যায়নি</p>
+                  <p className="text-xs text-muted-foreground mt-1">উপরের বাটনে ক্লিক করে নতুন টেমপ্লেট তৈরি করুন।</p>
                 </CardContent>
               </Card>
-            ))}
-            {templates.length === 0 && !showTemplateForm && (
-              <Card className="md:col-span-3"><CardContent className="p-8 text-center text-muted-foreground"><p>কোনো টেমপ্লেট নেই। উপরের বাটনে ক্লিক করে তৈরি করুন।</p></CardContent></Card>
             )}
           </div>
         </div>
       )}
 
-      {/* RULES */}
+      {/* RULES - UPGRADED */}
       {activeSubTab === 'rules' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-semibold">🤖 অটোমেশন রুলস</h3>
-            <Button size="sm" onClick={() => { resetRuleForm(); setShowRuleForm(true); }}><Plus className="w-4 h-4 mr-1" /> নতুন রুল</Button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-between">
+            <div className="flex items-center gap-2">
+              <Select value={ruleFilter} onValueChange={setRuleFilter}>
+                <SelectTrigger className="w-[130px] h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">সব রুল</SelectItem>
+                  <SelectItem value="active">অ্যাক্টিভ</SelectItem>
+                  <SelectItem value="inactive">ইন্যাক্টিভ</SelectItem>
+                </SelectContent>
+              </Select>
+              <Badge variant="secondary" className="text-xs py-1">মোট: {automationRules.length} | দেখাচ্ছে: {filteredRules.length}</Badge>
+            </div>
+            <Button size="sm" onClick={() => { resetRuleForm(); setShowRuleForm(true); }}>
+              <Plus className="w-4 h-4 mr-1" /> নতুন রুল
+            </Button>
           </div>
 
+          {/* Rule Form - Enhanced */}
           {showRuleForm && (
-            <Card className="border-primary/30">
-              <CardHeader><CardTitle className="text-base">{editingRule ? '✏️ রুল এডিট' : '➕ নতুন অটোমেশন রুল'}</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+            <Card className="border-primary/30 shadow-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  {editingRule ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  {editingRule ? 'রুল এডিট করুন' : 'নতুন অটোমেশন রুল'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Basic Info */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <Label className="text-sm">রুলের নাম</Label>
+                    <Label className="text-sm">রুলের নাম *</Label>
                     <Input value={ruleName} onChange={e => setRuleName(e.target.value)} placeholder="যেমন: নতুন বই অটো পোস্ট" className="mt-1" />
                   </div>
                   <div>
-                    <Label className="text-sm">ট্রিগার টাইপ</Label>
+                    <Label className="text-sm">ট্রিগার টাইপ *</Label>
                     <Select value={ruleTrigger} onValueChange={setRuleTrigger}>
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -649,15 +886,22 @@ const AutomationSettings = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div>
+                    <Label className="text-sm">প্রায়োরিটি</Label>
+                    <Input type="number" value={rulePriority} onChange={e => setRulePriority(Number(e.target.value))} min={0} max={100} className="mt-1" placeholder="0-100" />
+                    <p className="text-[10px] text-muted-foreground mt-0.5">বেশি = আগে চলবে</p>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+
+                {/* Template & Hashtag */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <Label className="text-sm">কন্টেন্ট টেমপ্লেট</Label>
                     <Select value={ruleTemplate || 'none'} onValueChange={v => setRuleTemplate(v === 'none' ? '' : v)}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder="টেমপ্লেট সিলেক্ট" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">কোনোটি নয়</SelectItem>
-                        {templates.filter((t: any) => t.is_active).map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                        <SelectItem value="none">কোনোটি নয় (ডিফল্ট ব্যবহার হবে)</SelectItem>
+                        {templates.filter((t: any) => t.is_active !== false).map((t: any) => <SelectItem key={t.id} value={t.id}>📝 {t.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -667,127 +911,323 @@ const AutomationSettings = () => {
                       <SelectTrigger className="mt-1"><SelectValue placeholder="গ্রুপ সিলেক্ট" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">কোনোটি নয়</SelectItem>
-                        {hashtagGroups.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                        {hashtagGroups.map((g: any) => <SelectItem key={g.id} value={g.id}>#️⃣ {g.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
+
+                {/* Platforms */}
                 <div>
-                  <Label className="text-sm">প্ল্যাটফর্ম</Label>
-                  <div className="flex flex-wrap gap-1 mt-1">
+                  <Label className="text-sm mb-1 block">প্ল্যাটফর্ম নির্বাচন</Label>
+                  <div className="flex flex-wrap gap-1.5">
                     {PLATFORMS.map(p => (
-                      <Badge key={p.id} variant={rulePlatforms.includes(p.id) ? 'default' : 'outline'} className="cursor-pointer text-[10px] gap-1" onClick={() => setRulePlatforms(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])}>
+                      <Badge key={p.id} variant={rulePlatforms.includes(p.id) ? 'default' : 'outline'} className="cursor-pointer text-[10px] gap-1 py-1" onClick={() => setRulePlatforms(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])}>
                         <p.icon className="w-3 h-3" /> {p.name}
                       </Badge>
                     ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+
+                <Separator />
+
+                {/* Schedule Window */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block flex items-center gap-2"><Clock className="w-4 h-4" /> শিডিউল উইন্ডো (ঐচ্ছিক)</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">সক্রিয় দিন</Label>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {DAYS_OF_WEEK.map(d => (
+                          <Badge key={d.id} variant={ruleScheduleDays.includes(d.id) ? 'default' : 'outline'} className="cursor-pointer text-[10px] py-0.5" onClick={() => setRuleScheduleDays(prev => prev.includes(d.id) ? prev.filter(x => x !== d.id) : [...prev, d.id])}>
+                            {d.label}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">শুরু সময়</Label>
+                      <Input type="time" value={ruleTimeStart} onChange={e => setRuleTimeStart(e.target.value)} className="mt-1" />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">শেষ সময়</Label>
+                      <Input type="time" value={ruleTimeEnd} onChange={e => setRuleTimeEnd(e.target.value)} className="mt-1" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Execution & Notification Controls */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
                     <Label className="text-sm">ডিলে (মিনিট)</Label>
                     <Input type="number" value={ruleDelay} onChange={e => setRuleDelay(Number(e.target.value))} min={0} className="mt-1" />
                   </div>
+                  <div>
+                    <Label className="text-sm">দৈনিক সর্বোচ্চ</Label>
+                    <Input type="number" value={ruleMaxExec ?? ''} onChange={e => setRuleMaxExec(e.target.value ? Number(e.target.value) : null)} min={0} className="mt-1" placeholder="সীমাহীন" />
+                  </div>
                   <label className="flex items-center gap-2 text-sm pt-6">
-                    <Checkbox checked={ruleSendEmail} onCheckedChange={c => setRuleSendEmail(!!c)} /> ইমেইল পাঠান
+                    <Checkbox checked={ruleSendEmail} onCheckedChange={c => setRuleSendEmail(!!c)} /> 📧 ইমেইল পাঠান
                   </label>
                   <label className="flex items-center gap-2 text-sm pt-6">
-                    <Checkbox checked={ruleSendSms} onCheckedChange={c => setRuleSendSms(!!c)} /> SMS পাঠান
+                    <Checkbox checked={ruleSendSms} onCheckedChange={c => setRuleSendSms(!!c)} /> 📱 SMS পাঠান
                   </label>
                 </div>
+
+                {/* Conditions */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block flex items-center gap-2"><Filter className="w-4 h-4" /> কন্ডিশন (ঐচ্ছিক)</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {CONDITION_TYPES.map(cond => (
+                      <div key={cond.id} className="flex items-center gap-2">
+                        {cond.type === 'boolean' ? (
+                          <label className="flex items-center gap-2 text-xs">
+                            <Checkbox checked={!!ruleConditions[cond.id]} onCheckedChange={c => setRuleConditions((prev: any) => ({ ...prev, [cond.id]: !!c }))} />
+                            {cond.label}
+                          </label>
+                        ) : (
+                          <div className="flex-1">
+                            <Label className="text-[11px] text-muted-foreground">{cond.label}</Label>
+                            <Input type={cond.type} value={ruleConditions[cond.id] || ''} onChange={e => setRuleConditions((prev: any) => ({ ...prev, [cond.id]: e.target.value }))} className="h-8 text-xs mt-0.5" placeholder={cond.type === 'number' ? '0' : 'মান দিন'} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator />
                 <div className="flex gap-2">
-                  <Button onClick={() => saveRule.mutate()} disabled={!ruleName || saveRule.isPending}>{editingRule ? 'আপডেট' : 'সেভ'}</Button>
+                  <Button onClick={() => saveRule.mutate()} disabled={!ruleName || saveRule.isPending}>
+                    {saveRule.isPending ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : null}
+                    {editingRule ? 'আপডেট করুন' : 'সেভ করুন'}
+                  </Button>
                   <Button variant="outline" onClick={resetRuleForm}>বাতিল</Button>
                 </div>
               </CardContent>
             </Card>
           )}
 
+          {/* Rules List - Professional */}
           <div className="space-y-2">
-            {automationRules.map((r: any) => {
+            {filteredRules.map((r: any) => {
               const trigger = TRIGGER_TYPES.find(t => t.id === r.trigger_type);
               const tpl = templates.find((t: any) => t.id === r.template_id);
               const hGroup = hashtagGroups.find((g: any) => g.id === r.hashtag_group_id);
+              const totalExec = (r.success_count || 0) + (r.fail_count || 0);
+              const successRate = totalExec > 0 ? Math.round(((r.success_count || 0) / totalExec) * 100) : 0;
               return (
-                <Card key={r.id} className={!r.is_active ? 'opacity-50' : ''}>
+                <Card key={r.id} className={`group transition-all hover:shadow-md ${!r.is_active ? 'opacity-50' : ''}`}>
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">{trigger?.icon || '🔔'}</span>
-                        <div>
-                          <p className="font-medium text-sm">{r.name}</p>
-                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="text-lg">{trigger?.icon || '🔔'}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-semibold text-sm">{r.name}</h4>
                             <Badge variant="outline" className="text-[9px]">{trigger?.label || r.trigger_type}</Badge>
-                            {tpl && <Badge variant="secondary" className="text-[9px]">📝 {tpl.name}</Badge>}
-                            {hGroup && <Badge variant="secondary" className="text-[9px]">#️⃣ {hGroup.name}</Badge>}
-                            {r.delay_minutes > 0 && <Badge variant="secondary" className="text-[9px]">⏱️ {r.delay_minutes} মিনিট</Badge>}
-                            {r.send_email && <Badge variant="secondary" className="text-[9px]">📧 ইমেইল</Badge>}
-                            {r.send_sms && <Badge variant="secondary" className="text-[9px]">📱 SMS</Badge>}
+                            {r.priority > 0 && <Badge variant="secondary" className="text-[9px]">P{r.priority}</Badge>}
                           </div>
-                          <div className="flex gap-1 mt-1">
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            {tpl && <Badge variant="secondary" className="text-[9px] gap-0.5">📝 {tpl.name}</Badge>}
+                            {hGroup && <Badge variant="secondary" className="text-[9px] gap-0.5">#️⃣ {hGroup.name}</Badge>}
+                            {r.delay_minutes > 0 && <Badge variant="secondary" className="text-[9px] gap-0.5">⏱️ {r.delay_minutes}মি.</Badge>}
+                            {r.send_email && <Badge variant="secondary" className="text-[9px]">📧</Badge>}
+                            {r.send_sms && <Badge variant="secondary" className="text-[9px]">📱</Badge>}
+                            {r.max_executions_per_day && <Badge variant="secondary" className="text-[9px]">সর্বোচ্চ {r.max_executions_per_day}/দিন</Badge>}
+                          </div>
+                          {(r.schedule_days || []).length > 0 && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <Clock className="w-3 h-3 text-muted-foreground" />
+                              <span className="text-[10px] text-muted-foreground">
+                                {(r.schedule_days || []).map((d: string) => DAYS_OF_WEEK.find(x => x.id === d)?.label).filter(Boolean).join(', ')}
+                                {r.schedule_time_start && ` (${r.schedule_time_start}${r.schedule_time_end ? '-' + r.schedule_time_end : ''})`}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex gap-1.5 mt-1.5">
                             {(r.platforms || []).map((pid: string) => {
                               const plat = PLATFORMS.find(x => x.id === pid);
-                              return plat ? <plat.icon key={pid} className="w-3 h-3" style={{ color: plat.color }} /> : null;
+                              return plat ? <plat.icon key={pid} className="w-3.5 h-3.5" style={{ color: plat.color }} /> : null;
                             })}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted-foreground">{r.trigger_count || 0} বার চালু</span>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
                         <Switch checked={r.is_active} onCheckedChange={checked => toggleRule.mutate({ id: r.id, active: checked })} />
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => editRuleAction(r)}><Edit className="w-3.5 h-3.5" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { if (confirm('মুছতে চান?')) deleteRule.mutate(r.id); }}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+                        <div className="text-right">
+                          <p className="text-xs font-medium">{r.trigger_count || 0} বার</p>
+                          {totalExec > 0 && (
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div className="h-full bg-green-500 rounded-full" style={{ width: `${successRate}%` }} />
+                              </div>
+                              <span className="text-[9px] text-muted-foreground">{successRate}%</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => editRuleAction(r)} title="এডিট"><Edit className="w-3.5 h-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateRule.mutate(r)} title="ডুপ্লিকেট"><Copy className="w-3.5 h-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { if (confirm('মুছতে চান?')) deleteRule.mutate(r.id); }} title="মুছুন"><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               );
             })}
-            {automationRules.length === 0 && !showRuleForm && (
-              <Card><CardContent className="p-8 text-center text-muted-foreground"><p>কোনো অটোমেশন রুল নেই। উপরের বাটনে ক্লিক করে তৈরি করুন।</p></CardContent></Card>
+            {filteredRules.length === 0 && !showRuleForm && (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Settings className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+                  <p className="text-muted-foreground font-medium">কোনো অটোমেশন রুল পাওয়া যায়নি</p>
+                  <p className="text-xs text-muted-foreground mt-1">উপরের বাটনে ক্লিক করে নতুন রুল তৈরি করুন।</p>
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>
       )}
 
-      {/* LOGS */}
+      {/* LOGS - UPGRADED */}
       {activeSubTab === 'logs' && (
-        <Card>
-          <CardHeader><CardTitle className="text-base">📋 অটোমেশন এক্সিকিউশন লগ ({automationLogs.length})</CardTitle></CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>তারিখ</TableHead>
-                  <TableHead>ট্রিগার</TableHead>
-                  <TableHead>পণ্য</TableHead>
-                  <TableHead>স্ট্যাটাস</TableHead>
-                  <TableHead>বিবরণ</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {automationLogs.map((log: any) => {
-                  const trigger = TRIGGER_TYPES.find(t => t.id === log.trigger_type);
-                  return (
-                    <TableRow key={log.id}>
-                      <TableCell className="text-xs whitespace-nowrap">{format(new Date(log.created_at), 'dd/MM/yy HH:mm')}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-[9px]">{trigger?.icon} {trigger?.label || log.trigger_type}</Badge></TableCell>
-                      <TableCell className="text-sm max-w-[200px] truncate">{log.product_name || '-'}</TableCell>
-                      <TableCell>
-                        <Badge className={log.status === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : log.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : log.status === 'skipped' ? 'bg-yellow-100 text-yellow-800' : 'bg-muted text-muted-foreground'} variant="outline">
-                          {log.status === 'success' ? '✓ সফল' : log.status === 'failed' ? '✗ ব্যর্থ' : log.status === 'skipped' ? '⏭ স্কিপ' : '⏳ পেন্ডিং'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">{log.error_message || '-'}</TableCell>
+        <div className="space-y-4">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {[
+              { label: 'মোট', value: logStats.total, icon: BarChart3, color: 'text-primary' },
+              { label: 'সফল', value: logStats.success, icon: Check, color: 'text-green-600' },
+              { label: 'ব্যর্থ', value: logStats.failed, icon: X, color: 'text-red-500' },
+              { label: 'স্কিপ', value: logStats.skipped, icon: AlertCircle, color: 'text-yellow-500' },
+              { label: 'সাফল্য', value: `${logStats.successRate}%`, icon: TrendingUp, color: 'text-emerald-500' },
+            ].map((s, i) => (
+              <Card key={i}>
+                <CardContent className="p-3 flex items-center gap-2">
+                  <s.icon className={`w-5 h-5 ${s.color}`} />
+                  <div><p className="text-lg font-bold">{s.value}</p><p className="text-[10px] text-muted-foreground">{s.label}</p></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Filters */}
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder="পণ্যের নাম দিয়ে খুঁজুন..." value={logSearch} onChange={e => setLogSearch(e.target.value)} className="pl-9 h-9" />
+                </div>
+                <Select value={logStatusFilter} onValueChange={setLogStatusFilter}>
+                  <SelectTrigger className="w-[130px] h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">সব স্ট্যাটাস</SelectItem>
+                    <SelectItem value="success">✓ সফল</SelectItem>
+                    <SelectItem value="failed">✗ ব্যর্থ</SelectItem>
+                    <SelectItem value="skipped">⏭ স্কিপ</SelectItem>
+                    <SelectItem value="pending">⏳ পেন্ডিং</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={logTriggerFilter} onValueChange={setLogTriggerFilter}>
+                  <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">সব ট্রিগার</SelectItem>
+                    {TRIGGER_TYPES.map(t => <SelectItem key={t.id} value={t.id}>{t.icon} {t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={logDateRange} onValueChange={(v: any) => setLogDateRange(v)}>
+                  <SelectTrigger className="w-[120px] h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">সব সময়</SelectItem>
+                    <SelectItem value="today">আজ</SelectItem>
+                    <SelectItem value="7d">৭ দিন</SelectItem>
+                    <SelectItem value="30d">৩০ দিন</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Logs Table */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center justify-between">
+                <span>📋 এক্সিকিউশন লগ</span>
+                <Badge variant="outline" className="text-xs">{filteredLogs.length} / {automationLogs.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[500px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[130px]">তারিখ</TableHead>
+                      <TableHead>ট্রিগার</TableHead>
+                      <TableHead>পণ্য</TableHead>
+                      <TableHead>প্ল্যাটফর্ম</TableHead>
+                      <TableHead className="text-center">স্ট্যাটাস</TableHead>
+                      <TableHead>বিবরণ</TableHead>
                     </TableRow>
-                  );
-                })}
-                {automationLogs.length === 0 && (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">কোনো লগ নেই</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredLogs.map((log: any) => {
+                      const trigger = TRIGGER_TYPES.find(t => t.id === log.trigger_type);
+                      return (
+                        <TableRow key={log.id} className="group">
+                          <TableCell className="text-xs whitespace-nowrap font-mono">{format(new Date(log.created_at), 'dd/MM/yy HH:mm')}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-[9px] gap-0.5">
+                              <span>{trigger?.icon}</span> {trigger?.label || log.trigger_type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm max-w-[180px] truncate font-medium">{log.product_name || '-'}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              {(log.platforms_posted || []).map((pid: string) => {
+                                const plat = PLATFORMS.find(x => x.id === pid);
+                                return plat ? <plat.icon key={pid} className="w-3.5 h-3.5" style={{ color: plat.color }} /> : null;
+                              })}
+                              {(!log.platforms_posted || log.platforms_posted.length === 0) && <span className="text-xs text-muted-foreground">-</span>}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge className={
+                              log.status === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                              log.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                              log.status === 'skipped' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                              'bg-muted text-muted-foreground'
+                            } variant="outline">
+                              {log.status === 'success' ? '✓ সফল' : log.status === 'failed' ? '✗ ব্যর্থ' : log.status === 'skipped' ? '⏭ স্কিপ' : '⏳'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground max-w-[200px]">
+                            {log.error_message ? (
+                              <span className="text-red-500 truncate block" title={log.error_message}>{log.error_message}</span>
+                            ) : log.execution_time_ms ? (
+                              <span>{log.execution_time_ms}ms</span>
+                            ) : '-'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {filteredLogs.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-12">
+                          <AlertCircle className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+                          <p className="text-muted-foreground">কোনো লগ পাওয়া যায়নি</p>
+                          <p className="text-xs text-muted-foreground mt-1">ফিল্টার পরিবর্তন করে চেষ্টা করুন</p>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );
