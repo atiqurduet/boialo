@@ -69,6 +69,11 @@ const TEMPLATE_TYPES = [
   { id: 'custom', label: 'কাস্টম' },
 ];
 
+const STATIC_VARIABLES = [
+  { key: '{{shop_name}}', label: 'দোকানের নাম', icon: '🏪', value: 'বইআলো' },
+  { key: '{{date}}', label: 'তারিখ', icon: '📅', value: new Date().toLocaleDateString('bn-BD') },
+];
+
 const AVAILABLE_VARIABLES = [
   { key: '{{product_name}}', label: 'পণ্যের নাম', icon: '📦' },
   { key: '{{price}}', label: 'মূল্য', icon: '💰' },
@@ -1312,7 +1317,7 @@ const AdminSocialMedia = () => {
     queryFn: async () => {
       const sanitized = productSearch.replace(/[%_\\]/g, '\\$&').slice(0, 200);
       // @ts-ignore
-      const base = supabase.from('products').select('id, title_bn, title_en, slug, images, price, original_price, discount_percent, author').eq('is_active', true).order('created_at', { ascending: false }).limit(30);
+      const base = supabase.from('products').select('id, title_bn, title_en, slug, images, price, original_price, discount_percent, author, publisher, category_id, isbn, language, pages, edition').eq('is_active', true).order('created_at', { ascending: false }).limit(30);
       const final = sanitized ? base.or(`title_bn.ilike.%${sanitized}%,title_en.ilike.%${sanitized}%,author.ilike.%${sanitized}%`) : base;
       const { data } = await final;
       return (data || []) as any[];
@@ -1324,7 +1329,7 @@ const AdminSocialMedia = () => {
     queryFn: async () => {
       const sanitized = productSearch.replace(/[%_\\]/g, '\\$&').slice(0, 200);
       // @ts-ignore
-      const base = supabase.from('universal_products').select('id, name_bn, name_en, slug, images, price, original_price, discount_percent, product_type').eq('is_active', true).order('created_at', { ascending: false }).limit(30);
+      const base = supabase.from('universal_products').select('id, name_bn, name_en, slug, images, price, original_price, discount_percent, product_type, brand_id, sku').eq('is_active', true).order('created_at', { ascending: false }).limit(30);
       const final = sanitized ? base.or(`name_bn.ilike.%${sanitized}%,name_en.ilike.%${sanitized}%`) : base;
       const { data } = await final;
       return (data || []) as any[];
@@ -1567,15 +1572,16 @@ const AdminSocialMedia = () => {
 
   const selectProduct = (product: any, type: 'book' | 'universal') => {
     const imgUrl = product.images?.[0] || null;
-    setSelectedProduct({ ...product, type, image_url: imgUrl });
+    const name = type === 'book' ? (product.title_bn || product.title_en) : (product.name_bn || product.name_en);
+    const price = product.price;
+    const discountPrice = product.original_price && product.discount_percent ? Math.round(price) : null;
     const url = type === 'book' ? `${BASE_URL}/product/${product.slug}` : `${BASE_URL}/universal-product/${product.slug}`;
+    
+    setSelectedProduct({ ...product, type, image_url: imgUrl, _resolved_name: name, _resolved_url: url });
     setPostLink(url);
-    // Auto-add product image to media
     if (imgUrl && !mediaUrls.includes(imgUrl)) {
       setMediaUrls(prev => [...prev, imgUrl]);
     }
-    const name = type === 'book' ? (product.title_bn || product.title_en) : (product.name_bn || product.name_en);
-    const price = product.discount_price || product.price;
     if (!postContent) {
       setPostContent(`📚 ${name}\n💰 মূল্য: ৳${price}\n\n🛒 এখনই অর্ডার করুন!\n🔗 ${url}`);
     }
@@ -1583,11 +1589,36 @@ const AdminSocialMedia = () => {
     toast.success('প্রোডাক্ট সিলেক্ট হয়েছে');
   };
 
+  // Build dynamic variables from selected product
+  const dynamicProductVars = useMemo(() => {
+    if (!selectedProduct) return [];
+    const vars: { key: string; label: string; icon: string; value: string }[] = [];
+    const p = selectedProduct;
+    const name = p._resolved_name || p.title_bn || p.name_bn || p.title_en || p.name_en || '';
+    if (name) vars.push({ key: name, label: 'পণ্যের নাম', icon: '📦', value: name });
+    if (p.price) vars.push({ key: `৳${p.price}`, label: 'মূল্য', icon: '💰', value: `৳${p.price}` });
+    if (p.original_price && p.original_price > p.price) vars.push({ key: `৳${p.original_price}`, label: 'ছাড় মূল্য', icon: '🏷️', value: `৳${p.original_price}` });
+    if (p.discount_percent) vars.push({ key: `${p.discount_percent}%`, label: 'ডিসকাউন্ট', icon: '🔥', value: `${p.discount_percent}%` });
+    if (p.author) vars.push({ key: p.author, label: 'লেখক', icon: '✍️', value: p.author });
+    if (p.publisher) vars.push({ key: p.publisher, label: 'প্রকাশনী', icon: '🏢', value: p.publisher });
+    if (p.product_type) vars.push({ key: p.product_type, label: 'প্রোডাক্ট টাইপ', icon: '🏷️', value: p.product_type });
+    if (p.isbn) vars.push({ key: p.isbn, label: 'ISBN', icon: '📖', value: p.isbn });
+    if (p.language) vars.push({ key: p.language, label: 'ভাষা', icon: '🌐', value: p.language });
+    if (p.pages) vars.push({ key: `${p.pages}`, label: 'পৃষ্ঠা', icon: '📄', value: `${p.pages} পৃষ্ঠা` });
+    if (p.edition) vars.push({ key: p.edition, label: 'সংস্করণ', icon: '📕', value: p.edition });
+    if (p.sku) vars.push({ key: p.sku, label: 'SKU', icon: '🔢', value: p.sku });
+    if (p._resolved_url) vars.push({ key: p._resolved_url, label: 'লিংক', icon: '🔗', value: p._resolved_url });
+    // Always add static vars
+    vars.push({ key: 'বইআলো', label: 'দোকানের নাম', icon: '🏪', value: 'বইআলো' });
+    vars.push({ key: new Date().toLocaleDateString('bn-BD'), label: 'তারিখ', icon: '📅', value: new Date().toLocaleDateString('bn-BD') });
+    return vars;
+  }, [selectedProduct]);
+
   const selectCategory = (cat: any, type: 'book' | 'universal') => {
     const name = cat.name_bn || cat.name_en;
     const url = type === 'book' ? `${BASE_URL}/categories/${cat.slug}` : `${BASE_URL}/category/${cat.product_type}/${cat.slug}`;
     setPostLink(url);
-    setSelectedProduct({ id: cat.id, type: `category-${type}`, name_bn: name, image_url: cat.image_url, slug: cat.slug });
+    setSelectedProduct({ id: cat.id, type: `category-${type}`, name_bn: name, image_url: cat.image_url, slug: cat.slug, _resolved_name: name, _resolved_url: url });
     if (cat.image_url && !mediaUrls.includes(cat.image_url)) {
       setMediaUrls(prev => [...prev, cat.image_url]);
     }
@@ -1788,30 +1819,59 @@ const AdminSocialMedia = () => {
                         ✍️ পোস্ট কন্টেন্ট
                       </Label>
                       
-                      {/* Variable insertion toolbar */}
+                      {/* Dynamic variable insertion toolbar */}
                       <div className="flex flex-wrap gap-1 p-2 bg-muted/50 rounded-lg border">
-                        <span className="text-[10px] text-muted-foreground self-center mr-1">ভেরিয়েবল:</span>
-                        {AVAILABLE_VARIABLES.map(v => (
-                          <Badge
-                            key={v.key}
-                            variant="outline"
-                            className="cursor-pointer text-[10px] hover:bg-primary/10 gap-0.5 py-0.5"
-                            onClick={() => {
-                              const textarea = postContentRef.current;
-                              if (textarea) {
-                                const start = textarea.selectionStart;
-                                const end = textarea.selectionEnd;
-                                const newVal = postContent.substring(0, start) + v.key + postContent.substring(end);
-                                setPostContent(newVal);
-                                setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + v.key.length, start + v.key.length); }, 50);
-                              } else {
-                                setPostContent(prev => prev + v.key);
-                              }
-                            }}
-                          >
-                            {v.icon} {v.label}
-                          </Badge>
-                        ))}
+                        <span className="text-[10px] font-semibold text-destructive self-center mr-1">ভেরিয়েবল:</span>
+                        {selectedProduct && dynamicProductVars.length > 0 ? (
+                          <>
+                            {dynamicProductVars.map((v, idx) => (
+                              <Badge
+                                key={idx}
+                                variant="outline"
+                                className="cursor-pointer text-[10px] hover:bg-primary/10 gap-0.5 py-0.5 border-primary/30"
+                                onClick={() => {
+                                  const textarea = postContentRef.current;
+                                  if (textarea) {
+                                    const start = textarea.selectionStart;
+                                    const end = textarea.selectionEnd;
+                                    const newVal = postContent.substring(0, start) + v.value + postContent.substring(end);
+                                    setPostContent(newVal);
+                                    setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + v.value.length, start + v.value.length); }, 50);
+                                  } else {
+                                    setPostContent(prev => prev + v.value);
+                                  }
+                                }}
+                              >
+                                {v.icon} {v.label}
+                              </Badge>
+                            ))}
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-[10px] text-muted-foreground self-center">প্রোডাক্ট সিলেক্ট করলে অটো ভেরিয়েবল আসবে</span>
+                            {STATIC_VARIABLES.map(v => (
+                              <Badge
+                                key={v.key}
+                                variant="outline"
+                                className="cursor-pointer text-[10px] hover:bg-primary/10 gap-0.5 py-0.5"
+                                onClick={() => {
+                                  const textarea = postContentRef.current;
+                                  if (textarea) {
+                                    const start = textarea.selectionStart;
+                                    const end = textarea.selectionEnd;
+                                    const newVal = postContent.substring(0, start) + v.value + postContent.substring(end);
+                                    setPostContent(newVal);
+                                    setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + v.value.length, start + v.value.length); }, 50);
+                                  } else {
+                                    setPostContent(prev => prev + v.value);
+                                  }
+                                }}
+                              >
+                                {v.icon} {v.label}
+                              </Badge>
+                            ))}
+                          </>
+                        )}
                       </div>
 
                       <Textarea
