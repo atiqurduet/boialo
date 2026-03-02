@@ -1394,6 +1394,13 @@ const AdminSocialMedia = () => {
   const [viewingPost, setViewingPost] = useState<any>(null);
   const [viewingPublishHistory, setViewingPublishHistory] = useState<any>(null);
 
+  // Engagement
+  const [engagementPostId, setEngagementPostId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [replyingTo, setReplyingTo] = useState<any>(null);
+  const [engagementPlatformFilter, setEngagementPlatformFilter] = useState('all');
+  const [syncing, setSyncing] = useState(false);
+
   // Account form
   const [accPlatform, setAccPlatform] = useState('');
   const [accName, setAccName] = useState('');
@@ -1422,6 +1429,15 @@ const AdminSocialMedia = () => {
     queryFn: async () => {
       // @ts-ignore
       const { data } = await supabase.from('social_media_publish_history').select('*').order('published_at', { ascending: false }).limit(200);
+      return data || [];
+    }
+  });
+
+  const { data: socialComments = [], refetch: refetchComments } = useQuery({
+    queryKey: ['social-comments'],
+    queryFn: async () => {
+      // @ts-ignore
+      const { data } = await supabase.from('social_media_comments').select('*').order('external_created_at', { ascending: false }).limit(500);
       return data || [];
     }
   });
@@ -1548,6 +1564,30 @@ const AdminSocialMedia = () => {
   });
 
   const resetComposer = () => { setPostContent(''); setSelectedPlatforms([]); setPostHashtags(''); setPostLink(''); setScheduleDate(''); setEditingPost(null); setSelectedProduct(null); setMediaUrls([]); };
+
+  // Engagement sync
+  const syncEngagement = async (postId?: string) => {
+    setSyncing(true);
+    try {
+      await supabase.functions.invoke('sync-social-engagement', { body: postId ? { post_id: postId } : {} });
+      queryClient.invalidateQueries({ queryKey: ['social-post-results'] });
+      refetchComments();
+      toast.success('এনগেজমেন্ট সিংক হয়েছে');
+    } catch (e) { toast.error('সিংক ব্যর্থ'); }
+    finally { setSyncing(false); }
+  };
+
+  // Reply mutation
+  const sendReply = useMutation({
+    mutationFn: async ({ post_result_id, comment_id, reply_text: text }: { post_result_id?: string; comment_id?: string; reply_text: string }) => {
+      const { data, error } = await supabase.functions.invoke('social-media-reply', { body: { post_result_id, comment_id, reply_text: text } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: () => { toast.success('রিপ্লাই পাঠানো হয়েছে'); setReplyText(''); setReplyingTo(null); refetchComments(); },
+    onError: (e: any) => toast.error(`রিপ্লাই ব্যর্থ: ${e.message}`),
+  });
+
   const resetAccountForm = () => { setAccPlatform(''); setAccName(''); setAccToken(''); setAccPageId(''); setAccChannelId(''); setEditingAccount(null); };
 
   const editAccount = (acc: any) => { setEditingAccount(acc); setAccPlatform(acc.platform); setAccName(acc.account_name || ''); setAccToken(''); setAccPageId(acc.page_id || ''); setAccChannelId(acc.channel_id || ''); setShowAccountDialog(true); };
@@ -1635,6 +1675,7 @@ const AdminSocialMedia = () => {
         <Tabs defaultValue="compose" className="space-y-4">
           <TabsList className="flex-wrap h-auto gap-1 bg-muted/60 p-1 border border-border/50">
             <TabsTrigger value="compose" className="gap-1.5"><Send className="w-3.5 h-3.5" /> পোস্ট</TabsTrigger>
+            <TabsTrigger value="engagement" className="gap-1.5"><MessageSquare className="w-3.5 h-3.5" /> এনগেজমেন্ট</TabsTrigger>
             <TabsTrigger value="history" className="gap-1.5"><Clock className="w-3.5 h-3.5" /> হিস্ট্রি</TabsTrigger>
             <TabsTrigger value="accounts" className="gap-1.5"><Settings className="w-3.5 h-3.5" /> অ্যাকাউন্ট</TabsTrigger>
             <TabsTrigger value="analytics" className="gap-1.5"><BarChart3 className="w-3.5 h-3.5" /> অ্যানালিটিক্স</TabsTrigger>
@@ -1843,6 +1884,212 @@ const AdminSocialMedia = () => {
                   </CardContent>
                 </Card>
               </div>
+            </div>
+          </TabsContent>
+
+          {/* ENGAGEMENT TAB */}
+          <TabsContent value="engagement">
+            <div className="space-y-4">
+              {/* Sync Control */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <MessageSquare className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-sm">সোশ্যাল এনগেজমেন্ট ড্যাশবোর্ড</h3>
+                        <p className="text-[11px] text-muted-foreground">সব প্ল্যাটফর্মের ভিউ, লাইক, কমেন্ট দেখুন এবং রিপ্লাই দিন</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Select value={engagementPlatformFilter} onValueChange={setEngagementPlatformFilter}>
+                        <SelectTrigger className="w-36 h-9"><SelectValue placeholder="সব প্ল্যাটফর্ম" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">সব প্ল্যাটফর্ম</SelectItem>
+                          {PLATFORMS.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Button size="sm" variant="outline" onClick={() => syncEngagement()} disabled={syncing} className="gap-1.5">
+                        <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                        {syncing ? 'সিংক হচ্ছে...' : 'সিংক করুন'}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Posts with engagement */}
+              {posts.filter(p => p.status === 'published').map(post => {
+                const results = postResults.filter(r => r.post_id === post.id && r.status === 'success');
+                const filteredResults = engagementPlatformFilter === 'all' ? results : results.filter(r => r.platform === engagementPlatformFilter);
+                if (filteredResults.length === 0) return null;
+
+                const postComments = socialComments.filter((c: any) => c.post_id === post.id && !c.parent_comment_id);
+                const totalLikesPost = filteredResults.reduce((s, r) => s + (r.likes_count || 0), 0);
+                const totalCommentsPost = filteredResults.reduce((s, r) => s + (r.comments_count || 0), 0);
+                const totalViewsPost = filteredResults.reduce((s, r) => s + (r.views_count || 0), 0);
+                const totalSharesPost = filteredResults.reduce((s, r) => s + (r.shares_count || 0), 0);
+
+                return (
+                  <Card key={post.id} className="overflow-hidden">
+                    <CardContent className="p-0">
+                      {/* Post Header */}
+                      <div className="p-4 border-b border-border/50">
+                        <div className="flex gap-3">
+                          {post.media_urls?.[0] && (
+                            <img src={post.media_urls[0]} alt="" className="w-16 h-16 rounded-xl object-cover shrink-0 shadow-sm" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm line-clamp-2">{post.content_bn || post.content}</p>
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                              <span className="text-[10px] text-muted-foreground">{format(new Date(post.created_at), 'dd/MM/yy HH:mm')}</span>
+                              {filteredResults.map(r => {
+                                const plat = PLATFORMS.find(p => p.id === r.platform);
+                                return plat ? (
+                                  <div key={r.id} className="flex items-center gap-0.5">
+                                    <plat.icon className="w-3 h-3" style={{ color: plat.color }} />
+                                    {r.last_synced_at && <span className="text-[9px] text-muted-foreground">সিংক: {format(new Date(r.last_synced_at), 'HH:mm')}</span>}
+                                  </div>
+                                ) : null;
+                              })}
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => syncEngagement(post.id)} disabled={syncing}>
+                            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+                          </Button>
+                        </div>
+
+                        {/* Engagement Metrics */}
+                        <div className="grid grid-cols-4 gap-2 mt-3">
+                          {[
+                            { icon: Eye, label: 'ভিউ', value: totalViewsPost, color: 'text-blue-500' },
+                            { icon: Heart, label: 'লাইক', value: totalLikesPost, color: 'text-red-500' },
+                            { icon: MessageSquare, label: 'কমেন্ট', value: totalCommentsPost, color: 'text-green-500' },
+                            { icon: Share2, label: 'শেয়ার', value: totalSharesPost, color: 'text-purple-500' },
+                          ].map((m, i) => (
+                            <div key={i} className="bg-muted/30 rounded-lg p-2 text-center border border-border/30">
+                              <m.icon className={`w-3.5 h-3.5 mx-auto mb-0.5 ${m.color}`} />
+                              <p className="text-base font-bold leading-tight">{m.value}</p>
+                              <p className="text-[9px] text-muted-foreground">{m.label}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Platform breakdown */}
+                        {filteredResults.length > 1 && (
+                          <div className="mt-2 space-y-1">
+                            {filteredResults.map(r => {
+                              const plat = PLATFORMS.find(p => p.id === r.platform);
+                              return (
+                                <div key={r.id} className="flex items-center gap-2 text-[10px] bg-muted/20 rounded-lg px-2.5 py-1.5">
+                                  {plat && <plat.icon className="w-3 h-3" style={{ color: plat.color }} />}
+                                  <span className="font-medium">{plat?.name}</span>
+                                  <span className="ml-auto flex items-center gap-3">
+                                    <span className="flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" />{r.views_count || 0}</span>
+                                    <span className="flex items-center gap-0.5"><Heart className="w-2.5 h-2.5" />{r.likes_count || 0}</span>
+                                    <span className="flex items-center gap-0.5"><MessageSquare className="w-2.5 h-2.5" />{r.comments_count || 0}</span>
+                                    <span className="flex items-center gap-0.5"><Share2 className="w-2.5 h-2.5" />{r.shares_count || 0}</span>
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Comments Section */}
+                      {postComments.length > 0 && (
+                        <div className="p-4 bg-muted/10">
+                          <h4 className="text-xs font-semibold mb-2.5 flex items-center gap-1.5">
+                            <MessageSquare className="w-3.5 h-3.5 text-primary" /> কমেন্টস ({postComments.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {postComments.slice(0, engagementPostId === post.id ? 50 : 3).map((comment: any) => {
+                              const cPlat = PLATFORMS.find(p => p.id === comment.platform);
+                              const replies = socialComments.filter((c: any) => c.parent_comment_id === comment.id);
+                              return (
+                                <div key={comment.id} className="space-y-1.5">
+                                  <div className={`flex gap-2 p-2.5 rounded-xl border ${comment.is_from_admin ? 'bg-primary/5 border-primary/20' : 'bg-background border-border/50'}`}>
+                                    <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 text-[10px] font-bold">
+                                      {comment.author_avatar_url ? <img src={comment.author_avatar_url} alt="" className="w-7 h-7 rounded-full object-cover" /> : (comment.author_name || '?')[0]}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-xs font-semibold">{comment.author_name}</span>
+                                        {comment.is_from_admin && <Badge variant="outline" className="text-[8px] py-0">Admin</Badge>}
+                                        {cPlat && <cPlat.icon className="w-3 h-3" style={{ color: cPlat.color }} />}
+                                        <span className="text-[10px] text-muted-foreground ml-auto">
+                                          {comment.external_created_at ? format(new Date(comment.external_created_at), 'dd/MM HH:mm') : ''}
+                                        </span>
+                                      </div>
+                                      <p className="text-xs mt-0.5 text-foreground/80">{comment.content}</p>
+                                      <div className="flex items-center gap-3 mt-1">
+                                        {comment.likes_count > 0 && <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Heart className="w-2.5 h-2.5" />{comment.likes_count}</span>}
+                                        <button className="text-[10px] text-primary font-medium hover:underline" onClick={() => { setReplyingTo({ comment, post_result_id: filteredResults.find(r => r.platform === comment.platform)?.id }); setReplyText(''); }}>
+                                          রিপ্লাই
+                                        </button>
+                                        {comment.author_profile_url && <a href={comment.author_profile_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline">প্রোফাইল</a>}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {/* Replies */}
+                                  {replies.map((reply: any) => (
+                                    <div key={reply.id} className={`flex gap-2 p-2 rounded-lg ml-8 border ${reply.is_from_admin ? 'bg-primary/5 border-primary/20' : 'bg-muted/20 border-border/30'}`}>
+                                      <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0 text-[8px] font-bold">
+                                        {reply.author_avatar_url ? <img src={reply.author_avatar_url} alt="" className="w-5 h-5 rounded-full" /> : (reply.author_name || '?')[0]}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-[11px] font-semibold">{reply.author_name}</span>
+                                          {reply.is_from_admin && <Badge variant="outline" className="text-[7px] py-0">Admin</Badge>}
+                                        </div>
+                                        <p className="text-[11px] mt-0.5">{reply.content}</p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {/* Reply Input */}
+                                  {replyingTo?.comment?.id === comment.id && (
+                                    <div className="flex gap-2 ml-8">
+                                      <Input value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="রিপ্লাই লিখুন..." className="h-8 text-xs" onKeyDown={e => { if (e.key === 'Enter' && replyText.trim()) sendReply.mutate({ comment_id: comment.id, reply_text: replyText }); }} />
+                                      <Button size="sm" className="h-8 text-xs gap-1" disabled={!replyText.trim() || sendReply.isPending} onClick={() => sendReply.mutate({ comment_id: comment.id, reply_text: replyText })}>
+                                        {sendReply.isPending ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />} পাঠান
+                                      </Button>
+                                      <Button variant="ghost" size="sm" className="h-8" onClick={() => setReplyingTo(null)}><X className="w-3 h-3" /></Button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            {postComments.length > 3 && engagementPostId !== post.id && (
+                              <Button variant="ghost" size="sm" className="text-xs w-full" onClick={() => setEngagementPostId(post.id)}>
+                                আরও {postComments.length - 3}টি কমেন্ট দেখুন <ChevronRight className="w-3 h-3 ml-1" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Direct Reply to Post */}
+                      <div className="p-3 border-t border-border/30">
+                        <div className="flex gap-2">
+                          <Input placeholder="পোস্টে কমেন্ট করুন..." className="h-9 text-xs" value={replyingTo?.post_id === post.id && !replyingTo?.comment ? replyText : ''} onChange={e => { setReplyingTo({ post_id: post.id }); setReplyText(e.target.value); }}
+                            onKeyDown={e => { if (e.key === 'Enter' && replyText.trim() && filteredResults[0]) sendReply.mutate({ post_result_id: filteredResults[0].id, reply_text: replyText }); }} />
+                          <Button size="sm" className="h-9 text-xs gap-1 shrink-0" disabled={!(replyingTo?.post_id === post.id && !replyingTo?.comment && replyText.trim()) || sendReply.isPending}
+                            onClick={() => { if (filteredResults[0]) sendReply.mutate({ post_result_id: filteredResults[0].id, reply_text: replyText }); }}>
+                            <Send className="w-3 h-3" /> কমেন্ট
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+
+              {posts.filter(p => p.status === 'published').length === 0 && (
+                <Card><CardContent className="py-12 text-center"><MessageSquare className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" /><p className="text-muted-foreground">কোনো পাবলিশড পোস্ট নেই</p></CardContent></Card>
+              )}
             </div>
           </TabsContent>
 
