@@ -1,3 +1,4 @@
+import { SEOHead } from "@/components/SEOHead";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
@@ -7,6 +8,16 @@ import { BookOpen, Users, Award, Heart, MapPin } from "lucide-react";
 const About = () => {
   return (
     <div className="min-h-screen bg-background animate-page-in">
+      <SEOHead
+        title="আমাদের সম্পর্কে"
+        description="বইআলো - বাংলাদেশের সবচেয়ে বড় অনলাইন বই ও লাইফস্টাইল শপ। আমাদের লক্ষ্য সবার হাতে সহজে বই পৌঁছে দেওয়া।"
+        keywords="বইআলো সম্পর্কে, boialo about, অনলাইন বই শপ বাংলাদেশ"
+        canonicalUrl="https://boialo.com/about"
+        breadcrumbs={[
+          { name: 'হোম', url: '/' },
+          { name: 'আমাদের সম্পর্কে', url: '/about' },
+        ]}
+      />
       <AnnouncementBar />
       <Header />
       <main>

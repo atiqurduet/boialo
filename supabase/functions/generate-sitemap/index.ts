@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const baseUrl = new URL(req.url).searchParams.get("base_url") || "https://boialo.lovable.app";
+    const baseUrl = new URL(req.url).searchParams.get("base_url") || "https://boialo.com";
 
     // Static pages
     const staticPages = [
@@ -27,14 +27,25 @@ Deno.serve(async (req) => {
       { url: "/offers", priority: "0.8", changefreq: "daily" },
       { url: "/preorder", priority: "0.8", changefreq: "daily" },
       { url: "/blog", priority: "0.7", changefreq: "daily" },
+      { url: "/bundles", priority: "0.6", changefreq: "weekly" },
+      { url: "/gift-cards", priority: "0.5", changefreq: "monthly" },
       { url: "/about", priority: "0.5", changefreq: "monthly" },
       { url: "/contact", priority: "0.5", changefreq: "monthly" },
       { url: "/faq", priority: "0.5", changefreq: "monthly" },
+      { url: "/terms", priority: "0.3", changefreq: "yearly" },
+      { url: "/privacy", priority: "0.3", changefreq: "yearly" },
+      { url: "/refund-policy", priority: "0.4", changefreq: "yearly" },
     ];
 
-    // Products
+    // Products (books)
     const { data: products } = await supabase
       .from("products")
+      .select("slug, updated_at")
+      .eq("is_active", true);
+
+    // Universal Products
+    const { data: universalProducts } = await supabase
+      .from("universal_products")
       .select("slug, updated_at")
       .eq("is_active", true);
 
@@ -42,6 +53,12 @@ Deno.serve(async (req) => {
     const { data: categories } = await supabase
       .from("categories")
       .select("slug, updated_at")
+      .eq("is_active", true);
+
+    // Universal Categories
+    const { data: universalCategories } = await supabase
+      .from("universal_categories")
+      .select("slug, product_type, updated_at")
       .eq("is_active", true);
 
     // Writers
@@ -62,9 +79,23 @@ Deno.serve(async (req) => {
       .select("slug, updated_at")
       .eq("status", "published");
 
+    // Dynamic pages
+    const { data: dynamicPages } = await supabase
+      .from("pages")
+      .select("slug, updated_at")
+      .eq("is_active", true)
+      .eq("is_private", false);
+
+    // Product types for category landing
+    const { data: productTypes } = await supabase
+      .from("product_types")
+      .select("slug, updated_at")
+      .eq("is_active", true);
+
     // Build XML
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">`;
 
     // Static pages
     for (const page of staticPages) {
@@ -76,7 +107,7 @@ Deno.serve(async (req) => {
   </url>`;
     }
 
-    // Products
+    // Products (books)
     for (const p of products || []) {
       xml += `
   <url>
@@ -87,12 +118,45 @@ Deno.serve(async (req) => {
   </url>`;
     }
 
-    // Categories
+    // Universal Products
+    for (const p of universalProducts || []) {
+      xml += `
+  <url>
+    <loc>${baseUrl}/universal-product/${p.slug}</loc>
+    <lastmod>${new Date(p.updated_at).toISOString().split("T")[0]}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+    }
+
+    // Book Categories
     for (const c of categories || []) {
       xml += `
   <url>
-    <loc>${baseUrl}/shop?category=${c.slug}</loc>
+    <loc>${baseUrl}/categories/${c.slug}</loc>
     <lastmod>${new Date(c.updated_at).toISOString().split("T")[0]}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`;
+    }
+
+    // Universal Categories
+    for (const c of universalCategories || []) {
+      xml += `
+  <url>
+    <loc>${baseUrl}/category/${c.product_type}/${c.slug}</loc>
+    <lastmod>${new Date(c.updated_at).toISOString().split("T")[0]}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`;
+    }
+
+    // Product type landing pages
+    for (const pt of productTypes || []) {
+      xml += `
+  <url>
+    <loc>${baseUrl}/category/${pt.slug}</loc>
+    <lastmod>${new Date(pt.updated_at).toISOString().split("T")[0]}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>`;
@@ -131,6 +195,17 @@ Deno.serve(async (req) => {
   </url>`;
     }
 
+    // Dynamic pages
+    for (const dp of dynamicPages || []) {
+      xml += `
+  <url>
+    <loc>${baseUrl}/${dp.slug}</loc>
+    <lastmod>${new Date(dp.updated_at).toISOString().split("T")[0]}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>`;
+    }
+
     xml += `
 </urlset>`;
 
@@ -138,6 +213,7 @@ Deno.serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/xml",
+        "Cache-Control": "public, max-age=3600",
       },
     });
   } catch (error: unknown) {

@@ -1,3 +1,4 @@
+import { SEOHead } from "@/components/SEOHead";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { Header } from "@/components/Header";
 import { DynamicHeroSlider } from "@/components/DynamicHeroSlider";
@@ -332,6 +333,12 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background animate-page-in">
+      <SEOHead
+        title="বইআলো - বাংলাদেশের সবচেয়ে বড় অনলাইন বই ও লাইফস্টাইল শপ"
+        description="বইআলো - বাংলাদেশের সবচেয়ে বড় অনলাইন বই ও লাইফস্টাইল শপ। ইসলামি বই, একাডেমিক বই, উপন্যাস, শিশুদের বই সহ হাজার হাজার বই সেরা দামে কিনুন। ফ্রি ডেলিভারি ও ক্যাশ অন ডেলিভারি।"
+        keywords="বই, অনলাইন বই, বাংলা বই, ইসলামি বই, বই কিনুন, বইআলো, boialo, online bookshop bangladesh, বই অর্ডার"
+        canonicalUrl="https://boialo.com"
+      />
       <AnnouncementBar />
       <Header />
       <main>

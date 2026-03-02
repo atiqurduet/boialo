@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { SafeHTML } from "@/components/SafeHTML";
+import { SEOHead } from "@/components/SEOHead";
 import { useProductTypes } from "@/hooks/useProductTypes";
 import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -207,8 +208,37 @@ const UniversalProductDetail = () => {
 
   const images = product.images?.length > 0 ? product.images : ['/placeholder.svg'];
 
+  const pName = product.name_bn || product.name_en;
+  const hasDiscount = product.discount_percent && product.discount_percent > 0;
+  const brandName = typeof product.brand === 'string' ? product.brand : '';
+  const uniSeoDesc = `${pName}${brandName ? ` - ${brandName}` : ''}। মূল্য: ৳${product.price}${hasDiscount ? ` (${product.discount_percent}% ছাড়)` : ''}। বইআলো থেকে অর্ডার করুন।`;
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title={pName}
+        description={product.meta_description || uniSeoDesc}
+        keywords={`${pName}, ${brandName}, ${category?.name_bn || ''}, বইআলো`}
+        canonicalUrl={`https://boialo.com/universal-product/${product.slug}`}
+        ogType="product"
+        ogImage={images[0] !== '/placeholder.svg' ? images[0] : undefined}
+        ogImageAlt={pName}
+        product={{
+          price: product.price,
+          currency: 'BDT',
+          availability: product.stock_quantity > 0 ? 'InStock' : 'OutOfStock',
+          brand: brandName || undefined,
+          category: category?.name_bn,
+          sku: product.sku || product.id,
+          image: images[0],
+        }}
+        breadcrumbs={[
+          { name: 'হোম', url: '/' },
+          { name: getTypeLabel(product.product_type) || product.product_type, url: `/category/${product.product_type}` },
+          ...(category ? [{ name: category.name_bn, url: `/category/${product.product_type}/${category.slug}` }] : []),
+          { name: pName, url: `/universal-product/${product.slug}` },
+        ]}
+      />
       <Header />
       
       <main className="flex-grow">

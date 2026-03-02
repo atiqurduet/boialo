@@ -1,3 +1,4 @@
+import { SEOHead } from "@/components/SEOHead";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
@@ -200,8 +201,23 @@ const CategoryDetail = () => {
     );
   }
 
+  const catName = category?.name_bn || category?.name_en || 'ক্যাটাগরি';
+  const catDesc = category?.meta_description || `${catName} ক্যাটাগরির সকল বই। বইআলো তে সেরা দামে ${catName} বই কিনুন।`;
+
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title={category?.meta_title || `${catName} - বই`}
+        description={catDesc}
+        keywords={`${catName}, ${catName} বই, বই কিনুন, বইআলো`}
+        canonicalUrl={`https://boialo.com/categories/${slug}`}
+        ogImage={category?.image_url || undefined}
+        breadcrumbs={[
+          { name: 'হোম', url: '/' },
+          { name: 'ক্যাটাগরি', url: '/categories' },
+          { name: catName, url: `/categories/${slug}` },
+        ]}
+      />
       <AnnouncementBar />
       <Header />
 
