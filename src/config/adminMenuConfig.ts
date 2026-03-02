@@ -34,6 +34,7 @@ import {
   Paintbrush,
   BookOpen,
   MapPin,
+  Globe,
   type LucideIcon
 } from 'lucide-react';
 
@@ -135,6 +136,7 @@ export const menuCategories: MenuCategory[] = [
       { icon: Image, label: 'ব্যানার', href: '/admin/banners', roles: ['admin', 'manager'] },
       { icon: Navigation, label: 'মেনু', href: '/admin/menu', roles: ['admin', 'manager'] },
       { icon: Footprints, label: 'ফুটার', href: '/admin/footer', roles: ['admin', 'manager'] },
+      { icon: Globe, label: 'SEO টুলস', href: '/admin/seo-tools', roles: ['admin', 'manager'] },
     ]
   },
   {
