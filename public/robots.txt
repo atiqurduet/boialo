@@ -1,8 +1,19 @@
 User-agent: Googlebot
 Allow: /
+Disallow: /admin/
+Disallow: /signin
+Disallow: /profile
+Disallow: /checkout
+Disallow: /order-confirmation
+Disallow: /reset-password
+Disallow: /forgot-password
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin/
+Disallow: /signin
+Disallow: /profile
+Disallow: /checkout
 
 User-agent: Twitterbot
 Allow: /
@@ -12,3 +23,13 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /signin
+Disallow: /profile
+Disallow: /checkout
+Disallow: /order-confirmation
+Disallow: /reset-password
+Disallow: /forgot-password
+
+# Sitemaps
+Sitemap: https://boialo.com/sitemap.xml

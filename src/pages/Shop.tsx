@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { SEOHead } from "@/components/SEOHead";
 import { useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
@@ -910,8 +911,23 @@ const Shop = () => {
     </div>
   );
 
+  const shopTitle = searchQuery ? `"${searchQuery}" অনুসন্ধান` : 'সকল বই ও পণ্য';
+  const shopDesc = searchQuery 
+    ? `"${searchQuery}" এর জন্য সার্চ রেজাল্ট। বইআলো - বাংলাদেশের সবচেয়ে বড় অনলাইন বই শপ।`
+    : 'বইআলো তে সকল বই ও পণ্য ব্রাউজ করুন। ইসলামি বই, একাডেমিক বই, উপন্যাস সহ হাজারো বই সেরা দামে।';
+
   return (
     <div className="min-h-screen bg-background animate-page-in">
+      <SEOHead
+        title={shopTitle}
+        description={shopDesc}
+        keywords="বই কিনুন, অনলাইন বই, বাংলা বই, ইসলামি বই, একাডেমিক বই, বইআলো শপ"
+        canonicalUrl="https://boialo.com/shop"
+        breadcrumbs={[
+          { name: 'হোম', url: '/' },
+          { name: 'শপ', url: '/shop' },
+        ]}
+      />
       <AnnouncementBar />
       <Header />
 

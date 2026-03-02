@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { SEOHead } from "@/components/SEOHead";
 import { SafeHTML } from "@/components/SafeHTML";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -129,8 +130,31 @@ const BlogPost = () => {
     );
   }
 
+  const blogDescription = post.excerpt_bn || post.meta_description || (post.content_bn?.replace(/<[^>]*>/g, '').substring(0, 160)) || '';
+
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title={post.meta_title || post.title_bn}
+        description={post.meta_description || blogDescription}
+        keywords={post.tags?.join(', ') || `${post.category || ''}, ব্লগ, বইআলো`}
+        canonicalUrl={`https://boialo.com/blog/${post.slug}`}
+        ogType="article"
+        ogImage={post.featured_image || undefined}
+        ogImageAlt={post.title_bn}
+        article={{
+          publishedTime: post.published_at || post.created_at,
+          modifiedTime: post.updated_at,
+          author: 'বইআলো',
+          section: post.category || 'ব্লগ',
+          tags: post.tags || [],
+        }}
+        breadcrumbs={[
+          { name: 'হোম', url: '/' },
+          { name: 'ব্লগ', url: '/blog' },
+          { name: post.title_bn, url: `/blog/${post.slug}` },
+        ]}
+      />
       <AnnouncementBar />
       <Header />
 

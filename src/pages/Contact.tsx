@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SEOHead } from "@/components/SEOHead";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
@@ -64,6 +65,16 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title="যোগাযোগ করুন"
+        description="বইআলো তে যোগাযোগ করুন। আমাদের সাথে ফোন, ইমেইল বা মেসেজের মাধ্যমে যোগাযোগ করতে পারবেন।"
+        keywords="বইআলো যোগাযোগ, contact boialo, অনলাইন বই শপ যোগাযোগ"
+        canonicalUrl="https://boialo.com/contact"
+        breadcrumbs={[
+          { name: 'হোম', url: '/' },
+          { name: 'যোগাযোগ', url: '/contact' },
+        ]}
+      />
       <AnnouncementBar />
       <Header />
 

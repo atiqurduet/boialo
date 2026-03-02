@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SEOHead } from "@/components/SEOHead";
 import { useParams, Link } from "react-router-dom";
 import { AIRecommendations } from "@/components/AIRecommendations";
 import { useQuery } from "@tanstack/react-query";
@@ -282,8 +283,38 @@ const ProductDetail = () => {
     addToCart(product.id);
   };
 
+  const stockStatus = dbProduct?.is_active ? (dbProduct?.is_preorder ? 'PreOrder' : 'InStock') : 'OutOfStock';
+  const seoDescription = `${product.title} - ${product.author}${product.publisher ? ` | ${product.publisher}` : ''}। মূল্য: ৳${product.price}${hasDiscount ? ` (${product.discount}% ছাড়)` : ''}। বইআলো থেকে অর্ডার করুন।`;
+
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title={`${product.title} - ${product.author}`}
+        description={seoDescription}
+        keywords={`${product.title}, ${product.author}, ${product.publisher || ''}, ${product.categoryName || ''}, বই কিনুন, বইআলো`}
+        canonicalUrl={`https://boialo.com/product/${dbProduct.slug}`}
+        ogType="product"
+        ogImage={product.image !== '/placeholder.svg' ? product.image : undefined}
+        ogImageAlt={product.title}
+        product={{
+          price: product.price,
+          currency: 'BDT',
+          availability: stockStatus,
+          brand: product.publisher,
+          category: product.categoryName,
+          sku: dbProduct.id,
+          image: product.image,
+          author: product.author,
+          publisher: product.publisher,
+          isbn: dbProduct.isbn || undefined,
+        }}
+        breadcrumbs={[
+          { name: 'হোম', url: '/' },
+          { name: 'বিষয়', url: '/shop' },
+          { name: product.categoryName || 'বিষয়', url: `/shop?category=${getCategorySlug()}` },
+          { name: product.title, url: `/product/${dbProduct.slug}` },
+        ]}
+      />
       <AnnouncementBar />
       <Header />
 

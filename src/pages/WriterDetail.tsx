@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SEOHead } from "@/components/SEOHead";
 import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -148,8 +149,23 @@ const WriterDetail = () => {
     );
   }
 
+  const writerName = writer.name_bn || writer.name_en;
+  const writerDesc = writer.meta_description || writer.bio_bn?.substring(0, 160) || `${writerName} এর সকল বই বইআলো তে পাওয়া যায়। সেরা দামে ${writerName} এর বই কিনুন।`;
+
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title={writer.meta_title || `${writerName} - সকল বই`}
+        description={writerDesc}
+        keywords={`${writerName}, ${writerName} বই, ${writerName} লেখক, বইআলো`}
+        canonicalUrl={`https://boialo.com/authors/${slug}`}
+        ogImage={writer.image_url || undefined}
+        breadcrumbs={[
+          { name: 'হোম', url: '/' },
+          { name: 'লেখক', url: '/authors' },
+          { name: writerName, url: `/authors/${slug}` },
+        ]}
+      />
       <AnnouncementBar />
       <Header />
 
