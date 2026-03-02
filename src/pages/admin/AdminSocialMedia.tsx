@@ -1392,6 +1392,7 @@ const AdminSocialMedia = () => {
 
   // Post detail dialog
   const [viewingPost, setViewingPost] = useState<any>(null);
+  const [viewingPublishHistory, setViewingPublishHistory] = useState<any>(null);
 
   // Account form
   const [accPlatform, setAccPlatform] = useState('');
@@ -1414,6 +1415,15 @@ const AdminSocialMedia = () => {
   const { data: postResults = [] } = useQuery({
     queryKey: ['social-post-results'],
     queryFn: async () => { const { data } = await supabase.from('social_media_post_results').select('*').order('created_at', { ascending: false }).limit(500); return data || []; }
+  });
+
+  const { data: publishHistory = [] } = useQuery({
+    queryKey: ['social-publish-history'],
+    queryFn: async () => {
+      // @ts-ignore
+      const { data } = await supabase.from('social_media_publish_history').select('*').order('published_at', { ascending: false }).limit(200);
+      return data || [];
+    }
   });
 
   const { data: composerHashtagGroups = [] } = useQuery({
@@ -1851,13 +1861,19 @@ const AdminSocialMedia = () => {
               </CardHeader>
               <CardContent>
                 <Table>
-                  <TableHeader><TableRow><TableHead>তারিখ</TableHead><TableHead>কন্টেন্ট</TableHead><TableHead>চ্যানেল</TableHead><TableHead>স্ট্যাটাস</TableHead><TableHead>রেজাল্ট</TableHead><TableHead className="text-right">অ্যাকশন</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead>তারিখ</TableHead><TableHead>কন্টেন্ট</TableHead><TableHead>চ্যানেল</TableHead><TableHead>স্ট্যাটাস</TableHead><TableHead>পাবলিশ</TableHead><TableHead>রেজাল্ট</TableHead><TableHead className="text-right">অ্যাকশন</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {filteredPosts.map(post => {
                       const results = getResultsForPost(post.id);
+                      const postPublishHistory = publishHistory.filter((h: any) => h.post_id === post.id);
                       return (
                         <TableRow key={post.id} className="group">
-                          <TableCell className="text-xs whitespace-nowrap">{format(new Date(post.created_at), 'dd/MM/yy HH:mm')}</TableCell>
+                          <TableCell className="text-xs whitespace-nowrap">
+                            {format(new Date(post.created_at), 'dd/MM/yy HH:mm')}
+                            {post.scheduled_at && post.status === 'scheduled' && (
+                              <div className="text-[10px] text-blue-500 flex items-center gap-0.5 mt-0.5"><Calendar className="w-3 h-3" />{format(new Date(post.scheduled_at), 'dd/MM HH:mm')}</div>
+                            )}
+                          </TableCell>
                           <TableCell className="max-w-[200px]">
                             <div className="flex items-center gap-2">
                               {post.media_urls?.[0] && <img src={post.media_urls[0]} alt="" className="w-8 h-8 rounded object-cover shrink-0" />}
@@ -1870,6 +1886,15 @@ const AdminSocialMedia = () => {
                             </div>
                           </TableCell>
                           <TableCell><Badge className={statusColors[post.status] || ''} variant="outline">{statusLabels[post.status] || post.status}</Badge></TableCell>
+                          <TableCell>
+                            {(post.publish_count || 0) > 0 ? (
+                              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 font-semibold" onClick={() => setViewingPublishHistory(post)}>
+                                <Activity className="w-3 h-3 text-primary" /> {post.publish_count || 0}বার
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
                           <TableCell><div className="flex gap-2 text-xs">{results.length > 0 && (<><span className="text-green-600">{results.filter(r => r.status === 'success').length} ✓</span>{results.some(r => r.status === 'failed') && <span className="text-red-600">{results.filter(r => r.status === 'failed').length} ✗</span>}</>)}</div></TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-0.5">
@@ -1883,7 +1908,7 @@ const AdminSocialMedia = () => {
                         </TableRow>
                       );
                     })}
-                    {filteredPosts.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">কোনো পোস্ট পাওয়া যায়নি</TableCell></TableRow>}
+                    {filteredPosts.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">কোনো পোস্ট পাওয়া যায়নি</TableCell></TableRow>}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -2081,6 +2106,59 @@ const AdminSocialMedia = () => {
                 <Button variant="outline" size="sm" className="flex-1" onClick={() => { duplicatePost(viewingPost); setViewingPost(null); }}><Copy className="w-4 h-4 mr-1" /> ডুপ্লিকেট</Button>
                 {getResultsForPost(viewingPost.id).some(r => r.status === 'failed') && <Button variant="outline" size="sm" className="flex-1" onClick={() => { retryPost.mutate(viewingPost.id); setViewingPost(null); }}><RotateCcw className="w-4 h-4 mr-1" /> রিট্রাই</Button>}
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Publish History Dialog */}
+      <Dialog open={!!viewingPublishHistory} onOpenChange={open => { if (!open) setViewingPublishHistory(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Activity className="w-5 h-5 text-primary" /> পাবলিশ হিস্ট্রি</DialogTitle></DialogHeader>
+          {viewingPublishHistory && (
+            <div className="space-y-3">
+              <div className="bg-muted/30 p-3 rounded-xl border border-border/30">
+                <p className="text-sm truncate font-medium">{viewingPublishHistory.content_bn || viewingPublishHistory.content}</p>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <Badge variant="outline" className="text-[10px]">মোট পাবলিশ: {viewingPublishHistory.publish_count || 0}বার</Badge>
+                  {viewingPublishHistory.published_at && <span className="text-[10px] text-muted-foreground">শেষ: {format(new Date(viewingPublishHistory.published_at), 'dd/MM/yy HH:mm')}</span>}
+                </div>
+              </div>
+              <ScrollArea className="h-[300px]">
+                <div className="space-y-2">
+                  {publishHistory.filter((h: any) => h.post_id === viewingPublishHistory.id).map((h: any, i: number) => {
+                    const hResults = (h.results || []) as any[];
+                    const successCount = hResults.filter((r: any) => r.status === 'success').length;
+                    const failCount = hResults.filter((r: any) => r.status === 'failed').length;
+                    return (
+                      <div key={h.id || i} className="p-3 border rounded-xl bg-background space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium">#{i + 1}</span>
+                            <span className="text-xs text-muted-foreground">{format(new Date(h.published_at), 'dd/MM/yyyy HH:mm:ss')}</span>
+                          </div>
+                          <Badge variant="outline" className="text-[9px]">{h.trigger_type === 'scheduled' ? '⏰ শিডিউল' : h.trigger_type === 'auto' ? '🤖 অটো' : '👤 ম্যানুয়াল'}</Badge>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {(h.platforms || []).map((pid: string) => { const plat = PLATFORMS.find(x => x.id === pid); return plat ? <plat.icon key={pid} className="w-3.5 h-3.5" style={{ color: plat.color }} /> : null; })}
+                          <span className="text-[10px] ml-auto">
+                            {successCount > 0 && <span className="text-green-600 mr-2">{successCount} সফল</span>}
+                            {failCount > 0 && <span className="text-red-600">{failCount} ব্যর্থ</span>}
+                          </span>
+                        </div>
+                        {hResults.some((r: any) => r.error) && (
+                          <div className="text-[10px] text-red-500 bg-red-50 dark:bg-red-950/20 p-1.5 rounded">
+                            {hResults.filter((r: any) => r.error).map((r: any, j: number) => <div key={j}>{r.platform}: {r.error}</div>)}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {publishHistory.filter((h: any) => h.post_id === viewingPublishHistory.id).length === 0 && (
+                    <p className="text-center text-muted-foreground py-8 text-sm">কোনো পাবলিশ রেকর্ড নেই</p>
+                  )}
+                </div>
+              </ScrollArea>
             </div>
           )}
         </DialogContent>
