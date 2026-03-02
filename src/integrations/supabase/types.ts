@@ -3617,6 +3617,45 @@ export type Database = {
         }
         Relationships: []
       }
+      seo_redirects: {
+        Row: {
+          created_at: string
+          destination_url: string
+          hit_count: number | null
+          id: string
+          is_active: boolean | null
+          last_hit_at: string | null
+          notes: string | null
+          redirect_type: number
+          source_path: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          destination_url: string
+          hit_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_hit_at?: string | null
+          notes?: string | null
+          redirect_type?: number
+          source_path: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          destination_url?: string
+          hit_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_hit_at?: string | null
+          notes?: string | null
+          redirect_type?: number
+          source_path?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       shared_wishlists: {
         Row: {
           created_at: string
