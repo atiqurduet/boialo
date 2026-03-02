@@ -67,12 +67,101 @@ serve(async (req) => {
             if (!String(chatId).startsWith('-') && !String(chatId).startsWith('@')) {
               chatId = `-100${numericId}`;
             }
-            const res = await fetch(`https://api.telegram.org/bot${account.access_token}/sendMessage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: chatId, text: fullContent, parse_mode: 'HTML', disable_web_page_preview: false }),
-            });
-            const data = await res.json();
+
+            // Fetch product details if product_id exists
+            let productData: any = null;
+            if (post.product_id) {
+              if (post.post_type === 'book' || !post.post_type || post.post_type === 'null') {
+                const { data: prod } = await supabase.from('products').select('title_bn, title_en, price, original_price, discount, images, slug').eq('id', post.product_id).single();
+                if (prod) productData = { title: prod.title_bn || prod.title_en, price: prod.price, originalPrice: prod.original_price, discount: prod.discount, image: prod.images?.[0] };
+                // Also try to get author/publisher
+                const { data: authorRel } = await supabase.from('product_writers').select('writers(name_bn)').eq('product_id', post.product_id).limit(1);
+                if (authorRel?.[0]?.writers) productData = { ...productData, author: (authorRel[0].writers as any).name_bn };
+                const { data: pubRel } = await supabase.from('product_publishers').select('publishers(name_bn)').eq('product_id', post.product_id).limit(1);
+                if (pubRel?.[0]?.publishers) productData = { ...productData, publisher: (pubRel[0].publishers as any).name_bn };
+              } else if (post.post_type === 'universal') {
+                const { data: prod } = await supabase.from('universal_products').select('name_bn, name_en, price, original_price, discount, images, slug').eq('id', post.product_id).single();
+                if (prod) productData = { title: prod.name_bn || prod.name_en, price: prod.price, originalPrice: prod.original_price, discount: prod.discount, image: prod.images?.[0] };
+              }
+            }
+
+            // Build modern formatted caption
+            const pTitle = productData?.title || '';
+            const pPrice = productData?.price ? `৳${productData.price}` : '';
+            const pOrigPrice = productData?.originalPrice ? `৳${productData.originalPrice}` : '';
+            const pDiscount = productData?.discount;
+            const pAuthor = productData?.author || '';
+            const pPublisher = productData?.publisher || '';
+            const productUrl = post.link_url || '';
+
+            let caption = '';
+            
+            if (pTitle) {
+              // Product-style post
+              caption += `📚 <b>${pTitle}</b>\n`;
+              caption += `━━━━━━━━━━━━━━━\n`;
+              
+              if (pPrice) {
+                if (pDiscount && Number(pDiscount) > 0) {
+                  caption += `\n💰 মূল্য: <s>${pOrigPrice}</s> → <b>${pPrice}</b>\n`;
+                  caption += `🏷️ ছাড়: <b>${pDiscount}% OFF</b>\n`;
+                } else {
+                  caption += `\n💰 মূল্য: <b>${pPrice}</b>\n`;
+                }
+              }
+              
+              if (pAuthor) caption += `✍️ ${pAuthor}\n`;
+              if (pPublisher) caption += `🏢 ${pPublisher}\n`;
+              
+              caption += `\n━━━━━━━━━━━━━━━\n`;
+              if (hashtags) caption += `${hashtags}\n\n`;
+              if (productUrl) caption += `🛒 <b>এখনই অর্ডার করুন!</b>`;
+            } else {
+              // Generic post - use content as-is
+              caption = content;
+              if (hashtags) caption += `\n\n${hashtags}`;
+              if (productUrl) caption += `\n\n🔗 ${productUrl}`;
+            }
+
+            // Inline keyboard button
+            const inlineKeyboard = productUrl ? {
+              inline_keyboard: [[
+                { text: '🛒 এখনই অর্ডার করুন', url: productUrl },
+              ]]
+            } : undefined;
+
+            // Product image or first media url
+            const imageUrl = post.media_urls?.[0] || productData?.image;
+
+            let data;
+            if (imageUrl) {
+              const res = await fetch(`https://api.telegram.org/bot${account.access_token}/sendPhoto`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  photo: imageUrl,
+                  caption: caption.substring(0, 1024),
+                  parse_mode: 'HTML',
+                  ...(inlineKeyboard ? { reply_markup: inlineKeyboard } : {}),
+                }),
+              });
+              data = await res.json();
+            } else {
+              const res = await fetch(`https://api.telegram.org/bot${account.access_token}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: caption || fullContent,
+                  parse_mode: 'HTML',
+                  disable_web_page_preview: false,
+                  ...(inlineKeyboard ? { reply_markup: inlineKeyboard } : {}),
+                }),
+              });
+              data = await res.json();
+            }
+            
             if (!data.ok) throw new Error(data.description || 'Telegram API error');
             postResult.external_post_id = String(data.result?.message_id);
             break;
