@@ -3919,6 +3919,85 @@ export type Database = {
         }
         Relationships: []
       }
+      social_media_comments: {
+        Row: {
+          author_avatar_url: string | null
+          author_name: string | null
+          author_profile_url: string | null
+          content: string
+          created_at: string
+          external_comment_id: string | null
+          external_created_at: string | null
+          id: string
+          is_from_admin: boolean | null
+          is_reply: boolean | null
+          likes_count: number | null
+          parent_comment_id: string | null
+          platform: string
+          post_id: string | null
+          post_result_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_avatar_url?: string | null
+          author_name?: string | null
+          author_profile_url?: string | null
+          content: string
+          created_at?: string
+          external_comment_id?: string | null
+          external_created_at?: string | null
+          id?: string
+          is_from_admin?: boolean | null
+          is_reply?: boolean | null
+          likes_count?: number | null
+          parent_comment_id?: string | null
+          platform: string
+          post_id?: string | null
+          post_result_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_avatar_url?: string | null
+          author_name?: string | null
+          author_profile_url?: string | null
+          content?: string
+          created_at?: string
+          external_comment_id?: string | null
+          external_created_at?: string | null
+          id?: string
+          is_from_admin?: boolean | null
+          is_reply?: boolean | null
+          likes_count?: number | null
+          parent_comment_id?: string | null
+          platform?: string
+          post_id?: string | null
+          post_result_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_media_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "social_media_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_media_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_media_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_media_comments_post_result_id_fkey"
+            columns: ["post_result_id"]
+            isOneToOne: false
+            referencedRelation: "social_media_post_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_media_post_results: {
         Row: {
           account_id: string | null
@@ -3928,6 +4007,7 @@ export type Database = {
           external_post_id: string | null
           external_url: string | null
           id: string
+          last_synced_at: string | null
           likes_count: number | null
           platform: string
           post_id: string
@@ -3946,6 +4026,7 @@ export type Database = {
           external_post_id?: string | null
           external_url?: string | null
           id?: string
+          last_synced_at?: string | null
           likes_count?: number | null
           platform: string
           post_id: string
@@ -3964,6 +4045,7 @@ export type Database = {
           external_post_id?: string | null
           external_url?: string | null
           id?: string
+          last_synced_at?: string | null
           likes_count?: number | null
           platform?: string
           post_id?: string
