@@ -516,7 +516,17 @@ const AutomationSettings = () => {
                 </div>
               </div>
               <div>
-                <Label className="text-sm font-medium">পোস্ট টেমপ্লেট (বাংলা)</Label>
+                <Label className="text-sm font-medium mb-1 block">পোস্ট টেমপ্লেট</Label>
+                <div className="flex flex-wrap gap-1 mb-1.5">
+                  {AVAILABLE_VARIABLES.slice(0, 5).map(v => (
+                    <Badge key={v.key} variant="outline" className="cursor-pointer text-[9px] hover:bg-primary/10 gap-0.5 py-0" onClick={() => {
+                      const current = smConfig.template_bn || '';
+                      smSetting && updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, template_bn: current + v.key } });
+                    }}>
+                      {v.icon} {v.key}
+                    </Badge>
+                  ))}
+                </div>
                 <Textarea value={smConfig.template_bn || ''} onChange={e => smSetting && updateSetting.mutate({ id: smSetting.id, setting_value: { ...smConfig, template_bn: e.target.value } })} rows={3} placeholder="📚 নতুন বই: {{product_name}} ..." className="mt-1 font-mono text-sm" />
               </div>
             </CardContent>
@@ -1238,7 +1248,7 @@ const AdminSocialMedia = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAccountDialog, setShowAccountDialog] = useState(false);
   const [postContent, setPostContent] = useState('');
-  const [postContentBn, setPostContentBn] = useState('');
+  const postContentRef = useRef<HTMLTextAreaElement>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [postHashtags, setPostHashtags] = useState('');
   const [postLink, setPostLink] = useState('');
@@ -1442,7 +1452,7 @@ const AdminSocialMedia = () => {
     mutationFn: async (status: string) => {
       const postData: any = {
         content: postContent,
-        content_bn: postContentBn || null,
+        content_bn: postContent,
         platforms: selectedPlatforms,
         hashtags: postHashtags ? postHashtags.split(',').map(h => h.trim()) : [],
         link_url: postLink || null,
@@ -1513,7 +1523,7 @@ const AdminSocialMedia = () => {
   });
 
   const resetComposer = () => {
-    setPostContent(''); setPostContentBn(''); setSelectedPlatforms([]);
+    setPostContent(''); setSelectedPlatforms([]);
     setPostHashtags(''); setPostLink(''); setScheduleDate(''); setEditingPost(null);
     setSelectedProduct(null); setMediaUrls([]);
   };
@@ -1532,8 +1542,7 @@ const AdminSocialMedia = () => {
 
   const editPost = (post: any) => {
     setEditingPost(post);
-    setPostContent(post.content || '');
-    setPostContentBn(post.content_bn || '');
+    setPostContent(post.content_bn || post.content || '');
     setSelectedPlatforms(post.platforms || []);
     setPostHashtags((post.hashtags || []).join(', '));
     setPostLink(post.link_url || '');
@@ -1544,8 +1553,7 @@ const AdminSocialMedia = () => {
 
   const duplicatePost = (post: any) => {
     setEditingPost(null);
-    setPostContent(post.content || '');
-    setPostContentBn(post.content_bn || '');
+    setPostContent(post.content_bn || post.content || '');
     setSelectedPlatforms(post.platforms || []);
     setPostHashtags((post.hashtags || []).join(', '));
     setPostLink(post.link_url || '');
@@ -1568,9 +1576,8 @@ const AdminSocialMedia = () => {
     }
     const name = type === 'book' ? (product.title_bn || product.title_en) : (product.name_bn || product.name_en);
     const price = product.discount_price || product.price;
-    if (!postContent && !postContentBn) {
-      setPostContentBn(`📚 ${name}\n💰 মূল্য: ৳${price}\n\n🛒 এখনই অর্ডার করুন!\n🔗 ${url}`);
-      setPostContent(`📚 ${name}\n💰 Price: ৳${price}\n\n🛒 Order now!\n🔗 ${url}`);
+    if (!postContent) {
+      setPostContent(`📚 ${name}\n💰 মূল্য: ৳${price}\n\n🛒 এখনই অর্ডার করুন!\n🔗 ${url}`);
     }
     setShowProductSelector(false);
     toast.success('প্রোডাক্ট সিলেক্ট হয়েছে');
@@ -1584,9 +1591,8 @@ const AdminSocialMedia = () => {
     if (cat.image_url && !mediaUrls.includes(cat.image_url)) {
       setMediaUrls(prev => [...prev, cat.image_url]);
     }
-    if (!postContent && !postContentBn) {
-      setPostContentBn(`📂 ${name} ক্যাটাগরি\n\n🛒 সব পণ্য দেখুন!\n🔗 ${url}`);
-      setPostContent(`📂 ${name} Category\n\n🛒 Browse all products!\n🔗 ${url}`);
+    if (!postContent) {
+      setPostContent(`📂 ${name} ক্যাটাগরি\n\n🛒 সব পণ্য দেখুন!\n🔗 ${url}`);
     }
     setShowProductSelector(false);
     toast.success('ক্যাটাগরি সিলেক্ট হয়েছে');
@@ -1757,8 +1763,8 @@ const AdminSocialMedia = () => {
                               variant="outline"
                               className="cursor-pointer text-[10px] hover:bg-primary/10 gap-0.5"
                               onClick={() => {
-                                if (t.content_bn) setPostContentBn(t.content_bn);
-                                if (t.content_en) setPostContent(t.content_en);
+                                if (t.content_bn) setPostContent(t.content_bn);
+                                else if (t.content_en) setPostContent(t.content_en);
                                 if (t.platforms?.length) setSelectedPlatforms(t.platforms);
                                 if (t.hashtag_group_id) {
                                   const group = composerHashtagGroups.find((g: any) => g.id === t.hashtag_group_id);
@@ -1776,31 +1782,50 @@ const AdminSocialMedia = () => {
                       </div>
                     )}
 
-                    {/* Content Fields */}
-                    <div className="space-y-1.5">
-                      <Label className="font-semibold text-sm">পোস্ট কন্টেন্ট (English)</Label>
+                    {/* Unified Content Editor with Variable Insertion */}
+                    <div className="space-y-2">
+                      <Label className="font-semibold text-sm flex items-center gap-2">
+                        ✍️ পোস্ট কন্টেন্ট
+                      </Label>
+                      
+                      {/* Variable insertion toolbar */}
+                      <div className="flex flex-wrap gap-1 p-2 bg-muted/50 rounded-lg border">
+                        <span className="text-[10px] text-muted-foreground self-center mr-1">ভেরিয়েবল:</span>
+                        {AVAILABLE_VARIABLES.map(v => (
+                          <Badge
+                            key={v.key}
+                            variant="outline"
+                            className="cursor-pointer text-[10px] hover:bg-primary/10 gap-0.5 py-0.5"
+                            onClick={() => {
+                              const textarea = postContentRef.current;
+                              if (textarea) {
+                                const start = textarea.selectionStart;
+                                const end = textarea.selectionEnd;
+                                const newVal = postContent.substring(0, start) + v.key + postContent.substring(end);
+                                setPostContent(newVal);
+                                setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + v.key.length, start + v.key.length); }, 50);
+                              } else {
+                                setPostContent(prev => prev + v.key);
+                              }
+                            }}
+                          >
+                            {v.icon} {v.label}
+                          </Badge>
+                        ))}
+                      </div>
+
                       <Textarea
+                        ref={postContentRef}
                         value={postContent}
                         onChange={e => setPostContent(e.target.value)}
-                        placeholder="Write your post content..."
-                        rows={4}
-                        className="resize-y"
+                        placeholder="📚 পোস্ট কন্টেন্ট লিখুন বা প্রোডাক্ট সিলেক্ট করুন..."
+                        rows={6}
+                        className="resize-y font-medium text-sm"
                       />
                       <div className="flex justify-between">
-                        <p className="text-xs text-muted-foreground">{postContent.length}/2200 characters</p>
-                        {postContent.length > 2200 && <p className="text-xs text-destructive">সর্বোচ্চ ২২০০ অক্ষর</p>}
+                        <p className="text-[10px] text-muted-foreground">{postContent.length}/2200 অক্ষর</p>
+                        {postContent.length > 2200 && <p className="text-[10px] text-destructive">সর্বোচ্চ ২২০০ অক্ষর</p>}
                       </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="font-semibold text-sm">পোস্ট কন্টেন্ট (বাংলা) <span className="text-muted-foreground font-normal">- ঐচ্ছিক</span></Label>
-                      <Textarea
-                        value={postContentBn}
-                        onChange={e => setPostContentBn(e.target.value)}
-                        placeholder="বাংলায় পোস্ট লিখুন..."
-                        rows={3}
-                        className="resize-y"
-                      />
                     </div>
 
                     <Separator />
@@ -1966,7 +1991,7 @@ const AdminSocialMedia = () => {
                 </Card>
 
                 {/* Live Preview */}
-                {(postContent || postContentBn || mediaUrls.length > 0) && (
+                {(postContent || mediaUrls.length > 0) && (
                   <Card className="border-primary/20">
                     <CardHeader className="pb-2"><CardTitle className="text-sm">👁️ লাইভ প্রিভিউ</CardTitle></CardHeader>
                     <CardContent>
@@ -1978,7 +2003,7 @@ const AdminSocialMedia = () => {
                             ))}
                           </div>
                         )}
-                        <p className="whitespace-pre-line text-xs leading-relaxed">{postContentBn || postContent}</p>
+                        <p className="whitespace-pre-line text-xs leading-relaxed">{postContent}</p>
                         {postHashtags && <p className="text-primary text-[10px]">{postHashtags.split(',').map(h => h.trim().startsWith('#') ? h.trim() : `#${h.trim()}`).join(' ')}</p>}
                         {postLink && <p className="text-[10px] text-blue-600 truncate">{postLink}</p>}
                         <div className="flex gap-1 pt-1">
@@ -2099,9 +2124,9 @@ const AdminSocialMedia = () => {
                               <Button variant="ghost" size="icon" title="ডুপ্লিকেট" onClick={() => duplicatePost(post)}>
                                 <Copy className="w-4 h-4" />
                               </Button>
-                              {hasFailed && (
-                                <Button variant="ghost" size="icon" title="রিট্রাই" onClick={() => retryPost.mutate(post.id)}>
-                                  <RotateCcw className="w-4 h-4 text-orange-500" />
+                              {(post.status === 'published' || post.status === 'failed') && (
+                                <Button variant="ghost" size="icon" title="রিট্রাই" onClick={() => retryPost.mutate(post.id)} disabled={retryPost.isPending}>
+                                  <RotateCcw className={`w-4 h-4 text-orange-500 ${retryPost.isPending ? 'animate-spin' : ''}`} />
                                 </Button>
                               )}
                               <Button variant="ghost" size="icon" title="ডিলিট" onClick={() => { if (confirm('মুছে ফেলতে চান?')) deletePost.mutate(post.id); }}>
