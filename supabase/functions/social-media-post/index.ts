@@ -35,7 +35,6 @@ serve(async (req) => {
     const results: any[] = [];
 
     for (const platform of platforms) {
-      // Get active account for this platform
       const { data: account } = await supabase
         .from('social_media_accounts')
         .select('*')
@@ -45,7 +44,6 @@ serve(async (req) => {
         .single();
 
       if (!account || !account.access_token) {
-        // Update result as failed
         await supabase.from('social_media_post_results')
           .update({ status: 'failed', error_message: 'No active account or token' })
           .eq('post_id', post_id)
@@ -65,7 +63,6 @@ serve(async (req) => {
           case 'telegram': {
             let chatId = account.channel_id || account.page_id;
             if (!chatId) throw new Error('No channel_id configured');
-            // Telegram channels/supergroups need -100 prefix
             const numericId = String(chatId).replace(/^-100/, '').replace(/^-/, '');
             if (!String(chatId).startsWith('-') && !String(chatId).startsWith('@')) {
               chatId = `-100${numericId}`;
@@ -73,30 +70,20 @@ serve(async (req) => {
             const res = await fetch(`https://api.telegram.org/bot${account.access_token}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: chatId,
-                text: fullContent,
-                parse_mode: 'HTML',
-                disable_web_page_preview: false,
-              }),
+              body: JSON.stringify({ chat_id: chatId, text: fullContent, parse_mode: 'HTML', disable_web_page_preview: false }),
             });
             const data = await res.json();
             if (!data.ok) throw new Error(data.description || 'Telegram API error');
             postResult.external_post_id = String(data.result?.message_id);
             break;
           }
-
           case 'facebook': {
             const pageId = account.page_id;
             if (!pageId) throw new Error('No page_id configured');
             const res = await fetch(`https://graph.facebook.com/v18.0/${pageId}/feed`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                message: fullContent,
-                access_token: account.access_token,
-                ...(post.link_url ? { link: post.link_url } : {}),
-              }),
+              body: JSON.stringify({ message: fullContent, access_token: account.access_token, ...(post.link_url ? { link: post.link_url } : {}) }),
             });
             const data = await res.json();
             if (data.error) throw new Error(data.error.message);
@@ -104,14 +91,10 @@ serve(async (req) => {
             postResult.external_url = `https://facebook.com/${data.id}`;
             break;
           }
-
           case 'twitter': {
             const res = await fetch('https://api.x.com/2/tweets', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${account.access_token}`,
-              },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${account.access_token}` },
               body: JSON.stringify({ text: fullContent.substring(0, 280) }),
             });
             const data = await res.json();
@@ -120,26 +103,14 @@ serve(async (req) => {
             postResult.external_url = `https://x.com/i/web/status/${data.data?.id}`;
             break;
           }
-
           case 'linkedin': {
-            // LinkedIn requires Organization URN
             const orgId = account.page_id || account.channel_id;
             const res = await fetch('https://api.linkedin.com/v2/ugcPosts', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${account.access_token}`,
-                'X-Restli-Protocol-Version': '2.0.0',
-              },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${account.access_token}`, 'X-Restli-Protocol-Version': '2.0.0' },
               body: JSON.stringify({
-                author: `urn:li:organization:${orgId}`,
-                lifecycleState: 'PUBLISHED',
-                specificContent: {
-                  'com.linkedin.ugc.ShareContent': {
-                    shareCommentary: { text: fullContent },
-                    shareMediaCategory: 'NONE',
-                  },
-                },
+                author: `urn:li:organization:${orgId}`, lifecycleState: 'PUBLISHED',
+                specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text: fullContent }, shareMediaCategory: 'NONE' } },
                 visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
               }),
             });
@@ -148,9 +119,7 @@ serve(async (req) => {
             postResult.external_post_id = data.id;
             break;
           }
-
           default: {
-            // For platforms without direct API support, mark as pending manual
             postResult.status = 'pending';
             postResult.error_message = `${platform} API integration pending - post content saved`;
             break;
@@ -159,32 +128,39 @@ serve(async (req) => {
 
         await supabase.from('social_media_post_results')
           .update({
-            status: postResult.status,
-            external_post_id: postResult.external_post_id,
-            external_url: postResult.external_url,
-            error_message: postResult.error_message || null,
+            status: postResult.status, external_post_id: postResult.external_post_id,
+            external_url: postResult.external_url, error_message: postResult.error_message || null,
             posted_at: postResult.status === 'success' ? new Date().toISOString() : null,
           })
-          .eq('post_id', post_id)
-          .eq('platform', platform);
+          .eq('post_id', post_id).eq('platform', platform);
 
         results.push({ platform, ...postResult });
       } catch (err: any) {
         await supabase.from('social_media_post_results')
           .update({ status: 'failed', error_message: err.message })
-          .eq('post_id', post_id)
-          .eq('platform', platform);
+          .eq('post_id', post_id).eq('platform', platform);
         results.push({ platform, status: 'failed', error: err.message });
       }
     }
 
-    // Update post status
+    // Update post status & publish count
     const anySuccess = results.some(r => r.status === 'success');
     const allFailed = results.every(r => r.status === 'failed');
+    const currentCount = post.publish_count || 0;
+    
     await supabase.from('social_media_posts').update({
       status: allFailed ? 'failed' : 'published',
       published_at: anySuccess ? new Date().toISOString() : null,
+      publish_count: currentCount + 1,
     }).eq('id', post_id);
+
+    // Record publish history
+    await supabase.from('social_media_publish_history').insert({
+      post_id,
+      platforms,
+      results: JSON.parse(JSON.stringify(results)),
+      trigger_type: post.status === 'scheduled' ? 'scheduled' : 'manual',
+    });
 
     return new Response(JSON.stringify({ success: true, results }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

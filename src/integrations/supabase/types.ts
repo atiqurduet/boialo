@@ -4004,6 +4004,7 @@ export type Database = {
           platforms: string[]
           post_type: string | null
           product_id: string | null
+          publish_count: number
           published_at: string | null
           scheduled_at: string | null
           status: string
@@ -4021,6 +4022,7 @@ export type Database = {
           platforms?: string[]
           post_type?: string | null
           product_id?: string | null
+          publish_count?: number
           published_at?: string | null
           scheduled_at?: string | null
           status?: string
@@ -4038,12 +4040,51 @@ export type Database = {
           platforms?: string[]
           post_type?: string | null
           product_id?: string | null
+          publish_count?: number
           published_at?: string | null
           scheduled_at?: string | null
           status?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      social_media_publish_history: {
+        Row: {
+          created_at: string
+          id: string
+          platforms: string[]
+          post_id: string
+          published_at: string
+          results: Json | null
+          trigger_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platforms?: string[]
+          post_id: string
+          published_at?: string
+          results?: Json | null
+          trigger_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platforms?: string[]
+          post_id?: string
+          published_at?: string
+          results?: Json | null
+          trigger_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_media_publish_history_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_media_posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       social_media_settings: {
         Row: {
