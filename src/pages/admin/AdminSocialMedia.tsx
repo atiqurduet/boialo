@@ -124,6 +124,12 @@ const AutomationSettings = () => {
   const [templateFilterType, setTemplateFilterType] = useState('all');
   const [showPreview, setShowPreview] = useState(false);
 
+  // Template product/category selector
+  const [tplShowProductSelector, setTplShowProductSelector] = useState(false);
+  const [tplProductSearch, setTplProductSearch] = useState('');
+  const [tplSelectedProduct, setTplSelectedProduct] = useState<any>(null);
+  const [tplSelectorTab, setTplSelectorTab] = useState<'books' | 'universal' | 'categories'>('books');
+
   // Rule form
   const [showRuleForm, setShowRuleForm] = useState(false);
   const [ruleName, setRuleName] = useState('');
@@ -150,6 +156,7 @@ const AutomationSettings = () => {
   const [logDateRange, setLogDateRange] = useState<'today' | '7d' | '30d' | 'all'>('all');
 
   const tplContentRef = useRef<HTMLTextAreaElement>(null);
+  const BASE_URL = 'https://boialo.lovable.app';
 
   // Old settings
   const { data: settings = [], isLoading: settingsLoading } = useQuery({
@@ -194,6 +201,55 @@ const AutomationSettings = () => {
       // @ts-ignore
       const { data } = await supabase.from('social_automation_log').select('*').order('created_at', { ascending: false }).limit(200);
       return data || [];
+    }
+  });
+
+  // Product/category queries for template form
+  const { data: tplProducts = [] } = useQuery({
+    queryKey: ['tpl-products', tplProductSearch],
+    queryFn: async () => {
+      const sanitized = tplProductSearch.replace(/[%_\\]/g, '\\$&').slice(0, 200);
+      // @ts-ignore
+      const base = supabase.from('products').select('id, title_bn, title_en, slug, images, price, original_price, discount_percent, author, publisher, category_id, isbn, writer_id, publisher_id, brand_id').eq('is_active', true).order('created_at', { ascending: false }).limit(50);
+      const final = sanitized ? base.or(`title_bn.ilike.%${sanitized}%,title_en.ilike.%${sanitized}%,author.ilike.%${sanitized}%`) : base;
+      const { data } = await final;
+      return (data || []) as any[];
+    }
+  });
+
+  const { data: tplUniversalProducts = [] } = useQuery({
+    queryKey: ['tpl-universal-products', tplProductSearch],
+    queryFn: async () => {
+      const sanitized = tplProductSearch.replace(/[%_\\]/g, '\\$&').slice(0, 200);
+      // @ts-ignore
+      const base = supabase.from('universal_products').select('id, name_bn, name_en, slug, images, price, original_price, discount_percent, product_type, brand, sku, weight, manufacturer').eq('is_active', true).order('created_at', { ascending: false }).limit(50);
+      const final = sanitized ? base.or(`name_bn.ilike.%${sanitized}%,name_en.ilike.%${sanitized}%`) : base;
+      const { data } = await final;
+      return (data || []) as any[];
+    }
+  });
+
+  const { data: tplCategories = [] } = useQuery({
+    queryKey: ['tpl-categories', tplProductSearch],
+    queryFn: async () => {
+      const sanitized = tplProductSearch.replace(/[%_\\]/g, '\\$&').slice(0, 200);
+      // @ts-ignore
+      const base = supabase.from('categories').select('id, name_bn, name_en, slug, image_url').eq('is_active', true).order('name_bn').limit(30);
+      const final = sanitized ? base.or(`name_bn.ilike.%${sanitized}%,name_en.ilike.%${sanitized}%`) : base;
+      const { data } = await final;
+      return (data || []) as any[];
+    }
+  });
+
+  const { data: tplUniversalCategories = [] } = useQuery({
+    queryKey: ['tpl-universal-categories', tplProductSearch],
+    queryFn: async () => {
+      const sanitized = tplProductSearch.replace(/[%_\\]/g, '\\$&').slice(0, 200);
+      // @ts-ignore
+      const base = supabase.from('universal_categories').select('id, name_bn, name_en, slug, image_url, product_type').eq('is_active', true).order('name_bn').limit(30);
+      const final = sanitized ? base.or(`name_bn.ilike.%${sanitized}%,name_en.ilike.%${sanitized}%`) : base;
+      const { data } = await final;
+      return (data || []) as any[];
     }
   });
 
@@ -365,6 +421,7 @@ const AutomationSettings = () => {
     setTplName(''); setTplType('general'); setTplContentBn(''); setTplContentEn('');
     setTplPlatforms([]); setTplHashtagGroup(''); setTplIncludeImage(true); setTplIncludePrice(true);
     setTplIncludeLink(true); setTplDescription(''); setEditingTemplate(null); setShowTemplateForm(false); setShowPreview(false);
+    setTplSelectedProduct(null); setTplProductSearch('');
   };
 
   const resetRuleForm = () => {
@@ -407,16 +464,66 @@ const AutomationSettings = () => {
     }
   };
 
+  // Select product for template preview
+  const tplSelectProduct = (product: any, type: 'book' | 'universal') => {
+    const name = type === 'book' ? (product.title_bn || product.title_en) : (product.name_bn || product.name_en);
+    const url = type === 'book' ? `${BASE_URL}/product/${product.slug}` : `${BASE_URL}/universal-product/${product.slug}`;
+    setTplSelectedProduct({ ...product, type, _resolved_name: name, _resolved_url: url });
+    setTplShowProductSelector(false);
+  };
+
+  const tplSelectCategory = (cat: any, type: 'book' | 'universal') => {
+    const name = cat.name_bn || cat.name_en;
+    const url = type === 'book' ? `${BASE_URL}/categories/${cat.slug}` : `${BASE_URL}/category/${cat.product_type}/${cat.slug}`;
+    setTplSelectedProduct({ id: cat.id, type: `category-${type}`, name_bn: name, slug: cat.slug, _resolved_name: name, _resolved_url: url, image_url: cat.image_url });
+    setTplShowProductSelector(false);
+  };
+
+  // Dynamic variables from selected product
+  const tplDynamicVars = useMemo(() => {
+    if (!tplSelectedProduct) return [];
+    const vars: { key: string; label: string; icon: string; value: string }[] = [];
+    const p = tplSelectedProduct;
+    const name = p._resolved_name || '';
+    if (name) vars.push({ key: name, label: 'পণ্যের নাম', icon: '📦', value: name });
+    if (p.price) vars.push({ key: `৳${p.price}`, label: 'মূল্য', icon: '💰', value: `৳${p.price}` });
+    if (p.original_price && p.original_price > p.price) vars.push({ key: `৳${p.original_price}`, label: 'আগের মূল্য', icon: '🏷️', value: `৳${p.original_price}` });
+    if (p.discount_percent) vars.push({ key: `${p.discount_percent}%`, label: 'ডিসকাউন্ট', icon: '🔥', value: `${p.discount_percent}%` });
+    if (p.author) vars.push({ key: p.author, label: 'লেখক', icon: '✍️', value: p.author });
+    if (p.publisher) vars.push({ key: p.publisher, label: 'প্রকাশনী', icon: '🏢', value: p.publisher });
+    if (p.product_type) vars.push({ key: p.product_type, label: 'টাইপ', icon: '🏷️', value: p.product_type });
+    if (p.isbn) vars.push({ key: p.isbn, label: 'ISBN', icon: '📖', value: p.isbn });
+    if (p.sku) vars.push({ key: p.sku, label: 'SKU', icon: '🔢', value: p.sku });
+    if (p.brand) vars.push({ key: p.brand, label: 'ব্র্যান্ড', icon: '🏷️', value: p.brand });
+    if (p.manufacturer) vars.push({ key: p.manufacturer, label: 'প্রস্তুতকারক', icon: '🏭', value: p.manufacturer });
+    if (p._resolved_url) vars.push({ key: p._resolved_url, label: 'লিংক', icon: '🔗', value: p._resolved_url });
+    vars.push({ key: 'বইআলো', label: 'দোকানের নাম', icon: '🏪', value: 'বইআলো' });
+    vars.push({ key: new Date().toLocaleDateString('bn-BD'), label: 'তারিখ', icon: '📅', value: new Date().toLocaleDateString('bn-BD') });
+    return vars;
+  }, [tplSelectedProduct]);
+
   const getPreviewContent = () => {
     let content = tplContentBn || 'কোনো কন্টেন্ট নেই';
-    content = content.replace(/\{\{product_name\}\}/g, 'আমার প্রথম বই')
-      .replace(/\{\{price\}\}/g, '৳350')
-      .replace(/\{\{discount_price\}\}/g, '৳280')
-      .replace(/\{\{author\}\}/g, 'লেখক নাম')
-      .replace(/\{\{category\}\}/g, 'উপন্যাস')
-      .replace(/\{\{link\}\}/g, 'https://boialo.com/book/example')
-      .replace(/\{\{shop_name\}\}/g, 'বইআলো')
-      .replace(/\{\{date\}\}/g, new Date().toLocaleDateString('bn-BD'));
+    if (tplSelectedProduct) {
+      const p = tplSelectedProduct;
+      content = content.replace(/\{\{product_name\}\}/g, p._resolved_name || 'পণ্যের নাম')
+        .replace(/\{\{price\}\}/g, p.price ? `৳${p.price}` : '৳0')
+        .replace(/\{\{discount_price\}\}/g, p.original_price ? `৳${p.original_price}` : '')
+        .replace(/\{\{author\}\}/g, p.author || 'লেখক')
+        .replace(/\{\{category\}\}/g, p.product_type || 'ক্যাটাগরি')
+        .replace(/\{\{link\}\}/g, p._resolved_url || '#')
+        .replace(/\{\{shop_name\}\}/g, 'বইআলো')
+        .replace(/\{\{date\}\}/g, new Date().toLocaleDateString('bn-BD'));
+    } else {
+      content = content.replace(/\{\{product_name\}\}/g, 'আমার প্রথম বই')
+        .replace(/\{\{price\}\}/g, '৳350')
+        .replace(/\{\{discount_price\}\}/g, '৳280')
+        .replace(/\{\{author\}\}/g, 'লেখক নাম')
+        .replace(/\{\{category\}\}/g, 'উপন্যাস')
+        .replace(/\{\{link\}\}/g, 'https://boialo.com/book/example')
+        .replace(/\{\{shop_name\}\}/g, 'বইআলো')
+        .replace(/\{\{date\}\}/g, new Date().toLocaleDateString('bn-BD'));
+    }
     const hGroup = hashtagGroups.find((g: any) => g.id === tplHashtagGroup);
     if (hGroup) content += '\n\n' + (hGroup.hashtags || []).map((h: string) => `#${h}`).join(' ');
     return content;
@@ -711,16 +818,110 @@ const AutomationSettings = () => {
                   <Input value={tplDescription} onChange={e => setTplDescription(e.target.value)} placeholder="এই টেমপ্লেটটি কখন ব্যবহার করবেন..." className="mt-1" />
                 </div>
 
-                {/* Variable insertion buttons */}
-                <div>
-                  <Label className="text-sm mb-2 block">ভেরিয়েবল যোগ করুন</Label>
-                  <div className="flex flex-wrap gap-1">
-                    {AVAILABLE_VARIABLES.map(v => (
-                      <Button key={v.key} type="button" variant="outline" size="sm" className="h-7 text-[11px] gap-1" onClick={() => insertVariable(v.key)}>
-                        <span>{v.icon}</span> {v.label}
-                      </Button>
-                    ))}
+                {/* Product/Category Selector for Template */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium flex items-center gap-2"><Package className="w-4 h-4" /> প্রোডাক্ট/ক্যাটাগরি দিয়ে প্রিভিউ</Label>
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => setTplShowProductSelector(!tplShowProductSelector)}>
+                      {tplShowProductSelector ? 'বন্ধ করুন' : <><Package className="w-3 h-3 mr-1" /> সিলেক্ট করুন</>}
+                    </Button>
                   </div>
+
+                  {tplSelectedProduct && (
+                    <div className="flex items-center gap-2 p-2 bg-primary/5 border border-primary/20 rounded-lg">
+                      {tplSelectedProduct.images?.[0] && <img src={tplSelectedProduct.images[0]} alt="" className="w-8 h-8 rounded object-cover" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{tplSelectedProduct._resolved_name}</p>
+                        <p className="text-[10px] text-muted-foreground">{tplSelectedProduct.type === 'book' ? 'বই' : tplSelectedProduct.type?.startsWith('category') ? 'ক্যাটাগরি' : 'ইউনিভার্সাল'}</p>
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setTplSelectedProduct(null)}><X className="w-3 h-3" /></Button>
+                    </div>
+                  )}
+
+                  {tplShowProductSelector && (
+                    <Card className="border-dashed">
+                      <CardContent className="p-3 space-y-2">
+                        <div className="flex gap-1 bg-muted p-0.5 rounded-md">
+                          {[
+                            { key: 'books' as const, label: '📚 বই', icon: BookOpen },
+                            { key: 'universal' as const, label: '🛍️ ইউনিভার্সাল', icon: ShoppingBag },
+                            { key: 'categories' as const, label: '📂 ক্যাটাগরি', icon: FolderOpen },
+                          ].map(t => (
+                            <button key={t.key} onClick={() => setTplSelectorTab(t.key)}
+                              className={`flex-1 text-[10px] font-medium py-1.5 rounded transition-all ${tplSelectorTab === t.key ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                          <Input placeholder="খুঁজুন..." value={tplProductSearch} onChange={e => setTplProductSearch(e.target.value)} className="pl-8 h-8 text-xs" />
+                        </div>
+                        <ScrollArea className="h-40">
+                          <div className="space-y-0.5">
+                            {tplSelectorTab === 'books' && tplProducts.map((p: any) => (
+                              <button key={p.id} onClick={() => tplSelectProduct(p, 'book')} className="w-full flex items-center gap-2 p-1.5 rounded hover:bg-muted text-left text-xs">
+                                {p.images?.[0] && <img src={p.images[0]} alt="" className="w-7 h-7 rounded object-cover shrink-0" />}
+                                <div className="flex-1 min-w-0"><p className="truncate font-medium">{p.title_bn || p.title_en}</p><p className="text-[10px] text-muted-foreground">৳{p.price} {p.author ? `• ${p.author}` : ''}</p></div>
+                              </button>
+                            ))}
+                            {tplSelectorTab === 'universal' && tplUniversalProducts.map((p: any) => (
+                              <button key={p.id} onClick={() => tplSelectProduct(p, 'universal')} className="w-full flex items-center gap-2 p-1.5 rounded hover:bg-muted text-left text-xs">
+                                {p.images?.[0] && <img src={p.images[0]} alt="" className="w-7 h-7 rounded object-cover shrink-0" />}
+                                <div className="flex-1 min-w-0"><p className="truncate font-medium">{p.name_bn || p.name_en}</p><p className="text-[10px] text-muted-foreground">৳{p.price} • {p.product_type}</p></div>
+                              </button>
+                            ))}
+                            {tplSelectorTab === 'categories' && (
+                              <>
+                                {tplCategories.map((c: any) => (
+                                  <button key={c.id} onClick={() => tplSelectCategory(c, 'book')} className="w-full flex items-center gap-2 p-1.5 rounded hover:bg-muted text-left text-xs">
+                                    <BookOpen className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                    <span className="truncate">{c.name_bn || c.name_en}</span>
+                                    <Badge variant="outline" className="text-[8px] ml-auto shrink-0">বই</Badge>
+                                  </button>
+                                ))}
+                                {tplUniversalCategories.map((c: any) => (
+                                  <button key={c.id} onClick={() => tplSelectCategory(c, 'universal')} className="w-full flex items-center gap-2 p-1.5 rounded hover:bg-muted text-left text-xs">
+                                    <ShoppingBag className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                                    <span className="truncate">{c.name_bn || c.name_en}</span>
+                                    <Badge variant="outline" className="text-[8px] ml-auto shrink-0">{c.product_type}</Badge>
+                                  </button>
+                                ))}
+                              </>
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Variable insertion - Dynamic from product OR static placeholders */}
+                <div>
+                  <Label className="text-sm mb-2 block flex items-center gap-2"><Sparkles className="w-4 h-4" /> ভেরিয়েবল যোগ করুন</Label>
+                  {tplSelectedProduct && tplDynamicVars.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-muted-foreground">ক্লিক করলে সরাসরি মান বসবে:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {tplDynamicVars.map((v, i) => (
+                          <Button key={i} type="button" variant="outline" size="sm" className="h-7 text-[11px] gap-1 border-primary/30 hover:bg-primary/10" onClick={() => insertVariable(v.value)}>
+                            <span>{v.icon}</span> {v.label}: <span className="font-semibold text-primary truncate max-w-[120px]">{v.value}</span>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-muted-foreground">প্লেসহোল্ডার ভেরিয়েবল (অটোমেশনে ডায়নামিক মান হবে):</p>
+                      <div className="flex flex-wrap gap-1">
+                        {AVAILABLE_VARIABLES.map(v => (
+                          <Button key={v.key} type="button" variant="outline" size="sm" className="h-7 text-[11px] gap-1" onClick={() => insertVariable(v.key)}>
+                            <span>{v.icon}</span> {v.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
