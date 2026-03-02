@@ -15,11 +15,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Search, Globe, BarChart3, FileText, AlertTriangle, CheckCircle2,
-  XCircle, Eye, ExternalLink, RefreshCw, TrendingUp, Target,
-  Zap, Shield, Link2, Image, Type, Hash, ArrowRight, Loader2,
-  AlertCircle, Info, ChevronDown, ChevronUp, Copy, Download
+  Search, AlertTriangle, CheckCircle2,
+  XCircle, TrendingUp, Target,
+  Zap, Hash, Loader2, Image as ImageIcon,
+  AlertCircle, ChevronDown, ChevronUp
 } from 'lucide-react';
+import { RedirectManager, BulkMetaEditor, InternalLinkAnalyzer, HeadingAnalyzer, DuplicateDetector, SchemaValidator, ImageSEOChecker } from '@/components/admin/seo/SEOAdvancedTools';
 
 // ─── SEO Score Calculator ───
 const calculateSEOScore = (data: {
@@ -212,7 +213,7 @@ const SocialPreview = ({ title, description, image, url }: { title: string; desc
         <img src={image} alt="" className="w-full h-full object-cover" />
       ) : (
         <div className="text-muted-foreground flex flex-col items-center gap-2">
-          <Image className="h-10 w-10" />
+          <ImageIcon className="h-10 w-10" />
           <span className="text-sm">OG ইমেজ নেই</span>
         </div>
       )}
@@ -374,11 +375,18 @@ const AdminSEOTools = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+          <TabsList className="flex flex-wrap gap-1 h-auto p-1 w-full max-w-5xl">
             <TabsTrigger value="overview">📊 ওভারভিউ</TabsTrigger>
             <TabsTrigger value="analyzer">🔍 অ্যানালাইজার</TabsTrigger>
             <TabsTrigger value="audit">📋 সাইট অডিট</TabsTrigger>
             <TabsTrigger value="keywords">🎯 কীওয়ার্ড</TabsTrigger>
+            <TabsTrigger value="bulk-meta">✏️ বাল্ক মেটা</TabsTrigger>
+            <TabsTrigger value="redirects">↪️ রিডাইরেক্ট</TabsTrigger>
+            <TabsTrigger value="links">🔗 লিংক ম্যাপ</TabsTrigger>
+            <TabsTrigger value="duplicates">📑 ডুপ্লিকেট</TabsTrigger>
+            <TabsTrigger value="images">🖼️ ইমেজ SEO</TabsTrigger>
+            <TabsTrigger value="schema">📐 Schema</TabsTrigger>
+            <TabsTrigger value="headings">📑 হেডিং</TabsTrigger>
             <TabsTrigger value="checklist">✅ চেকলিস্ট</TabsTrigger>
           </TabsList>
 
@@ -726,6 +734,41 @@ const AdminSEOTools = () => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* ═══ BULK META EDITOR TAB ═══ */}
+          <TabsContent value="bulk-meta" className="space-y-4">
+            <BulkMetaEditor />
+          </TabsContent>
+
+          {/* ═══ REDIRECTS TAB ═══ */}
+          <TabsContent value="redirects" className="space-y-4">
+            <RedirectManager />
+          </TabsContent>
+
+          {/* ═══ INTERNAL LINKS TAB ═══ */}
+          <TabsContent value="links" className="space-y-4">
+            <InternalLinkAnalyzer />
+          </TabsContent>
+
+          {/* ═══ DUPLICATES TAB ═══ */}
+          <TabsContent value="duplicates" className="space-y-4">
+            <DuplicateDetector />
+          </TabsContent>
+
+          {/* ═══ IMAGE SEO TAB ═══ */}
+          <TabsContent value="images" className="space-y-4">
+            <ImageSEOChecker />
+          </TabsContent>
+
+          {/* ═══ SCHEMA TAB ═══ */}
+          <TabsContent value="schema" className="space-y-4">
+            <SchemaValidator />
+          </TabsContent>
+
+          {/* ═══ HEADINGS TAB ═══ */}
+          <TabsContent value="headings" className="space-y-4">
+            <HeadingAnalyzer />
           </TabsContent>
 
           {/* ═══ CHECKLIST TAB ═══ */}
