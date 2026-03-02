@@ -26,8 +26,9 @@ import {
   TrendingUp, Heart, MessageSquare, Share2, BarChart3, Settings, Smartphone,
   Search, Copy, Link2, Package, X, Check, AlertCircle, RotateCcw, Filter,
   Image as ImageIcon, Upload, BookOpen, ShoppingBag, FolderOpen, Sparkles,
-  Zap, Target, Activity, ArrowUpRight, Layers, Bell, ChevronRight
+  Zap, Target, Activity, ArrowUpRight, Layers, Bell, ChevronRight, Rss
 } from "lucide-react";
+import SocialFeedView from "@/components/admin/SocialFeedView";
 
 const PLATFORMS = [
   { id: 'facebook', name: 'Facebook', icon: Facebook, color: '#1877F2' },
@@ -1674,6 +1675,7 @@ const AdminSocialMedia = () => {
 
         <Tabs defaultValue="compose" className="space-y-4">
           <TabsList className="flex-wrap h-auto gap-1 bg-muted/60 p-1 border border-border/50">
+            <TabsTrigger value="feed" className="gap-1.5"><Rss className="w-3.5 h-3.5" /> ফিড</TabsTrigger>
             <TabsTrigger value="compose" className="gap-1.5"><Send className="w-3.5 h-3.5" /> পোস্ট</TabsTrigger>
             <TabsTrigger value="engagement" className="gap-1.5"><MessageSquare className="w-3.5 h-3.5" /> এনগেজমেন্ট</TabsTrigger>
             <TabsTrigger value="history" className="gap-1.5"><Clock className="w-3.5 h-3.5" /> হিস্ট্রি</TabsTrigger>
@@ -1681,6 +1683,11 @@ const AdminSocialMedia = () => {
             <TabsTrigger value="analytics" className="gap-1.5"><BarChart3 className="w-3.5 h-3.5" /> অ্যানালিটিক্স</TabsTrigger>
             <TabsTrigger value="automation" className="gap-1.5"><Zap className="w-3.5 h-3.5" /> অটোমেশন</TabsTrigger>
           </TabsList>
+
+          {/* FEED TAB - Facebook-style */}
+          <TabsContent value="feed">
+            <SocialFeedView />
+          </TabsContent>
 
           {/* COMPOSE TAB */}
           <TabsContent value="compose">
