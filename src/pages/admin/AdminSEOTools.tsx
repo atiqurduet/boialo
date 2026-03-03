@@ -21,6 +21,7 @@ import {
   AlertCircle, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { RedirectManager, BulkMetaEditor, InternalLinkAnalyzer, HeadingAnalyzer, DuplicateDetector, SchemaValidator, ImageSEOChecker } from '@/components/admin/seo/SEOAdvancedTools';
+import { SEOInlineFixer, KeywordTracker } from '@/components/admin/seo/SEOInlineFixer';
 
 // ─── SEO Score Calculator ───
 const calculateSEOScore = (data: {
@@ -614,62 +615,26 @@ const AdminSEOTools = () => {
             </div>
           </TabsContent>
 
-          {/* ═══ SITE AUDIT TAB ═══ */}
+          {/* ═══ SITE AUDIT TAB (with inline fixer) ═══ */}
           <TabsContent value="audit" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">সাইট-ওয়াইড SEO অডিট</CardTitle>
-                    <CardDescription>সব পেজ, প্রোডাক্ট ও ব্লগের SEO স্কোর</CardDescription>
-                  </div>
-                  <Badge variant="outline">{siteAudit.total}টি আইটেম</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {productsLoading ? (
-                  <div className="flex items-center justify-center py-10"><Loader2 className="h-6 w-6 animate-spin" /></div>
-                ) : (
-                  <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                    {siteAudit.allItems.sort((a, b) => a.score - b.score).map(item => (
-                      <div key={`${item.type}-${item.id}`}
-                        className="border rounded-lg p-3 hover:bg-muted/50 transition-colors cursor-pointer"
-                        onClick={() => setExpandedProduct(expandedProduct === item.id ? null : item.id)}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <ScoreCircle score={item.score} size="sm" />
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm truncate">{item.name}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <Badge variant="secondary" className="text-xs">{item.type}</Badge>
-                                <span className="text-xs text-muted-foreground">/{item.slug}</span>
-                              </div>
-                            </div>
-                          </div>
-                          {expandedProduct === item.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        </div>
-                        {expandedProduct === item.id && (
-                          <div className="mt-3 pt-3 border-t space-y-1.5">
-                            {item.issues.map((issue, i) => (
-                              <div key={i} className="flex items-start gap-2 text-sm">
-                                {issue.type === 'good' && <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />}
-                                {issue.type === 'warning' && <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />}
-                                {issue.type === 'error' && <XCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />}
-                                <span>{issue.message}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {productsLoading ? (
+              <div className="flex items-center justify-center py-10"><Loader2 className="h-6 w-6 animate-spin" /></div>
+            ) : (
+              <SEOInlineFixer
+                items={siteAudit.allItems}
+                productsRaw={products}
+                blogPostsRaw={blogPosts}
+                categoriesRaw={categories}
+                universalProductsRaw={universalProducts}
+              />
+            )}
           </TabsContent>
 
           {/* ═══ KEYWORDS TAB ═══ */}
-          <TabsContent value="keywords" className="space-y-4">
+          <TabsContent value="keywords" className="space-y-6">
+            {/* Keyword Tracker */}
+            <KeywordTracker products={products} blogPosts={blogPosts} categories={categories} universalProducts={universalProducts} />
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
