@@ -1,16 +1,17 @@
 import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { LogoUpload } from '@/components/admin/LogoUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
   XCircle, AlertTriangle, CheckCircle2, ImageIcon, Search,
-  Save, Loader2, ChevronDown, ChevronUp, Upload, ExternalLink
+  Save, Loader2, ChevronDown, ChevronUp, Upload, Sparkles, X, Plus, Globe
 } from 'lucide-react';
 
 interface PageProblem {
@@ -23,7 +24,18 @@ interface PageProblem {
   image_url?: string;
   meta_title?: string;
   meta_description?: string;
+  meta_keywords?: string;
+  description?: string;
 }
+
+const KEYWORD_SUGGESTIONS: Record<string, string[]> = {
+  'বই': ['বই', 'বাংলা বই', 'অনলাইন বই', 'বই কিনুন', 'book', 'bangla book', 'buy book online'],
+  'ক্যাটাগরি': ['বই ক্যাটাগরি', 'বিষয়ভিত্তিক বই', 'category', 'book category'],
+  'ব্লগ': ['ব্লগ', 'আর্টিকেল', 'পড়ুন', 'blog', 'article', 'reading'],
+  'প্রোডাক্ট': ['পণ্য', 'কিনুন', 'অর্ডার', 'product', 'buy online', 'order'],
+  'লেখক': ['লেখক', 'বই লেখক', 'author', 'writer', 'bangla writer'],
+  'প্রকাশনী': ['প্রকাশনী', 'পাবলিশার', 'publisher', 'book publisher'],
+};
 
 export const PageProblemFixer = () => {
   const { toast } = useToast();
@@ -33,6 +45,7 @@ export const PageProblemFixer = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, any>>({});
+  const [newKeyword, setNewKeyword] = useState('');
 
   const { data: products = [] } = useQuery({
     queryKey: ['page-problems-products'],
@@ -82,7 +95,6 @@ export const PageProblemFixer = () => {
     }
   });
 
-  // Build comprehensive problem list
   const allPages = useMemo(() => {
     const pages: PageProblem[] = [];
 
@@ -97,6 +109,7 @@ export const PageProblemFixer = () => {
         pages.push({
           type: 'বই', id: p.id, name: p.title || p.title_bn, slug: p.slug, table: 'products',
           problems, image_url: p.image_url, meta_title: p.meta_title, meta_description: p.meta_description,
+          meta_keywords: p.meta_keywords, description: p.description,
         });
       }
     });
@@ -138,6 +151,7 @@ export const PageProblemFixer = () => {
         pages.push({
           type: 'প্রোডাক্ট', id: u.id, name: u.name_bn, slug: u.slug, table: 'universal_products',
           problems, meta_title: u.meta_title, meta_description: u.meta_description,
+          meta_keywords: u.meta_keywords, description: u.description_bn,
         });
       }
     });
@@ -172,13 +186,13 @@ export const PageProblemFixer = () => {
     return pages;
   }, [products, categories, blogPosts, universalProducts, writers, publishers]);
 
-  // Filter
   const filtered = useMemo(() => {
     let result = allPages;
     if (filterType !== 'all') result = result.filter(p => p.type === filterType);
     if (filterProblem === 'image') result = result.filter(p => p.problems.some(pr => pr.field === 'image'));
     else if (filterProblem === 'meta') result = result.filter(p => p.problems.some(pr => pr.field === 'meta_title' || pr.field === 'meta_description'));
     else if (filterProblem === 'content') result = result.filter(p => p.problems.some(pr => pr.field === 'content' || pr.field === 'description'));
+    else if (filterProblem === 'keywords') result = result.filter(p => p.problems.some(pr => pr.field === 'meta_keywords'));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(p => p.name?.toLowerCase().includes(q) || p.slug?.includes(q));
@@ -186,12 +200,12 @@ export const PageProblemFixer = () => {
     return result;
   }, [allPages, filterType, filterProblem, searchQuery]);
 
-  // Stats
   const stats = useMemo(() => ({
     total: allPages.length,
     noImage: allPages.filter(p => p.problems.some(pr => pr.field === 'image')).length,
     noMeta: allPages.filter(p => p.problems.some(pr => pr.field === 'meta_title' || pr.field === 'meta_description')).length,
     noContent: allPages.filter(p => p.problems.some(pr => pr.field === 'content' || pr.field === 'description')).length,
+    noKeywords: allPages.filter(p => p.problems.some(pr => pr.field === 'meta_keywords')).length,
   }), [allPages]);
 
   const types = [...new Set(allPages.map(p => p.type))];
@@ -217,7 +231,15 @@ export const PageProblemFixer = () => {
   const handleExpand = (page: PageProblem) => {
     if (expandedId === page.id) { setExpandedId(null); return; }
     setExpandedId(page.id);
-    setEditValues({ image_url: page.image_url || '' });
+    const keywords = page.meta_keywords ? page.meta_keywords.split(',').map(k => k.trim()).filter(Boolean) : [];
+    setEditValues({
+      image_url: page.image_url || '',
+      meta_title: page.meta_title || '',
+      meta_description: page.meta_description || '',
+      slug: page.slug || '',
+      keywords,
+    });
+    setNewKeyword('');
   };
 
   const handleSaveImage = (page: PageProblem, url: string) => {
@@ -225,65 +247,140 @@ export const PageProblemFixer = () => {
     saveMutation.mutate({ table: page.table, id: page.id, values: { [imageField]: url } });
   };
 
+  const handleSaveMeta = (page: PageProblem) => {
+    const values: Record<string, any> = {};
+    if (editValues.meta_title) values.meta_title = editValues.meta_title;
+    if (editValues.meta_description) values.meta_description = editValues.meta_description;
+    if (editValues.slug && editValues.slug !== page.slug) values.slug = editValues.slug;
+    if (editValues.keywords?.length > 0 && (page.table === 'products' || page.table === 'universal_products')) {
+      values.meta_keywords = editValues.keywords.join(', ');
+    }
+    if (Object.keys(values).length === 0) {
+      toast({ title: 'কিছু পরিবর্তন করুন', variant: 'destructive' });
+      return;
+    }
+    saveMutation.mutate({ table: page.table, id: page.id, values });
+  };
+
+  const autoGenerateMeta = (page: PageProblem) => {
+    const name = page.name || '';
+    let title = '';
+    let desc = '';
+    const suggestions = KEYWORD_SUGGESTIONS[page.type] || [];
+
+    switch (page.type) {
+      case 'বই':
+        title = `${name} - বই কিনুন | বইআলো`;
+        desc = `${name} বইটি অনলাইনে সেরা দামে কিনুন বইআলো থেকে। দ্রুত ডেলিভারি ও ক্যাশ অন ডেলিভারি সুবিধা।`;
+        break;
+      case 'ক্যাটাগরি':
+        title = `${name} বই - সেরা সংগ্রহ | বইআলো`;
+        desc = `${name} বিভাগের সেরা বই সংগ্রহ। বইআলো থেকে ${name} ক্যাটাগরির সব বই কিনুন সেরা দামে।`;
+        break;
+      case 'ব্লগ':
+        title = `${name} | বইআলো ব্লগ`;
+        desc = `${name} - বিস্তারিত পড়ুন বইআলো ব্লগে। বই সম্পর্কিত আর্টিকেল ও রিভিউ।`;
+        break;
+      case 'লেখক':
+        title = `${name} এর বই সমূহ | বইআলো`;
+        desc = `${name} এর সকল বই একসাথে পেয়ে যান বইআলোতে। জনপ্রিয় লেখকের বই অর্ডার করুন।`;
+        break;
+      case 'প্রকাশনী':
+        title = `${name} প্রকাশনী - সকল বই | বইআলো`;
+        desc = `${name} প্রকাশনীর সকল বই কিনুন বইআলো থেকে। সেরা দাম ও দ্রুত ডেলিভারি।`;
+        break;
+      default:
+        title = `${name} | বইআলো`;
+        desc = `${name} - বিস্তারিত দেখুন বইআলোতে।`;
+    }
+
+    const existingKw = editValues.keywords || [];
+    const merged = [...new Set([...existingKw, ...suggestions])];
+
+    setEditValues(prev => ({
+      ...prev,
+      meta_title: prev.meta_title || title,
+      meta_description: prev.meta_description || desc,
+      keywords: merged,
+    }));
+    toast({ title: '✨ অটো-জেনারেট হয়েছে!' });
+  };
+
+  const addKeyword = () => {
+    const kw = newKeyword.trim();
+    if (!kw) return;
+    const current = editValues.keywords || [];
+    if (current.includes(kw)) { toast({ title: 'কীওয়ার্ড আগে থেকেই আছে' }); return; }
+    setEditValues(prev => ({ ...prev, keywords: [...current, kw] }));
+    setNewKeyword('');
+  };
+
+  const removeKeyword = (kw: string) => {
+    setEditValues(prev => ({ ...prev, keywords: (prev.keywords || []).filter((k: string) => k !== kw) }));
+  };
+
+  const addSuggestedKeyword = (kw: string) => {
+    const current = editValues.keywords || [];
+    if (current.includes(kw)) return;
+    setEditValues(prev => ({ ...prev, keywords: [...current, kw] }));
+  };
+
+  const metaTitleLen = (editValues.meta_title || '').length;
+  const metaDescLen = (editValues.meta_description || '').length;
+
   return (
     <div className="space-y-4">
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card>
-          <CardContent className="pt-4 text-center">
-            <p className="text-3xl font-bold text-red-600">{stats.total}</p>
-            <p className="text-xs text-muted-foreground">মোট সমস্যা সহ পেজ</p>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('image')}>
-          <CardContent className="pt-4 text-center">
-            <p className="text-3xl font-bold text-red-500">{stats.noImage}</p>
-            <p className="text-xs text-muted-foreground">🖼️ ইমেজ নেই</p>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('meta')}>
-          <CardContent className="pt-4 text-center">
-            <p className="text-3xl font-bold text-yellow-600">{stats.noMeta}</p>
-            <p className="text-xs text-muted-foreground">📝 মেটা নেই</p>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('content')}>
-          <CardContent className="pt-4 text-center">
-            <p className="text-3xl font-bold text-orange-500">{stats.noContent}</p>
-            <p className="text-xs text-muted-foreground">📄 কন্টেন্ট নেই</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <Card><CardContent className="pt-4 text-center">
+          <p className="text-3xl font-bold text-destructive">{stats.total}</p>
+          <p className="text-xs text-muted-foreground">মোট সমস্যা</p>
+        </CardContent></Card>
+        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('image')}><CardContent className="pt-4 text-center">
+          <p className="text-3xl font-bold text-destructive">{stats.noImage}</p>
+          <p className="text-xs text-muted-foreground">🖼️ ইমেজ নেই</p>
+        </CardContent></Card>
+        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('meta')}><CardContent className="pt-4 text-center">
+          <p className="text-3xl font-bold text-yellow-600">{stats.noMeta}</p>
+          <p className="text-xs text-muted-foreground">📝 মেটা নেই</p>
+        </CardContent></Card>
+        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('keywords')}><CardContent className="pt-4 text-center">
+          <p className="text-3xl font-bold text-orange-500">{stats.noKeywords}</p>
+          <p className="text-xs text-muted-foreground">🔑 কীওয়ার্ড নেই</p>
+        </CardContent></Card>
+        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('content')}><CardContent className="pt-4 text-center">
+          <p className="text-3xl font-bold text-orange-500">{stats.noContent}</p>
+          <p className="text-xs text-muted-foreground">📄 কন্টেন্ট নেই</p>
+        </CardContent></Card>
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="নাম বা স্লাগ দিয়ে খুঁজুন..." className="pl-9"
-                value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-            </div>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">সব টাইপ</SelectItem>
-                {types.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterProblem} onValueChange={setFilterProblem}>
-              <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">সব সমস্যা</SelectItem>
-                <SelectItem value="image">🖼️ ইমেজ নেই</SelectItem>
-                <SelectItem value="meta">📝 মেটা নেই</SelectItem>
-                <SelectItem value="content">📄 কন্টেন্ট নেই</SelectItem>
-              </SelectContent>
-            </Select>
-            <Badge variant="outline">{filtered.length}টি পেজ</Badge>
+      <Card><CardContent className="pt-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="নাম বা স্লাগ দিয়ে খুঁজুন..." className="pl-9" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
           </div>
-        </CardContent>
-      </Card>
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সব টাইপ</SelectItem>
+              {types.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterProblem} onValueChange={setFilterProblem}>
+            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সব সমস্যা</SelectItem>
+              <SelectItem value="image">🖼️ ইমেজ নেই</SelectItem>
+              <SelectItem value="meta">📝 মেটা নেই</SelectItem>
+              <SelectItem value="keywords">🔑 কীওয়ার্ড নেই</SelectItem>
+              <SelectItem value="content">📄 কন্টেন্ট নেই</SelectItem>
+            </SelectContent>
+          </Select>
+          <Badge variant="outline">{filtered.length}টি পেজ</Badge>
+        </div>
+      </CardContent></Card>
 
       {/* Pages List */}
       <div className="space-y-2 max-h-[700px] overflow-y-auto">
@@ -292,19 +389,18 @@ export const PageProblemFixer = () => {
           const hasImageProblem = page.problems.some(p => p.field === 'image');
           const errorCount = page.problems.filter(p => p.type === 'error').length;
           const warningCount = page.problems.filter(p => p.type === 'warning').length;
+          const suggestions = KEYWORD_SUGGESTIONS[page.type] || [];
 
           return (
             <div key={`${page.type}-${page.id}`}
-              className={`border rounded-lg transition-all ${hasImageProblem ? 'border-red-200' : 'border-yellow-200'} ${isExpanded ? 'shadow-md' : 'hover:shadow-sm'}`}>
-              <div className="p-3 cursor-pointer flex items-center justify-between gap-3"
-                onClick={() => handleExpand(page)}>
+              className={`border rounded-lg transition-all ${hasImageProblem ? 'border-destructive/30' : 'border-yellow-300/50'} ${isExpanded ? 'shadow-md' : 'hover:shadow-sm'}`}>
+              <div className="p-3 cursor-pointer flex items-center justify-between gap-3" onClick={() => handleExpand(page)}>
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  {/* Image preview or placeholder */}
                   <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0">
                     {page.image_url ? (
                       <img src={page.image_url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
                     ) : (
-                      <ImageIcon className="h-5 w-5 text-red-400" />
+                      <ImageIcon className="h-5 w-5 text-destructive" />
                     )}
                   </div>
                   <div className="min-w-0">
@@ -327,12 +423,122 @@ export const PageProblemFixer = () => {
                   {/* Problems */}
                   <div className="pt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                     {page.problems.map((problem, i) => (
-                      <div key={i} className={`flex items-start gap-2 text-sm p-2 rounded-lg ${problem.type === 'error' ? 'bg-red-50' : 'bg-yellow-50'}`}>
-                        {problem.type === 'error' ? <XCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" /> : <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />}
+                      <div key={i} className={`flex items-start gap-2 text-sm p-2 rounded-lg ${problem.type === 'error' ? 'bg-destructive/10' : 'bg-yellow-50'}`}>
+                        {problem.type === 'error' ? <XCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" /> : <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />}
                         <span>{problem.message}</span>
                       </div>
                     ))}
                   </div>
+
+                  {/* Auto Generate Button */}
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => autoGenerateMeta(page)}>
+                      <Sparkles className="h-4 w-4 mr-1" /> অটো-জেনারেট মেটা ও কীওয়ার্ড
+                    </Button>
+                  </div>
+
+                  {/* Meta Title */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">মেটা টাইটেল</label>
+                      <span className={`text-xs ${metaTitleLen > 60 ? 'text-destructive' : metaTitleLen > 50 ? 'text-yellow-600' : 'text-muted-foreground'}`}>
+                        {metaTitleLen}/60
+                      </span>
+                    </div>
+                    <Input
+                      value={editValues.meta_title || ''}
+                      onChange={e => setEditValues(prev => ({ ...prev, meta_title: e.target.value }))}
+                      placeholder="মেটা টাইটেল লিখুন..."
+                    />
+                  </div>
+
+                  {/* Meta Description */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">মেটা বর্ণনা</label>
+                      <span className={`text-xs ${metaDescLen > 160 ? 'text-destructive' : metaDescLen > 140 ? 'text-yellow-600' : 'text-muted-foreground'}`}>
+                        {metaDescLen}/160
+                      </span>
+                    </div>
+                    <Textarea
+                      value={editValues.meta_description || ''}
+                      onChange={e => setEditValues(prev => ({ ...prev, meta_description: e.target.value }))}
+                      placeholder="মেটা বর্ণনা লিখুন..."
+                      rows={3}
+                    />
+                  </div>
+
+                  {/* Slug */}
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium flex items-center gap-1">
+                      <Globe className="h-3.5 w-3.5" /> স্লাগ (URL)
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-muted-foreground">/</span>
+                      <Input
+                        value={editValues.slug || ''}
+                        onChange={e => setEditValues(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-') }))}
+                        placeholder="slug-here"
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Keywords */}
+                  {(page.table === 'products' || page.table === 'universal_products') && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">🔑 কীওয়ার্ড</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(editValues.keywords || []).map((kw: string) => (
+                          <Badge key={kw} variant="secondary" className="gap-1 pr-1">
+                            {kw}
+                            <button onClick={() => removeKeyword(kw)} className="ml-1 hover:text-destructive">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          value={newKeyword}
+                          onChange={e => setNewKeyword(e.target.value)}
+                          placeholder="নতুন কীওয়ার্ড লিখুন..."
+                          className="flex-1"
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } }}
+                        />
+                        <Button size="sm" variant="outline" onClick={addKeyword}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {/* Keyword Suggestions */}
+                      {suggestions.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">💡 সাজেস্টেড কীওয়ার্ড (ক্লিক করে যোগ করুন):</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {suggestions.filter(s => !(editValues.keywords || []).includes(s)).map(kw => (
+                              <Badge key={kw} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors"
+                                onClick={() => addSuggestedKeyword(kw)}>
+                                <Plus className="h-3 w-3 mr-0.5" /> {kw}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Google Preview */}
+                  {(editValues.meta_title || editValues.meta_description) && (
+                    <div className="border rounded-lg p-3 bg-background">
+                      <p className="text-xs text-muted-foreground mb-2">🔍 Google প্রিভিউ</p>
+                      <div className="space-y-0.5">
+                        <p className="text-blue-700 text-base font-medium truncate">{editValues.meta_title || page.name}</p>
+                        <p className="text-green-700 text-xs font-mono">boialo.com/{editValues.slug || page.slug}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{editValues.meta_description || 'মেটা বর্ণনা এখানে দেখাবে...'}</p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Image Upload Fix */}
                   {hasImageProblem && (
@@ -351,6 +557,12 @@ export const PageProblemFixer = () => {
                       />
                     </div>
                   )}
+
+                  {/* Save Button */}
+                  <Button onClick={() => handleSaveMeta(page)} disabled={saveMutation.isPending} className="w-full">
+                    {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                    সব পরিবর্তন সেভ করুন
+                  </Button>
                 </div>
               )}
             </div>
