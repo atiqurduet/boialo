@@ -22,7 +22,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { GripVertical, Eye, EyeOff, Settings2, Plus, Trash2, Search } from 'lucide-react';
+import { GripVertical, Eye, EyeOff, Settings2, Plus, Trash2, Search, Link2, RotateCcw } from 'lucide-react';
 
 interface HomepageSection {
   id: string;
@@ -74,9 +74,9 @@ const AdminHomepage = () => {
   const { toast } = useToast();
 
   // Data for dropdowns
-  const [categories, setCategories] = useState<Array<{ id: string; name_bn: string }>>([]);
-  const [universalCategories, setUniversalCategories] = useState<Array<{ id: string; name_bn: string; product_type: string }>>([]);
-  const [writers, setWriters] = useState<Array<{ id: string; name_bn: string }>>([]);
+  const [categories, setCategories] = useState<Array<{ id: string; name_bn: string; slug: string }>>([]);
+  const [universalCategories, setUniversalCategories] = useState<Array<{ id: string; name_bn: string; product_type: string; slug: string }>>([]);
+  const [writers, setWriters] = useState<Array<{ id: string; name_bn: string; slug: string }>>([]);
   const [products, setProducts] = useState<Array<{ id: string; title_bn: string }>>([]);
   const [productSearch, setProductSearch] = useState('');
 
@@ -105,7 +105,7 @@ const AdminHomepage = () => {
   const fetchCategories = async () => {
     const { data } = await supabase
       .from('categories')
-      .select('id, name_bn')
+      .select('id, name_bn, slug')
       .eq('is_active', true)
       .order('name_bn');
     setCategories(data || []);
@@ -114,7 +114,7 @@ const AdminHomepage = () => {
   const fetchUniversalCategories = async () => {
     const { data } = await supabase
       .from('universal_categories')
-      .select('id, name_bn, product_type')
+      .select('id, name_bn, product_type, slug')
       .eq('is_active', true)
       .order('name_bn');
     setUniversalCategories(data || []);
@@ -123,10 +123,51 @@ const AdminHomepage = () => {
   const fetchWriters = async () => {
     const { data } = await supabase
       .from('writers')
-      .select('id, name_bn')
+      .select('id, name_bn, slug')
       .eq('is_active', true)
       .order('name_bn');
     setWriters(data || []);
+  };
+
+  // Auto-generate view_all_link based on section type and settings
+  const getAutoLink = (sectionType: string, settings: any): string => {
+    switch (sectionType) {
+      case 'category_products': {
+        const cat = categories.find(c => c.id === settings.category_id);
+        return cat ? `/categories/${cat.slug}` : '/shop';
+      }
+      case 'writer_products': {
+        const writer = writers.find(w => w.id === settings.writer_id);
+        return writer ? `/writers/${writer.slug}` : '/authors';
+      }
+      case 'category_grid':
+      case 'category_subcategory_grid':
+      case 'category_top_products':
+        return '/categories';
+      case 'flash_sale':
+        return '/offers';
+      case 'universal_flash_sale':
+        return '/offers';
+      case 'universal_category_products': {
+        const uCat = universalCategories.find(c => c.id === settings.universal_category_id);
+        if (uCat) return `/category/${uCat.product_type}/${uCat.slug}`;
+        return settings.product_type ? `/${settings.product_type}` : '/shop';
+      }
+      case 'universal_category_grid':
+        return settings.product_type ? `/categories` : '/categories';
+      case 'new_releases':
+      case 'bestsellers':
+      case 'featured_products':
+      case 'recommended':
+      case 'preorder_products':
+      case 'top_selling':
+      case 'top_selling_universal_products':
+        return '/shop';
+      case 'top_authors':
+        return '/authors';
+      default:
+        return '/shop';
+    }
   };
 
   const fetchProducts = async (search: string) => {
@@ -297,6 +338,45 @@ const AdminHomepage = () => {
     updateSortOrder(targetSection.id, currentSection.sort_order);
   };
 
+  const renderSmartLinkField = (sectionType: string) => {
+    const autoLink = getAutoLink(sectionType, formData.settings);
+    return (
+      <div>
+        <Label className="flex items-center gap-1.5">
+          <Link2 className="w-3.5 h-3.5" /> View All লিংক
+        </Label>
+        <div className="flex gap-2">
+          <Input
+            value={formData.settings.view_all_link || ''}
+            onChange={(e) => setFormData({
+              ...formData,
+              settings: { ...formData.settings, view_all_link: e.target.value }
+            })}
+            placeholder={`অটো: ${autoLink}`}
+          />
+          {formData.settings.view_all_link && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="flex-shrink-0"
+              title="অটো লিংক ব্যবহার করুন"
+              onClick={() => setFormData({
+                ...formData,
+                settings: { ...formData.settings, view_all_link: '' }
+              })}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          খালি রাখলে অটো লিংক: <span className="font-medium text-primary">{autoLink}</span>
+        </p>
+      </div>
+    );
+  };
+
   const renderSettingsEditor = () => {
     const sectionType = isCreating ? formData.section_type : editingSection?.section_type;
     if (!sectionType) return null;
@@ -438,16 +518,7 @@ const AdminHomepage = () => {
                 </Select>
               </div>
             )}
-            <div>
-              <Label>View All লিংক</Label>
-              <Input
-                value={formData.settings.view_all_link || '/shop'}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  settings: { ...formData.settings, view_all_link: e.target.value }
-                })}
-              />
-            </div>
+            {renderSmartLinkField(sectionType || '')}
             <div className="flex items-center gap-2">
               <Switch
                 checked={formData.settings.show_ranking || false}
@@ -495,16 +566,7 @@ const AdminHomepage = () => {
                 })}
               />
             </div>
-            <div>
-              <Label>View All লিংক</Label>
-              <Input
-                value={formData.settings.view_all_link || '/shop'}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  settings: { ...formData.settings, view_all_link: e.target.value }
-                })}
-              />
-            </div>
+            {renderSmartLinkField(sectionType || '')}
           </div>
         );
 
@@ -542,16 +604,7 @@ const AdminHomepage = () => {
                 })}
               />
             </div>
-            <div>
-              <Label>View All লিংক</Label>
-              <Input
-                value={formData.settings.view_all_link || '/authors'}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  settings: { ...formData.settings, view_all_link: e.target.value }
-                })}
-              />
-            </div>
+            {renderSmartLinkField(sectionType || '')}
           </div>
         );
 
@@ -646,16 +699,7 @@ const AdminHomepage = () => {
                 </Select>
               </div>
             </div>
-            <div>
-              <Label>View All লিংক</Label>
-              <Input
-                value={formData.settings.view_all_link || '/shop'}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  settings: { ...formData.settings, view_all_link: e.target.value }
-                })}
-              />
-            </div>
+            {renderSmartLinkField(sectionType || '')}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-2">
                 <Switch
@@ -914,17 +958,7 @@ const AdminHomepage = () => {
                 })}
               />
             </div>
-            <div>
-              <Label>View All লিংক</Label>
-              <Input
-                value={formData.settings.view_all_link || ''}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  settings: { ...formData.settings, view_all_link: e.target.value }
-                })}
-                placeholder={`/${formData.settings.product_type || 'lifestyle'}`}
-              />
-            </div>
+            {renderSmartLinkField(sectionType || '')}
           </div>
         );
 
