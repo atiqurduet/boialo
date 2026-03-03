@@ -6,12 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { LogoUpload } from '@/components/admin/LogoUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
   XCircle, AlertTriangle, CheckCircle2, ImageIcon, Search,
-  Save, Loader2, ChevronDown, ChevronUp, Upload, Sparkles, X, Plus, Globe
+  Save, Loader2, ChevronDown, ChevronUp, Upload, Sparkles, X, Plus, Globe,
+  FileText, Eye
 } from 'lucide-react';
 
 interface PageProblem {
@@ -20,12 +22,14 @@ interface PageProblem {
   name: string;
   slug: string;
   table: string;
-  problems: { type: 'error' | 'warning'; message: string; field: string }[];
+  problems: { type: 'error' | 'warning' | 'info'; message: string; field: string }[];
   image_url?: string;
   meta_title?: string;
   meta_description?: string;
   meta_keywords?: string;
   description?: string;
+  status?: string;
+  isStatic?: boolean;
 }
 
 const KEYWORD_SUGGESTIONS: Record<string, string[]> = {
@@ -35,7 +39,37 @@ const KEYWORD_SUGGESTIONS: Record<string, string[]> = {
   'প্রোডাক্ট': ['পণ্য', 'কিনুন', 'অর্ডার', 'product', 'buy online', 'order'],
   'লেখক': ['লেখক', 'বই লেখক', 'author', 'writer', 'bangla writer'],
   'প্রকাশনী': ['প্রকাশনী', 'পাবলিশার', 'publisher', 'book publisher'],
+  'পেজ': ['বইআলো', 'boialo', 'অনলাইন বইয়ের দোকান', 'online bookshop'],
+  'স্ট্যাটিক পেজ': ['বইআলো', 'boialo', 'অনলাইন বই', 'বাংলা বই'],
 };
+
+const STATIC_PAGES: PageProblem[] = [
+  { type: 'স্ট্যাটিক পেজ', id: 'static-home', name: 'হোম পেজ', slug: '', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-shop', name: 'শপ', slug: 'shop', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-categories', name: 'ক্যাটাগরি সমূহ', slug: 'categories', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-authors', name: 'লেখক সমূহ', slug: 'authors', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-publishers', name: 'প্রকাশনী সমূহ', slug: 'publishers', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-blog', name: 'ব্লগ', slug: 'blog', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-about', name: 'আমাদের সম্পর্কে', slug: 'about', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-contact', name: 'যোগাযোগ', slug: 'contact', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-faq', name: 'FAQ', slug: 'faq', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-terms', name: 'শর্তাবলী', slug: 'terms', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-privacy', name: 'প্রাইভেসি পলিসি', slug: 'privacy', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-refund', name: 'রিফান্ড পলিসি', slug: 'refund-policy', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-offers', name: 'অফার সমূহ', slug: 'offers', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-preorder', name: 'প্রি-অর্ডার', slug: 'preorder', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-bundles', name: 'বান্ডেল', slug: 'bundles', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-giftcards', name: 'গিফট কার্ড', slug: 'gift-cards', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-digital', name: 'ডিজিটাল লাইব্রেরি', slug: 'digital-library', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-compare', name: 'তুলনা', slug: 'compare', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-cart', name: 'কার্ট', slug: 'cart', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-checkout', name: 'চেকআউট', slug: 'checkout', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-signin', name: 'সাইন ইন', slug: 'signin', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-track', name: 'অর্ডার ট্র্যাকিং', slug: 'track', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-wishlist', name: 'উইশলিস্ট', slug: 'wishlist', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-profile', name: 'প্রোফাইল', slug: 'profile', table: '_static', problems: [], isStatic: true },
+  { type: 'স্ট্যাটিক পেজ', id: 'static-orders', name: 'অর্ডার হিস্ট্রি', slug: 'orders', table: '_static', problems: [], isStatic: true },
+];
 
 export const PageProblemFixer = () => {
   const { toast } = useToast();
@@ -46,6 +80,7 @@ export const PageProblemFixer = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, any>>({});
   const [newKeyword, setNewKeyword] = useState('');
+  const [showAll, setShowAll] = useState(false);
 
   const { data: products = [] } = useQuery({
     queryKey: ['page-problems-products'],
@@ -95,8 +130,39 @@ export const PageProblemFixer = () => {
     }
   });
 
+  const { data: dynamicPages = [] } = useQuery({
+    queryKey: ['page-problems-pages'],
+    queryFn: async () => {
+      const { data } = await supabase.from('pages').select('id, title_bn, title_en, slug, status, meta_title, meta_description, featured_image, description_bn').order('created_at', { ascending: false });
+      return data || [];
+    }
+  });
+
   const allPages = useMemo(() => {
     const pages: PageProblem[] = [];
+
+    // Static pages (always shown when showAll)
+    if (showAll) {
+      STATIC_PAGES.forEach(sp => {
+        pages.push({ ...sp, problems: [{ type: 'info', message: 'বিল্ট-ইন পেজ', field: 'info' }] });
+      });
+    }
+
+    // Dynamic pages from DB
+    dynamicPages.forEach((dp: any) => {
+      const problems: PageProblem['problems'] = [];
+      if (!dp.featured_image) problems.push({ type: 'warning', message: 'ফিচার্ড ইমেজ নেই', field: 'image' });
+      if (!dp.meta_title) problems.push({ type: 'warning', message: 'মেটা টাইটেল নেই', field: 'meta_title' });
+      if (!dp.meta_description) problems.push({ type: 'warning', message: 'মেটা বর্ণনা নেই', field: 'meta_description' });
+      if (!dp.description_bn) problems.push({ type: 'warning', message: 'বর্ণনা নেই', field: 'description' });
+      if (showAll || problems.length > 0) {
+        pages.push({
+          type: 'পেজ', id: dp.id, name: dp.title_bn, slug: dp.slug, table: 'pages',
+          problems, image_url: dp.featured_image, meta_title: dp.meta_title,
+          meta_description: dp.meta_description, status: dp.status,
+        });
+      }
+    });
 
     products.forEach((p: any) => {
       const problems: PageProblem['problems'] = [];
@@ -105,7 +171,7 @@ export const PageProblemFixer = () => {
       if (!p.meta_description) problems.push({ type: 'warning', message: 'মেটা বর্ণনা নেই', field: 'meta_description' });
       if (!p.meta_keywords) problems.push({ type: 'warning', message: 'কীওয়ার্ড নেই', field: 'meta_keywords' });
       if (!p.description) problems.push({ type: 'warning', message: 'বর্ণনা নেই', field: 'description' });
-      if (problems.length > 0) {
+      if (showAll || problems.length > 0) {
         pages.push({
           type: 'বই', id: p.id, name: p.title || p.title_bn, slug: p.slug, table: 'products',
           problems, image_url: p.image_url, meta_title: p.meta_title, meta_description: p.meta_description,
@@ -119,7 +185,7 @@ export const PageProblemFixer = () => {
       if (!c.image_url) problems.push({ type: 'error', message: 'ইমেজ নেই', field: 'image' });
       if (!c.meta_title) problems.push({ type: 'warning', message: 'মেটা টাইটেল নেই', field: 'meta_title' });
       if (!c.meta_description) problems.push({ type: 'warning', message: 'মেটা বর্ণনা নেই', field: 'meta_description' });
-      if (problems.length > 0) {
+      if (showAll || problems.length > 0) {
         pages.push({
           type: 'ক্যাটাগরি', id: c.id, name: c.name_bn, slug: c.slug, table: 'categories',
           problems, image_url: c.image_url, meta_title: c.meta_title, meta_description: c.meta_description,
@@ -133,10 +199,11 @@ export const PageProblemFixer = () => {
       if (!b.meta_title) problems.push({ type: 'warning', message: 'মেটা টাইটেল নেই', field: 'meta_title' });
       if (!b.meta_description) problems.push({ type: 'warning', message: 'মেটা বর্ণনা নেই', field: 'meta_description' });
       if (!b.content_bn) problems.push({ type: 'error', message: 'কন্টেন্ট নেই', field: 'content' });
-      if (problems.length > 0) {
+      if (showAll || problems.length > 0) {
         pages.push({
           type: 'ব্লগ', id: b.id, name: b.title_bn, slug: b.slug, table: 'blog_posts',
           problems, image_url: b.featured_image, meta_title: b.meta_title, meta_description: b.meta_description,
+          status: b.status,
         });
       }
     });
@@ -147,7 +214,7 @@ export const PageProblemFixer = () => {
       if (!u.meta_description) problems.push({ type: 'warning', message: 'মেটা বর্ণনা নেই', field: 'meta_description' });
       if (!u.meta_keywords) problems.push({ type: 'warning', message: 'কীওয়ার্ড নেই', field: 'meta_keywords' });
       if (!u.description_bn) problems.push({ type: 'warning', message: 'বর্ণনা নেই', field: 'description' });
-      if (problems.length > 0) {
+      if (showAll || problems.length > 0) {
         pages.push({
           type: 'প্রোডাক্ট', id: u.id, name: u.name_bn, slug: u.slug, table: 'universal_products',
           problems, meta_title: u.meta_title, meta_description: u.meta_description,
@@ -162,7 +229,7 @@ export const PageProblemFixer = () => {
       if (!w.meta_title) problems.push({ type: 'warning', message: 'মেটা টাইটেল নেই', field: 'meta_title' });
       if (!w.meta_description) problems.push({ type: 'warning', message: 'মেটা বর্ণনা নেই', field: 'meta_description' });
       if (!w.bio_bn) problems.push({ type: 'warning', message: 'বায়ো নেই', field: 'bio' });
-      if (problems.length > 0) {
+      if (showAll || problems.length > 0) {
         pages.push({
           type: 'লেখক', id: w.id, name: w.name_bn, slug: w.slug, table: 'writers',
           problems, image_url: w.image_url, meta_title: w.meta_title, meta_description: w.meta_description,
@@ -175,7 +242,7 @@ export const PageProblemFixer = () => {
       if (!pub.logo_url) problems.push({ type: 'error', message: 'লোগো নেই', field: 'image' });
       if (!pub.meta_title) problems.push({ type: 'warning', message: 'মেটা টাইটেল নেই', field: 'meta_title' });
       if (!pub.meta_description) problems.push({ type: 'warning', message: 'মেটা বর্ণনা নেই', field: 'meta_description' });
-      if (problems.length > 0) {
+      if (showAll || problems.length > 0) {
         pages.push({
           type: 'প্রকাশনী', id: pub.id, name: pub.name_bn, slug: pub.slug, table: 'publishers',
           problems, image_url: pub.logo_url, meta_title: pub.meta_title, meta_description: pub.meta_description,
@@ -184,7 +251,7 @@ export const PageProblemFixer = () => {
     });
 
     return pages;
-  }, [products, categories, blogPosts, universalProducts, writers, publishers]);
+  }, [products, categories, blogPosts, universalProducts, writers, publishers, dynamicPages, showAll]);
 
   const filtered = useMemo(() => {
     let result = allPages;
@@ -193,6 +260,7 @@ export const PageProblemFixer = () => {
     else if (filterProblem === 'meta') result = result.filter(p => p.problems.some(pr => pr.field === 'meta_title' || pr.field === 'meta_description'));
     else if (filterProblem === 'content') result = result.filter(p => p.problems.some(pr => pr.field === 'content' || pr.field === 'description'));
     else if (filterProblem === 'keywords') result = result.filter(p => p.problems.some(pr => pr.field === 'meta_keywords'));
+    else if (filterProblem === 'ok') result = result.filter(p => p.problems.length === 0 || p.problems.every(pr => pr.type === 'info'));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(p => p.name?.toLowerCase().includes(q) || p.slug?.includes(q));
@@ -200,13 +268,17 @@ export const PageProblemFixer = () => {
     return result;
   }, [allPages, filterType, filterProblem, searchQuery]);
 
+  // Count stats from problematic items only
+  const problemPages = useMemo(() => allPages.filter(p => p.problems.some(pr => pr.type === 'error' || pr.type === 'warning')), [allPages]);
+
   const stats = useMemo(() => ({
     total: allPages.length,
-    noImage: allPages.filter(p => p.problems.some(pr => pr.field === 'image')).length,
-    noMeta: allPages.filter(p => p.problems.some(pr => pr.field === 'meta_title' || pr.field === 'meta_description')).length,
-    noContent: allPages.filter(p => p.problems.some(pr => pr.field === 'content' || pr.field === 'description')).length,
-    noKeywords: allPages.filter(p => p.problems.some(pr => pr.field === 'meta_keywords')).length,
-  }), [allPages]);
+    problems: problemPages.length,
+    noImage: problemPages.filter(p => p.problems.some(pr => pr.field === 'image')).length,
+    noMeta: problemPages.filter(p => p.problems.some(pr => pr.field === 'meta_title' || pr.field === 'meta_description')).length,
+    noContent: problemPages.filter(p => p.problems.some(pr => pr.field === 'content' || pr.field === 'description')).length,
+    noKeywords: problemPages.filter(p => p.problems.some(pr => pr.field === 'meta_keywords')).length,
+  }), [allPages, problemPages]);
 
   const types = [...new Set(allPages.map(p => p.type))];
 
@@ -222,6 +294,7 @@ export const PageProblemFixer = () => {
       queryClient.invalidateQueries({ queryKey: ['page-problems-universal'] });
       queryClient.invalidateQueries({ queryKey: ['page-problems-writers'] });
       queryClient.invalidateQueries({ queryKey: ['page-problems-publishers'] });
+      queryClient.invalidateQueries({ queryKey: ['page-problems-pages'] });
       setExpandedId(null);
       toast({ title: '✅ সেভ হয়েছে!' });
     },
@@ -229,6 +302,7 @@ export const PageProblemFixer = () => {
   });
 
   const handleExpand = (page: PageProblem) => {
+    if (page.isStatic) return; // Static pages can't be edited here
     if (expandedId === page.id) { setExpandedId(null); return; }
     setExpandedId(page.id);
     const keywords = page.meta_keywords ? page.meta_keywords.split(',').map(k => k.trim()).filter(Boolean) : [];
@@ -243,11 +317,12 @@ export const PageProblemFixer = () => {
   };
 
   const handleSaveImage = (page: PageProblem, url: string) => {
-    const imageField = page.table === 'publishers' ? 'logo_url' : page.table === 'blog_posts' ? 'featured_image' : 'image_url';
+    const imageField = page.table === 'publishers' ? 'logo_url' : page.table === 'blog_posts' ? 'featured_image' : page.table === 'pages' ? 'featured_image' : 'image_url';
     saveMutation.mutate({ table: page.table, id: page.id, values: { [imageField]: url } });
   };
 
   const handleSaveMeta = (page: PageProblem) => {
+    if (page.isStatic) return;
     const values: Record<string, any> = {};
     if (editValues.meta_title) values.meta_title = editValues.meta_title;
     if (editValues.meta_description) values.meta_description = editValues.meta_description;
@@ -288,6 +363,10 @@ export const PageProblemFixer = () => {
       case 'প্রকাশনী':
         title = `${name} প্রকাশনী - সকল বই | বইআলো`;
         desc = `${name} প্রকাশনীর সকল বই কিনুন বইআলো থেকে। সেরা দাম ও দ্রুত ডেলিভারি।`;
+        break;
+      case 'পেজ':
+        title = `${name} | বইআলো`;
+        desc = `${name} - বইআলোর বিস্তারিত তথ্য দেখুন।`;
         break;
       default:
         title = `${name} | বইআলো`;
@@ -331,27 +410,43 @@ export const PageProblemFixer = () => {
   return (
     <div className="space-y-4">
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card><CardContent className="pt-4 text-center">
-          <p className="text-3xl font-bold text-destructive">{stats.total}</p>
-          <p className="text-xs text-muted-foreground">মোট সমস্যা</p>
-        </CardContent></Card>
-        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('image')}><CardContent className="pt-4 text-center">
-          <p className="text-3xl font-bold text-destructive">{stats.noImage}</p>
-          <p className="text-xs text-muted-foreground">🖼️ ইমেজ নেই</p>
-        </CardContent></Card>
-        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('meta')}><CardContent className="pt-4 text-center">
-          <p className="text-3xl font-bold text-yellow-600">{stats.noMeta}</p>
-          <p className="text-xs text-muted-foreground">📝 মেটা নেই</p>
-        </CardContent></Card>
-        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('keywords')}><CardContent className="pt-4 text-center">
-          <p className="text-3xl font-bold text-orange-500">{stats.noKeywords}</p>
-          <p className="text-xs text-muted-foreground">🔑 কীওয়ার্ড নেই</p>
-        </CardContent></Card>
-        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('content')}><CardContent className="pt-4 text-center">
-          <p className="text-3xl font-bold text-orange-500">{stats.noContent}</p>
-          <p className="text-xs text-muted-foreground">📄 কন্টেন্ট নেই</p>
-        </CardContent></Card>
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <Card className="cursor-pointer hover:shadow-md" onClick={() => { setShowAll(true); setFilterProblem('all'); }}>
+          <CardContent className="pt-4 text-center">
+            <p className="text-3xl font-bold text-primary">{stats.total}</p>
+            <p className="text-xs text-muted-foreground">📄 মোট পেজ</p>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:shadow-md" onClick={() => { setShowAll(false); setFilterProblem('all'); }}>
+          <CardContent className="pt-4 text-center">
+            <p className="text-3xl font-bold text-destructive">{stats.problems}</p>
+            <p className="text-xs text-muted-foreground">⚠️ সমস্যা আছে</p>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('image')}>
+          <CardContent className="pt-4 text-center">
+            <p className="text-3xl font-bold text-destructive">{stats.noImage}</p>
+            <p className="text-xs text-muted-foreground">🖼️ ইমেজ নেই</p>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('meta')}>
+          <CardContent className="pt-4 text-center">
+            <p className="text-3xl font-bold text-yellow-600">{stats.noMeta}</p>
+            <p className="text-xs text-muted-foreground">📝 মেটা নেই</p>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('keywords')}>
+          <CardContent className="pt-4 text-center">
+            <p className="text-3xl font-bold text-orange-500">{stats.noKeywords}</p>
+            <p className="text-xs text-muted-foreground">🔑 কীওয়ার্ড নেই</p>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterProblem('content')}>
+          <CardContent className="pt-4 text-center">
+            <p className="text-3xl font-bold text-orange-500">{stats.noContent}</p>
+            <p className="text-xs text-muted-foreground">📄 কন্টেন্ট নেই</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -362,7 +457,7 @@ export const PageProblemFixer = () => {
             <Input placeholder="নাম বা স্লাগ দিয়ে খুঁজুন..." className="pl-9" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
           </div>
           <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">সব টাইপ</SelectItem>
               {types.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -376,8 +471,13 @@ export const PageProblemFixer = () => {
               <SelectItem value="meta">📝 মেটা নেই</SelectItem>
               <SelectItem value="keywords">🔑 কীওয়ার্ড নেই</SelectItem>
               <SelectItem value="content">📄 কন্টেন্ট নেই</SelectItem>
+              <SelectItem value="ok">✅ সমস্যা নেই</SelectItem>
             </SelectContent>
           </Select>
+          <div className="flex items-center gap-2">
+            <Switch checked={showAll} onCheckedChange={setShowAll} />
+            <span className="text-sm text-muted-foreground">সব পেজ দেখান</span>
+          </div>
           <Badge variant="outline">{filtered.length}টি পেজ</Badge>
         </div>
       </CardContent></Card>
@@ -387,17 +487,22 @@ export const PageProblemFixer = () => {
         {filtered.map(page => {
           const isExpanded = expandedId === page.id;
           const hasImageProblem = page.problems.some(p => p.field === 'image');
+          const hasRealProblems = page.problems.some(p => p.type === 'error' || p.type === 'warning');
           const errorCount = page.problems.filter(p => p.type === 'error').length;
           const warningCount = page.problems.filter(p => p.type === 'warning').length;
           const suggestions = KEYWORD_SUGGESTIONS[page.type] || [];
 
           return (
             <div key={`${page.type}-${page.id}`}
-              className={`border rounded-lg transition-all ${hasImageProblem ? 'border-destructive/30' : 'border-yellow-300/50'} ${isExpanded ? 'shadow-md' : 'hover:shadow-sm'}`}>
+              className={`border rounded-lg transition-all ${
+                !hasRealProblems ? 'border-green-200' : hasImageProblem ? 'border-destructive/30' : 'border-yellow-300/50'
+              } ${isExpanded ? 'shadow-md' : 'hover:shadow-sm'}`}>
               <div className="p-3 cursor-pointer flex items-center justify-between gap-3" onClick={() => handleExpand(page)}>
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0">
-                    {page.image_url ? (
+                    {page.isStatic ? (
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                    ) : page.image_url ? (
                       <img src={page.image_url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
                     ) : (
                       <ImageIcon className="h-5 w-5 text-destructive" />
@@ -407,34 +512,50 @@ export const PageProblemFixer = () => {
                     <p className="font-medium text-sm truncate">{page.name}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <Badge variant="secondary" className="text-xs">{page.type}</Badge>
-                      <span className="text-xs text-muted-foreground font-mono">/{page.slug}</span>
+                      <span className="text-xs text-muted-foreground font-mono">/{page.slug || '(home)'}</span>
+                      {page.status && (
+                        <Badge variant={page.status === 'published' ? 'default' : 'outline'} className="text-xs">
+                          {page.status === 'published' ? 'প্রকাশিত' : page.status === 'draft' ? 'ড্রাফট' : page.status}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  {!hasRealProblems && <Badge className="text-xs bg-green-100 text-green-800">✅ ঠিক আছে</Badge>}
                   {errorCount > 0 && <Badge variant="destructive" className="text-xs">{errorCount} ত্রুটি</Badge>}
                   {warningCount > 0 && <Badge className="text-xs bg-yellow-100 text-yellow-800">{warningCount} সতর্কতা</Badge>}
-                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  {!page.isStatic && (isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
+                  {page.isStatic && (
+                    <a href={`/${page.slug}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                      <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </a>
+                  )}
                 </div>
               </div>
 
-              {isExpanded && (
+              {isExpanded && !page.isStatic && (
                 <div className="px-3 pb-4 border-t space-y-4">
                   {/* Problems */}
-                  <div className="pt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {page.problems.map((problem, i) => (
-                      <div key={i} className={`flex items-start gap-2 text-sm p-2 rounded-lg ${problem.type === 'error' ? 'bg-destructive/10' : 'bg-yellow-50'}`}>
-                        {problem.type === 'error' ? <XCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" /> : <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />}
-                        <span>{problem.message}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {hasRealProblems && (
+                    <div className="pt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {page.problems.filter(p => p.type !== 'info').map((problem, i) => (
+                        <div key={i} className={`flex items-start gap-2 text-sm p-2 rounded-lg ${problem.type === 'error' ? 'bg-destructive/10' : 'bg-yellow-50'}`}>
+                          {problem.type === 'error' ? <XCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" /> : <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />}
+                          <span>{problem.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Auto Generate Button */}
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => autoGenerateMeta(page)}>
                       <Sparkles className="h-4 w-4 mr-1" /> অটো-জেনারেট মেটা ও কীওয়ার্ড
                     </Button>
+                    <a href={`/${page.slug}`} target="_blank" rel="noopener noreferrer">
+                      <Button size="sm" variant="ghost"><Eye className="h-4 w-4 mr-1" /> প্রিভিউ</Button>
+                    </a>
                   </div>
 
                   {/* Meta Title */}
@@ -511,7 +632,6 @@ export const PageProblemFixer = () => {
                         </Button>
                       </div>
 
-                      {/* Keyword Suggestions */}
                       {suggestions.length > 0 && (
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">💡 সাজেস্টেড কীওয়ার্ড (ক্লিক করে যোগ করুন):</p>
@@ -552,7 +672,7 @@ export const PageProblemFixer = () => {
                           setEditValues(prev => ({ ...prev, image_url: url }));
                           if (url) handleSaveImage(page, url);
                         }}
-                        label={page.type === 'প্রকাশনী' ? 'লোগো আপলোড' : page.type === 'ব্লগ' ? 'ফিচার্ড ইমেজ' : 'ইমেজ আপলোড'}
+                        label={page.type === 'প্রকাশনী' ? 'লোগো আপলোড' : page.type === 'ব্লগ' || page.type === 'পেজ' ? 'ফিচার্ড ইমেজ' : 'ইমেজ আপলোড'}
                         folder={page.table === 'categories' ? 'categories' : page.table === 'publishers' ? 'branding' : 'product-images'}
                       />
                     </div>
@@ -573,8 +693,8 @@ export const PageProblemFixer = () => {
       {filtered.length === 0 && (
         <div className="text-center py-10 text-muted-foreground">
           <CheckCircle2 className="h-10 w-10 mx-auto mb-2 text-green-500" />
-          <p className="font-medium">কোনো সমস্যা পাওয়া যায়নি! 🎉</p>
-          <p className="text-sm">সব পেজ ঠিক আছে।</p>
+          <p className="font-medium">কোনো পেজ পাওয়া যায়নি</p>
+          <p className="text-sm">ফিল্টার পরিবর্তন করে দেখুন।</p>
         </div>
       )}
     </div>
