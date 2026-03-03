@@ -85,7 +85,18 @@ export const DynamicProductGrid = ({
         )}
       </div>
 
-      <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-${columns} gap-4`}>
+      <div className={cn(
+        "grid grid-cols-2 gap-4",
+        {
+          'md:grid-cols-2 lg:grid-cols-2': columns === 2,
+          'md:grid-cols-3 lg:grid-cols-3': columns === 3,
+          'md:grid-cols-3 lg:grid-cols-4': columns === 4,
+          'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5': columns === 5,
+          'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6': columns === 6,
+          'md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7': columns === 7,
+          'md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8': columns === 8,
+        }
+      )}>
         {products.map((product, index) => {
           const inWishlist = isInWishlist(product.id);
           return (
