@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,11 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
   Search, TrendingUp, Target, Loader2, Copy, Globe, BarChart3,
-  Lightbulb, ArrowRight, Zap, Star, RefreshCw, ChevronDown, ChevronUp
+  Lightbulb, ArrowRight, Zap, Star, RefreshCw, ChevronDown, ChevronUp,
+  Download, Filter, Bookmark, BookmarkCheck, ArrowUpDown, Eye, Hash, Flame, Clock
 } from 'lucide-react';
 
 // ─── Competitor Analyzer ───
@@ -82,7 +84,6 @@ export const CompetitorAnalyzer = () => {
 
       {result && (
         <div className="space-y-4">
-          {/* Competitor Keywords */}
           {result.competitor_keywords?.length > 0 && (
             <Card>
               <CardHeader className="cursor-pointer" onClick={() => setExpandedSection(expandedSection === 'competitor_keywords' ? null : 'competitor_keywords')}>
@@ -130,7 +131,6 @@ export const CompetitorAnalyzer = () => {
             </Card>
           )}
 
-          {/* Keyword Gaps */}
           {result.keyword_gaps?.length > 0 && (
             <Card>
               <CardHeader className="cursor-pointer" onClick={() => setExpandedSection(expandedSection === 'gaps' ? null : 'gaps')}>
@@ -164,7 +164,6 @@ export const CompetitorAnalyzer = () => {
             </Card>
           )}
 
-          {/* Content Ideas */}
           {result.content_ideas?.length > 0 && (
             <Card>
               <CardHeader className="cursor-pointer" onClick={() => setExpandedSection(expandedSection === 'content' ? null : 'content')}>
@@ -194,7 +193,6 @@ export const CompetitorAnalyzer = () => {
             </Card>
           )}
 
-          {/* Ranking Tips */}
           {result.ranking_tips?.length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-base flex items-center gap-2"><Star className="h-5 w-5 text-primary" /> র‍্যাঙ্কিং টিপস</CardTitle></CardHeader>
@@ -216,12 +214,22 @@ export const CompetitorAnalyzer = () => {
   );
 };
 
-// ─── Trending Keywords ───
+// ─── Trending Keywords (Advanced) ───
 export const TrendingKeywords = () => {
   const { toast } = useToast();
   const [category, setCategory] = useState('all');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [searchFilter, setSearchFilter] = useState('');
+  const [savedKeywords, setSavedKeywords] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('seo_saved_keywords') || '[]'); } catch { return []; }
+  });
+  const [sortBy, setSortBy] = useState<'default' | 'volume' | 'trend'>('default');
+  const [activeSubTab, setActiveSubTab] = useState('daily');
+  const [showOnlySaved, setShowOnlySaved] = useState(false);
+  const [history, setHistory] = useState<{ date: string; category: string; count: number }[]>(() => {
+    try { return JSON.parse(localStorage.getItem('seo_trend_history') || '[]'); } catch { return []; }
+  });
 
   const fetchTrends = async () => {
     setLoading(true);
@@ -246,6 +254,10 @@ export const TrendingKeywords = () => {
       }
 
       setResult(data);
+      const newEntry = { date: new Date().toISOString(), category, count: data?.daily_trends?.length || 0 };
+      const updatedHistory = [newEntry, ...history].slice(0, 20);
+      setHistory(updatedHistory);
+      localStorage.setItem('seo_trend_history', JSON.stringify(updatedHistory));
       toast({ title: '✅ ট্রেন্ড লোড হয়েছে!' });
     } catch (err: any) {
       toast({ title: 'ত্রুটি', description: err.message, variant: 'destructive' });
@@ -259,15 +271,97 @@ export const TrendingKeywords = () => {
     toast({ title: 'কপি হয়েছে', description: kw });
   };
 
+  const toggleSave = useCallback((kw: string) => {
+    setSavedKeywords(prev => {
+      const updated = prev.includes(kw) ? prev.filter(k => k !== kw) : [...prev, kw];
+      localStorage.setItem('seo_saved_keywords', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const exportCSV = useCallback(() => {
+    if (!result) return;
+    const rows = [['কীওয়ার্ড', 'বাংলা', 'ট্রেন্ড', 'ভলিউম', 'ক্যাটাগরি']];
+    (result.daily_trends || []).forEach((t: any) => {
+      rows.push([t.keyword, t.keyword_bn || '', t.trend || '', t.volume || '', t.category || '']);
+    });
+    (result.google_trends_equivalent || []).forEach((t: any) => {
+      rows.push([t.keyword, t.keyword_bn || '', `interest:${t.search_interest}`, '', '']);
+    });
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `trending-keywords-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast({ title: '📥 CSV ডাউনলোড হয়েছে!' });
+  }, [result, toast]);
+
+  const exportAllSaved = useCallback(() => {
+    if (savedKeywords.length === 0) return;
+    navigator.clipboard.writeText(savedKeywords.join(', '));
+    toast({ title: `${savedKeywords.length}টি সেভ করা কীওয়ার্ড কপি হয়েছে` });
+  }, [savedKeywords, toast]);
+
+  const filteredDailyTrends = useMemo(() => {
+    if (!result?.daily_trends) return [];
+    let items = [...result.daily_trends];
+    if (searchFilter) {
+      const q = searchFilter.toLowerCase();
+      items = items.filter((t: any) =>
+        (t.keyword || '').toLowerCase().includes(q) ||
+        (t.keyword_bn || '').toLowerCase().includes(q) ||
+        (t.category || '').toLowerCase().includes(q)
+      );
+    }
+    if (showOnlySaved) {
+      items = items.filter((t: any) => savedKeywords.includes(t.keyword_bn || t.keyword));
+    }
+    if (sortBy === 'volume') {
+      const volOrder: Record<string, number> = { high: 3, medium: 2, low: 1 };
+      items.sort((a: any, b: any) => (volOrder[b.volume] || 0) - (volOrder[a.volume] || 0));
+    } else if (sortBy === 'trend') {
+      const trendOrder: Record<string, number> = { rising: 3, stable: 2, declining: 1 };
+      items.sort((a: any, b: any) => (trendOrder[b.trend] || 0) - (trendOrder[a.trend] || 0));
+    }
+    return items;
+  }, [result, searchFilter, sortBy, showOnlySaved, savedKeywords]);
+
+  const filteredGoogleTrends = useMemo(() => {
+    if (!result?.google_trends_equivalent) return [];
+    let items = [...result.google_trends_equivalent];
+    if (searchFilter) {
+      const q = searchFilter.toLowerCase();
+      items = items.filter((t: any) =>
+        (t.keyword || '').toLowerCase().includes(q) ||
+        (t.keyword_bn || '').toLowerCase().includes(q)
+      );
+    }
+    items.sort((a: any, b: any) => (b.search_interest || 0) - (a.search_interest || 0));
+    return items;
+  }, [result, searchFilter]);
+
+  const stats = useMemo(() => {
+    if (!result?.daily_trends) return null;
+    const trends = result.daily_trends;
+    const rising = trends.filter((t: any) => t.trend === 'rising').length;
+    const highVol = trends.filter((t: any) => t.volume === 'high').length;
+    const categories = [...new Set(trends.map((t: any) => t.category).filter(Boolean))];
+    return { total: trends.length, rising, highVol, categories: categories.length };
+  }, [result]);
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-5 w-5 text-green-500" /> ট্রেন্ডিং কীওয়ার্ড (Google Trends স্টাইল)</CardTitle>
-          <CardDescription>প্রতিদিনের জনপ্রিয় সার্চ কীওয়ার্ড ও ট্রেন্ড বিশ্লেষণ</CardDescription>
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-green-500" />
+            ট্রেন্ডিং কীওয়ার্ড রিসার্চ
+          </CardTitle>
+          <CardDescription>Google Trends স্টাইল ডেটা — সার্চ ট্রেন্ড, সিজনাল কীওয়ার্ড, ইমার্জিং টপিক</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -278,127 +372,386 @@ export const TrendingKeywords = () => {
                 <SelectItem value="stationery">✏️ স্টেশনারি</SelectItem>
                 <SelectItem value="food">🍔 খাবার</SelectItem>
                 <SelectItem value="academic">🎓 একাডেমিক</SelectItem>
+                <SelectItem value="electronics">📱 ইলেকট্রনিক্স</SelectItem>
+                <SelectItem value="health">💊 স্বাস্থ্য</SelectItem>
+                <SelectItem value="fashion">👗 ফ্যাশন</SelectItem>
               </SelectContent>
             </Select>
             <Button onClick={fetchTrends} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
               ট্রেন্ড দেখুন
             </Button>
+            {result && (
+              <>
+                <Button variant="outline" onClick={exportCSV}>
+                  <Download className="h-4 w-4 mr-2" /> CSV এক্সপোর্ট
+                </Button>
+                {savedKeywords.length > 0 && (
+                  <Button variant="outline" onClick={exportAllSaved}>
+                    <BookmarkCheck className="h-4 w-4 mr-2" /> সেভ করা ({savedKeywords.length}) কপি
+                  </Button>
+                )}
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {result && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Daily Trends */}
-          {result.daily_trends?.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">📈 আজকের ট্রেন্ড</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                  {result.daily_trends.map((t: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between border-b pb-2 last:border-0">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="text-xs text-muted-foreground w-5">{i + 1}.</span>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{t.keyword_bn || t.keyword}</p>
-                          {t.category && <span className="text-xs text-muted-foreground">{t.category}</span>}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Badge variant="outline" className={`text-xs ${t.trend === 'rising' ? 'border-green-300 text-green-600' : t.trend === 'stable' ? 'border-blue-300 text-blue-600' : 'border-red-300 text-red-600'}`}>
-                          {t.trend === 'rising' ? '📈' : t.trend === 'stable' ? '➡️' : '📉'} {t.volume === 'high' ? 'উচ্চ' : t.volume === 'medium' ? 'মাঝারি' : 'কম'}
-                        </Badge>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => copyKeyword(t.keyword_bn || t.keyword)}>
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Google Trends Equivalent */}
-          {result.google_trends_equivalent?.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><BarChart3 className="h-5 w-5" /> সার্চ ইন্টারেস্ট</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                  {result.google_trends_equivalent.map((t: any, i: number) => (
-                    <div key={i} className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{t.keyword_bn || t.keyword}</span>
-                        <span className="text-xs font-bold text-primary">{t.search_interest}/100</span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
-                        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${t.search_interest}%` }} />
-                      </div>
-                      {t.related_queries?.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {t.related_queries.slice(0, 3).map((q: string, j: number) => (
-                            <Badge key={j} variant="secondary" className="text-xs cursor-pointer" onClick={() => copyKeyword(q)}>{q}</Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Seasonal Keywords */}
-          {result.seasonal_keywords?.length > 0 && (
-            <Card>
-              <CardHeader><CardTitle className="text-base">🗓️ সিজনাল কীওয়ার্ড</CardTitle></CardHeader>
-              <CardContent>
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {result.seasonal_keywords.map((s: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between border-b pb-2 last:border-0">
-                      <div>
-                        <p className="text-sm font-medium">{s.keyword_bn || s.keyword}</p>
-                        <p className="text-xs text-muted-foreground">পিক: {s.peak_months} | সিজন: {s.season}</p>
-                      </div>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => copyKeyword(s.keyword_bn || s.keyword)}>
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Emerging Topics */}
-          {result.emerging_topics?.length > 0 && (
-            <Card>
-              <CardHeader><CardTitle className="text-base">🚀 ইমার্জিং টপিক</CardTitle></CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                  {result.emerging_topics.map((topic: any, i: number) => (
-                    <div key={i} className="border rounded-lg p-3">
-                      <h4 className="font-medium text-sm">{topic.topic_bn || topic.topic}</h4>
-                      <p className="text-xs text-muted-foreground mt-0.5">{topic.relevance}</p>
-                      {topic.keywords?.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {topic.keywords.map((kw: string, j: number) => (
-                            <Badge key={j} variant="outline" className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground" onClick={() => copyKeyword(kw)}>{kw}</Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card><CardContent className="pt-4 pb-3 text-center">
+            <Hash className="h-5 w-5 mx-auto text-primary mb-1" />
+            <p className="text-2xl font-bold">{stats.total}</p>
+            <p className="text-xs text-muted-foreground">মোট কীওয়ার্ড</p>
+          </CardContent></Card>
+          <Card><CardContent className="pt-4 pb-3 text-center">
+            <Flame className="h-5 w-5 mx-auto text-orange-500 mb-1" />
+            <p className="text-2xl font-bold text-orange-600">{stats.rising}</p>
+            <p className="text-xs text-muted-foreground">রাইজিং ট্রেন্ড</p>
+          </CardContent></Card>
+          <Card><CardContent className="pt-4 pb-3 text-center">
+            <TrendingUp className="h-5 w-5 mx-auto text-green-500 mb-1" />
+            <p className="text-2xl font-bold text-green-600">{stats.highVol}</p>
+            <p className="text-xs text-muted-foreground">উচ্চ ভলিউম</p>
+          </CardContent></Card>
+          <Card><CardContent className="pt-4 pb-3 text-center">
+            <Eye className="h-5 w-5 mx-auto text-blue-500 mb-1" />
+            <p className="text-2xl font-bold text-blue-600">{stats.categories}</p>
+            <p className="text-xs text-muted-foreground">ক্যাটাগরি</p>
+          </CardContent></Card>
         </div>
+      )}
+
+      {result && (
+        <>
+          <Card>
+            <CardContent className="pt-4 pb-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex-1 min-w-[200px]">
+                  <div className="relative">
+                    <Filter className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input placeholder="কীওয়ার্ড খুঁজুন..." value={searchFilter}
+                      onChange={e => setSearchFilter(e.target.value)} className="pl-9" />
+                  </div>
+                </div>
+                <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
+                  <SelectTrigger className="w-[160px]">
+                    <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">ডিফল্ট সর্ট</SelectItem>
+                    <SelectItem value="volume">ভলিউম অনুসারে</SelectItem>
+                    <SelectItem value="trend">ট্রেন্ড অনুসারে</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-2">
+                  <Switch checked={showOnlySaved} onCheckedChange={setShowOnlySaved} id="show-saved" />
+                  <label htmlFor="show-saved" className="text-sm cursor-pointer">শুধু সেভ করা</label>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
+            <TabsList className="w-full justify-start flex-wrap h-auto">
+              <TabsTrigger value="daily" className="flex items-center gap-1">
+                <Flame className="h-3.5 w-3.5" /> আজকের ট্রেন্ড ({filteredDailyTrends.length})
+              </TabsTrigger>
+              <TabsTrigger value="google" className="flex items-center gap-1">
+                <BarChart3 className="h-3.5 w-3.5" /> সার্চ ইন্টারেস্ট ({filteredGoogleTrends.length})
+              </TabsTrigger>
+              <TabsTrigger value="seasonal" className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" /> সিজনাল ({result.seasonal_keywords?.length || 0})
+              </TabsTrigger>
+              <TabsTrigger value="emerging" className="flex items-center gap-1">
+                <Zap className="h-3.5 w-3.5" /> ইমার্জিং ({result.emerging_topics?.length || 0})
+              </TabsTrigger>
+              {savedKeywords.length > 0 && (
+                <TabsTrigger value="saved" className="flex items-center gap-1">
+                  <Bookmark className="h-3.5 w-3.5" /> সেভ করা ({savedKeywords.length})
+                </TabsTrigger>
+              )}
+            </TabsList>
+
+            {/* Daily Trends Table */}
+            <TabsContent value="daily">
+              {filteredDailyTrends.length > 0 ? (
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-8">#</TableHead>
+                            <TableHead>কীওয়ার্ড</TableHead>
+                            <TableHead>ইংরেজি</TableHead>
+                            <TableHead>ক্যাটাগরি</TableHead>
+                            <TableHead>ট্রেন্ড</TableHead>
+                            <TableHead>ভলিউম</TableHead>
+                            <TableHead className="text-right">অ্যাকশন</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredDailyTrends.map((t: any, i: number) => {
+                            const kw = t.keyword_bn || t.keyword;
+                            const isSaved = savedKeywords.includes(kw);
+                            return (
+                              <TableRow key={i} className={isSaved ? 'bg-primary/5' : ''}>
+                                <TableCell className="text-muted-foreground text-xs">{i + 1}</TableCell>
+                                <TableCell className="font-medium text-sm">{t.keyword_bn || '—'}</TableCell>
+                                <TableCell className="text-sm text-muted-foreground">{t.keyword}</TableCell>
+                                <TableCell>{t.category && <Badge variant="secondary" className="text-xs">{t.category}</Badge>}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className={`text-xs ${
+                                    t.trend === 'rising' ? 'border-green-300 text-green-700 bg-green-50' :
+                                    t.trend === 'stable' ? 'border-blue-300 text-blue-700 bg-blue-50' :
+                                    'border-red-300 text-red-700 bg-red-50'
+                                  }`}>
+                                    {t.trend === 'rising' ? '📈 রাইজিং' : t.trend === 'stable' ? '➡️ স্থিতিশীল' : '📉 ক্ষয়িষ্ণু'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={`text-xs ${
+                                    t.volume === 'high' ? 'bg-green-100 text-green-800' :
+                                    t.volume === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-muted text-muted-foreground'
+                                  }`}>
+                                    {t.volume === 'high' ? '🔥 উচ্চ' : t.volume === 'medium' ? '📊 মাঝারি' : '📉 কম'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1 justify-end">
+                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toggleSave(kw)}>
+                                      {isSaved ? <BookmarkCheck className="h-3.5 w-3.5 text-primary" /> : <Bookmark className="h-3.5 w-3.5" />}
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => copyKeyword(kw)}>
+                                      <Copy className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card><CardContent className="pt-6 text-center text-muted-foreground text-sm">কোনো ট্রেন্ড পাওয়া যায়নি</CardContent></Card>
+              )}
+            </TabsContent>
+
+            {/* Google Trends Interest */}
+            <TabsContent value="google">
+              {filteredGoogleTrends.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5" /> Google সার্চ ইন্টারেস্ট (0-100)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {filteredGoogleTrends.map((t: any, i: number) => {
+                        const kw = t.keyword_bn || t.keyword;
+                        const isSaved = savedKeywords.includes(kw);
+                        const interest = t.search_interest || 0;
+                        return (
+                          <div key={i} className="space-y-2 p-3 border rounded-lg hover:bg-muted/30 transition-colors">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground font-mono w-5">{i + 1}</span>
+                                <span className="font-medium text-sm">{kw}</span>
+                                {t.keyword_bn && t.keyword !== t.keyword_bn && (
+                                  <span className="text-xs text-muted-foreground">({t.keyword})</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-sm font-bold ${
+                                  interest >= 80 ? 'text-green-600' : interest >= 50 ? 'text-yellow-600' : 'text-red-600'
+                                }`}>{interest}</span>
+                                <span className="text-xs text-muted-foreground">/100</span>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toggleSave(kw)}>
+                                  {isSaved ? <BookmarkCheck className="h-3.5 w-3.5 text-primary" /> : <Bookmark className="h-3.5 w-3.5" />}
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => copyKeyword(kw)}>
+                                  <Copy className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                              <div className={`h-full rounded-full transition-all duration-700 ${
+                                interest >= 80 ? 'bg-green-500' : interest >= 50 ? 'bg-yellow-500' : 'bg-red-400'
+                              }`} style={{ width: `${interest}%` }} />
+                            </div>
+                            {t.related_queries?.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-1">
+                                <span className="text-xs text-muted-foreground mr-1">সম্পর্কিত:</span>
+                                {t.related_queries.map((q: string, j: number) => (
+                                  <Badge key={j} variant="outline" className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                                    onClick={() => copyKeyword(q)}>{q}</Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card><CardContent className="pt-6 text-center text-muted-foreground text-sm">Google ট্রেন্ড ডেটা নেই</CardContent></Card>
+              )}
+            </TabsContent>
+
+            {/* Seasonal */}
+            <TabsContent value="seasonal">
+              {result.seasonal_keywords?.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">🗓️ সিজনাল কীওয়ার্ড — সময়মতো ব্যবহার করুন</CardTitle>
+                    <CardDescription>নির্দিষ্ট সময়ে সবচেয়ে বেশি সার্চ হয়</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>কীওয়ার্ড</TableHead>
+                            <TableHead>ইংরেজি</TableHead>
+                            <TableHead>সিজন</TableHead>
+                            <TableHead>পিক সময়</TableHead>
+                            <TableHead className="text-right">অ্যাকশন</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {result.seasonal_keywords.map((s: any, i: number) => {
+                            const kw = s.keyword_bn || s.keyword;
+                            return (
+                              <TableRow key={i}>
+                                <TableCell className="font-medium text-sm">{s.keyword_bn || '—'}</TableCell>
+                                <TableCell className="text-sm text-muted-foreground">{s.keyword}</TableCell>
+                                <TableCell><Badge variant="secondary" className="text-xs">{s.season}</Badge></TableCell>
+                                <TableCell><Badge variant="outline" className="text-xs">📅 {s.peak_months}</Badge></TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1 justify-end">
+                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toggleSave(kw)}>
+                                      {savedKeywords.includes(kw) ? <BookmarkCheck className="h-3.5 w-3.5 text-primary" /> : <Bookmark className="h-3.5 w-3.5" />}
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => copyKeyword(kw)}>
+                                      <Copy className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card><CardContent className="pt-6 text-center text-muted-foreground text-sm">সিজনাল ডেটা নেই</CardContent></Card>
+              )}
+            </TabsContent>
+
+            {/* Emerging Topics */}
+            <TabsContent value="emerging">
+              {result.emerging_topics?.length > 0 ? (
+                <div className="space-y-3">
+                  {result.emerging_topics.map((topic: any, i: number) => (
+                    <Card key={i}>
+                      <CardContent className="pt-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Zap className="h-4 w-4 text-yellow-500" />
+                              <h4 className="font-semibold text-sm">{topic.topic_bn || topic.topic}</h4>
+                              {topic.topic_bn && topic.topic !== topic.topic_bn && (
+                                <span className="text-xs text-muted-foreground">({topic.topic})</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-2">{topic.relevance}</p>
+                            {topic.keywords?.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                <span className="text-xs text-muted-foreground">কীওয়ার্ড:</span>
+                                {topic.keywords.map((kw: string, j: number) => (
+                                  <Badge key={j} variant="outline" className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                                    onClick={() => copyKeyword(kw)}>{kw}</Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => toggleSave(topic.topic_bn || topic.topic)}>
+                            {savedKeywords.includes(topic.topic_bn || topic.topic)
+                              ? <BookmarkCheck className="h-4 w-4 text-primary" />
+                              : <Bookmark className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card><CardContent className="pt-6 text-center text-muted-foreground text-sm">ইমার্জিং টপিক নেই</CardContent></Card>
+              )}
+            </TabsContent>
+
+            {/* Saved Keywords */}
+            <TabsContent value="saved">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <BookmarkCheck className="h-5 w-5 text-primary" /> সেভ করা কীওয়ার্ড ({savedKeywords.length})
+                    </CardTitle>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={exportAllSaved}>
+                        <Copy className="h-3.5 w-3.5 mr-1" /> সব কপি
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => {
+                        setSavedKeywords([]);
+                        localStorage.removeItem('seo_saved_keywords');
+                        toast({ title: 'সব সেভ মুছে ফেলা হয়েছে' });
+                      }}>সব মুছুন</Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {savedKeywords.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {savedKeywords.map((kw, i) => (
+                        <Badge key={i} variant="default" className="text-sm py-1.5 px-3 cursor-pointer gap-1.5" onClick={() => toggleSave(kw)}>
+                          {kw} <span className="text-xs opacity-70">✕</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">কোনো কীওয়ার্ড সেভ করা হয়নি। ⭐ আইকনে ক্লিক করে সেভ করুন।</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+
+          {history.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> সার্চ হিস্ট্রি</CardTitle></CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {history.slice(0, 10).map((h, i) => (
+                    <Badge key={i} variant="outline" className="text-xs">
+                      {h.category === 'all' ? 'সব' : h.category} — {new Date(h.date).toLocaleDateString('bn-BD')} ({h.count}টি)
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );
@@ -477,7 +830,6 @@ export const AIKeywordSuggester = () => {
 
       {result && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Primary Keywords */}
           {result.primary_keywords?.length > 0 && (
             <Card>
               <CardHeader>
@@ -510,7 +862,6 @@ export const AIKeywordSuggester = () => {
             </Card>
           )}
 
-          {/* Long Tail Keywords */}
           {result.long_tail_keywords?.length > 0 && (
             <Card>
               <CardHeader>
@@ -541,7 +892,6 @@ export const AIKeywordSuggester = () => {
             </Card>
           )}
 
-          {/* LSI Keywords */}
           {result.lsi_keywords?.length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-base">🧠 LSI কীওয়ার্ড (সেমান্টিক)</CardTitle></CardHeader>
@@ -558,7 +908,6 @@ export const AIKeywordSuggester = () => {
             </Card>
           )}
 
-          {/* Meta Suggestions */}
           {(result.meta_title_suggestions?.length > 0 || result.meta_description_suggestions?.length > 0) && (
             <Card>
               <CardHeader><CardTitle className="text-base">📝 মেটা সাজেশন</CardTitle></CardHeader>
@@ -583,7 +932,6 @@ export const AIKeywordSuggester = () => {
             </Card>
           )}
 
-          {/* Secondary Keywords */}
           {result.secondary_keywords?.length > 0 && (
             <Card className="lg:col-span-2">
               <CardHeader>
@@ -626,10 +974,7 @@ export const SiteRankingAnalyzer = ({ pages }: { pages: any[] }) => {
           type: 'site_ranking_analysis',
           data: {
             pages: pages.slice(0, 20).map(p => ({
-              name: p.name,
-              type: p.type,
-              score: p.score,
-              slug: p.slug,
+              name: p.name, type: p.type, score: p.score, slug: p.slug,
             })),
             site_url: 'boialo.com',
           },
@@ -663,7 +1008,6 @@ export const SiteRankingAnalyzer = ({ pages }: { pages: any[] }) => {
 
       {result && (
         <>
-          {/* Quick Wins */}
           {result.quick_wins?.length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-base">⚡ Quick Wins — দ্রুত উন্নতি</CardTitle></CardHeader>
@@ -687,7 +1031,6 @@ export const SiteRankingAnalyzer = ({ pages }: { pages: any[] }) => {
             </Card>
           )}
 
-          {/* Page Recommendations */}
           {result.page_recommendations?.length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-base">📋 পেজ-ভিত্তিক সাজেশন</CardTitle></CardHeader>
@@ -725,7 +1068,6 @@ export const SiteRankingAnalyzer = ({ pages }: { pages: any[] }) => {
             </Card>
           )}
 
-          {/* Site-wide Recommendations */}
           {result.site_wide_recommendations?.length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-base">🌐 সাইট-ওয়াইড সাজেশন</CardTitle></CardHeader>
