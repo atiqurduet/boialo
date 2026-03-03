@@ -74,6 +74,7 @@ const Index = () => {
     const limit = settings.limit || 10;
     const sectionTitle = settings.hide_title ? '' : section.title_bn;
     const sectionSubtitle = settings.hide_title ? undefined : (section.subtitle_bn || undefined);
+    const useCarousel = settings.use_carousel !== false; // default true
 
     switch (section.section_type) {
       case 'flash_sale':
@@ -85,6 +86,8 @@ const Index = () => {
             key={section.id}
             products={flashProducts} 
             title={sectionTitle}
+            useCarousel={useCarousel}
+            columns={settings.columns || 5}
           />
         );
 
@@ -114,6 +117,7 @@ const Index = () => {
             subtitle={sectionSubtitle}
             viewAllLink={settings.view_all_link || `/shop?category=${category?.slug || ''}`}
             columns={settings.columns || 5}
+            useCarousel={useCarousel}
           />
         );
 
@@ -131,6 +135,7 @@ const Index = () => {
             subtitle={sectionSubtitle || (writer ? writer.name_bn : undefined)}
             viewAllLink={settings.view_all_link || `/authors/${writer?.slug || ''}`}
             columns={settings.columns || 5}
+            useCarousel={useCarousel}
           />
         );
 
@@ -147,6 +152,7 @@ const Index = () => {
             subtitle={sectionSubtitle}
             viewAllLink={settings.view_all_link}
             columns={settings.columns || 5}
+            useCarousel={useCarousel}
           />
         );
 
@@ -159,6 +165,7 @@ const Index = () => {
             subtitle={sectionSubtitle}
             viewAllLink={settings.view_all_link || "/shop?sort=new"}
             columns={settings.columns || 5}
+            useCarousel={useCarousel}
           />
         ) : null;
 
@@ -175,6 +182,7 @@ const Index = () => {
               viewAllLink={settings.view_all_link || "/shop?sort=bestseller"}
               columns={settings.columns || 5}
               showRanking={settings.show_ranking}
+              useCarousel={useCarousel}
             />
           </div>
         ) : null;
@@ -196,6 +204,7 @@ const Index = () => {
             viewAllLink={settings.view_all_link || "/shop"}
             columns={settings.columns || 5}
             showRanking={settings.show_ranking}
+            useCarousel={useCarousel}
           />
         ) : null;
 
@@ -209,6 +218,7 @@ const Index = () => {
             subtitle={sectionSubtitle}
             viewAllLink={settings.view_all_link || "/shop?preorder=true"}
             columns={settings.columns || 5}
+            useCarousel={useCarousel}
           />
         );
 
@@ -242,6 +252,7 @@ const Index = () => {
             subtitle={sectionSubtitle}
             viewAllLink={settings.view_all_link || `/${productType}${uniCategory ? `?category=${uniCategory.slug}` : ''}`}
             columns={settings.columns || 5}
+            useCarousel={useCarousel}
           />
         );
 
@@ -285,6 +296,8 @@ const Index = () => {
             products={flashUniProducts}
             title={sectionTitle}
             viewAllLink={settings.view_all_link || (flashProductType && flashProductType !== 'all' ? `/${flashProductType}` : '/lifestyle')}
+            useCarousel={useCarousel}
+            columns={settings.columns || 5}
           />
         );
 
@@ -297,6 +310,7 @@ const Index = () => {
             title={sectionTitle}
             subtitle={sectionSubtitle}
             viewAllLink={settings.view_all_link || "/shop"}
+            useCarousel={useCarousel}
           />
         );
 
@@ -307,6 +321,8 @@ const Index = () => {
             limit={settings.limit || 10}
             title={sectionTitle}
             subtitle={sectionSubtitle}
+            useCarousel={useCarousel}
+            columns={settings.columns || 5}
           />
         );
 
@@ -327,6 +343,8 @@ const Index = () => {
             limit={settings.limit || 10}
             title={sectionTitle}
             subtitle={sectionSubtitle}
+            useCarousel={useCarousel}
+            columns={settings.columns || 5}
           />
         );
 
