@@ -4,6 +4,7 @@ import { useCartContext } from "@/contexts/CartContext";
 import { useWishlistContext } from "@/contexts/WishlistContext";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ProductCarouselWrapper } from "./ProductCarouselWrapper";
 
 interface UniversalProduct {
   id: string;
@@ -58,9 +59,68 @@ export const DynamicUniversalProductGrid = ({
     await toggleWishlist(productId);
   };
 
-  if (products.length === 0) {
-    return null;
-  }
+  if (products.length === 0) return null;
+
+  const renderCard = (product: UniversalProduct, index: number) => {
+    const inWishlist = isInWishlist(product.id);
+    return (
+      <div key={product.id} className="relative group product-card">
+        {showRanking && (
+          <div className="absolute -top-2 -left-2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm z-10">
+            {index + 1}
+          </div>
+        )}
+        
+        <button
+          onClick={(e) => handleToggleWishlist(e, product.id)}
+          className={cn(
+            "absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center z-20 transition-all shadow-md",
+            inWishlist ? "bg-red-500 text-white" : "bg-white/90 text-muted-foreground hover:bg-white hover:text-red-500"
+          )}
+        >
+          <Heart className={cn("w-4 h-4", inWishlist && "fill-current")} />
+        </button>
+
+        {product.discount_percent && product.discount_percent > 0 && (
+          <div className="absolute top-2 left-2 bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded z-10">
+            -{product.discount_percent}%
+          </div>
+        )}
+        
+        <Link to={`/universal-product/${product.slug}`}>
+          <div className="aspect-square overflow-hidden rounded-t-lg relative">
+            <img
+              src={getProductImage(product)}
+              alt={product.name_bn}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
+            />
+            <button
+              onClick={(e) => handleAddToCart(e, product.id)}
+              className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground py-2.5 text-sm font-medium flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              অর্ডার করুন
+            </button>
+          </div>
+          <div className="p-3">
+            <h3 className="font-medium text-sm line-clamp-2 mb-1 group-hover:text-primary transition-colors">
+              {product.name_bn}
+            </h3>
+            <p className="text-xs text-muted-foreground mb-2 line-clamp-1">
+              {product.brand || product.name_en}
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-primary font-bold">৳{product.price}</span>
+              {product.original_price && product.original_price > product.price && (
+                <span className="text-muted-foreground line-through text-xs">৳{product.original_price}</span>
+              )}
+            </div>
+          </div>
+        </Link>
+      </div>
+    );
+  };
 
   return (
     <section className="mb-8">
@@ -72,92 +132,20 @@ export const DynamicUniversalProductGrid = ({
             </div>
           )}
           <div>
-            <h2 className="text-xl font-bold">{title}</h2>
+            {title && <h2 className="text-xl font-bold">{title}</h2>}
             {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
         </div>
         {viewAllLink && (
-          <Link
-            to={viewAllLink}
-            className="text-primary text-sm font-medium hover:underline flex items-center gap-1"
-          >
+          <Link to={viewAllLink} className="text-primary text-sm font-medium hover:underline flex items-center gap-1">
             সব দেখুন <ChevronRight className="w-4 h-4" />
           </Link>
         )}
       </div>
 
-      <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-${columns} gap-4`}>
-        {products.map((product, index) => {
-          const inWishlist = isInWishlist(product.id);
-          return (
-            <div key={product.id} className="relative group product-card">
-              {showRanking && (
-                <div className="absolute -top-2 -left-2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm z-10">
-                  {index + 1}
-                </div>
-              )}
-              
-              {/* Wishlist Button - Top Right */}
-              <button
-                onClick={(e) => handleToggleWishlist(e, product.id)}
-                className={cn(
-                  "absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center z-20 transition-all shadow-md",
-                  inWishlist 
-                    ? "bg-red-500 text-white" 
-                    : "bg-white/90 text-muted-foreground hover:bg-white hover:text-red-500"
-                )}
-                aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
-              >
-                <Heart className={cn("w-4 h-4", inWishlist && "fill-current")} />
-              </button>
-
-              {product.discount_percent && product.discount_percent > 0 && (
-                <div className="absolute top-2 left-2 bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded z-10">
-                  -{product.discount_percent}%
-                </div>
-              )}
-              
-              <Link to={`/universal-product/${product.slug}`}>
-                <div className="aspect-square overflow-hidden rounded-t-lg relative">
-                  <img
-                    src={getProductImage(product)}
-                    alt={product.name_bn}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/placeholder.svg';
-                    }}
-                  />
-                  {/* Cart Button - Bottom, shows on hover */}
-                  <button
-                    onClick={(e) => handleAddToCart(e, product.id)}
-                    className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground py-2.5 text-sm font-medium flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20"
-                    aria-label="Add to cart"
-                  >
-                    <ShoppingCart className="w-4 h-4" />
-                    অর্ডার করুন
-                  </button>
-                </div>
-                <div className="p-3">
-                  <h3 className="font-medium text-sm line-clamp-2 mb-1 group-hover:text-primary transition-colors">
-                    {product.name_bn}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mb-2 line-clamp-1">
-                    {product.brand || product.name_en}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-primary font-bold">৳{product.price}</span>
-                    {product.original_price && product.original_price > product.price && (
-                      <span className="text-muted-foreground line-through text-xs">
-                        ৳{product.original_price}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            </div>
-          );
-        })}
-      </div>
+      <ProductCarouselWrapper columns={columns}>
+        {products.map((product, index) => renderCard(product, index))}
+      </ProductCarouselWrapper>
     </section>
   );
 };
