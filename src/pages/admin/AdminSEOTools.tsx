@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { RedirectManager, BulkMetaEditor, InternalLinkAnalyzer, HeadingAnalyzer, DuplicateDetector, SchemaValidator, ImageSEOChecker } from '@/components/admin/seo/SEOAdvancedTools';
 import { SEOInlineFixer, KeywordTracker } from '@/components/admin/seo/SEOInlineFixer';
+import { CompetitorAnalyzer, TrendingKeywords, AIKeywordSuggester, SiteRankingAnalyzer } from '@/components/admin/seo/SEOKeywordResearch';
+import { PageProblemFixer } from '@/components/admin/seo/SEOPageProblemFixer';
 
 // ─── SEO Score Calculator ───
 const calculateSEOScore = (data: {
@@ -376,8 +378,13 @@ const AdminSEOTools = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="flex flex-wrap gap-1 h-auto p-1 w-full max-w-5xl">
+          <TabsList className="flex flex-wrap gap-1 h-auto p-1 w-full max-w-6xl">
             <TabsTrigger value="overview">📊 ওভারভিউ</TabsTrigger>
+            <TabsTrigger value="page-problems">🔧 পেজ ফিক্সার</TabsTrigger>
+            <TabsTrigger value="competitor">🌐 প্রতিযোগী</TabsTrigger>
+            <TabsTrigger value="trends">📈 ট্রেন্ড</TabsTrigger>
+            <TabsTrigger value="ai-keywords">🤖 AI কীওয়ার্ড</TabsTrigger>
+            <TabsTrigger value="ranking">🏆 র‍্যাঙ্কিং</TabsTrigger>
             <TabsTrigger value="analyzer">🔍 অ্যানালাইজার</TabsTrigger>
             <TabsTrigger value="audit">📋 সাইট অডিট</TabsTrigger>
             <TabsTrigger value="keywords">🎯 কীওয়ার্ড</TabsTrigger>
@@ -473,6 +480,31 @@ const AdminSEOTools = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* ═══ PAGE PROBLEMS TAB ═══ */}
+          <TabsContent value="page-problems" className="space-y-4">
+            <PageProblemFixer />
+          </TabsContent>
+
+          {/* ═══ COMPETITOR TAB ═══ */}
+          <TabsContent value="competitor" className="space-y-4">
+            <CompetitorAnalyzer />
+          </TabsContent>
+
+          {/* ═══ TRENDS TAB ═══ */}
+          <TabsContent value="trends" className="space-y-4">
+            <TrendingKeywords />
+          </TabsContent>
+
+          {/* ═══ AI KEYWORDS TAB ═══ */}
+          <TabsContent value="ai-keywords" className="space-y-4">
+            <AIKeywordSuggester />
+          </TabsContent>
+
+          {/* ═══ RANKING TAB ═══ */}
+          <TabsContent value="ranking" className="space-y-4">
+            <SiteRankingAnalyzer pages={siteAudit.allItems} />
           </TabsContent>
 
           {/* ═══ ANALYZER TAB ═══ */}
