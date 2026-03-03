@@ -5,6 +5,7 @@ import { useCartContext } from "@/contexts/CartContext";
 import { useWishlistContext } from "@/contexts/WishlistContext";
 import { useToast } from "@/hooks/use-toast";
 import { ProductCarouselWrapper } from "./ProductCarouselWrapper";
+import { cn } from "@/lib/utils";
 
 interface UniversalProduct {
   id: string;
@@ -24,13 +25,17 @@ interface DynamicUniversalFlashSaleProps {
   title?: string;
   endTime?: Date;
   viewAllLink?: string;
+  useCarousel?: boolean;
+  columns?: number;
 }
 
 export const DynamicUniversalFlashSale = ({ 
   products, 
   title = "ফ্ল্যাশ সেল",
   endTime,
-  viewAllLink = "/lifestyle"
+  viewAllLink = "/lifestyle",
+  useCarousel = true,
+  columns = 5,
 }: DynamicUniversalFlashSaleProps) => {
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const { addToCart } = useCartContext();
@@ -105,7 +110,8 @@ export const DynamicUniversalFlashSale = ({
           </div>
         </div>
 
-        <ProductCarouselWrapper columns={5}>
+        {useCarousel ? (
+        <ProductCarouselWrapper columns={columns}>
           {products.map((product) => (
             <Link
               key={product.id}
@@ -141,6 +147,52 @@ export const DynamicUniversalFlashSale = ({
             </Link>
           ))}
         </ProductCarouselWrapper>
+        ) : (
+        <div className={cn(
+          "grid grid-cols-2 gap-4",
+          {
+            'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5': columns === 5,
+            'md:grid-cols-3 lg:grid-cols-4': columns === 4,
+            'md:grid-cols-3': columns === 3,
+            'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6': columns === 6,
+          }
+        )}>
+          {products.map((product) => (
+            <Link
+              key={product.id}
+              to={`/universal-product/${product.slug}`}
+              className="bg-card rounded-lg overflow-hidden group hover:shadow-lg transition-shadow relative block"
+            >
+              <button
+                onClick={(e) => handleToggleWishlist(e, product.id)}
+                className="absolute top-2 left-2 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors shadow-sm"
+              >
+                <Heart className={`w-4 h-4 transition-colors ${isInWishlist(product.id) ? "fill-destructive text-destructive" : "text-muted-foreground hover:text-destructive"}`} />
+              </button>
+              <div className="relative aspect-square">
+                <img src={getProductImage(product)} alt={product.name_bn} className="w-full h-full object-cover group-hover:scale-105 transition-transform" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
+                {product.discount_percent && product.discount_percent > 0 && (
+                  <div className="absolute top-2 right-2 bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded">-{product.discount_percent}%</div>
+                )}
+                <button onClick={(e) => handleAddToCart(e, product.id)} className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground py-2.5 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-full group-hover:translate-y-0">
+                  <ShoppingCart className="w-4 h-4" />
+                  <span className="text-sm font-medium">অর্ডার করুন</span>
+                </button>
+              </div>
+              <div className="p-3">
+                <h3 className="font-medium text-sm line-clamp-2 mb-1">{product.name_bn}</h3>
+                <p className="text-xs text-muted-foreground line-clamp-1 mb-1">{product.brand || product.name_en}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-primary font-bold">৳{product.price}</span>
+                  {product.original_price && product.original_price > product.price && (
+                    <span className="text-muted-foreground line-through text-xs">৳{product.original_price}</span>
+                  )}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+        )}
 
         <div className="mt-4 text-center">
           <Link to={viewAllLink} className="inline-flex items-center gap-1 text-white hover:underline text-sm font-medium">

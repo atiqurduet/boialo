@@ -7,11 +7,14 @@ import { useCart } from "@/hooks/useCart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProductCarouselWrapper } from "./ProductCarouselWrapper";
+import { cn } from "@/lib/utils";
 
 interface TopSellingUniversalProductsProps {
   limit?: number;
   title?: string;
   subtitle?: string;
+  useCarousel?: boolean;
+  columns?: number;
 }
 
 const RANK_COLORS = [
@@ -20,7 +23,7 @@ const RANK_COLORS = [
   "from-orange-500 to-amber-600",
 ];
 
-export const TopSellingUniversalProducts = ({ limit = 10, title = "টপ বিক্রিত সাধারণ প্রোডাক্ট", subtitle }: TopSellingUniversalProductsProps) => {
+export const TopSellingUniversalProducts = ({ limit = 10, title = "টপ বিক্রিত সাধারণ প্রোডাক্ট", subtitle, useCarousel = true, columns = 5 }: TopSellingUniversalProductsProps) => {
   const { addToCart } = useCart();
 
   const { data: topProducts = [], isLoading } = useQuery({
@@ -76,7 +79,8 @@ export const TopSellingUniversalProducts = ({ limit = 10, title = "টপ বি
         </Link>
       </div>
 
-      <ProductCarouselWrapper columns={5}>
+      {useCarousel ? (
+      <ProductCarouselWrapper columns={columns}>
         {topProducts.map((product: any) => {
           const hasDiscount = product.discount_percent && product.discount_percent > 0;
           return (
@@ -128,6 +132,68 @@ export const TopSellingUniversalProducts = ({ limit = 10, title = "টপ বি
           );
         })}
       </ProductCarouselWrapper>
+      ) : (
+      <div className={cn(
+        "grid grid-cols-2 gap-4",
+        {
+          'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5': columns === 5,
+          'md:grid-cols-3 lg:grid-cols-4': columns === 4,
+          'md:grid-cols-3': columns === 3,
+          'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6': columns === 6,
+        }
+      )}>
+        {topProducts.map((product: any) => {
+          const hasDiscount = product.discount_percent && product.discount_percent > 0;
+          return (
+            <div key={product.id} className="group relative bg-card rounded-xl border overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              {product.rank <= 3 && (
+                <div className={`absolute top-2 left-2 z-10 w-8 h-8 bg-gradient-to-br ${RANK_COLORS[product.rank - 1]} rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg`}>
+                  {product.rank}
+                </div>
+              )}
+              {product.rank > 3 && (
+                <div className="absolute top-2 left-2 z-10 w-7 h-7 bg-muted rounded-full flex items-center justify-center text-xs font-bold text-muted-foreground">
+                  #{product.rank}
+                </div>
+              )}
+              {hasDiscount && (
+                <div className="absolute top-2 right-2 z-10 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">-{product.discount_percent}%</div>
+              )}
+              <div className="absolute bottom-[calc(100%-2.5rem)] right-2 z-10">
+                <Badge variant="secondary" className="text-[10px] capitalize">{product.product_type}</Badge>
+              </div>
+              <Link to={getProductLink(product)}>
+                <div className="aspect-square overflow-hidden bg-muted">
+                  <img src={getProductImage(product)} alt={product.name_bn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                </div>
+              </Link>
+              <div className="p-3 space-y-1.5">
+                <Link to={getProductLink(product)}>
+                  <h3 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors leading-tight">{product.name_bn}</h3>
+                </Link>
+                {product.brand && <p className="text-xs text-muted-foreground line-clamp-1">{product.brand}</p>}
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-primary">৳{product.price}</span>
+                  {product.original_price && product.original_price > product.price && (
+                    <span className="text-xs text-muted-foreground line-through">৳{product.original_price}</span>
+                  )}
+                </div>
+                {product.is_featured && (
+                  <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                    <Star className="w-3 h-3 fill-current" />
+                    <span>ফিচার্ড</span>
+                  </div>
+                )}
+                <Button size="sm" variant="outline" className="w-full mt-1 h-8 text-xs" onClick={() => addToCart(product.id, 1)}>
+                  <ShoppingCart className="w-3 h-3 mr-1" />
+                  কার্টে যোগ করুন
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      )}
     </section>
   );
 };

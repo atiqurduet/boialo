@@ -1157,6 +1157,13 @@ const AdminHomepage = () => {
               )}
               <div className="flex items-center gap-2">
                 <Switch
+                  checked={formData.settings?.use_carousel !== false}
+                  onCheckedChange={(checked) => setFormData({ ...formData, settings: { ...formData.settings, use_carousel: checked } })}
+                />
+                <Label>কারোসেল ব্যবহার করুন</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
                   checked={formData.is_active}
                   onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                 />

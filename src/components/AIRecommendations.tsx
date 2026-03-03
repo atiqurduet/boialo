@@ -9,6 +9,7 @@ interface AIRecommendationsProps {
   title?: string;
   subtitle?: string;
   viewAllLink?: string;
+  useCarousel?: boolean;
 }
 
 export const AIRecommendations = ({
@@ -17,6 +18,7 @@ export const AIRecommendations = ({
   title = "আপনার জন্য সাজেশন",
   subtitle = "আপনার পছন্দ অনুযায়ী বাছাই করা",
   viewAllLink = "/shop",
+  useCarousel = true,
 }: AIRecommendationsProps) => {
   const { user } = useAuth();
   const [products, setProducts] = useState<any[]>([]);
@@ -146,6 +148,7 @@ export const AIRecommendations = ({
         subtitle={subtitle}
         viewAllLink={viewAllLink}
         columns={columns}
+        useCarousel={useCarousel}
       />
     </div>
   );

@@ -7,11 +7,14 @@ import { useCart } from "@/hooks/useCart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProductCarouselWrapper } from "./ProductCarouselWrapper";
+import { cn } from "@/lib/utils";
 
 interface TopSellingProductsProps {
   limit?: number;
   title?: string;
   subtitle?: string;
+  useCarousel?: boolean;
+  columns?: number;
 }
 
 const RANK_STYLES = [
@@ -20,7 +23,7 @@ const RANK_STYLES = [
   { bg: "bg-gradient-to-br from-amber-600 to-amber-700", text: "text-white", label: "🥉", shadow: "shadow-amber-600/50" },
 ];
 
-export const TopSellingProducts = ({ limit = 10, title = "টপ বিক্রিত বই", subtitle }: TopSellingProductsProps) => {
+export const TopSellingProducts = ({ limit = 10, title = "টপ বিক্রিত বই", subtitle, useCarousel = true, columns = 5 }: TopSellingProductsProps) => {
   const { addToCart } = useCart();
 
   const { data: topProducts = [], isLoading } = useQuery({
@@ -82,7 +85,8 @@ export const TopSellingProducts = ({ limit = 10, title = "টপ বিক্র
         </Link>
       </div>
 
-      <ProductCarouselWrapper columns={5}>
+      {useCarousel ? (
+      <ProductCarouselWrapper columns={columns}>
         {topProducts.map((product: any) => {
           const rankStyle = RANK_STYLES[product.rank - 1];
           const hasDiscount = product.discount_percent && product.discount_percent > 0;
@@ -132,6 +136,66 @@ export const TopSellingProducts = ({ limit = 10, title = "টপ বিক্র
           );
         })}
       </ProductCarouselWrapper>
+      ) : (
+      <div className={cn(
+        "grid grid-cols-2 gap-4",
+        {
+          'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5': columns === 5,
+          'md:grid-cols-3 lg:grid-cols-4': columns === 4,
+          'md:grid-cols-3': columns === 3,
+          'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6': columns === 6,
+        }
+      )}>
+        {topProducts.map((product: any) => {
+          const rankStyle = RANK_STYLES[product.rank - 1];
+          const hasDiscount = product.discount_percent && product.discount_percent > 0;
+          return (
+            <div key={product.id} className="group relative bg-card rounded-xl border overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              {product.rank <= 3 && rankStyle && (
+                <div className={`absolute top-2 left-2 z-10 w-8 h-8 ${rankStyle.bg} rounded-full flex items-center justify-center text-sm font-bold shadow-lg ${rankStyle.shadow}`}>
+                  {rankStyle.label}
+                </div>
+              )}
+              {product.rank > 3 && (
+                <div className="absolute top-2 left-2 z-10 w-7 h-7 bg-muted rounded-full flex items-center justify-center text-xs font-bold text-muted-foreground">
+                  #{product.rank}
+                </div>
+              )}
+              {hasDiscount && (
+                <div className="absolute top-2 right-2 z-10 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">-{product.discount_percent}%</div>
+              )}
+              <Link to={`/product/${product.slug}`}>
+                <div className="aspect-[3/4] overflow-hidden bg-muted">
+                  <img src={getProductImage(product)} alt={product.title_bn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                </div>
+              </Link>
+              <div className="p-3 space-y-1.5">
+                <Link to={`/product/${product.slug}`}>
+                  <h3 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors leading-tight">{product.title_bn}</h3>
+                </Link>
+                {product.author && <p className="text-xs text-muted-foreground line-clamp-1">{product.author}</p>}
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-primary">৳{product.price}</span>
+                  {product.original_price && product.original_price > product.price && (
+                    <span className="text-xs text-muted-foreground line-through">৳{product.original_price}</span>
+                  )}
+                </div>
+                {product.sold_count > 0 && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    <span>{product.sold_count} বার বিক্রি</span>
+                  </div>
+                )}
+                <Button size="sm" variant="outline" className="w-full mt-1 h-8 text-xs" onClick={() => addToCart(product.id, 1)}>
+                  <ShoppingCart className="w-3 h-3 mr-1" />
+                  কার্টে যোগ করুন
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      )}
     </section>
   );
 };

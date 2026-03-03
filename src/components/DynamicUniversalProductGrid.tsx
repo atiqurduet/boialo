@@ -26,6 +26,7 @@ interface DynamicUniversalProductGridProps {
   viewAllLink?: string;
   columns?: number;
   showRanking?: boolean;
+  useCarousel?: boolean;
 }
 
 export const DynamicUniversalProductGrid = ({
@@ -35,6 +36,7 @@ export const DynamicUniversalProductGrid = ({
   viewAllLink,
   columns = 5,
   showRanking = false,
+  useCarousel = true,
 }: DynamicUniversalProductGridProps) => {
   const { addToCart } = useCartContext();
   const { isInWishlist, toggleWishlist } = useWishlistContext();
@@ -143,9 +145,26 @@ export const DynamicUniversalProductGrid = ({
         )}
       </div>
 
-      <ProductCarouselWrapper columns={columns}>
-        {products.map((product, index) => renderCard(product, index))}
-      </ProductCarouselWrapper>
+      {useCarousel ? (
+        <ProductCarouselWrapper columns={columns}>
+          {products.map((product, index) => renderCard(product, index))}
+        </ProductCarouselWrapper>
+      ) : (
+        <div className={cn(
+          "grid grid-cols-2 gap-4",
+          {
+            'md:grid-cols-2': columns === 2,
+            'md:grid-cols-3': columns === 3,
+            'md:grid-cols-3 lg:grid-cols-4': columns === 4,
+            'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5': columns === 5,
+            'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6': columns === 6,
+            'md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7': columns === 7,
+            'md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8': columns === 8,
+          }
+        )}>
+          {products.map((product, index) => renderCard(product, index))}
+        </div>
+      )}
     </section>
   );
 };
