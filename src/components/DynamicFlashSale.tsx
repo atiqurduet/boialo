@@ -4,6 +4,7 @@ import { ChevronRight, Clock, ShoppingCart, Heart } from "lucide-react";
 import { useCartContext } from "@/contexts/CartContext";
 import { useWishlistContext } from "@/contexts/WishlistContext";
 import { useToast } from "@/hooks/use-toast";
+import { ProductCarouselWrapper } from "./ProductCarouselWrapper";
 
 interface Product {
   id: string;
@@ -37,7 +38,6 @@ export const DynamicFlashSale = ({
     const calculateTimeLeft = () => {
       const end = endTime || new Date(new Date().setHours(23, 59, 59, 999));
       const diff = end.getTime() - new Date().getTime();
-      
       if (diff > 0) {
         setTimeLeft({
           hours: Math.floor(diff / (1000 * 60 * 60)),
@@ -46,7 +46,6 @@ export const DynamicFlashSale = ({
         });
       }
     };
-
     calculateTimeLeft();
     const timer = setInterval(calculateTimeLeft, 1000);
     return () => clearInterval(timer);
@@ -59,7 +58,6 @@ export const DynamicFlashSale = ({
     return '/placeholder.svg';
   };
 
-  // Filter products with discount
   const discountedProducts = products
     .filter(p => p.discount_percent && p.discount_percent > 0)
     .slice(0, 10);
@@ -76,16 +74,12 @@ export const DynamicFlashSale = ({
     e.stopPropagation();
     if (isInWishlist(productId)) {
       await removeFromWishlist(productId);
-      toast({ title: "উইশলিস্ট থেকে সরানো হয়েছে" });
     } else {
       await addToWishlist(productId);
-      toast({ title: "উইশলিস্টে যোগ হয়েছে" });
     }
   };
 
-  if (discountedProducts.length === 0) {
-    return null;
-  }
+  if (discountedProducts.length === 0) return null;
 
   return (
     <section className="mb-8">
@@ -100,65 +94,37 @@ export const DynamicFlashSale = ({
               <p className="text-sm opacity-80">সীমিত সময়ের জন্য</p>
             </div>
           </div>
-          
           <div className="flex items-center gap-2 text-primary-foreground">
             <Clock className="w-5 h-5" />
             <div className="flex gap-1">
-              <span className="bg-primary-foreground/20 px-2 py-1 rounded font-mono text-lg">
-                {String(timeLeft.hours).padStart(2, '0')}
-              </span>
+              <span className="bg-primary-foreground/20 px-2 py-1 rounded font-mono text-lg">{String(timeLeft.hours).padStart(2, '0')}</span>
               <span className="text-xl">:</span>
-              <span className="bg-primary-foreground/20 px-2 py-1 rounded font-mono text-lg">
-                {String(timeLeft.minutes).padStart(2, '0')}
-              </span>
+              <span className="bg-primary-foreground/20 px-2 py-1 rounded font-mono text-lg">{String(timeLeft.minutes).padStart(2, '0')}</span>
               <span className="text-xl">:</span>
-              <span className="bg-primary-foreground/20 px-2 py-1 rounded font-mono text-lg">
-                {String(timeLeft.seconds).padStart(2, '0')}
-              </span>
+              <span className="bg-primary-foreground/20 px-2 py-1 rounded font-mono text-lg">{String(timeLeft.seconds).padStart(2, '0')}</span>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <ProductCarouselWrapper columns={5}>
           {discountedProducts.map((product) => (
             <Link
               key={product.id}
               to={`/product/${product.slug}`}
-              className="bg-card rounded-lg overflow-hidden group hover:shadow-lg transition-shadow relative"
+              className="bg-card rounded-lg overflow-hidden group hover:shadow-lg transition-shadow relative block"
             >
-              {/* Wishlist Button - Top Right */}
               <button
                 onClick={(e) => handleToggleWishlist(e, product.id)}
                 className="absolute top-2 left-2 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors shadow-sm"
-                aria-label="উইশলিস্টে যোগ করুন"
               >
-                <Heart
-                  className={`w-4 h-4 transition-colors ${
-                    isInWishlist(product.id) ? "fill-destructive text-destructive" : "text-muted-foreground hover:text-destructive"
-                  }`}
-                />
+                <Heart className={`w-4 h-4 transition-colors ${isInWishlist(product.id) ? "fill-destructive text-destructive" : "text-muted-foreground hover:text-destructive"}`} />
               </button>
-
               <div className="relative aspect-[3/4]">
-                <img
-                  src={getProductImage(product)}
-                  alt={product.title_bn}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholder.svg';
-                  }}
-                />
+                <img src={getProductImage(product)} alt={product.title_bn} className="w-full h-full object-cover group-hover:scale-105 transition-transform" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
                 {product.discount_percent && (
-                  <div className="absolute top-2 right-2 bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded">
-                    -{product.discount_percent}%
-                  </div>
+                  <div className="absolute top-2 right-2 bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded">-{product.discount_percent}%</div>
                 )}
-
-                {/* Add to Cart Button - Bottom on Hover */}
-                <button
-                  onClick={(e) => handleAddToCart(e, product.id)}
-                  className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground py-2.5 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-full group-hover:translate-y-0"
-                >
+                <button onClick={(e) => handleAddToCart(e, product.id)} className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground py-2.5 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-full group-hover:translate-y-0">
                   <ShoppingCart className="w-4 h-4" />
                   <span className="text-sm font-medium">অর্ডার করুন</span>
                 </button>
@@ -167,22 +133,15 @@ export const DynamicFlashSale = ({
                 <h3 className="font-medium text-sm line-clamp-2 mb-1">{product.title_bn}</h3>
                 <div className="flex items-center gap-2">
                   <span className="text-primary font-bold">৳{product.price}</span>
-                  {product.original_price && (
-                    <span className="text-muted-foreground line-through text-xs">
-                      ৳{product.original_price}
-                    </span>
-                  )}
+                  {product.original_price && <span className="text-muted-foreground line-through text-xs">৳{product.original_price}</span>}
                 </div>
               </div>
             </Link>
           ))}
-        </div>
+        </ProductCarouselWrapper>
 
         <div className="mt-4 text-center">
-          <Link
-            to="/offers"
-            className="inline-flex items-center gap-1 text-primary-foreground hover:underline text-sm font-medium"
-          >
+          <Link to="/offers" className="inline-flex items-center gap-1 text-primary-foreground hover:underline text-sm font-medium">
             সব অফার দেখুন <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
