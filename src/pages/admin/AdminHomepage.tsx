@@ -40,6 +40,7 @@ const sectionTypeLabels: Record<string, string> = {
   category_grid: '📚 ক্যাটাগরি গ্রিড',
   category_products: '📂 ক্যাটাগরি প্রোডাক্ট',
   category_subcategory_grid: '🗂️ ক্যাটাগরি ও সাব-ক্যাটাগরি গ্রিড',
+  category_top_products: '🏅 ক্যাটাগরি টপ প্রোডাক্ট',
   writer_products: '✍️ লেখকের বই',
   new_releases: '🆕 নতুন প্রকাশিত',
   bestsellers: '🏆 বেস্টসেলার',
@@ -782,6 +783,73 @@ const AdminHomepage = () => {
               {selectedCatIds.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
                   {selectedCatIds.length}টি ক্যাটাগরি নির্বাচিত
+                </p>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'category_top_products':
+        const selectedTopCatIds: string[] = formData.settings.category_ids || [];
+        return (
+          <div className="space-y-4 border-t pt-4 mt-4">
+            <h4 className="font-medium">ক্যাটাগরি টপ প্রোডাক্ট সেটিংস</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>ক্যাটাগরি সংখ্যা</Label>
+                <Input
+                  type="number"
+                  min={2}
+                  max={10}
+                  value={formData.settings.max_categories || 5}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, max_categories: Number(e.target.value) }
+                  })}
+                />
+              </div>
+              <div>
+                <Label>প্রতি ক্যাটাগরিতে প্রোডাক্ট</Label>
+                <Input
+                  type="number"
+                  min={2}
+                  max={8}
+                  value={formData.settings.products_per_category || 4}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, products_per_category: Number(e.target.value) }
+                  })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>নির্দিষ্ট ক্যাটাগরি নির্বাচন (ঐচ্ছিক)</Label>
+              <p className="text-xs text-muted-foreground mb-2">খালি রাখলে প্রোডাক্ট আছে এমন সব ক্যাটাগরি দেখাবে</p>
+              <div className="border rounded-lg max-h-48 overflow-y-auto">
+                {categories.map(cat => (
+                  <label 
+                    key={cat.id} 
+                    className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedTopCatIds.includes(cat.id)}
+                      onCheckedChange={(checked) => {
+                        const newIds = checked 
+                          ? [...selectedTopCatIds, cat.id]
+                          : selectedTopCatIds.filter(id => id !== cat.id);
+                        setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, category_ids: newIds }
+                        });
+                      }}
+                    />
+                    <span className="text-sm">{cat.name_bn}</span>
+                  </label>
+                ))}
+              </div>
+              {selectedTopCatIds.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedTopCatIds.length}টি ক্যাটাগরি নির্বাচিত
                 </p>
               )}
             </div>

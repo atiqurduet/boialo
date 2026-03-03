@@ -10,6 +10,7 @@ import { DynamicUniversalProductGrid } from "@/components/DynamicUniversalProduc
 import { DynamicUniversalCategorySection } from "@/components/DynamicUniversalCategorySection";
 import { DynamicUniversalFlashSale } from "@/components/DynamicUniversalFlashSale";
 import { DynamicCategoryWithSubcategories } from "@/components/DynamicCategoryWithSubcategories";
+import { DynamicCategoryTopProducts } from "@/components/DynamicCategoryTopProducts";
 import { TrustBadges } from "@/components/TrustBadges";
 import { NewsletterSection } from "@/components/NewsletterSection";
 import { FeaturedOfferBanner } from "@/components/FeaturedOfferBanner";
@@ -337,6 +338,20 @@ const Index = () => {
             maxParentCategories={settings.max_parent_categories || 8}
             maxSubcategories={settings.max_subcategories || 6}
             columns={settings.columns || 4}
+            selectedCategoryIds={settings.category_ids}
+          />
+        );
+
+      case 'category_top_products':
+        return (
+          <DynamicCategoryTopProducts
+            key={section.id}
+            categories={categories}
+            products={products}
+            title={section.title_bn}
+            subtitle={section.subtitle_bn || undefined}
+            maxCategories={settings.max_categories || 5}
+            productsPerCategory={settings.products_per_category || 4}
             selectedCategoryIds={settings.category_ids}
           />
         );
