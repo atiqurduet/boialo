@@ -101,7 +101,7 @@ const CategoryCard = ({
   const containerHeight = visibleCount * ITEM_HEIGHT;
 
   return (
-    <div className="flex-shrink-0 w-[280px] md:w-[300px] bg-card rounded-xl border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden snap-start group">
+    <div className="flex-shrink-0 w-[280px] md:w-[300px] bg-card rounded-xl border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden snap-start group flex flex-col">
       {/* Header */}
       <div className={cn("bg-gradient-to-r px-4 py-3 flex items-center justify-between", gradient)}>
         <div className="flex items-center gap-2 min-w-0">
@@ -114,7 +114,7 @@ const CategoryCard = ({
       </div>
 
       {/* Products with vertical scroll */}
-      <div className="relative">
+      <div className="relative flex-1">
         {/* Scroll Up Button */}
         {needsScroll && canScrollUp && (
           <button
