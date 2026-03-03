@@ -388,69 +388,328 @@ const AdminHomepage = () => {
       case 'promo_banner':
         return (
           <div className="space-y-4 border-t pt-4 mt-4">
-            <h4 className="font-medium">ব্যানার সেটিংস</h4>
+            <h4 className="font-medium">🎯 প্রমোশনাল ব্যানার সেটিংস</h4>
+            
+            {/* Image Upload */}
             <div>
-              <Label>ব্যানার টাইটেল</Label>
-              <Input
-                value={formData.settings.title || ''}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  settings: { ...formData.settings, title: e.target.value }
-                })}
-              />
-            </div>
-            <div>
-              <Label>বিবরণ</Label>
-              <Textarea
-                value={formData.settings.description || ''}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  settings: { ...formData.settings, description: e.target.value }
-                })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>বাটন টেক্সট</Label>
-                <Input
-                  value={formData.settings.button_text || ''}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    settings: { ...formData.settings, button_text: e.target.value }
-                  })}
-                />
-              </div>
-              <div>
-                <Label>বাটন লিংক</Label>
-                <Input
-                  value={formData.settings.button_link || ''}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    settings: { ...formData.settings, button_link: e.target.value }
-                  })}
-                />
-              </div>
-            </div>
-            <div>
-              <Label>ব্যাজ টেক্সট</Label>
-              <Input
-                value={formData.settings.badge_text || ''}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  settings: { ...formData.settings, badge_text: e.target.value }
-                })}
-              />
-            </div>
-            <div>
-              <Label>ব্যানার ইমেজ</Label>
+              <Label>ব্যানার ইমেজ *</Label>
               <BannerImageUpload
                 value={formData.settings.background_image || ''}
                 onChange={(url) => setFormData({
                   ...formData,
                   settings: { ...formData.settings, background_image: url }
                 })}
-                label="ব্যাকগ্রাউন্ড ইমেজ আপলোড করুন"
+                label="ব্যানার ইমেজ আপলোড করুন"
               />
+            </div>
+
+            {/* Layout Mode */}
+            <div>
+              <Label>ব্যানার টাইপ</Label>
+              <Select
+                value={formData.settings.banner_mode || 'image_with_text'}
+                onValueChange={(val) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, banner_mode: val }
+                })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="image_only">শুধু ইমেজ</SelectItem>
+                  <SelectItem value="image_with_text">ইমেজ + টেক্সট ওভারলে</SelectItem>
+                  <SelectItem value="gradient_with_text">গ্রেডিয়েন্ট + টেক্সট</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Text Content - show only when text is enabled */}
+            {formData.settings.banner_mode !== 'image_only' && (
+              <>
+                <div>
+                  <Label>ব্যানার টাইটেল</Label>
+                  <Input
+                    value={formData.settings.title || ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      settings: { ...formData.settings, title: e.target.value }
+                    })}
+                    placeholder="বিশেষ অফার!"
+                  />
+                </div>
+                <div>
+                  <Label>বিবরণ</Label>
+                  <Textarea
+                    value={formData.settings.description || ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      settings: { ...formData.settings, description: e.target.value }
+                    })}
+                    placeholder="সীমিত সময়ের জন্য বিশেষ ছাড়"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <Label>ব্যাজ টেক্সট</Label>
+                  <Input
+                    value={formData.settings.badge_text || ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      settings: { ...formData.settings, badge_text: e.target.value }
+                    })}
+                    placeholder="সীমিত সময়ের অফার"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>বাটন টেক্সট</Label>
+                    <Input
+                      value={formData.settings.button_text || ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        settings: { ...formData.settings, button_text: e.target.value }
+                      })}
+                      placeholder="এখনই কিনুন"
+                    />
+                  </div>
+                  <div>
+                    <Label>বাটন লিংক</Label>
+                    <Input
+                      value={formData.settings.button_link || ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        settings: { ...formData.settings, button_link: e.target.value }
+                      })}
+                      placeholder="/shop"
+                    />
+                  </div>
+                </div>
+
+                {/* Text Alignment */}
+                <div>
+                  <Label>টেক্সট পজিশন</Label>
+                  <Select
+                    value={formData.settings.text_align || 'left'}
+                    onValueChange={(val) => setFormData({
+                      ...formData,
+                      settings: { ...formData.settings, text_align: val }
+                    })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="left">বামে</SelectItem>
+                      <SelectItem value="center">মাঝে</SelectItem>
+                      <SelectItem value="right">ডানে</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Text Color */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>টেক্সট কালার</Label>
+                    <Select
+                      value={formData.settings.text_color || 'white'}
+                      onValueChange={(val) => setFormData({
+                        ...formData,
+                        settings: { ...formData.settings, text_color: val }
+                      })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="white">সাদা</SelectItem>
+                        <SelectItem value="black">কালো</SelectItem>
+                        <SelectItem value="primary">প্রাইমারি</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>টাইটেল সাইজ</Label>
+                    <Select
+                      value={formData.settings.title_size || 'xl'}
+                      onValueChange={(val) => setFormData({
+                        ...formData,
+                        settings: { ...formData.settings, title_size: val }
+                      })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sm">ছোট</SelectItem>
+                        <SelectItem value="md">মাঝারি</SelectItem>
+                        <SelectItem value="lg">বড়</SelectItem>
+                        <SelectItem value="xl">অনেক বড়</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Overlay */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>ওভারলে কালার</Label>
+                    <Select
+                      value={formData.settings.overlay_color || 'black'}
+                      onValueChange={(val) => setFormData({
+                        ...formData,
+                        settings: { ...formData.settings, overlay_color: val }
+                      })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">কোন ওভারলে নেই</SelectItem>
+                        <SelectItem value="black">কালো</SelectItem>
+                        <SelectItem value="primary">প্রাইমারি</SelectItem>
+                        <SelectItem value="white">সাদা</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>ওভারলে অস্বচ্ছতা (%)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={90}
+                      value={formData.settings.overlay_opacity ?? 40}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        settings: { ...formData.settings, overlay_opacity: Number(e.target.value) }
+                      })}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Link for image-only mode */}
+            {formData.settings.banner_mode === 'image_only' && (
+              <div>
+                <Label>ক্লিক লিংক (ঐচ্ছিক)</Label>
+                <Input
+                  value={formData.settings.button_link || ''}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, button_link: e.target.value }
+                  })}
+                  placeholder="/offers"
+                />
+              </div>
+            )}
+
+            {/* Size & Spacing */}
+            <h4 className="font-medium pt-2">📐 সাইজ ও স্পেসিং</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>উচ্চতা (px)</Label>
+                <Input
+                  type="number"
+                  min={100}
+                  max={800}
+                  value={formData.settings.height || 300}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, height: Number(e.target.value) }
+                  })}
+                />
+              </div>
+              <div>
+                <Label>বর্ডার রেডিয়াস (px)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={50}
+                  value={formData.settings.border_radius ?? 16}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, border_radius: Number(e.target.value) }
+                  })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>প্যাডিং - উপর-নিচ (px)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.settings.padding_y ?? 32}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, padding_y: Number(e.target.value) }
+                  })}
+                />
+              </div>
+              <div>
+                <Label>প্যাডিং - বাম-ডান (px)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.settings.padding_x ?? 32}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, padding_x: Number(e.target.value) }
+                  })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>মার্জিন - উপর (px)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={80}
+                  value={formData.settings.margin_top ?? 0}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, margin_top: Number(e.target.value) }
+                  })}
+                />
+              </div>
+              <div>
+                <Label>মার্জিন - নিচ (px)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={80}
+                  value={formData.settings.margin_bottom ?? 32}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, margin_bottom: Number(e.target.value) }
+                  })}
+                />
+              </div>
+            </div>
+
+            {/* Image Fit */}
+            <div>
+              <Label>ইমেজ ফিট</Label>
+              <Select
+                value={formData.settings.object_fit || 'cover'}
+                onValueChange={(val) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, object_fit: val }
+                })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cover">কভার (ক্রপ করে ফিট)</SelectItem>
+                  <SelectItem value="contain">কনটেইন (পুরো ইমেজ দেখাবে)</SelectItem>
+                  <SelectItem value="fill">ফিল (স্ট্রেচ করে ফিট)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Full Width Toggle */}
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={formData.settings.full_width || false}
+                onCheckedChange={(checked) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, full_width: checked }
+                })}
+              />
+              <Label>ফুল উইডথ (কনটেইনারের বাইরে)</Label>
             </div>
           </div>
         );
