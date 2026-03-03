@@ -234,6 +234,17 @@ export const TrendingKeywords = () => {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+
+      const hasTrendData =
+        Array.isArray(data?.daily_trends) ||
+        Array.isArray(data?.seasonal_keywords) ||
+        Array.isArray(data?.emerging_topics) ||
+        Array.isArray(data?.google_trends_equivalent);
+
+      if (!hasTrendData) {
+        throw new Error('ট্রেন্ড ডেটা পাওয়া যায়নি, আবার চেষ্টা করুন');
+      }
+
       setResult(data);
       toast({ title: '✅ ট্রেন্ড লোড হয়েছে!' });
     } catch (err: any) {
