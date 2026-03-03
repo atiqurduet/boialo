@@ -2792,6 +2792,126 @@ export type Database = {
         }
         Relationships: []
       }
+      popup_banners: {
+        Row: {
+          animation: string | null
+          auto_close_seconds: number | null
+          background_color: string | null
+          badge_text: string | null
+          border_radius: number | null
+          button_link: string | null
+          button_text: string | null
+          close_on_overlay_click: boolean | null
+          created_at: string
+          description: string | null
+          device_target: string | null
+          end_date: string | null
+          exclude_pages: string[] | null
+          height: number | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          overlay_color: string | null
+          padding: number | null
+          popup_type: string
+          position: string | null
+          show_close_button: boolean | null
+          show_frequency: string | null
+          show_on_pages: string[] | null
+          show_to_guests: boolean | null
+          show_to_logged_in: boolean | null
+          sort_order: number | null
+          start_date: string | null
+          text_align: string | null
+          text_color: string | null
+          title: string
+          title_size: string | null
+          trigger_delay: number | null
+          trigger_scroll_percent: number | null
+          trigger_type: string | null
+          updated_at: string
+          width: number | null
+        }
+        Insert: {
+          animation?: string | null
+          auto_close_seconds?: number | null
+          background_color?: string | null
+          badge_text?: string | null
+          border_radius?: number | null
+          button_link?: string | null
+          button_text?: string | null
+          close_on_overlay_click?: boolean | null
+          created_at?: string
+          description?: string | null
+          device_target?: string | null
+          end_date?: string | null
+          exclude_pages?: string[] | null
+          height?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          overlay_color?: string | null
+          padding?: number | null
+          popup_type?: string
+          position?: string | null
+          show_close_button?: boolean | null
+          show_frequency?: string | null
+          show_on_pages?: string[] | null
+          show_to_guests?: boolean | null
+          show_to_logged_in?: boolean | null
+          sort_order?: number | null
+          start_date?: string | null
+          text_align?: string | null
+          text_color?: string | null
+          title?: string
+          title_size?: string | null
+          trigger_delay?: number | null
+          trigger_scroll_percent?: number | null
+          trigger_type?: string | null
+          updated_at?: string
+          width?: number | null
+        }
+        Update: {
+          animation?: string | null
+          auto_close_seconds?: number | null
+          background_color?: string | null
+          badge_text?: string | null
+          border_radius?: number | null
+          button_link?: string | null
+          button_text?: string | null
+          close_on_overlay_click?: boolean | null
+          created_at?: string
+          description?: string | null
+          device_target?: string | null
+          end_date?: string | null
+          exclude_pages?: string[] | null
+          height?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          overlay_color?: string | null
+          padding?: number | null
+          popup_type?: string
+          position?: string | null
+          show_close_button?: boolean | null
+          show_frequency?: string | null
+          show_on_pages?: string[] | null
+          show_to_guests?: boolean | null
+          show_to_logged_in?: boolean | null
+          sort_order?: number | null
+          start_date?: string | null
+          text_align?: string | null
+          text_color?: string | null
+          title?: string
+          title_size?: string | null
+          trigger_delay?: number | null
+          trigger_scroll_percent?: number | null
+          trigger_type?: string | null
+          updated_at?: string
+          width?: number | null
+        }
+        Relationships: []
+      }
       price_drop_alerts: {
         Row: {
           created_at: string

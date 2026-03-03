@@ -105,8 +105,10 @@ import AdminVisitorAnalytics from "./pages/admin/AdminVisitorAnalytics";
 import AdminSocialMedia from "./pages/admin/AdminSocialMedia";
 import AdminDynamicPricing from "./pages/admin/AdminDynamicPricing";
 import AdminSEOTools from "./pages/admin/AdminSEOTools";
+import AdminPopupBanners from "./pages/admin/AdminPopupBanners";
 import { ThemeInitializer } from "./components/ThemeInitializer";
 import { CompareFloatingBar } from "./components/CompareFloatingBar";
+import { PopupBannerRenderer } from "./components/PopupBannerRenderer";
 
 const queryClient = new QueryClient();
 
@@ -220,6 +222,7 @@ const App = () => (
                 <Route path="/admin/social-media" element={<AdminSocialMedia />} />
                 <Route path="/admin/dynamic-pricing" element={<AdminDynamicPricing />} />
                 <Route path="/admin/seo-tools" element={<AdminSEOTools />} />
+                <Route path="/admin/popup-banners" element={<AdminPopupBanners />} />
                 
                 {/* Dynamic Page Route - must be before catch-all */}
                 <Route path="/:slug" element={<DynamicPage />} />
@@ -228,6 +231,7 @@ const App = () => (
               </Routes>
               <ChatWidget />
               <CompareFloatingBar />
+              <PopupBannerRenderer />
               </AnalyticsProvider>
             </BrowserRouter>
           </TooltipProvider>
