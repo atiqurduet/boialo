@@ -1120,14 +1120,25 @@ const AdminHomepage = () => {
                   </Select>
                 </div>
               )}
+              <div className="flex items-center gap-2 mb-2">
+                <Switch
+                  checked={formData.settings?.hide_title || false}
+                  onCheckedChange={(checked) => setFormData({ ...formData, settings: { ...formData.settings, hide_title: checked } })}
+                />
+                <Label>টাইটেল হাইড করুন</Label>
+              </div>
+              {!formData.settings?.hide_title && (
               <div>
                 <Label>টাইটেল (বাংলা)</Label>
                 <Input
                   value={formData.title_bn}
                   onChange={(e) => setFormData({ ...formData, title_bn: e.target.value })}
-                  required
+                  required={!formData.settings?.hide_title}
                 />
               </div>
+              )}
+              {!formData.settings?.hide_title && (
+              <>
               <div>
                 <Label>Title (English)</Label>
                 <Input
@@ -1142,6 +1153,8 @@ const AdminHomepage = () => {
                   onChange={(e) => setFormData({ ...formData, subtitle_bn: e.target.value })}
                 />
               </div>
+              </>
+              )}
               <div className="flex items-center gap-2">
                 <Switch
                   checked={formData.is_active}

@@ -72,6 +72,8 @@ const Index = () => {
   const renderSection = (section: typeof sections[0]) => {
     const settings = section.settings || {};
     const limit = settings.limit || 10;
+    const sectionTitle = settings.hide_title ? '' : section.title_bn;
+    const sectionSubtitle = settings.hide_title ? undefined : (section.subtitle_bn || undefined);
 
     switch (section.section_type) {
       case 'flash_sale':
@@ -82,7 +84,7 @@ const Index = () => {
           <DynamicFlashSale 
             key={section.id}
             products={flashProducts} 
-            title={section.title_bn}
+            title={sectionTitle}
           />
         );
 
@@ -93,7 +95,7 @@ const Index = () => {
             categories={categories}
             universalCategories={universalCategories}
             products={products}
-            title={section.title_bn}
+            title={sectionTitle}
             settings={settings}
           />
         ) : null;
@@ -108,8 +110,8 @@ const Index = () => {
           <DynamicProductGrid
             key={section.id}
             products={categoryProducts}
-            title={section.title_bn}
-            subtitle={section.subtitle_bn || undefined}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
             viewAllLink={settings.view_all_link || `/shop?category=${category?.slug || ''}`}
             columns={settings.columns || 5}
           />
@@ -125,8 +127,8 @@ const Index = () => {
           <DynamicProductGrid
             key={section.id}
             products={writerProducts}
-            title={section.title_bn}
-            subtitle={section.subtitle_bn || (writer ? writer.name_bn : undefined)}
+            title={sectionTitle}
+            subtitle={sectionSubtitle || (writer ? writer.name_bn : undefined)}
             viewAllLink={settings.view_all_link || `/authors/${writer?.slug || ''}`}
             columns={settings.columns || 5}
           />
@@ -141,8 +143,8 @@ const Index = () => {
           <DynamicProductGrid
             key={section.id}
             products={selectedProducts}
-            title={section.title_bn}
-            subtitle={section.subtitle_bn || undefined}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
             viewAllLink={settings.view_all_link}
             columns={settings.columns || 5}
           />
@@ -153,8 +155,8 @@ const Index = () => {
           <DynamicProductGrid
             key={section.id}
             products={newProducts.slice(0, limit)}
-            title={section.title_bn}
-            subtitle={section.subtitle_bn || undefined}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
             viewAllLink={settings.view_all_link || "/shop?sort=new"}
             columns={settings.columns || 5}
           />
@@ -168,8 +170,8 @@ const Index = () => {
           <div key={section.id} className="bg-card rounded-xl p-6 shadow-sm my-8">
             <DynamicProductGrid
               products={bestProducts}
-              title={section.title_bn}
-              subtitle={section.subtitle_bn || undefined}
+              title={sectionTitle}
+              subtitle={sectionSubtitle}
               viewAllLink={settings.view_all_link || "/shop?sort=bestseller"}
               columns={settings.columns || 5}
               showRanking={settings.show_ranking}
@@ -189,8 +191,8 @@ const Index = () => {
           <DynamicProductGrid
             key={section.id}
             products={recProducts}
-            title={section.title_bn}
-            subtitle={section.subtitle_bn || undefined}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
             viewAllLink={settings.view_all_link || "/shop"}
             columns={settings.columns || 5}
             showRanking={settings.show_ranking}
@@ -203,8 +205,8 @@ const Index = () => {
           <DynamicProductGrid
             key={section.id}
             products={preorderProducts.slice(0, limit)}
-            title={section.title_bn}
-            subtitle={section.subtitle_bn || undefined}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
             viewAllLink={settings.view_all_link || "/shop?preorder=true"}
             columns={settings.columns || 5}
           />
@@ -236,8 +238,8 @@ const Index = () => {
           <DynamicUniversalProductGrid
             key={section.id}
             products={uniProducts}
-            title={section.title_bn}
-            subtitle={section.subtitle_bn || undefined}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
             viewAllLink={settings.view_all_link || `/${productType}${uniCategory ? `?category=${uniCategory.slug}` : ''}`}
             columns={settings.columns || 5}
           />
@@ -254,7 +256,7 @@ const Index = () => {
           <DynamicUniversalCategorySection
             key={section.id}
             categories={typeCategories}
-            title={section.title_bn}
+            title={sectionTitle}
             productType={gridProductType}
             maxCategories={settings.max_categories || 8}
           />
@@ -281,7 +283,7 @@ const Index = () => {
           <DynamicUniversalFlashSale
             key={section.id}
             products={flashUniProducts}
-            title={section.title_bn}
+            title={sectionTitle}
             viewAllLink={settings.view_all_link || (flashProductType && flashProductType !== 'all' ? `/${flashProductType}` : '/lifestyle')}
           />
         );
@@ -292,8 +294,8 @@ const Index = () => {
             key={section.id}
             limit={settings.limit || 10}
             columns={settings.columns || 5}
-            title={section.title_bn}
-            subtitle={section.subtitle_bn || undefined}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
             viewAllLink={settings.view_all_link || "/shop"}
           />
         );
@@ -303,8 +305,8 @@ const Index = () => {
           <TopSellingProducts
             key={section.id}
             limit={settings.limit || 10}
-            title={section.title_bn}
-            subtitle={section.subtitle_bn || undefined}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
           />
         );
 
@@ -313,8 +315,8 @@ const Index = () => {
           <TopAuthorsSection
             key={section.id}
             limit={settings.limit || 12}
-            title={section.title_bn}
-            subtitle={section.subtitle_bn || undefined}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
           />
         );
 
@@ -323,8 +325,8 @@ const Index = () => {
           <TopSellingUniversalProducts
             key={section.id}
             limit={settings.limit || 10}
-            title={section.title_bn}
-            subtitle={section.subtitle_bn || undefined}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
           />
         );
 
@@ -333,8 +335,8 @@ const Index = () => {
           <DynamicCategoryWithSubcategories
             key={section.id}
             categories={categories}
-            title={section.title_bn}
-            subtitle={section.subtitle_bn || undefined}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
             maxParentCategories={settings.max_parent_categories || 8}
             maxSubcategories={settings.max_subcategories || 6}
             columns={settings.columns || 4}
@@ -348,8 +350,8 @@ const Index = () => {
             key={section.id}
             categories={categories}
             products={products}
-            title={section.title_bn}
-            subtitle={section.subtitle_bn || undefined}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
             maxCategories={settings.max_categories || 5}
             productsPerCategory={settings.products_per_category || 4}
             selectedCategoryIds={settings.category_ids}
