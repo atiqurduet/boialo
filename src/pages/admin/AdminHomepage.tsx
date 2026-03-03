@@ -39,6 +39,7 @@ const sectionTypeLabels: Record<string, string> = {
   flash_sale: '⚡ ফ্ল্যাশ সেল',
   category_grid: '📚 ক্যাটাগরি গ্রিড',
   category_products: '📂 ক্যাটাগরি প্রোডাক্ট',
+  category_subcategory_grid: '🗂️ ক্যাটাগরি ও সাব-ক্যাটাগরি গ্রিড',
   writer_products: '✍️ লেখকের বই',
   new_releases: '🆕 নতুন প্রকাশিত',
   bestsellers: '🏆 বেস্টসেলার',
@@ -697,6 +698,92 @@ const AdminHomepage = () => {
                 />
                 <Label>গ্র্যাডিয়েন্ট বর্ডার</Label>
               </div>
+            </div>
+          </div>
+        );
+
+      case 'category_subcategory_grid':
+        const selectedCatIds: string[] = formData.settings.category_ids || [];
+        return (
+          <div className="space-y-4 border-t pt-4 mt-4">
+            <h4 className="font-medium">ক্যাটাগরি ও সাব-ক্যাটাগরি গ্রিড সেটিংস</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>প্যারেন্ট ক্যাটাগরি সংখ্যা</Label>
+                <Input
+                  type="number"
+                  min={2}
+                  max={12}
+                  value={formData.settings.max_parent_categories || 8}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, max_parent_categories: Number(e.target.value) }
+                  })}
+                />
+              </div>
+              <div>
+                <Label>সাব-ক্যাটাগরি সংখ্যা (প্রতি ক্যাটাগরি)</Label>
+                <Input
+                  type="number"
+                  min={2}
+                  max={10}
+                  value={formData.settings.max_subcategories || 6}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    settings: { ...formData.settings, max_subcategories: Number(e.target.value) }
+                  })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>কলাম সংখ্যা</Label>
+              <Select
+                value={String(formData.settings.columns || 4)}
+                onValueChange={(value) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, columns: Number(value) }
+                })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">২ কলাম</SelectItem>
+                  <SelectItem value="3">৩ কলাম</SelectItem>
+                  <SelectItem value="4">৪ কলাম</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>নির্দিষ্ট ক্যাটাগরি নির্বাচন করুন (ঐচ্ছিক)</Label>
+              <p className="text-xs text-muted-foreground mb-2">খালি রাখলে সব প্যারেন্ট ক্যাটাগরি দেখাবে</p>
+              <div className="border rounded-lg max-h-48 overflow-y-auto">
+                {categories.filter(c => !categories.some(p => p.id === (c as any).parent_id && (c as any).parent_id)).map(cat => (
+                  <label 
+                    key={cat.id} 
+                    className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedCatIds.includes(cat.id)}
+                      onCheckedChange={(checked) => {
+                        const newIds = checked 
+                          ? [...selectedCatIds, cat.id]
+                          : selectedCatIds.filter(id => id !== cat.id);
+                        setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, category_ids: newIds }
+                        });
+                      }}
+                    />
+                    <span className="text-sm">{cat.name_bn}</span>
+                  </label>
+                ))}
+              </div>
+              {selectedCatIds.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedCatIds.length}টি ক্যাটাগরি নির্বাচিত
+                </p>
+              )}
             </div>
           </div>
         );
