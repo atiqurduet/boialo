@@ -24,6 +24,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { GripVertical, Eye, EyeOff, Settings2, Plus, Trash2, Search, Link2, RotateCcw } from 'lucide-react';
 import { BannerImageUpload } from '@/components/admin/BannerImageUpload';
+import { DynamicProductSelector } from '@/components/admin/DynamicProductSelector';
+import { DynamicCategorySelector } from '@/components/admin/DynamicCategorySelector';
 
 interface HomepageSection {
   id: string;
@@ -611,54 +613,29 @@ const AdminHomepage = () => {
         );
 
       case 'selected_products':
-        const selectedProducts: string[] = formData.settings.product_ids || [];
         return (
           <div className="space-y-4 border-t pt-4 mt-4">
             <h4 className="font-medium">সিলেক্টেড প্রোডাক্ট সেটিংস</h4>
             <div>
-              <Label>প্রোডাক্ট খুঁজুন</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="প্রোডাক্টের নাম লিখুন..."
-                  value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
+              <Label>ক্যাটাগরি দিয়ে ফিল্টার করুন</Label>
+              <DynamicCategorySelector
+                selectedIds={formData.settings.category_ids || []}
+                onChange={(ids) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, category_ids: ids }
+                })}
+              />
             </div>
-            {products.length > 0 && productSearch.length >= 2 && (
-              <div className="border rounded-lg max-h-48 overflow-y-auto">
-                {products.map(product => (
-                  <label 
-                    key={product.id} 
-                    className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer"
-                  >
-                    <Checkbox
-                      checked={selectedProducts.includes(product.id)}
-                      onCheckedChange={(checked) => {
-                        const newIds = checked 
-                          ? [...selectedProducts, product.id]
-                          : selectedProducts.filter(id => id !== product.id);
-                        setFormData({
-                          ...formData,
-                          settings: { ...formData.settings, product_ids: newIds }
-                        });
-                      }}
-                    />
-                    <span className="text-sm">{product.title_bn}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-            {selectedProducts.length > 0 && (
-              <div>
-                <Label>নির্বাচিত প্রোডাক্ট ({selectedProducts.length})</Label>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {selectedProducts.length}টি প্রোডাক্ট নির্বাচন করা হয়েছে
-                </p>
-              </div>
-            )}
+            <div>
+              <Label>প্রোডাক্ট নির্বাচন করুন</Label>
+              <DynamicProductSelector
+                selectedIds={formData.settings.product_ids || []}
+                onChange={(ids) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, product_ids: ids }
+                })}
+              />
+            </div>
           </div>
         );
 
