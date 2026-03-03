@@ -488,22 +488,22 @@ const AdminSEOTools = () => {
           </TabsContent>
 
           {/* ═══ COMPETITOR TAB ═══ */}
-          <TabsContent value="competitor" className="space-y-4">
+          <TabsContent value="competitor" forceMount className={activeTab !== 'competitor' ? 'hidden' : 'space-y-4'}>
             <CompetitorAnalyzer />
           </TabsContent>
 
           {/* ═══ TRENDS TAB ═══ */}
-          <TabsContent value="trends" className="space-y-4">
+          <TabsContent value="trends" forceMount className={activeTab !== 'trends' ? 'hidden' : 'space-y-4'}>
             <TrendingKeywords />
           </TabsContent>
 
           {/* ═══ AI KEYWORDS TAB ═══ */}
-          <TabsContent value="ai-keywords" className="space-y-4">
+          <TabsContent value="ai-keywords" forceMount className={activeTab !== 'ai-keywords' ? 'hidden' : 'space-y-4'}>
             <AIKeywordSuggester />
           </TabsContent>
 
           {/* ═══ RANKING TAB ═══ */}
-          <TabsContent value="ranking" className="space-y-4">
+          <TabsContent value="ranking" forceMount className={activeTab !== 'ranking' ? 'hidden' : 'space-y-4'}>
             <SiteRankingAnalyzer pages={siteAudit.allItems} />
           </TabsContent>
 
