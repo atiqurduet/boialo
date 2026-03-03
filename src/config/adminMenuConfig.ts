@@ -131,6 +131,7 @@ export const menuCategories: MenuCategory[] = [
     items: [
       { icon: Home, label: 'হোমপেজ', href: '/admin/homepage', roles: ['admin', 'manager'] },
       { icon: FilePlus, label: 'পেজ ম্যানেজমেন্ট', href: '/admin/pages', roles: ['admin', 'manager'] },
+      { icon: Megaphone, label: 'পপআপ ব্যানার', href: '/admin/popup-banners', roles: ['admin', 'manager'] },
       { icon: Paintbrush, label: 'অ্যাপিয়ারেন্স', href: '/admin/appearance', roles: ['admin'] },
       { icon: Palette, label: 'লোগো ও ব্র্যান্ডিং', href: '/admin/branding', roles: ['admin', 'manager'] },
       { icon: Image, label: 'ব্যানার', href: '/admin/banners', roles: ['admin', 'manager'] },
