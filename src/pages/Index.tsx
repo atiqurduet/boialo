@@ -9,6 +9,7 @@ import { DynamicPromoBanner } from "@/components/DynamicPromoBanner";
 import { DynamicUniversalProductGrid } from "@/components/DynamicUniversalProductGrid";
 import { DynamicUniversalCategorySection } from "@/components/DynamicUniversalCategorySection";
 import { DynamicUniversalFlashSale } from "@/components/DynamicUniversalFlashSale";
+import { DynamicCategoryWithSubcategories } from "@/components/DynamicCategoryWithSubcategories";
 import { TrustBadges } from "@/components/TrustBadges";
 import { NewsletterSection } from "@/components/NewsletterSection";
 import { FeaturedOfferBanner } from "@/components/FeaturedOfferBanner";
@@ -323,6 +324,20 @@ const Index = () => {
             limit={settings.limit || 10}
             title={section.title_bn}
             subtitle={section.subtitle_bn || undefined}
+          />
+        );
+
+      case 'category_subcategory_grid':
+        return (
+          <DynamicCategoryWithSubcategories
+            key={section.id}
+            categories={categories}
+            title={section.title_bn}
+            subtitle={section.subtitle_bn || undefined}
+            maxParentCategories={settings.max_parent_categories || 8}
+            maxSubcategories={settings.max_subcategories || 6}
+            columns={settings.columns || 4}
+            selectedCategoryIds={settings.category_ids}
           />
         );
 
