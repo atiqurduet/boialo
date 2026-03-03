@@ -138,7 +138,7 @@ const CategoryCard = ({
           {catProducts.map((product, idx) => (
             <Link
               key={product.id}
-              to={`/books/${product.slug}`}
+              to={`/product/${product.slug}`}
               className="flex gap-3 p-3 hover:bg-muted/40 transition-colors group/item"
             >
               <div className="relative flex-shrink-0">
