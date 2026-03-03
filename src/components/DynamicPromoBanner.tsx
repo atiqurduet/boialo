@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 interface PromoBannerSettings {
   title?: string;
@@ -7,6 +8,7 @@ interface PromoBannerSettings {
   button_link?: string;
   badge_text?: string;
   background_color?: string;
+  background_image?: string;
 }
 
 interface DynamicPromoBannerProps {
@@ -20,11 +22,30 @@ export const DynamicPromoBanner = ({ settings }: DynamicPromoBannerProps) => {
     button_text = "এখনই কিনুন",
     button_link = "/shop",
     badge_text = "সীমিত সময়ের অফার",
+    background_image,
   } = settings || {};
 
   return (
-    <div className="bg-gradient-to-r from-primary to-primary/80 rounded-2xl p-8 md:p-12 text-primary-foreground my-8">
-      <div className="max-w-2xl">
+    <div
+      className={cn(
+        "relative rounded-2xl p-8 md:p-12 text-primary-foreground my-8 overflow-hidden",
+        !background_image && "bg-gradient-to-r from-primary to-primary/80"
+      )}
+    >
+      {background_image && (
+        <img
+          src={background_image}
+          alt={title}
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
+      )}
+      {background_image && (
+        <div className="absolute inset-0 bg-black/40" />
+      )}
+      <div className="relative max-w-2xl z-10">
         {badge_text && (
           <span className="inline-block bg-primary-foreground/20 px-4 py-1 rounded-full text-sm mb-4">
             {badge_text}

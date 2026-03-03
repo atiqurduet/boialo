@@ -23,6 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { GripVertical, Eye, EyeOff, Settings2, Plus, Trash2, Search, Link2, RotateCcw } from 'lucide-react';
+import { BannerImageUpload } from '@/components/admin/BannerImageUpload';
 
 interface HomepageSection {
   id: string;
@@ -439,13 +440,14 @@ const AdminHomepage = () => {
               />
             </div>
             <div>
-              <Label>ব্যাকগ্রাউন্ড ইমেজ URL</Label>
-              <Input
+              <Label>ব্যানার ইমেজ</Label>
+              <BannerImageUpload
                 value={formData.settings.background_image || ''}
-                onChange={(e) => setFormData({
+                onChange={(url) => setFormData({
                   ...formData,
-                  settings: { ...formData.settings, background_image: e.target.value }
+                  settings: { ...formData.settings, background_image: url }
                 })}
+                label="ব্যাকগ্রাউন্ড ইমেজ আপলোড করুন"
               />
             </div>
           </div>
