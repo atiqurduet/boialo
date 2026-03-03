@@ -5,18 +5,111 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type RequestType = "competitor_analysis" | "trending_keywords" | "keyword_suggestions" | "site_ranking_analysis";
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+
+const getMessageContentText = (message: any): string => {
+  const content = message?.content;
+
+  if (typeof content === "string") return content;
+
+  if (Array.isArray(content)) {
+    return content
+      .map((chunk) => {
+        if (typeof chunk === "string") return chunk;
+        if (typeof chunk?.text === "string") return chunk.text;
+        if (typeof chunk?.content === "string") return chunk.content;
+        return "";
+      })
+      .join("\n")
+      .trim();
+  }
+
+  return "";
+};
+
+const extractJsonObject = (text: string): Record<string, unknown> | null => {
+  if (!text?.trim()) return null;
+
+  const cleaned = text.trim();
+  const codeBlockMatch = cleaned.match(/```json\s*([\s\S]*?)\s*```/i);
+  const candidate = codeBlockMatch?.[1] || cleaned;
+
+  try {
+    const parsed = JSON.parse(candidate);
+    if (isPlainObject(parsed)) return (parsed.result as Record<string, unknown>) || parsed;
+  } catch {
+    // Continue to regex fallback
+  }
+
+  const objectMatch = candidate.match(/\{[\s\S]*\}/);
+  if (objectMatch) {
+    try {
+      const parsed = JSON.parse(objectMatch[0]);
+      if (isPlainObject(parsed)) return (parsed.result as Record<string, unknown>) || parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+};
+
+const hasUsableKeys = (type: RequestType, result: Record<string, unknown> | null): boolean => {
+  if (!result) return false;
+
+  const expectedKeyMap: Record<RequestType, string[]> = {
+    competitor_analysis: ["competitor_keywords", "keyword_gaps", "content_ideas", "ranking_tips"],
+    trending_keywords: ["daily_trends", "seasonal_keywords", "emerging_topics", "google_trends_equivalent"],
+    keyword_suggestions: ["primary_keywords", "secondary_keywords", "long_tail_keywords", "lsi_keywords"],
+    site_ranking_analysis: ["page_recommendations", "site_wide_recommendations", "quick_wins"],
+  };
+
+  return expectedKeyMap[type].some((key) => Array.isArray(result[key]));
+};
+
+const getTrendingFallback = (category: string) => ({
+  daily_trends: [
+    { keyword: "boi mela offer", keyword_bn: "বইমেলা অফার", trend: "rising", volume: "high", category: "books" },
+    { keyword: "islamic boi", keyword_bn: "ইসলামিক বই", trend: "rising", volume: "high", category: "islamic" },
+    { keyword: "hsc guide", keyword_bn: "এইচএসসি গাইড", trend: "stable", volume: "medium", category: "academic" },
+    { keyword: "kids story book", keyword_bn: "বাচ্চাদের গল্পের বই", trend: "rising", volume: "medium", category: "books" },
+    { keyword: "ramadan planner", keyword_bn: "রমাদান প্ল্যানার", trend: "rising", volume: "medium", category: "lifestyle" },
+  ],
+  seasonal_keywords: [
+    { keyword: "eid gift book", keyword_bn: "ঈদের বই উপহার", season: "Eid", peak_months: "Mar-Apr" },
+    { keyword: "boishakh diary", keyword_bn: "বৈশাখ ডায়েরি", season: "Pohela Boishakh", peak_months: "Apr" },
+    { keyword: "exam preparation", keyword_bn: "পরীক্ষার প্রস্তুতি", season: "Exam", peak_months: "Oct-Feb" },
+  ],
+  emerging_topics: [
+    { topic: "self help bangla", topic_bn: "সেলফ হেল্প বাংলা", relevance: "মানসিক উন্নয়ন সম্পর্কিত সার্চ বাড়ছে", keywords: ["self development", "habit", "productivity"] },
+    { topic: "kids islamic learning", topic_bn: "শিশুদের ইসলামিক লার্নিং", relevance: "পরিবারভিত্তিক সার্চ ট্রেন্ড বাড়ছে", keywords: ["dua book", "kids quran", "islamic stories"] },
+  ],
+  google_trends_equivalent: [
+    { keyword: "boi mela", keyword_bn: "বইমেলা", search_interest: 88, related_queries: ["boi mela discount", "new book list", "best seller boi"] },
+    { keyword: "islamic boi", keyword_bn: "ইসলামিক বই", search_interest: 82, related_queries: ["tafsir bangla", "hadith book", "ramadan book"] },
+    { keyword: "academic guide", keyword_bn: "একাডেমিক গাইড", search_interest: 74, related_queries: ["hsc guide 2026", "ssc test paper", "model test"] },
+  ],
+  source: "fallback",
+  category,
+});
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const { type, data } = await req.json();
+    const requestType = type as RequestType;
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     let systemPrompt = "";
     let userPrompt = "";
 
-    switch (type) {
+    switch (requestType) {
       case "competitor_analysis": {
         const { competitors, siteUrl, niche } = data;
         systemPrompt = `You are an expert SEO analyst for Bangladesh e-commerce market, especially for book stores and online shops. Analyze competitor keywords and provide actionable insights. Always respond in valid JSON format.`;
@@ -42,7 +135,7 @@ Include at least 20 competitor keywords, 10 keyword gaps, 5 content ideas, and 5
         userPrompt = `What are the current trending search keywords in Bangladesh for e-commerce, specifically for online bookstores and lifestyle products?
 
 Category focus: ${category || "all"}
-Current date context: ${date || new Date().toISOString().split('T')[0]}
+Current date context: ${date || new Date().toISOString().split("T")[0]}
 
 Provide a JSON response with this exact structure:
 {
@@ -154,22 +247,36 @@ Provide a JSON response with this exact structure:
     }
 
     const aiData = await response.json();
-    
-    let result;
+    const message = aiData?.choices?.[0]?.message;
+
+    let result: Record<string, unknown> | null = null;
+
     try {
-      const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-      if (toolCall?.function?.arguments) {
-        const parsed = JSON.parse(toolCall.function.arguments);
-        result = parsed.result || parsed;
-      } else {
-        // Fallback: try to parse content as JSON
-        const content = aiData.choices?.[0]?.message?.content || "{}";
-        const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/\{[\s\S]*\}/);
-        result = JSON.parse(jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content);
+      const toolCallArgs = message?.tool_calls?.[0]?.function?.arguments;
+      if (typeof toolCallArgs === "string" && toolCallArgs.trim()) {
+        const parsedTool = JSON.parse(toolCallArgs);
+        if (isPlainObject(parsedTool)) {
+          result = isPlainObject(parsedTool.result) ? parsedTool.result : parsedTool;
+        }
       }
     } catch (parseErr) {
-      console.error("Parse error:", parseErr);
-      result = { error: "Failed to parse AI response", raw: aiData.choices?.[0]?.message?.content };
+      console.error("Tool-call parse error:", parseErr);
+    }
+
+    if (!hasUsableKeys(requestType, result)) {
+      const contentText = getMessageContentText(message);
+      const parsedFromContent = extractJsonObject(contentText);
+      if (parsedFromContent) result = parsedFromContent;
+    }
+
+    if (!hasUsableKeys(requestType, result)) {
+      console.error("Empty/invalid AI payload", { requestType, aiDataPreview: aiData?.choices?.[0]?.message });
+
+      if (requestType === "trending_keywords") {
+        result = getTrendingFallback(data?.category || "all");
+      } else {
+        throw new Error("AI returned empty keyword data. Please try again.");
+      }
     }
 
     return new Response(JSON.stringify(result), {
