@@ -853,18 +853,32 @@ const AdminHomepage = () => {
                 />
               </div>
               <div>
-                <Label>প্রতি ক্যাটাগরিতে প্রোডাক্ট</Label>
+                <Label>প্রতি ক্যাটাগরিতে মোট প্রোডাক্ট</Label>
                 <Input
                   type="number"
                   min={2}
-                  max={8}
-                  value={formData.settings.products_per_category || 4}
+                  max={20}
+                  value={formData.settings.products_per_category || 6}
                   onChange={(e) => setFormData({
                     ...formData,
                     settings: { ...formData.settings, products_per_category: Number(e.target.value) }
                   })}
                 />
               </div>
+            </div>
+            <div>
+              <Label>প্রথমে দৃশ্যমান প্রোডাক্ট সংখ্যা</Label>
+              <p className="text-xs text-muted-foreground mb-1">বাকিগুলো উপরে-নিচে স্ক্রল করে দেখা যাবে</p>
+              <Input
+                type="number"
+                min={1}
+                max={10}
+                value={formData.settings.visible_products || 3}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  settings: { ...formData.settings, visible_products: Number(e.target.value) }
+                })}
+              />
             </div>
             <div>
               <Label>নির্দিষ্ট ক্যাটাগরি নির্বাচন (ঐচ্ছিক)</Label>

@@ -371,7 +371,8 @@ const Index = () => {
             title={sectionTitle}
             subtitle={sectionSubtitle}
             maxCategories={settings.max_categories || 5}
-            productsPerCategory={settings.products_per_category || 4}
+            productsPerCategory={settings.products_per_category || 6}
+            visibleProducts={settings.visible_products || 3}
             selectedCategoryIds={settings.category_ids}
           />
         );
