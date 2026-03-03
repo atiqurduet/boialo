@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ArrowRight, ShoppingCart, Star, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRef, useState, useEffect } from "react";
 
@@ -39,6 +39,22 @@ interface DynamicCategoryTopProductsProps {
   selectedCategoryIds?: string[];
 }
 
+const RankBadge = ({ rank }: { rank: number }) => {
+  const medals = ['🥇', '🥈', '🥉'];
+  if (rank <= 3) {
+    return (
+      <div className="absolute -top-1 -left-1 w-7 h-7 flex items-center justify-center z-10">
+        <span className="text-lg drop-shadow-md">{medals[rank - 1]}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="absolute -top-1 -left-1 w-5.5 h-5.5 bg-muted-foreground/80 rounded-full flex items-center justify-center z-10 shadow-sm">
+      <span className="text-white text-[10px] font-bold">{rank}</span>
+    </div>
+  );
+};
+
 export const DynamicCategoryTopProducts = ({
   categories,
   products,
@@ -52,15 +68,12 @@ export const DynamicCategoryTopProducts = ({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
-  // Get parent categories
   let parentCategories = categories.filter(c => !c.parent_id);
   if (selectedCategoryIds && selectedCategoryIds.length > 0) {
     parentCategories = parentCategories.filter(c => selectedCategoryIds.includes(c.id));
   }
 
-  // Only show categories that have products
   const categoriesWithProducts = parentCategories.filter(cat => {
-    // Get all subcategory IDs for this parent
     const subCatIds = categories.filter(c => c.parent_id === cat.id).map(c => c.id);
     const allCatIds = [cat.id, ...subCatIds];
     return products.some(p => p.category_id && allCatIds.includes(p.category_id));
@@ -72,7 +85,6 @@ export const DynamicCategoryTopProducts = ({
     return products
       .filter(p => p.category_id && allCatIds.includes(p.category_id))
       .sort((a, b) => {
-        // Sort by discount, then featured
         const aScore = (a.discount_percent || 0) + (a.is_featured ? 20 : 0);
         const bScore = (b.discount_percent || 0) + (b.is_featured ? 20 : 0);
         return bScore - aScore;
@@ -82,12 +94,8 @@ export const DynamicCategoryTopProducts = ({
 
   const getProductImage = (product: Product): string => {
     if (product.images) {
-      if (Array.isArray(product.images) && product.images.length > 0) {
-        return product.images[0];
-      }
-      if (typeof product.images === 'object' && product.images.cover) {
-        return product.images.cover;
-      }
+      if (Array.isArray(product.images) && product.images.length > 0) return product.images[0];
+      if (typeof product.images === 'object' && product.images.cover) return product.images.cover;
     }
     return '/placeholder.svg';
   };
@@ -114,123 +122,119 @@ export const DynamicCategoryTopProducts = ({
   }, [categoriesWithProducts]);
 
   const scroll = (dir: 'left' | 'right') => {
-    scrollRef.current?.scrollBy({
-      left: dir === 'left' ? -320 : 320,
-      behavior: 'smooth',
-    });
+    scrollRef.current?.scrollBy({ left: dir === 'left' ? -320 : 320, behavior: 'smooth' });
   };
 
   if (categoriesWithProducts.length === 0) return null;
 
-  // Colors for category headers - cycling through
-  const headerColors = [
-    'bg-rose-600',
-    'bg-emerald-600', 
-    'bg-blue-600',
-    'bg-purple-600',
-    'bg-amber-600',
-    'bg-teal-600',
-    'bg-indigo-600',
-    'bg-pink-600',
+  const headerGradients = [
+    'from-[hsl(4,82%,56%)] to-[hsl(350,80%,45%)]',
+    'from-[hsl(160,60%,40%)] to-[hsl(140,50%,35%)]',
+    'from-[hsl(220,70%,50%)] to-[hsl(240,60%,45%)]',
+    'from-[hsl(270,60%,50%)] to-[hsl(290,55%,42%)]',
+    'from-[hsl(30,80%,50%)] to-[hsl(15,75%,42%)]',
+    'from-[hsl(174,60%,40%)] to-[hsl(185,55%,35%)]',
+    'from-[hsl(340,70%,50%)] to-[hsl(320,60%,42%)]',
+    'from-[hsl(200,70%,45%)] to-[hsl(210,65%,38%)]',
   ];
 
   return (
     <section className="mb-10">
       {title && (
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold text-foreground">{title}</h2>
-            {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-8 rounded-full bg-primary" />
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-foreground">{title}</h2>
+              {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
+            </div>
           </div>
         </div>
       )}
 
       <div className="relative">
-        {/* Scroll Arrows */}
         {canScrollLeft && (
           <button
             onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-background/95 shadow-lg border border-border flex items-center justify-center hover:scale-110 transition-transform -translate-x-3"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-card shadow-lg border border-border/50 flex items-center justify-center hover:scale-110 hover:bg-primary hover:text-primary-foreground transition-all -translate-x-4"
           >
-            <ChevronRight className="w-5 h-5 text-foreground rotate-180" />
+            <ChevronRight className="w-5 h-5 rotate-180" />
           </button>
         )}
         {canScrollRight && (
           <button
             onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-background/95 shadow-lg border border-border flex items-center justify-center hover:scale-110 transition-transform translate-x-3"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-card shadow-lg border border-border/50 flex items-center justify-center hover:scale-110 hover:bg-primary hover:text-primary-foreground transition-all translate-x-4"
           >
-            <ChevronRight className="w-5 h-5 text-foreground" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         )}
 
         <div
           ref={scrollRef}
-          className="flex gap-4 overflow-x-auto scrollbar-hide pb-2"
+          className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {categoriesWithProducts.map((cat, catIndex) => {
             const catProducts = getProductsForCategory(cat.id);
-            const colorClass = headerColors[catIndex % headerColors.length];
+            const gradient = headerGradients[catIndex % headerGradients.length];
 
             return (
               <div
                 key={cat.id}
-                className="flex-shrink-0 w-[280px] md:w-[300px] bg-card rounded-xl border border-border/60 shadow-sm overflow-hidden"
+                className="flex-shrink-0 w-[280px] md:w-[300px] bg-card rounded-xl border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden snap-start group"
               >
-                {/* Category Header */}
-                <div className={cn("px-4 py-3 flex items-center gap-2", colorClass)}>
-                  <span className="text-white text-lg">☪</span>
-                  <h3 className="text-white font-bold text-sm line-clamp-1">{cat.name_bn}</h3>
+                {/* Header */}
+                <div className={cn("bg-gradient-to-r px-4 py-3 flex items-center justify-between", gradient)}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <TrendingUp className="w-4 h-4 text-white/90 flex-shrink-0" />
+                    <h3 className="text-white font-bold text-sm line-clamp-1">{cat.name_bn}</h3>
+                  </div>
+                  <span className="text-[10px] text-white/80 bg-white/20 px-2 py-0.5 rounded-full flex-shrink-0">
+                    টপ {catProducts.length}
+                  </span>
                 </div>
 
-                {/* Products List */}
-                <div className="divide-y divide-border/40">
+                {/* Products */}
+                <div className="divide-y divide-border/30">
                   {catProducts.map((product, idx) => (
                     <Link
                       key={product.id}
                       to={`/books/${product.slug}`}
-                      className="flex gap-3 p-3 hover:bg-muted/40 transition-colors group"
+                      className="flex gap-3 p-3 hover:bg-muted/40 transition-colors group/item"
                     >
-                      {/* Ranking Badge + Image */}
                       <div className="relative flex-shrink-0">
-                        <div className="w-16 h-20 rounded-md overflow-hidden border border-border/40 bg-muted/20">
+                        <div className="w-[60px] h-[76px] rounded-md overflow-hidden border border-border/30 bg-muted/20 group-hover/item:border-primary/30 transition-colors">
                           <img
                             src={getProductImage(product)}
                             alt={product.title_bn}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-300"
                             loading="lazy"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = '/placeholder.svg';
-                            }}
+                            onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
                           />
                         </div>
-                        {/* Rank badge */}
-                        <div className="absolute -top-1.5 -left-1.5 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center shadow-md">
-                          <span className="text-white text-xs font-bold">{idx + 1}</span>
-                        </div>
+                        <RankBadge rank={idx + 1} />
                       </div>
 
-                      {/* Product Info */}
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-semibold text-foreground line-clamp-2 leading-tight group-hover:text-primary transition-colors">
-                          {product.title_bn}
-                        </h4>
-                        {product.author && (
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                            {product.author}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <span className="text-sm font-bold text-primary">৳{product.price}</span>
-                          {product.original_price && product.original_price > product.price && (
-                            <span className="text-xs text-muted-foreground line-through">
-                              ৳{product.original_price}
-                            </span>
+                      <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                        <div>
+                          <h4 className="text-[13px] font-semibold text-foreground line-clamp-2 leading-tight group-hover/item:text-primary transition-colors">
+                            {product.title_bn}
+                          </h4>
+                          {product.author && (
+                            <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{product.author}</p>
                           )}
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-bold text-primary">৳{product.price}</span>
+                            {product.original_price && product.original_price > product.price && (
+                              <span className="text-[10px] text-muted-foreground line-through">৳{product.original_price}</span>
+                            )}
+                          </div>
                           {product.discount_percent && product.discount_percent > 0 && (
-                            <span className="text-xs font-medium text-destructive">
-                              ({product.discount_percent}% ছাড়)
+                            <span className="text-[10px] font-bold text-white bg-destructive/90 px-1.5 py-0.5 rounded">
+                              -{product.discount_percent}%
                             </span>
                           )}
                         </div>
@@ -239,13 +243,14 @@ export const DynamicCategoryTopProducts = ({
                   ))}
                 </div>
 
-                {/* View All */}
-                <div className="px-4 py-2.5 border-t border-border/40">
+                {/* Footer */}
+                <div className="px-3 py-2.5 border-t border-border/30">
                   <Link
                     to={`/categories/${cat.slug}`}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                    className="flex items-center justify-center gap-1.5 text-xs font-semibold text-primary bg-primary/5 hover:bg-primary/10 rounded-lg py-2 transition-colors group/link"
                   >
-                    সব দেখুন <ChevronRight className="w-4 h-4" />
+                    সব দেখুন
+                    <ArrowRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 transition-transform" />
                   </Link>
                 </div>
               </div>
@@ -253,12 +258,11 @@ export const DynamicCategoryTopProducts = ({
           })}
         </div>
 
-        {/* Gradient Overlays */}
         {canScrollLeft && (
-          <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent pointer-events-none z-10" />
+          <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent pointer-events-none z-10" />
         )}
         {canScrollRight && (
-          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none z-10" />
+          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none z-10" />
         )}
       </div>
     </section>
