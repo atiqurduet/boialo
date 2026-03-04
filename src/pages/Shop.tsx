@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { SEOHead } from "@/components/SEOHead";
 import { useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -16,8 +16,6 @@ import {
   X, 
   Search,
   SlidersHorizontal,
-  Grid3X3,
-  LayoutGrid,
   ArrowUpDown,
   Sparkles,
   TrendingUp,
@@ -25,14 +23,14 @@ import {
   Tag,
   BookOpen,
   Package,
-  Star
+  Star,
+  LayoutGrid
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { PageHeroBanner } from "@/components/PageHeroBanner";
 import {
   Select,
   SelectContent,
@@ -48,7 +46,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-// Sort options configuration
 const SORT_OPTIONS = [
   { value: "new", label: "নতুন প্রকাশিত", icon: Clock, description: "সর্বশেষ যোগ করা" },
   { value: "bestseller", label: "বেস্টসেলার", icon: TrendingUp, description: "সবচেয়ে বেশি বিক্রিত" },
@@ -58,10 +55,16 @@ const SORT_OPTIONS = [
   { value: "discount", label: "সর্বোচ্চ ছাড়", icon: Tag, description: "বেশি ডিসকাউন্ট আগে" },
 ];
 
+const GRID_COL_CLASSES: Record<number, string> = {
+  4: "grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
+  5: "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5",
+  6: "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6",
+  7: "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7",
+};
+
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   
-  // Read all filters from URL
   const category = searchParams.get("category");
   const writer = searchParams.get("writer");
   const publisher = searchParams.get("publisher");
@@ -73,8 +76,8 @@ const Shop = () => {
   
   const [priceRange, setPriceRange] = useState([0, 30000]);
   const [currentPage, setCurrentPage] = useState(pageFromUrl);
-  const [gridCols, setGridCols] = useState<3 | 4>(4);
-  const productsPerPage = 12;
+  const [columns, setColumns] = useState(5);
+  const productsPerPage = 24;
   const [showFilters, setShowFilters] = useState(false);
   const [ratingFilter, setRatingFilter] = useState<number | null>(null);
   const [expandedSections, setExpandedSections] = useState({
@@ -87,10 +90,13 @@ const Shop = () => {
     rating: false,
   });
 
-  // Sync sortBy with URL
+  // Subcategory scroll
+  const subScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollSubLeft, setCanScrollSubLeft] = useState(false);
+  const [canScrollSubRight, setCanScrollSubRight] = useState(false);
+
   const sortBy = sortFromUrl;
 
-  // Update URL when sort changes
   const handleSortChange = useCallback((value: string) => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set("sort", value);
@@ -99,7 +105,6 @@ const Shop = () => {
     setCurrentPage(1);
   }, [searchParams, setSearchParams]);
 
-  // Update URL when page changes
   const handlePageChange = useCallback((page: number) => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set("page", page.toString());
@@ -107,7 +112,6 @@ const Shop = () => {
     setCurrentPage(page);
   }, [searchParams, setSearchParams]);
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     if (currentPage !== 1) {
       setCurrentPage(1);
@@ -117,7 +121,6 @@ const Shop = () => {
     }
   }, [category, writer, publisher, brand, preorder, searchQuery, priceRange]);
 
-  // Sync page from URL
   useEffect(() => {
     if (pageFromUrl !== currentPage) {
       setCurrentPage(pageFromUrl);
@@ -129,8 +132,9 @@ const Shop = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from('categories')
-        .select('id, name_bn, name_en, slug')
-        .eq('is_active', true);
+        .select('id, name_bn, name_en, slug, parent_id')
+        .eq('is_active', true)
+        .order('sort_order');
       return data || [];
     },
   });
@@ -185,7 +189,6 @@ const Shop = () => {
     },
   });
 
-  // Fetch average ratings for all products
   const { data: productRatings = [] } = useQuery({
     queryKey: ['product-ratings'],
     queryFn: async () => {
@@ -193,7 +196,6 @@ const Shop = () => {
         .from('reviews')
         .select('product_id, rating');
       if (!data) return [];
-      // Calculate average rating per product
       const ratingMap: Record<string, { total: number; count: number }> = {};
       data.forEach(r => {
         if (!ratingMap[r.product_id]) ratingMap[r.product_id] = { total: 0, count: 0 };
@@ -207,6 +209,31 @@ const Shop = () => {
       }));
     },
   });
+
+  // Subcategory scroll logic
+  const checkSubScroll = useCallback(() => {
+    const el = subScrollRef.current;
+    if (!el) return;
+    setCanScrollSubLeft(el.scrollLeft > 5);
+    setCanScrollSubRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 5);
+  }, []);
+
+  useEffect(() => {
+    checkSubScroll();
+    const el = subScrollRef.current;
+    if (el) {
+      el.addEventListener('scroll', checkSubScroll);
+      window.addEventListener('resize', checkSubScroll);
+    }
+    return () => {
+      el?.removeEventListener('scroll', checkSubScroll);
+      window.removeEventListener('resize', checkSubScroll);
+    };
+  }, [checkSubScroll, categories]);
+
+  const scrollSub = (dir: 'left' | 'right') => {
+    subScrollRef.current?.scrollBy({ left: dir === 'left' ? -200 : 200, behavior: 'smooth' });
+  };
 
   const getWriterInfo = () => {
     if (!writer) return null;
@@ -253,10 +280,28 @@ const Shop = () => {
     };
   };
 
+  // Get parent categories for subcategory carousel
+  const parentCategories = useMemo(() => {
+    return categories.filter(c => !c.parent_id);
+  }, [categories]);
+
+  // If a category is selected, get its subcategories
+  const selectedCategoryInfo = getCategoryInfo();
+  const subcategories = useMemo(() => {
+    if (!selectedCategoryInfo) return [];
+    // If selected is a parent, show its children
+    const children = categories.filter(c => c.parent_id === selectedCategoryInfo.id);
+    if (children.length > 0) return children;
+    // If selected is a child, show siblings
+    if (selectedCategoryInfo.parent_id) {
+      return categories.filter(c => c.parent_id === selectedCategoryInfo.parent_id);
+    }
+    return [];
+  }, [selectedCategoryInfo, categories]);
+
   const filteredProducts = useMemo(() => {
     let products: Product[] = dbProducts.map(convertDbProduct);
 
-    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       products = products.filter(
@@ -266,22 +311,21 @@ const Shop = () => {
       );
     }
 
-    // Filter by category
     if (category) {
       const categoryInfo = getCategoryInfo();
       products = dbProducts
         .filter(p => {
           if (categoryInfo) {
-            return p.category?.slug === categoryInfo.slug || 
-                   p.category?.id === categoryInfo.id ||
-                   p.category_id === categoryInfo.id;
+            // Include products from this category and its subcategories
+            const subCatIds = categories.filter(c => c.parent_id === categoryInfo.id).map(c => c.id);
+            const allIds = [categoryInfo.id, ...subCatIds];
+            return allIds.includes(p.category_id);
           }
           return p.category?.slug === category || p.category_id === category;
         })
         .map(convertDbProduct);
     }
 
-    // Filter by writer
     if (writer) {
       const writerInfo = getWriterInfo();
       products = dbProducts
@@ -296,7 +340,6 @@ const Shop = () => {
         .map(convertDbProduct);
     }
 
-    // Filter by publisher
     if (publisher) {
       const publisherInfo = getPublisherInfo();
       if (publisherInfo) {
@@ -310,7 +353,6 @@ const Shop = () => {
       }
     }
 
-    // Filter by brand
     if (brand) {
       const brandInfo = getBrandInfo();
       if (brandInfo) {
@@ -320,19 +362,16 @@ const Shop = () => {
       }
     }
 
-    // Filter by pre-order status
     if (preorder === "true") {
       products = products.filter(p => p.isPreorder === true);
     } else if (preorder === "false") {
       products = products.filter(p => p.isPreorder !== true);
     }
 
-    // Filter by price range
     products = products.filter(
       (p) => p.price >= priceRange[0] && p.price <= priceRange[1]
     );
 
-    // Filter by rating
     if (ratingFilter) {
       const ratingMapLookup = new Map(productRatings.map(r => [r.product_id, r.avg]));
       products = products.filter(p => {
@@ -341,7 +380,6 @@ const Shop = () => {
       });
     }
 
-    // Sort products based on URL sort parameter
     switch (sortBy) {
       case "price-low":
         products.sort((a, b) => a.price - b.price);
@@ -351,7 +389,6 @@ const Shop = () => {
         break;
       case "popular":
       case "bestseller":
-        // Sort by discount as popularity indicator
         products.sort((a, b) => (b.discount || 0) - (a.discount || 0));
         break;
       case "discount":
@@ -359,7 +396,6 @@ const Shop = () => {
         break;
       case "new":
       default:
-        // Already sorted by created_at from database
         break;
     }
 
@@ -429,60 +465,23 @@ const Shop = () => {
 
   const hasActiveFilters = category || writer || publisher || brand || preorder || searchQuery || priceRange[0] > 0 || priceRange[1] < 30000 || ratingFilter;
 
-  const getBreadcrumb = () => {
-    if (writer) {
-      const writerInfo = getWriterInfo();
-      return (
-        <>
-          <Link to="/authors" className="hover:text-primary transition-colors">লেখক</Link>
-          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
-          <span className="text-foreground font-medium">{writerInfo?.name_bn || writer}</span>
-        </>
-      );
-    }
-    if (publisher) {
-      const publisherInfo = getPublisherInfo();
-      return (
-        <>
-          <Link to="/publishers" className="hover:text-primary transition-colors">প্রকাশনী</Link>
-          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
-          <span className="text-foreground font-medium">{publisherInfo?.name_bn || publisher}</span>
-        </>
-      );
-    }
-    if (brand) {
-      const brandInfo = getBrandInfo();
-      return (
-        <>
-          <span>ব্র্যান্ড</span>
-          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
-          <span className="text-foreground font-medium">{brandInfo?.name_bn || brand}</span>
-        </>
-      );
-    }
-    if (category) {
-      return (
-        <>
-          <Link to="/categories" className="hover:text-primary transition-colors">বিষয়</Link>
-          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
-          <span className="text-foreground font-medium">{getCategoryTitle()}</span>
-        </>
-      );
-    }
-    return <span className="text-foreground font-medium">সকল বই</span>;
-  };
-
   const currentSortOption = SORT_OPTIONS.find(opt => opt.value === sortBy) || SORT_OPTIONS[0];
+
+  // Categories to show in the subcategory carousel
+  const carouselCategories = useMemo(() => {
+    if (category && subcategories.length > 0) return subcategories;
+    return parentCategories;
+  }, [category, subcategories, parentCategories]);
 
   // Filter Sidebar Component
   const FilterSidebar = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className={cn(
-      "space-y-6",
-      isMobile ? "" : "bg-card rounded-2xl p-5 shadow-sm border border-border/50"
+      "space-y-5",
+      isMobile ? "" : "bg-card rounded-xl p-4 shadow-sm border border-border/50"
     )}>
       {/* Active Filters */}
       {hasActiveFilters && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-muted-foreground">সক্রিয় ফিল্টার</span>
             <Button
@@ -494,84 +493,48 @@ const Shop = () => {
               সব মুছুন
             </Button>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {searchQuery && (
-              <Badge variant="secondary" className="gap-1 pr-1">
+              <Badge variant="secondary" className="gap-1 pr-1 text-xs">
                 সার্চ: {searchQuery}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-4 w-4 hover:bg-destructive/20"
-                  onClick={() => {
-                    const newParams = new URLSearchParams(searchParams);
-                    newParams.delete("search");
-                    setSearchParams(newParams);
-                  }}
-                >
+                <Button variant="ghost" size="icon" className="h-4 w-4 hover:bg-destructive/20"
+                  onClick={() => { const p = new URLSearchParams(searchParams); p.delete("search"); setSearchParams(p); }}>
                   <X className="h-3 w-3" />
                 </Button>
               </Badge>
             )}
             {category && (
-              <Badge variant="secondary" className="gap-1 pr-1">
+              <Badge variant="secondary" className="gap-1 pr-1 text-xs">
                 {getCategoryInfo()?.name_bn || category}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-4 w-4 hover:bg-destructive/20"
-                  onClick={() => {
-                    const newParams = new URLSearchParams(searchParams);
-                    newParams.delete("category");
-                    setSearchParams(newParams);
-                  }}
-                >
+                <Button variant="ghost" size="icon" className="h-4 w-4 hover:bg-destructive/20"
+                  onClick={() => { const p = new URLSearchParams(searchParams); p.delete("category"); setSearchParams(p); }}>
                   <X className="h-3 w-3" />
                 </Button>
               </Badge>
             )}
             {writer && (
-              <Badge variant="secondary" className="gap-1 pr-1">
+              <Badge variant="secondary" className="gap-1 pr-1 text-xs">
                 {getWriterInfo()?.name_bn || writer}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-4 w-4 hover:bg-destructive/20"
-                  onClick={() => {
-                    const newParams = new URLSearchParams(searchParams);
-                    newParams.delete("writer");
-                    setSearchParams(newParams);
-                  }}
-                >
+                <Button variant="ghost" size="icon" className="h-4 w-4 hover:bg-destructive/20"
+                  onClick={() => { const p = new URLSearchParams(searchParams); p.delete("writer"); setSearchParams(p); }}>
                   <X className="h-3 w-3" />
                 </Button>
               </Badge>
             )}
             {publisher && (
-              <Badge variant="secondary" className="gap-1 pr-1">
+              <Badge variant="secondary" className="gap-1 pr-1 text-xs">
                 {getPublisherInfo()?.name_bn || publisher}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-4 w-4 hover:bg-destructive/20"
-                  onClick={() => {
-                    const newParams = new URLSearchParams(searchParams);
-                    newParams.delete("publisher");
-                    setSearchParams(newParams);
-                  }}
-                >
+                <Button variant="ghost" size="icon" className="h-4 w-4 hover:bg-destructive/20"
+                  onClick={() => { const p = new URLSearchParams(searchParams); p.delete("publisher"); setSearchParams(p); }}>
                   <X className="h-3 w-3" />
                 </Button>
               </Badge>
             )}
             {preorder && (
-              <Badge variant="secondary" className="gap-1 pr-1">
+              <Badge variant="secondary" className="gap-1 pr-1 text-xs">
                 {preorder === "true" ? "প্রি-অর্ডার" : "স্টকে আছে"}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-4 w-4 hover:bg-destructive/20"
-                  onClick={() => handlePreorderFilter(null)}
-                >
+                <Button variant="ghost" size="icon" className="h-4 w-4 hover:bg-destructive/20"
+                  onClick={() => handlePreorderFilter(null)}>
                   <X className="h-3 w-3" />
                 </Button>
               </Badge>
@@ -582,47 +545,30 @@ const Shop = () => {
 
       {/* Categories */}
       <div>
-        <button
-          onClick={() => toggleSection("category")}
-          className="flex items-center justify-between w-full font-semibold mb-3 group"
-        >
+        <button onClick={() => toggleSection("category")}
+          className="flex items-center justify-between w-full font-semibold mb-2 group text-sm">
           <span className="flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-primary" />
             বিষয়
           </span>
-          {expandedSections.category ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          )}
+          {expandedSections.category ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </button>
         {expandedSections.category && (
-          <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin pr-2">
+          <div className="space-y-0.5 max-h-48 overflow-y-auto pr-1">
             {categories.length > 0 ? (
-              categories.slice(0, 10).map((cat) => (
-                <Link
-                  key={cat.id}
-                  to={`/shop?category=${cat.slug}&sort=${sortBy}`}
-                  className={cn(
-                    "flex items-center gap-2 text-sm py-2 px-3 rounded-lg transition-all",
-                    category === cat.slug 
-                      ? "bg-primary text-primary-foreground font-medium" 
-                      : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                  )}
-                >
+              categories.filter(c => !c.parent_id).slice(0, 12).map((cat) => (
+                <Link key={cat.id} to={`/shop?category=${cat.slug}&sort=${sortBy}`}
+                  className={cn("flex items-center gap-2 text-sm py-1.5 px-2.5 rounded-lg transition-all",
+                    category === cat.slug ? "bg-primary text-primary-foreground font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                  )}>
                   <span>{cat.name_bn}</span>
                 </Link>
               ))
             ) : (
               <p className="text-sm text-muted-foreground py-2">কোনো বিষয় নেই</p>
             )}
-            {categories.length > 10 && (
-              <Link
-                to="/categories"
-                className="text-xs text-primary hover:underline block pt-2"
-              >
-                সব বিষয় দেখুন →
-              </Link>
+            {categories.filter(c => !c.parent_id).length > 12 && (
+              <Link to="/categories" className="text-xs text-primary hover:underline block pt-1 px-2.5">সব বিষয় দেখুন →</Link>
             )}
           </div>
         )}
@@ -630,37 +576,26 @@ const Shop = () => {
 
       {/* Pre-order Filter */}
       <div>
-        <button
-          onClick={() => toggleSection("preorder")}
-          className="flex items-center justify-between w-full font-semibold mb-3 group"
-        >
+        <button onClick={() => toggleSection("preorder")}
+          className="flex items-center justify-between w-full font-semibold mb-2 group text-sm">
           <span className="flex items-center gap-2">
             <Package className="w-4 h-4 text-primary" />
             স্টক স্ট্যাটাস
           </span>
-          {expandedSections.preorder ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          )}
+          {expandedSections.preorder ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </button>
         {expandedSections.preorder && (
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {[
               { value: null, label: "সকল পণ্য", icon: "📦" },
               { value: "true", label: "প্রি-অর্ডার", icon: "🔥" },
               { value: "false", label: "স্টকে আছে", icon: "✅" },
             ].map((option) => (
-              <button
-                key={option.label}
-                onClick={() => handlePreorderFilter(option.value)}
-                className={cn(
-                  "w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-2",
+              <button key={option.label} onClick={() => handlePreorderFilter(option.value)}
+                className={cn("w-full text-left px-2.5 py-1.5 rounded-lg text-sm transition-all flex items-center gap-2",
                   (option.value === null && !preorder) || preorder === option.value
-                    ? "bg-primary text-primary-foreground font-medium"
-                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                )}
-              >
+                    ? "bg-primary text-primary-foreground font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                )}>
                 <span>{option.icon}</span>
                 {option.label}
               </button>
@@ -671,76 +606,52 @@ const Shop = () => {
 
       {/* Price Range */}
       <div>
-        <button
-          onClick={() => toggleSection("price")}
-          className="flex items-center justify-between w-full font-semibold mb-3 group"
-        >
+        <button onClick={() => toggleSection("price")}
+          className="flex items-center justify-between w-full font-semibold mb-2 group text-sm">
           <span className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-primary" />
             মূল্য পরিসীমা
           </span>
-          {expandedSections.price ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          )}
+          {expandedSections.price ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </button>
         {expandedSections.price && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="px-1">
-              <Slider
-                value={priceRange}
-                onValueChange={setPriceRange}
-                max={30000}
-                step={100}
-                className="mt-2"
-              />
+              <Slider value={priceRange} onValueChange={setPriceRange} max={30000} step={100} className="mt-2" />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div className="flex-1">
-                <label className="text-xs text-muted-foreground mb-1 block">সর্বনিম্ন</label>
+                <label className="text-[11px] text-muted-foreground mb-0.5 block">সর্বনিম্ন</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">৳</span>
-                  <input
-                    type="number"
-                    value={priceRange[0]}
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">৳</span>
+                  <input type="number" value={priceRange[0]}
                     onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
-                    className="w-full pl-7 pr-3 py-2 border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                  />
+                    className="w-full pl-6 pr-2 py-1.5 border rounded-lg text-xs bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
                 </div>
               </div>
-              <span className="text-muted-foreground mt-5">—</span>
+              <span className="text-muted-foreground mt-4 text-xs">—</span>
               <div className="flex-1">
-                <label className="text-xs text-muted-foreground mb-1 block">সর্বোচ্চ</label>
+                <label className="text-[11px] text-muted-foreground mb-0.5 block">সর্বোচ্চ</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">৳</span>
-                  <input
-                    type="number"
-                    value={priceRange[1]}
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">৳</span>
+                  <input type="number" value={priceRange[1]}
                     onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
-                    className="w-full pl-7 pr-3 py-2 border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                  />
+                    className="w-full pl-6 pr-2 py-1.5 border rounded-lg text-xs bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
                 </div>
               </div>
             </div>
-            {/* Quick price filters */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {[
                 { label: "০-২০০", range: [0, 200] },
                 { label: "২০০-৫০০", range: [200, 500] },
                 { label: "৫০০-১০০০", range: [500, 1000] },
                 { label: "১০০০+", range: [1000, 30000] },
               ].map((preset) => (
-                <button
-                  key={preset.label}
-                  onClick={() => setPriceRange(preset.range as [number, number])}
-                  className={cn(
-                    "text-xs px-3 py-1.5 rounded-full border transition-all",
+                <button key={preset.label} onClick={() => setPriceRange(preset.range as [number, number])}
+                  className={cn("text-[11px] px-2.5 py-1 rounded-full border transition-all",
                     priceRange[0] === preset.range[0] && priceRange[1] === preset.range[1]
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "hover:border-primary hover:text-primary"
-                  )}
-                >
+                      ? "bg-primary text-primary-foreground border-primary" : "hover:border-primary hover:text-primary"
+                  )}>
                   ৳{preset.label}
                 </button>
               ))}
@@ -751,31 +662,19 @@ const Shop = () => {
 
       {/* Publishers */}
       <div>
-        <button
-          onClick={() => toggleSection("publisher")}
-          className="flex items-center justify-between w-full font-semibold mb-3 group"
-        >
+        <button onClick={() => toggleSection("publisher")}
+          className="flex items-center justify-between w-full font-semibold mb-2 group text-sm">
           <span>প্রকাশনী</span>
-          {expandedSections.publisher ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          )}
+          {expandedSections.publisher ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </button>
         {expandedSections.publisher && (
-          <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin pr-2">
+          <div className="space-y-0.5 max-h-48 overflow-y-auto pr-1">
             {dbPublishers.length > 0 ? (
               dbPublishers.slice(0, 15).map((pub) => (
-                <Link
-                  key={pub.id}
-                  to={`/shop?publisher=${pub.slug}&sort=${sortBy}`}
-                  className={cn(
-                    "flex items-center gap-2 text-sm py-2 px-3 rounded-lg transition-all",
-                    publisher === pub.slug 
-                      ? "bg-primary text-primary-foreground font-medium" 
-                      : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                  )}
-                >
+                <Link key={pub.id} to={`/shop?publisher=${pub.slug}&sort=${sortBy}`}
+                  className={cn("flex items-center gap-2 text-sm py-1.5 px-2.5 rounded-lg transition-all",
+                    publisher === pub.slug ? "bg-primary text-primary-foreground font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                  )}>
                   <span>{pub.name_bn}</span>
                 </Link>
               ))
@@ -788,31 +687,19 @@ const Shop = () => {
 
       {/* Writers */}
       <div>
-        <button
-          onClick={() => toggleSection("writer")}
-          className="flex items-center justify-between w-full font-semibold mb-3 group"
-        >
+        <button onClick={() => toggleSection("writer")}
+          className="flex items-center justify-between w-full font-semibold mb-2 group text-sm">
           <span>লেখক</span>
-          {expandedSections.writer ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          )}
+          {expandedSections.writer ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </button>
         {expandedSections.writer && (
-          <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin pr-2">
+          <div className="space-y-0.5 max-h-48 overflow-y-auto pr-1">
             {writers.length > 0 ? (
               writers.slice(0, 15).map((w) => (
-                <Link
-                  key={w.id}
-                  to={`/shop?writer=${w.slug}&sort=${sortBy}`}
-                  className={cn(
-                    "flex items-center gap-2 text-sm py-2 px-3 rounded-lg transition-all",
-                    writer === w.slug 
-                      ? "bg-primary text-primary-foreground font-medium" 
-                      : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                  )}
-                >
+                <Link key={w.id} to={`/shop?writer=${w.slug}&sort=${sortBy}`}
+                  className={cn("flex items-center gap-2 text-sm py-1.5 px-2.5 rounded-lg transition-all",
+                    writer === w.slug ? "bg-primary text-primary-foreground font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                  )}>
                   <span>{w.name_bn}</span>
                 </Link>
               ))
@@ -825,31 +712,19 @@ const Shop = () => {
 
       {/* Brands */}
       <div>
-        <button
-          onClick={() => toggleSection("brand")}
-          className="flex items-center justify-between w-full font-semibold mb-3 group"
-        >
+        <button onClick={() => toggleSection("brand")}
+          className="flex items-center justify-between w-full font-semibold mb-2 group text-sm">
           <span>ব্র্যান্ড</span>
-          {expandedSections.brand ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          )}
+          {expandedSections.brand ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </button>
         {expandedSections.brand && (
-          <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin pr-2">
+          <div className="space-y-0.5 max-h-48 overflow-y-auto pr-1">
             {brands.length > 0 ? (
               brands.map((b) => (
-                <Link
-                  key={b.id}
-                  to={`/shop?brand=${b.slug}&sort=${sortBy}`}
-                  className={cn(
-                    "flex items-center gap-2 text-sm py-2 px-3 rounded-lg transition-all",
-                    brand === b.slug 
-                      ? "bg-primary text-primary-foreground font-medium" 
-                      : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                  )}
-                >
+                <Link key={b.id} to={`/shop?brand=${b.slug}&sort=${sortBy}`}
+                  className={cn("flex items-center gap-2 text-sm py-1.5 px-2.5 rounded-lg transition-all",
+                    brand === b.slug ? "bg-primary text-primary-foreground font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                  )}>
                   <span>{b.name_bn}</span>
                 </Link>
               ))
@@ -862,22 +737,16 @@ const Shop = () => {
 
       {/* Rating Filter */}
       <div>
-        <button
-          onClick={() => toggleSection("rating")}
-          className="flex items-center justify-between w-full font-semibold mb-3 group"
-        >
+        <button onClick={() => toggleSection("rating")}
+          className="flex items-center justify-between w-full font-semibold mb-2 group text-sm">
           <span className="flex items-center gap-2">
             <Star className="w-4 h-4 text-primary" />
             রেটিং
           </span>
-          {expandedSections.rating ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          )}
+          {expandedSections.rating ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </button>
         {expandedSections.rating && (
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {[
               { value: null, label: "সকল রেটিং", stars: 0 },
               { value: 4, label: "৪★ ও তার বেশি", stars: 4 },
@@ -885,20 +754,14 @@ const Shop = () => {
               { value: 2, label: "২★ ও তার বেশি", stars: 2 },
               { value: 1, label: "১★ ও তার বেশি", stars: 1 },
             ].map((option) => (
-              <button
-                key={option.label}
-                onClick={() => setRatingFilter(option.value)}
-                className={cn(
-                  "w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-2",
-                  ratingFilter === option.value
-                    ? "bg-primary text-primary-foreground font-medium"
-                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                )}
-              >
+              <button key={option.label} onClick={() => setRatingFilter(option.value)}
+                className={cn("w-full text-left px-2.5 py-1.5 rounded-lg text-sm transition-all flex items-center gap-2",
+                  ratingFilter === option.value ? "bg-primary text-primary-foreground font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                )}>
                 {option.stars > 0 && (
                   <span className="flex items-center gap-0.5">
                     {Array.from({ length: option.stars }).map((_, i) => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                      <Star key={i} className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                     ))}
                   </span>
                 )}
@@ -926,184 +789,166 @@ const Shop = () => {
         breadcrumbs={[
           { name: 'হোম', url: '/' },
           { name: 'শপ', url: '/shop' },
+          ...(category ? [{ name: getCategoryInfo()?.name_bn || category, url: `/shop?category=${category}` }] : []),
         ]}
       />
       <AnnouncementBar />
       <Header />
 
-      <PageHeroBanner
-        title={getCategoryTitle()}
-        subtitle={`${filteredProducts.length} টি পণ্য পাওয়া গেছে`}
-        breadcrumbs={[
-          { label: "হোম", href: "/" },
-          { label: "শপ", href: "/shop" },
-          ...(category ? [{ label: getCategoryInfo()?.name_bn || category }] : []),
-          ...(writer ? [{ label: getWriterInfo()?.name_bn || writer }] : []),
-          ...(publisher ? [{ label: getPublisherInfo()?.name_bn || publisher }] : []),
-        ]}
-        productCount={filteredProducts.length}
-        icon={<BookOpen className="w-6 h-6 md:w-7 md:h-7 text-primary" />}
-      />
-
-      <main className="container py-6">
-
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Mobile Filter & Sort Bar */}
-          <div className="lg:hidden space-y-4">
-            {/* Sort Pills - Horizontal Scroll */}
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {SORT_OPTIONS.map((option) => {
-                const Icon = option.icon;
-                return (
-                  <button
-                    key={option.value}
-                    onClick={() => handleSortChange(option.value)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-2 rounded-full text-sm whitespace-nowrap transition-all border",
-                      sortBy === option.value
-                        ? "bg-primary text-primary-foreground border-primary shadow-md"
-                        : "bg-card hover:bg-muted border-border"
-                    )}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Filter Button */}
-            <Sheet open={showFilters} onOpenChange={setShowFilters}>
-              <SheetTrigger asChild>
-                <Button variant="outline" className="w-full gap-2">
-                  <SlidersHorizontal className="w-4 h-4" />
-                  ফিল্টার
-                  {hasActiveFilters && (
-                    <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 justify-center">
-                      !
-                    </Badge>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] sm:w-[350px] overflow-y-auto">
-                <SheetHeader>
-                  <SheetTitle className="flex items-center gap-2">
-                    <Filter className="w-5 h-5" />
-                    ফিল্টার
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="mt-6">
-                  <FilterSidebar isMobile />
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-
-          {/* Desktop Sidebar Filters */}
-          <aside className="hidden lg:block lg:w-72 lg:shrink-0">
+      <main className="container mx-auto px-4 py-6">
+        <div className="flex gap-6 lg:gap-8">
+          {/* Left Sidebar: Filters Only */}
+          <aside className="hidden lg:block w-60 xl:w-64 flex-shrink-0">
             <div className="sticky top-4">
               <FilterSidebar />
             </div>
           </aside>
 
-          {/* Products Grid */}
-          <div className="flex-1">
-            {/* Header with Title, Count, Sort, and Grid Toggle */}
-            <div className="bg-card rounded-2xl p-4 mb-6 shadow-sm border border-border/50">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl font-bold">{getCategoryTitle()}</h1>
-                  <p className="text-muted-foreground text-sm mt-1 flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">
-                      {filteredProducts.length}
-                    </span>
-                    টি পণ্য পাওয়া গেছে
-                  </p>
-                </div>
-                
-                <div className="hidden lg:flex items-center gap-3">
-                  {/* Grid Toggle */}
-                  <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
-                    <button
-                      onClick={() => setGridCols(3)}
-                      className={cn(
-                        "p-2 rounded-md transition-all",
-                        gridCols === 3 ? "bg-background shadow-sm" : "hover:bg-background/50"
-                      )}
-                      title="3 কলাম"
-                    >
-                      <Grid3X3 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setGridCols(4)}
-                      className={cn(
-                        "p-2 rounded-md transition-all",
-                        gridCols === 4 ? "bg-background shadow-sm" : "hover:bg-background/50"
-                      )}
-                      title="4 কলাম"
-                    >
-                      <LayoutGrid className="w-4 h-4" />
-                    </button>
-                  </div>
+          {/* Right Content Area */}
+          <div className="flex-1 min-w-0">
+            {/* Breadcrumb */}
+            <nav className="text-sm text-muted-foreground mb-3 flex items-center gap-1.5 flex-wrap">
+              <Link to="/" className="hover:text-primary transition-colors">হোম</Link>
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
+              {category ? (
+                <>
+                  <Link to="/shop" className="hover:text-primary transition-colors">শপ</Link>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
+                  <span className="text-foreground font-medium">{getCategoryInfo()?.name_bn || category}</span>
+                </>
+              ) : writer ? (
+                <>
+                  <Link to="/shop" className="hover:text-primary transition-colors">শপ</Link>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
+                  <span className="text-foreground font-medium">{getWriterInfo()?.name_bn || writer}</span>
+                </>
+              ) : publisher ? (
+                <>
+                  <Link to="/shop" className="hover:text-primary transition-colors">শপ</Link>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
+                  <span className="text-foreground font-medium">{getPublisherInfo()?.name_bn || publisher}</span>
+                </>
+              ) : (
+                <span className="text-foreground font-medium">শপ</span>
+              )}
+            </nav>
 
-                  {/* Sort Dropdown */}
-                  <Select value={sortBy} onValueChange={handleSortChange}>
-                    <SelectTrigger className="w-[200px] bg-background">
-                      <div className="flex items-center gap-2">
-                        <currentSortOption.icon className="w-4 h-4 text-primary" />
-                        <SelectValue placeholder="সাজান" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SORT_OPTIONS.map((option) => {
-                        const Icon = option.icon;
-                        return (
-                          <SelectItem key={option.value} value={option.value}>
-                            <div className="flex items-center gap-2">
-                              <Icon className="w-4 h-4" />
-                              <div>
-                                <div className="font-medium">{option.label}</div>
-                                <div className="text-xs text-muted-foreground">{option.description}</div>
-                              </div>
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
+            {/* Title & Product Count */}
+            <div className="mb-4">
+              <h1 className="text-xl md:text-2xl font-bold text-foreground">{getCategoryTitle()}</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {filteredProducts.length} টি পণ্য পাওয়া গেছে
+              </p>
+            </div>
+
+            {/* Subcategory Carousel */}
+            {carouselCategories.length > 0 && (
+              <div className="relative mb-5">
+                {canScrollSubLeft && (
+                  <button onClick={() => scrollSub('left')}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-card shadow-md border border-border/50 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all -translate-x-3">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                )}
+                <div ref={subScrollRef}
+                  className="flex gap-2 overflow-x-auto pb-1"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {/* "All" pill */}
+                  <Link to={category ? `/shop?sort=${sortBy}` : `/shop?sort=${sortBy}`}
+                    className={cn(
+                      "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-all whitespace-nowrap",
+                      !category ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted border-border"
+                    )}>
+                    সকল
+                  </Link>
+                  {carouselCategories.map((cat) => (
+                    <Link key={cat.id} to={`/shop?category=${cat.slug}&sort=${sortBy}`}
+                      className={cn(
+                        "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-all whitespace-nowrap",
+                        category === cat.slug ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted border-border"
+                      )}>
+                      {cat.name_bn}
+                    </Link>
+                  ))}
                 </div>
+                {canScrollSubRight && (
+                  <button onClick={() => scrollSub('right')}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-card shadow-md border border-border/50 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all translate-x-3">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Action Bar: Sort + Grid Toggle */}
+            <div className="flex items-center justify-between gap-3 mb-4">
+              {/* Mobile Filter Button */}
+              <div className="lg:hidden">
+                <Sheet open={showFilters} onOpenChange={setShowFilters}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-1.5">
+                      <SlidersHorizontal className="w-4 h-4" />
+                      ফিল্টার
+                      {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-primary" />}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-[300px] sm:w-[350px] overflow-y-auto">
+                    <SheetHeader>
+                      <SheetTitle className="flex items-center gap-2">
+                        <Filter className="w-5 h-5" />
+                        ফিল্টার
+                      </SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-6">
+                      <FilterSidebar isMobile />
+                    </div>
+                  </SheetContent>
+                </Sheet>
               </div>
 
-              {/* Desktop Quick Sort Pills */}
-              <div className="hidden lg:flex gap-2 mt-4 pt-4 border-t border-border/50 overflow-x-auto">
-                {SORT_OPTIONS.map((option) => {
-                  const Icon = option.icon;
-                  return (
-                    <button
-                      key={option.value}
-                      onClick={() => handleSortChange(option.value)}
-                      className={cn(
-                        "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm whitespace-nowrap transition-all",
-                        sortBy === option.value
-                          ? "bg-primary text-primary-foreground shadow-md"
-                          : "bg-muted hover:bg-muted/80"
-                      )}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                      {option.label}
+              {/* Sort + Grid Controls */}
+              <div className="flex items-center gap-2 ml-auto">
+                {/* Sort Dropdown */}
+                <Select value={sortBy} onValueChange={handleSortChange}>
+                  <SelectTrigger className="w-[160px] h-9 text-sm bg-card">
+                    <div className="flex items-center gap-1.5">
+                      <currentSortOption.icon className="w-3.5 h-3.5 text-primary" />
+                      <SelectValue placeholder="সাজান" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map((option) => {
+                      const Icon = option.icon;
+                      return (
+                        <SelectItem key={option.value} value={option.value}>
+                          <div className="flex items-center gap-2">
+                            <Icon className="w-3.5 h-3.5" />
+                            <span>{option.label}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+
+                {/* Column Selector */}
+                <div className="hidden lg:flex items-center gap-1 p-1 bg-muted rounded-lg">
+                  {[4, 5, 6, 7].map((col) => (
+                    <button key={col} onClick={() => setColumns(col)}
+                      className={cn("px-2 py-1 rounded text-xs font-medium transition-all",
+                        columns === col ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                      )}>
+                      {col}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Products */}
+            {/* Products Grid */}
             {isLoading ? (
-              <div className={cn(
-                "grid gap-4 md:gap-6",
-                gridCols === 3 ? "grid-cols-2 lg:grid-cols-3" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-              )}>
-                {[...Array(8)].map((_, i) => (
+              <div className={cn("grid gap-3 md:gap-4", GRID_COL_CLASSES[columns])}>
+                {[...Array(12)].map((_, i) => (
                   <div key={i} className="space-y-3">
                     <Skeleton className="aspect-[3/4] rounded-xl" />
                     <Skeleton className="h-4 w-3/4" />
@@ -1113,30 +958,23 @@ const Shop = () => {
                 ))}
               </div>
             ) : paginatedProducts.length > 0 ? (
-              <div className={cn(
-                "grid gap-4 md:gap-6",
-                gridCols === 3 ? "grid-cols-2 lg:grid-cols-3" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-              )}>
+              <div className={cn("grid gap-3 md:gap-4", GRID_COL_CLASSES[columns])}>
                 {paginatedProducts.map((product, index) => (
-                  <div
-                    key={product.id}
-                    className="animate-fade-in"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
+                  <div key={product.id} className="animate-fade-in" style={{ animationDelay: `${index * 30}ms` }}>
                     <ProductCard product={product} />
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16 bg-card rounded-2xl border border-border/50">
-                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
-                  <Search className="w-10 h-10 text-muted-foreground" />
+              <div className="text-center py-16 bg-card rounded-xl border border-border/50">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                  <Search className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h2 className="text-xl font-bold mb-2">কোনো পণ্য পাওয়া যায়নি</h2>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                <h2 className="text-lg font-bold mb-2">কোনো পণ্য পাওয়া যায়নি</h2>
+                <p className="text-muted-foreground mb-4 text-sm max-w-md mx-auto">
                   আপনার ফিল্টার অনুযায়ী কোনো পণ্য পাওয়া যায়নি। অন্য ফিল্টার ব্যবহার করে দেখুন।
                 </p>
-                <Button onClick={clearAllFilters} variant="outline" className="gap-2">
+                <Button onClick={clearAllFilters} variant="outline" size="sm" className="gap-2">
                   <X className="w-4 h-4" />
                   সব ফিল্টার মুছুন
                 </Button>
@@ -1145,52 +983,36 @@ const Shop = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="mt-10">
+              <div className="mt-8">
                 <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  <Button variant="outline" size="sm"
                     onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="gap-1 rounded-full"
-                  >
+                    disabled={currentPage === 1} className="gap-1 rounded-full">
                     <ChevronLeft className="w-4 h-4" />
                     <span className="hidden sm:inline">আগের</span>
                   </Button>
                   
                   {getPageNumbers().map((page, index) => (
                     typeof page === 'number' ? (
-                      <Button
-                        key={index}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
+                      <Button key={index} variant={currentPage === page ? "default" : "outline"} size="sm"
                         onClick={() => handlePageChange(page)}
-                        className={cn(
-                          "min-w-[40px] rounded-full",
-                          currentPage === page && "shadow-md"
-                        )}
-                      >
+                        className={cn("min-w-[36px] rounded-full", currentPage === page && "shadow-md")}>
                         {page}
                       </Button>
                     ) : (
-                      <span key={index} className="px-2 text-muted-foreground">...</span>
+                      <span key={index} className="px-1.5 text-muted-foreground">...</span>
                     )
                   ))}
                   
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  <Button variant="outline" size="sm"
                     onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                    className="gap-1 rounded-full"
-                  >
+                    disabled={currentPage === totalPages} className="gap-1 rounded-full">
                     <span className="hidden sm:inline">পরের</span>
                     <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
 
-                {/* Results info */}
-                <p className="text-center text-sm text-muted-foreground mt-4">
+                <p className="text-center text-sm text-muted-foreground mt-3">
                   মোট <span className="font-medium text-foreground">{filteredProducts.length}</span> টি পণ্যের মধ্যে{' '}
                   <span className="font-medium text-foreground">{(currentPage - 1) * productsPerPage + 1}</span> -{' '}
                   <span className="font-medium text-foreground">{Math.min(currentPage * productsPerPage, filteredProducts.length)}</span> দেখাচ্ছে
