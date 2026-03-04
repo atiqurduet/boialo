@@ -12,11 +12,20 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, AreaChart, Area, LineChart, Line
+} from "recharts";
 import {
   BookOpen, Plus, Search, Edit, Trash2, Eye, Download, Star, Upload,
   FileText, Filter, BarChart3, Tag, Globe, Shield, Settings, RefreshCw,
-  ChevronDown, Copy, ExternalLink, Layers, BookMarked, Headphones, ChevronLeft, ChevronRight
+  ChevronDown, Copy, ExternalLink, Layers, BookMarked, Headphones, ChevronLeft, ChevronRight,
+  TrendingUp, Award, MessageSquare, Clock, CheckCircle, AlertTriangle, Printer,
+  Hash, ArrowUpRight, ArrowDownRight, Zap, Users, Heart
 } from "lucide-react";
 
 const LANGUAGES = [
@@ -28,6 +37,7 @@ const LANGUAGES = [
 ];
 
 const FORMATS = ['pdf', 'epub', 'mobi', 'djvu'];
+const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
 const AdminEbooks = () => {
   const queryClient = useQueryClient();
@@ -38,9 +48,13 @@ const AdminEbooks = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState("list");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDialog, setShowBulkDialog] = useState(false);
+  const [bulkAction, setBulkAction] = useState("");
+  const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [selectedReviewProduct, setSelectedReviewProduct] = useState<string | null>(null);
   const perPage = 20;
 
-  // Form state
   const [form, setForm] = useState<any>({
     title_bn: '', title_en: '', slug: '', description_bn: '', description_en: '',
     product_type: 'ebook', category: '', price: 0, original_price: 0, discount_percent: 0,
@@ -48,7 +62,6 @@ const AdminEbooks = () => {
     preview_url: '', preview_pages: 10, is_active: true, is_featured: false, is_free: false,
     max_downloads: 5, download_expiry_days: 365, drm_enabled: false, watermark_enabled: false,
     tags: [], meta_title: '', meta_description: '',
-    // Ebook metadata
     isbn: '', language: 'bn', page_count: 0, publisher: '', author: '', translator: '',
     edition: '', publish_year: new Date().getFullYear(), format: 'pdf',
     has_audio: false, audio_url: '', audio_duration_minutes: 0, sample_chapter_url: '',
@@ -77,21 +90,75 @@ const AdminEbooks = () => {
     }
   });
 
-  const { data: stats } = useQuery({
-    queryKey: ['ebook-stats'],
+  const { data: allEbooks = [] } = useQuery({
+    queryKey: ['all-ebooks-analytics'],
     queryFn: async () => {
-      const { data: all } = await supabase.from('digital_products').select('id, is_active, is_free, total_sales, total_downloads, price').eq('product_type', 'ebook');
-      const items = all || [];
-      return {
-        total: items.length,
-        active: items.filter(i => i.is_active).length,
-        free: items.filter(i => i.is_free).length,
-        totalSales: items.reduce((s, i) => s + (i.total_sales || 0), 0),
-        totalDownloads: items.reduce((s, i) => s + (i.total_downloads || 0), 0),
-        revenue: items.reduce((s, i) => s + ((i.total_sales || 0) * (i.price || 0)), 0),
-      };
+      const { data } = await supabase.from('digital_products')
+        .select('id, title_bn, is_active, is_free, is_featured, total_sales, total_downloads, price, avg_rating, review_count, created_at, category, file_format')
+        .eq('product_type', 'ebook');
+      return data || [];
     }
   });
+
+  const { data: reviews = [] } = useQuery({
+    queryKey: ['ebook-reviews', selectedReviewProduct],
+    queryFn: async () => {
+      if (!selectedReviewProduct) return [];
+      const { data } = await supabase.from('digital_product_reviews')
+        .select('*')
+        .eq('digital_product_id', selectedReviewProduct)
+        .order('created_at', { ascending: false });
+      return data || [];
+    },
+    enabled: !!selectedReviewProduct
+  });
+
+  const { data: allReviews = [] } = useQuery({
+    queryKey: ['all-ebook-reviews'],
+    queryFn: async () => {
+      const { data } = await supabase.from('digital_product_reviews')
+        .select('*, digital_products!inner(product_type)')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      return (data || []).filter((r: any) => r.digital_products?.product_type === 'ebook');
+    }
+  });
+
+  const stats = {
+    total: allEbooks.length,
+    active: allEbooks.filter(i => i.is_active).length,
+    featured: allEbooks.filter(i => i.is_featured).length,
+    free: allEbooks.filter(i => i.is_free).length,
+    totalSales: allEbooks.reduce((s, i) => s + (i.total_sales || 0), 0),
+    totalDownloads: allEbooks.reduce((s, i) => s + (i.total_downloads || 0), 0),
+    revenue: allEbooks.reduce((s, i) => s + ((i.total_sales || 0) * (i.price || 0)), 0),
+    avgRating: allEbooks.length > 0 ? allEbooks.reduce((s, i) => s + (i.avg_rating || 0), 0) / allEbooks.filter(i => i.avg_rating).length || 0 : 0,
+    totalReviews: allEbooks.reduce((s, i) => s + (i.review_count || 0), 0),
+    avgPrice: allEbooks.filter(i => !i.is_free).length > 0 ? allEbooks.filter(i => !i.is_free).reduce((s, i) => s + (i.price || 0), 0) / allEbooks.filter(i => !i.is_free).length : 0,
+  };
+
+  // Analytics data
+  const topSelling = [...allEbooks].sort((a, b) => (b.total_sales || 0) - (a.total_sales || 0)).slice(0, 10);
+  const topDownloaded = [...allEbooks].sort((a, b) => (b.total_downloads || 0) - (a.total_downloads || 0)).slice(0, 10);
+  const topRated = [...allEbooks].filter(i => i.avg_rating).sort((a, b) => (b.avg_rating || 0) - (a.avg_rating || 0)).slice(0, 10);
+
+  const categoryBreakdown = allEbooks.reduce((acc: any, item) => {
+    const cat = item.category || 'অন্যান্য';
+    if (!acc[cat]) acc[cat] = { name: cat, count: 0, sales: 0, revenue: 0 };
+    acc[cat].count++;
+    acc[cat].sales += item.total_sales || 0;
+    acc[cat].revenue += (item.total_sales || 0) * (item.price || 0);
+    return acc;
+  }, {});
+  const categoryData = Object.values(categoryBreakdown) as any[];
+
+  const formatBreakdown = allEbooks.reduce((acc: any, item) => {
+    const fmt = item.file_format || 'pdf';
+    if (!acc[fmt]) acc[fmt] = { name: fmt.toUpperCase(), value: 0 };
+    acc[fmt].value++;
+    return acc;
+  }, {});
+  const formatData = Object.values(formatBreakdown) as any[];
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -105,7 +172,6 @@ const AdminEbooks = () => {
       if (editingId) {
         const { error } = await supabase.from('digital_products').update(productData).eq('id', editingId);
         if (error) throw error;
-        // Update or insert metadata
         const { data: existingMeta } = await supabase.from('ebook_metadata').select('id').eq('digital_product_id', editingId).maybeSingle();
         if (existingMeta) {
           await supabase.from('ebook_metadata').update(ebookMeta).eq('digital_product_id', editingId);
@@ -120,7 +186,7 @@ const AdminEbooks = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-ebooks'] });
-      queryClient.invalidateQueries({ queryKey: ['ebook-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['all-ebooks-analytics'] });
       setShowForm(false);
       setEditingId(null);
       toast.success(editingId ? "ই-বুক আপডেট হয়েছে" : "ই-বুক যোগ হয়েছে");
@@ -144,6 +210,51 @@ const AdminEbooks = () => {
       await supabase.from('digital_products').update({ is_active: active }).eq('id', id);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-ebooks'] })
+  });
+
+  const bulkMutation = useMutation({
+    mutationFn: async ({ action, ids }: { action: string; ids: string[] }) => {
+      if (action === 'activate') {
+        await supabase.from('digital_products').update({ is_active: true }).in('id', ids);
+      } else if (action === 'deactivate') {
+        await supabase.from('digital_products').update({ is_active: false }).in('id', ids);
+      } else if (action === 'feature') {
+        await supabase.from('digital_products').update({ is_featured: true }).in('id', ids);
+      } else if (action === 'unfeature') {
+        await supabase.from('digital_products').update({ is_featured: false }).in('id', ids);
+      } else if (action === 'delete') {
+        await supabase.from('digital_products').delete().in('id', ids);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-ebooks'] });
+      queryClient.invalidateQueries({ queryKey: ['all-ebooks-analytics'] });
+      setSelectedIds(new Set());
+      setShowBulkDialog(false);
+      toast.success("বাল্ক অপারেশন সম্পন্ন");
+    }
+  });
+
+  const approveReviewMutation = useMutation({
+    mutationFn: async ({ id, approved }: { id: string; approved: boolean }) => {
+      await supabase.from('digital_product_reviews').update({ is_approved: approved }).eq('id', id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ebook-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['all-ebook-reviews'] });
+      toast.success("রিভিউ আপডেট হয়েছে");
+    }
+  });
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await supabase.from('digital_product_reviews').delete().eq('id', id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ebook-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['all-ebook-reviews'] });
+      toast.success("রিভিউ মুছে ফেলা হয়েছে");
+    }
   });
 
   const openEdit = (item: any) => {
@@ -190,45 +301,76 @@ const AdminEbooks = () => {
 
   const generateSlug = (title: string) => title.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === ebooks.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(ebooks.map((e: any) => e.id)));
+    }
+  };
+
   const statCards = [
-    { label: 'মোট ই-বুক', value: stats?.total || 0, icon: BookOpen, color: 'text-blue-500 bg-blue-50 dark:bg-blue-950' },
-    { label: 'সক্রিয়', value: stats?.active || 0, icon: Eye, color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950' },
-    { label: 'ফ্রি ই-বুক', value: stats?.free || 0, icon: Tag, color: 'text-amber-500 bg-amber-50 dark:bg-amber-950' },
-    { label: 'মোট বিক্রি', value: stats?.totalSales || 0, icon: BarChart3, color: 'text-purple-500 bg-purple-50 dark:bg-purple-950' },
-    { label: 'মোট ডাউনলোড', value: stats?.totalDownloads || 0, icon: Download, color: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-950' },
-    { label: 'রেভিনিউ', value: `৳${(stats?.revenue || 0).toLocaleString()}`, icon: BarChart3, color: 'text-rose-500 bg-rose-50 dark:bg-rose-950' },
+    { label: 'মোট ই-বুক', value: stats.total, icon: BookOpen, color: 'text-blue-500 bg-blue-50 dark:bg-blue-950' },
+    { label: 'সক্রিয়', value: stats.active, icon: Eye, color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950' },
+    { label: 'ফিচার্ড', value: stats.featured, icon: Award, color: 'text-amber-500 bg-amber-50 dark:bg-amber-950' },
+    { label: 'ফ্রি', value: stats.free, icon: Tag, color: 'text-teal-500 bg-teal-50 dark:bg-teal-950' },
+    { label: 'মোট বিক্রি', value: stats.totalSales, icon: TrendingUp, color: 'text-purple-500 bg-purple-50 dark:bg-purple-950' },
+    { label: 'ডাউনলোড', value: stats.totalDownloads, icon: Download, color: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-950' },
+    { label: 'রেভিনিউ', value: `৳${stats.revenue.toLocaleString()}`, icon: BarChart3, color: 'text-rose-500 bg-rose-50 dark:bg-rose-950' },
+    { label: 'রিভিউ', value: stats.totalReviews, icon: MessageSquare, color: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-950' },
   ];
 
   return (
     <AdminLayout>
       <div className="mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2"><BookOpen className="w-6 h-6 text-primary" /> ই-বুক ম্যানেজমেন্ট</h1>
-        <p className="text-sm text-muted-foreground">ই-বুক পরিচালনা, মেটাডাটা ও প্রকাশনা</p>
+        <p className="text-sm text-muted-foreground">ই-বুক পরিচালনা, মেটাডাটা, রিভিউ ও অ্যানালিটিক্স</p>
       </div>
+
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
         {statCards.map((s, i) => (
-          <div key={i} className="bg-card rounded-xl p-4 border shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <div className={`p-2 rounded-lg ${s.color}`}><s.icon className="w-4 h-4" /></div>
-            </div>
-            <p className="text-2xl font-bold">{s.value}</p>
-            <p className="text-xs text-muted-foreground">{s.label}</p>
+          <div key={i} className="bg-card rounded-xl p-3 border shadow-sm">
+            <div className={`p-1.5 rounded-lg w-fit ${s.color} mb-1.5`}><s.icon className="w-3.5 h-3.5" /></div>
+            <p className="text-xl font-bold">{s.value}</p>
+            <p className="text-[10px] text-muted-foreground">{s.label}</p>
           </div>
         ))}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="list"><BookOpen className="w-4 h-4 mr-1" /> তালিকা</TabsTrigger>
             <TabsTrigger value="analytics"><BarChart3 className="w-4 h-4 mr-1" /> অ্যানালিটিক্স</TabsTrigger>
+            <TabsTrigger value="reviews"><MessageSquare className="w-4 h-4 mr-1" /> রিভিউ</TabsTrigger>
+            <TabsTrigger value="rankings"><Award className="w-4 h-4 mr-1" /> র‍্যাঙ্কিং</TabsTrigger>
             <TabsTrigger value="settings"><Settings className="w-4 h-4 mr-1" /> সেটিংস</TabsTrigger>
           </TabsList>
           <Button onClick={openNew} className="gap-2"><Plus className="w-4 h-4" /> নতুন ই-বুক</Button>
         </div>
 
         <TabsContent value="list">
+          {/* Bulk Actions */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary/20 mb-4 flex-wrap">
+              <span className="font-medium text-sm">{selectedIds.size}টি সিলেক্টেড</span>
+              <Button size="sm" variant="outline" onClick={() => { setBulkAction('activate'); setShowBulkDialog(true); }}>সক্রিয় করুন</Button>
+              <Button size="sm" variant="outline" onClick={() => { setBulkAction('deactivate'); setShowBulkDialog(true); }}>নিষ্ক্রিয় করুন</Button>
+              <Button size="sm" variant="outline" onClick={() => { setBulkAction('feature'); setShowBulkDialog(true); }}>ফিচার্ড করুন</Button>
+              <Button size="sm" variant="destructive" onClick={() => { setBulkAction('delete'); setShowBulkDialog(true); }}>মুছুন</Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>বাতিল</Button>
+            </div>
+          )}
+
           {/* Filters */}
           <div className="flex flex-wrap gap-3 mb-4">
             <div className="relative flex-1 min-w-[200px]">
@@ -268,10 +410,13 @@ const AdminEbooks = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">
+                        <input type="checkbox" checked={selectedIds.size === ebooks.length && ebooks.length > 0} onChange={toggleSelectAll} className="rounded" />
+                      </TableHead>
                       <TableHead>ই-বুক</TableHead>
                       <TableHead>লেখক</TableHead>
                       <TableHead>মূল্য</TableHead>
-                      <TableHead>ফরম্যাট</TableHead>
+                      <TableHead>রেটিং</TableHead>
                       <TableHead>বিক্রি</TableHead>
                       <TableHead>ডাউনলোড</TableHead>
                       <TableHead>স্ট্যাটাস</TableHead>
@@ -282,7 +427,10 @@ const AdminEbooks = () => {
                     {ebooks.map((item: any) => {
                       const meta = item.ebook_metadata?.[0] || {};
                       return (
-                        <TableRow key={item.id}>
+                        <TableRow key={item.id} className={selectedIds.has(item.id) ? 'bg-primary/5' : ''}>
+                          <TableCell>
+                            <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} className="rounded" />
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <img src={item.cover_image || '/placeholder.svg'} alt="" className="w-10 h-14 rounded object-cover bg-muted" />
@@ -298,17 +446,32 @@ const AdminEbooks = () => {
                             {item.is_free ? (
                               <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">ফ্রি</Badge>
                             ) : (
-                              <span className="font-semibold">৳{item.price}</span>
+                              <div>
+                                <span className="font-semibold">৳{item.price}</span>
+                                {item.original_price > item.price && (
+                                  <span className="text-xs text-muted-foreground line-through ml-1">৳{item.original_price}</span>
+                                )}
+                              </div>
                             )}
                           </TableCell>
-                          <TableCell><Badge variant="outline" className="text-xs uppercase">{meta.format || item.file_format || 'pdf'}</Badge></TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                              <span className="text-sm font-medium">{(item.avg_rating || 0).toFixed(1)}</span>
+                              <span className="text-[10px] text-muted-foreground">({item.review_count || 0})</span>
+                            </div>
+                          </TableCell>
                           <TableCell className="font-medium">{item.total_sales || 0}</TableCell>
                           <TableCell className="font-medium">{item.total_downloads || 0}</TableCell>
                           <TableCell>
-                            <Switch checked={item.is_active} onCheckedChange={v => toggleActive.mutate({ id: item.id, active: v })} />
+                            <div className="flex items-center gap-1.5">
+                              <Switch checked={item.is_active} onCheckedChange={v => toggleActive.mutate({ id: item.id, active: v })} />
+                              {item.is_featured && <Badge variant="outline" className="text-[10px] py-0">★</Badge>}
+                            </div>
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => { setSelectedReviewProduct(item.id); setShowReviewDialog(true); }}><MessageSquare className="w-4 h-4" /></Button>
                               <Button variant="ghost" size="icon" onClick={() => openEdit(item)}><Edit className="w-4 h-4" /></Button>
                               <Button variant="ghost" size="icon" className="text-destructive" onClick={() => {
                                 if (confirm("এই ই-বুক মুছে ফেলতে চান?")) deleteMutation.mutate(item.id);
@@ -322,9 +485,8 @@ const AdminEbooks = () => {
                 </Table>
               </div>
 
-              {/* Pagination */}
               <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-muted-foreground">পেজ {currentPage}</p>
+                <p className="text-sm text-muted-foreground">পেজ {currentPage} • মোট {stats.total}টি</p>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
                   <Button variant="outline" size="sm" disabled={ebooks.length < perPage} onClick={() => setCurrentPage(p => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
@@ -334,25 +496,224 @@ const AdminEbooks = () => {
           )}
         </TabsContent>
 
+        {/* Analytics Tab */}
         <TabsContent value="analytics">
-          <div className="bg-card rounded-xl border p-8 text-center text-muted-foreground">
-            <BarChart3 className="w-16 h-16 mx-auto mb-4 opacity-30" />
-            <p className="font-medium text-lg mb-2">ই-বুক অ্যানালিটিক্স</p>
-            <p className="text-sm">বিক্রি, ডাউনলোড, এবং রেটিং ট্রেন্ড দেখুন</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 text-left">
-              <div className="bg-muted/50 rounded-lg p-4">
-                <p className="text-sm font-medium">সর্বোচ্চ বিক্রিত</p>
-                <p className="text-xs text-muted-foreground mt-1">ডাটা আসছে...</p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-4">
-                <p className="text-sm font-medium">সর্বোচ্চ ডাউনলোড</p>
-                <p className="text-xs text-muted-foreground mt-1">ডাটা আসছে...</p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-4">
-                <p className="text-sm font-medium">সর্বোচ্চ রেটিং</p>
-                <p className="text-xs text-muted-foreground mt-1">ডাটা আসছে...</p>
-              </div>
+          <div className="space-y-6">
+            {/* Revenue & Sales Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                <CardContent className="p-5">
+                  <p className="text-sm text-muted-foreground">মোট রেভিনিউ</p>
+                  <p className="text-3xl font-bold text-primary">৳{stats.revenue.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground mt-1">গড় মূল্য: ৳{Math.round(stats.avgPrice)}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-5">
+                  <p className="text-sm text-muted-foreground">কনভার্সন রেট</p>
+                  <p className="text-3xl font-bold">{stats.totalDownloads > 0 ? ((stats.totalSales / stats.totalDownloads) * 100).toFixed(1) : 0}%</p>
+                  <p className="text-xs text-muted-foreground mt-1">ডাউনলোড → বিক্রি</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-5">
+                  <p className="text-sm text-muted-foreground">গড় রেটিং</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-3xl font-bold">{stats.avgRating.toFixed(1)}</p>
+                    <div className="flex">{[1,2,3,4,5].map(i => <Star key={i} className={`w-4 h-4 ${i <= Math.round(stats.avgRating) ? 'text-amber-500 fill-amber-500' : 'text-muted'}`} />)}</div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{stats.totalReviews}টি রিভিউ থেকে</p>
+                </CardContent>
+              </Card>
             </div>
+
+            {/* Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader><CardTitle className="text-base">ক্যাটাগরি অনুযায়ী বিক্রি</CardTitle></CardHeader>
+                <CardContent>
+                  {categoryData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart data={categoryData}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                        <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+                        <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', color: 'hsl(var(--foreground))' }} />
+                        <Bar dataKey="sales" name="বিক্রি" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="count" name="সংখ্যা" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : <p className="text-center text-muted-foreground py-12">ডাটা নেই</p>}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle className="text-base">ফরম্যাট ডিস্ট্রিবিউশন</CardTitle></CardHeader>
+                <CardContent>
+                  {formatData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={280}>
+                      <PieChart>
+                        <Pie data={formatData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} style={{ fontSize: 11 }}>
+                          {formatData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                        </Pie>
+                        <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', color: 'hsl(var(--foreground))' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : <p className="text-center text-muted-foreground py-12">ডাটা নেই</p>}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Category Revenue Table */}
+            <Card>
+              <CardHeader><CardTitle className="text-base">ক্যাটাগরি রেভিনিউ বিশ্লেষণ</CardTitle></CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ক্যাটাগরি</TableHead>
+                      <TableHead>ই-বুক সংখ্যা</TableHead>
+                      <TableHead>মোট বিক্রি</TableHead>
+                      <TableHead>রেভিনিউ</TableHead>
+                      <TableHead>শেয়ার</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categoryData.sort((a: any, b: any) => b.revenue - a.revenue).map((cat: any, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="font-medium">{cat.name}</TableCell>
+                        <TableCell>{cat.count}</TableCell>
+                        <TableCell>{cat.sales}</TableCell>
+                        <TableCell className="font-semibold">৳{cat.revenue.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Progress value={stats.revenue > 0 ? (cat.revenue / stats.revenue) * 100 : 0} className="h-2 w-20" />
+                            <span className="text-xs">{stats.revenue > 0 ? ((cat.revenue / stats.revenue) * 100).toFixed(0) : 0}%</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Reviews Tab */}
+        <TabsContent value="reviews">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+              <Card><CardContent className="p-4 text-center"><Star className="w-6 h-6 mx-auto mb-1 text-amber-500" /><p className="text-2xl font-bold">{stats.avgRating.toFixed(1)}</p><p className="text-xs text-muted-foreground">গড় রেটিং</p></CardContent></Card>
+              <Card><CardContent className="p-4 text-center"><MessageSquare className="w-6 h-6 mx-auto mb-1 text-blue-500" /><p className="text-2xl font-bold">{stats.totalReviews}</p><p className="text-xs text-muted-foreground">মোট রিভিউ</p></CardContent></Card>
+              <Card><CardContent className="p-4 text-center"><CheckCircle className="w-6 h-6 mx-auto mb-1 text-emerald-500" /><p className="text-2xl font-bold">{allReviews.filter((r: any) => r.is_approved).length}</p><p className="text-xs text-muted-foreground">অনুমোদিত</p></CardContent></Card>
+              <Card><CardContent className="p-4 text-center"><Clock className="w-6 h-6 mx-auto mb-1 text-orange-500" /><p className="text-2xl font-bold">{allReviews.filter((r: any) => !r.is_approved).length}</p><p className="text-xs text-muted-foreground">পেন্ডিং</p></CardContent></Card>
+            </div>
+
+            <Card>
+              <CardHeader><CardTitle className="text-base">সাম্প্রতিক রিভিউ</CardTitle></CardHeader>
+              <CardContent>
+                {allReviews.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">কোনো রিভিউ নেই</p>
+                ) : (
+                  <div className="space-y-3">
+                    {allReviews.map((review: any) => (
+                      <div key={review.id} className="border rounded-lg p-4 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="flex">{[1,2,3,4,5].map(i => <Star key={i} className={`w-3.5 h-3.5 ${i <= review.rating ? 'text-amber-500 fill-amber-500' : 'text-muted'}`} />)}</div>
+                            {review.is_verified_purchase && <Badge variant="secondary" className="text-[10px]">ভেরিফাইড</Badge>}
+                            <Badge variant={review.is_approved ? 'default' : 'outline'} className="text-[10px]">
+                              {review.is_approved ? 'অনুমোদিত' : 'পেন্ডিং'}
+                            </Badge>
+                          </div>
+                          <span className="text-xs text-muted-foreground">{new Date(review.created_at).toLocaleDateString('bn-BD')}</span>
+                        </div>
+                        {review.review_text && <p className="text-sm">{review.review_text}</p>}
+                        <div className="flex gap-2">
+                          {!review.is_approved && (
+                            <Button size="sm" variant="outline" onClick={() => approveReviewMutation.mutate({ id: review.id, approved: true })}>
+                              <CheckCircle className="w-3.5 h-3.5 mr-1" /> অনুমোদন
+                            </Button>
+                          )}
+                          {review.is_approved && (
+                            <Button size="sm" variant="outline" onClick={() => approveReviewMutation.mutate({ id: review.id, approved: false })}>
+                              বাতিল
+                            </Button>
+                          )}
+                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => {
+                            if (confirm("রিভিউ মুছে ফেলতে চান?")) deleteReviewMutation.mutate(review.id);
+                          }}><Trash2 className="w-3.5 h-3.5" /></Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Rankings Tab */}
+        <TabsContent value="rankings">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="w-4 h-4 text-primary" /> সর্বোচ্চ বিক্রিত</CardTitle></CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {topSelling.map((item, i) => (
+                    <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i < 3 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{item.title_bn}</p>
+                        <p className="text-xs text-muted-foreground">{item.total_sales || 0} বিক্রি</p>
+                      </div>
+                      <span className="text-sm font-semibold">৳{((item.total_sales || 0) * (item.price || 0)).toLocaleString()}</span>
+                    </div>
+                  ))}
+                  {topSelling.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">ডাটা নেই</p>}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="text-base flex items-center gap-2"><Download className="w-4 h-4 text-cyan-500" /> সর্বোচ্চ ডাউনলোড</CardTitle></CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {topDownloaded.map((item, i) => (
+                    <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i < 3 ? 'bg-cyan-500 text-white' : 'bg-muted text-muted-foreground'}`}>{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{item.title_bn}</p>
+                        <p className="text-xs text-muted-foreground">{item.total_downloads || 0} ডাউনলোড</p>
+                      </div>
+                    </div>
+                  ))}
+                  {topDownloaded.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">ডাটা নেই</p>}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="text-base flex items-center gap-2"><Star className="w-4 h-4 text-amber-500" /> সর্বোচ্চ রেটিং</CardTitle></CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {topRated.map((item, i) => (
+                    <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i < 3 ? 'bg-amber-500 text-white' : 'bg-muted text-muted-foreground'}`}>{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{item.title_bn}</p>
+                        <div className="flex items-center gap-1">
+                          <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                          <span className="text-xs">{(item.avg_rating || 0).toFixed(1)} ({item.review_count || 0})</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {topRated.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">ডাটা নেই</p>}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
@@ -376,10 +737,70 @@ const AdminEbooks = () => {
                 <Switch defaultChecked={false} id="watermark-default" />
                 <Label htmlFor="watermark-default">ওয়াটারমার্ক ডিফল্ট সক্রিয়</Label>
               </div>
+              <div className="flex items-center gap-3">
+                <Switch defaultChecked={true} id="auto-approve-reviews" />
+                <Label htmlFor="auto-approve-reviews">রিভিউ অটো অনুমোদন</Label>
+              </div>
+              <div className="space-y-3">
+                <Label>ন্যূনতম রিভিউ দৈর্ঘ্য</Label>
+                <Input type="number" defaultValue={10} />
+              </div>
             </div>
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Bulk Action Confirm Dialog */}
+      <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>বাল্ক অ্যাকশন নিশ্চিত করুন</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {selectedIds.size}টি ই-বুকে "{bulkAction === 'activate' ? 'সক্রিয়' : bulkAction === 'deactivate' ? 'নিষ্ক্রিয়' : bulkAction === 'feature' ? 'ফিচার্ড' : bulkAction === 'unfeature' ? 'আনফিচার' : 'ডিলিট'}" অ্যাকশন প্রয়োগ করতে চান?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkDialog(false)}>বাতিল</Button>
+            <Button variant={bulkAction === 'delete' ? 'destructive' : 'default'} onClick={() => bulkMutation.mutate({ action: bulkAction, ids: Array.from(selectedIds) })}>
+              {bulkMutation.isPending && <RefreshCw className="w-4 h-4 animate-spin mr-1" />}
+              নিশ্চিত
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Review Dialog for specific product */}
+      <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><MessageSquare className="w-5 h-5" /> প্রোডাক্ট রিভিউ</DialogTitle></DialogHeader>
+          {reviews.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">কোনো রিভিউ নেই</p>
+          ) : (
+            <div className="space-y-3">
+              {reviews.map((r: any) => (
+                <div key={r.id} className="border rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <div className="flex">{[1,2,3,4,5].map(i => <Star key={i} className={`w-3 h-3 ${i <= r.rating ? 'text-amber-500 fill-amber-500' : 'text-muted'}`} />)}</div>
+                      <Badge variant={r.is_approved ? 'default' : 'outline'} className="text-[10px]">{r.is_approved ? 'অনুমোদিত' : 'পেন্ডিং'}</Badge>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString('bn-BD')}</span>
+                  </div>
+                  {r.review_text && <p className="text-sm mt-1">{r.review_text}</p>}
+                  <div className="flex gap-2 mt-2">
+                    <Button size="sm" variant="outline" onClick={() => approveReviewMutation.mutate({ id: r.id, approved: !r.is_approved })}>
+                      {r.is_approved ? 'বাতিল' : 'অনুমোদন'}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteReviewMutation.mutate(r.id)}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
@@ -408,8 +829,8 @@ const AdminEbooks = () => {
                 <div><Label>স্লাগ *</Label><Input value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })} /></div>
                 <div><Label>ক্যাটাগরি</Label><Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} /></div>
               </div>
-              <div><Label>বিবরণ (বাংলা)</Label><textarea className="w-full border rounded-md p-2 text-sm min-h-[100px] bg-background" value={form.description_bn} onChange={e => setForm({ ...form, description_bn: e.target.value })} /></div>
-              <div><Label>বিবরণ (ইংরেজি)</Label><textarea className="w-full border rounded-md p-2 text-sm min-h-[80px] bg-background" value={form.description_en} onChange={e => setForm({ ...form, description_en: e.target.value })} /></div>
+              <div><Label>বিবরণ (বাংলা)</Label><Textarea value={form.description_bn} onChange={e => setForm({ ...form, description_bn: e.target.value })} rows={4} /></div>
+              <div><Label>বিবরণ (ইংরেজি)</Label><Textarea value={form.description_en} onChange={e => setForm({ ...form, description_en: e.target.value })} rows={3} /></div>
               <div><Label>কভার ইমেজ URL</Label><Input value={form.cover_image} onChange={e => setForm({ ...form, cover_image: e.target.value })} placeholder="https://..." /></div>
               <div className="flex flex-wrap gap-4">
                 <div className="flex items-center gap-2"><Switch checked={form.is_featured} onCheckedChange={v => setForm({ ...form, is_featured: v })} /><Label>ফিচার্ড</Label></div>
@@ -498,7 +919,7 @@ const AdminEbooks = () => {
 
             <TabsContent value="seo" className="space-y-4 mt-4">
               <div><Label>মেটা টাইটেল</Label><Input value={form.meta_title} onChange={e => setForm({ ...form, meta_title: e.target.value })} /></div>
-              <div><Label>মেটা ডেসক্রিপশন</Label><textarea className="w-full border rounded-md p-2 text-sm min-h-[80px] bg-background" value={form.meta_description} onChange={e => setForm({ ...form, meta_description: e.target.value })} /></div>
+              <div><Label>মেটা ডেসক্রিপশন</Label><Textarea value={form.meta_description} onChange={e => setForm({ ...form, meta_description: e.target.value })} rows={3} /></div>
               <div><Label>ট্যাগ (কমা দিয়ে আলাদা)</Label><Input value={(form.tags || []).join(', ')} onChange={e => setForm({ ...form, tags: e.target.value.split(',').map((t: string) => t.trim()).filter(Boolean) })} /></div>
             </TabsContent>
           </Tabs>
