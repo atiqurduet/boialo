@@ -297,11 +297,28 @@ const AdminEbooks = () => {
       // Include gallery_images in productData
       productData.gallery_images = gallery_images;
 
+      // Clean empty strings to null for optional fields
+      const cleanStr = (v: any) => (v && String(v).trim()) ? String(v).trim() : null;
+      const cleanNum = (v: any) => (v && Number(v) > 0) ? Number(v) : null;
+
       const ebookMeta = {
-        isbn, language, page_count, publisher, publisher_id: publisher_id || null,
-        author, author_id: author_id || null, translator, translator_id: translator_id || null,
-        edition, publish_year, format, has_audio, audio_url, audio_duration_minutes,
-        sample_chapter_url, table_of_contents
+        isbn: cleanStr(isbn),
+        language: cleanStr(language) || 'bn',
+        page_count: cleanNum(page_count),
+        publisher: cleanStr(publisher),
+        publisher_id: cleanStr(publisher_id),
+        author: cleanStr(author),
+        author_id: cleanStr(author_id),
+        translator: cleanStr(translator),
+        translator_id: cleanStr(translator_id),
+        edition: cleanStr(edition),
+        publish_year: cleanNum(publish_year),
+        format: cleanStr(format) || 'pdf',
+        has_audio: !!has_audio,
+        audio_url: cleanStr(audio_url),
+        audio_duration_minutes: cleanNum(audio_duration_minutes),
+        sample_chapter_url: cleanStr(sample_chapter_url),
+        table_of_contents: table_of_contents && Array.isArray(table_of_contents) && table_of_contents.length > 0 ? table_of_contents : null,
       };
 
       if (editingId) {
@@ -309,14 +326,17 @@ const AdminEbooks = () => {
         if (error) throw error;
         const { data: existingMeta } = await supabase.from('ebook_metadata').select('id').eq('digital_product_id', editingId).maybeSingle();
         if (existingMeta) {
-          await supabase.from('ebook_metadata').update(ebookMeta).eq('digital_product_id', editingId);
+          const { error: metaError } = await supabase.from('ebook_metadata').update(ebookMeta).eq('digital_product_id', editingId);
+          if (metaError) { console.error('Metadata update error:', metaError); throw new Error('মেটাডাটা আপডেট ব্যর্থ: ' + metaError.message); }
         } else {
-          await supabase.from('ebook_metadata').insert({ ...ebookMeta, digital_product_id: editingId });
+          const { error: metaError } = await supabase.from('ebook_metadata').insert({ ...ebookMeta, digital_product_id: editingId });
+          if (metaError) { console.error('Metadata insert error:', metaError); throw new Error('মেটাডাটা সেভ ব্যর্থ: ' + metaError.message); }
         }
       } else {
         const { data: newProduct, error } = await supabase.from('digital_products').insert(productData).select().single();
         if (error) throw error;
-        await supabase.from('ebook_metadata').insert({ ...ebookMeta, digital_product_id: newProduct.id });
+        const { error: metaError } = await supabase.from('ebook_metadata').insert({ ...ebookMeta, digital_product_id: newProduct.id });
+        if (metaError) { console.error('Metadata insert error:', metaError); throw new Error('মেটাডাটা সেভ ব্যর্থ: ' + metaError.message); }
       }
     },
     onSuccess: () => {
