@@ -20,6 +20,14 @@ import { AIRecommendations } from "@/components/AIRecommendations";
 import { TopSellingProducts } from "@/components/TopSellingProducts";
 import { TopAuthorsSection } from "@/components/TopAuthorsSection";
 import { TopSellingUniversalProducts } from "@/components/TopSellingUniversalProducts";
+import { RecentlySoldProducts } from "@/components/RecentlySoldProducts";
+import { OfferProducts } from "@/components/OfferProducts";
+import { EbookSection } from "@/components/EbookSection";
+import { WeeklyBestBooks } from "@/components/WeeklyBestBooks";
+import { WeeklyBestUniversalProducts } from "@/components/WeeklyBestUniversalProducts";
+import { BundleShowcase } from "@/components/BundleShowcase";
+import { BestSellingBrands } from "@/components/BestSellingBrands";
+import { BestSellingPublishers } from "@/components/BestSellingPublishers";
 import { useHomepageData } from "@/hooks/useHomepageData";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -374,6 +382,99 @@ const Index = () => {
             productsPerCategory={settings.products_per_category || 6}
             visibleProducts={settings.visible_products || 3}
             selectedCategoryIds={settings.category_ids}
+          />
+        );
+
+      case 'recently_sold':
+        return (
+          <RecentlySoldProducts
+            key={section.id}
+            limit={settings.limit || 10}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
+            useCarousel={useCarousel}
+            columns={settings.columns || 5}
+          />
+        );
+
+      case 'offer_products':
+        return (
+          <OfferProducts
+            key={section.id}
+            limit={settings.limit || 10}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
+            useCarousel={useCarousel}
+            columns={settings.columns || 5}
+            minDiscount={settings.min_discount || 5}
+          />
+        );
+
+      case 'ebooks':
+        return (
+          <EbookSection
+            key={section.id}
+            limit={settings.limit || 10}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
+            useCarousel={useCarousel}
+            columns={settings.columns || 5}
+          />
+        );
+
+      case 'weekly_best_books':
+        return (
+          <WeeklyBestBooks
+            key={section.id}
+            limit={settings.limit || 10}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
+            useCarousel={useCarousel}
+            columns={settings.columns || 5}
+          />
+        );
+
+      case 'weekly_best_universal':
+        return (
+          <WeeklyBestUniversalProducts
+            key={section.id}
+            limit={settings.limit || 10}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
+            useCarousel={useCarousel}
+            columns={settings.columns || 5}
+          />
+        );
+
+      case 'bundle_showcase':
+        return (
+          <BundleShowcase
+            key={section.id}
+            limit={settings.limit || 6}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
+            useCarousel={useCarousel}
+            columns={settings.columns || 3}
+          />
+        );
+
+      case 'best_selling_brands':
+        return (
+          <BestSellingBrands
+            key={section.id}
+            limit={settings.limit || 12}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
+          />
+        );
+
+      case 'best_selling_publishers':
+        return (
+          <BestSellingPublishers
+            key={section.id}
+            limit={settings.limit || 12}
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
           />
         );
 
