@@ -103,11 +103,63 @@ const EbookDetail = () => {
   const handleAddToCart = () => {
     if (!ebook) return;
     if (ebook.is_free) {
-      toast.info("এই ই-বুকটি ফ্রি! সরাসরি ডাউনলোড করুন।");
+      handleDownload();
       return;
     }
     addToCart(ebook.id, 1);
     toast.success("কার্টে যোগ করা হয়েছে!");
+  };
+
+  const handleDownload = async () => {
+    if (!ebook) return;
+    
+    // For free ebooks, create a purchase record if not exists, then download
+    if (ebook.is_free) {
+      if (!user) {
+        toast.error("ডাউনলোড করতে লগইন করুন");
+        return;
+      }
+      // Create purchase record for free ebook if not exists
+      if (!hasPurchased) {
+        await supabase.from("digital_purchases").insert({
+          user_id: user.id,
+          product_id: ebook.id,
+          product_type: "ebook",
+          max_downloads: ebook.max_downloads || 5,
+        });
+      }
+    }
+
+    if (ebook.file_url) {
+      // Increment download count
+      if (user && hasPurchased) {
+        const { data: purchase } = await supabase
+          .from("digital_purchases")
+          .select("id, download_count, max_downloads, expires_at")
+          .eq("product_id", ebook.id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (purchase) {
+          if (purchase.max_downloads && purchase.download_count >= purchase.max_downloads) {
+            toast.error("ডাউনলোড সীমা শেষ হয়ে গেছে");
+            return;
+          }
+          if (purchase.expires_at && new Date(purchase.expires_at) < new Date()) {
+            toast.error("ডাউনলোড মেয়াদ শেষ হয়ে গেছে");
+            return;
+          }
+          await supabase
+            .from("digital_purchases")
+            .update({ download_count: (purchase.download_count || 0) + 1 })
+            .eq("id", purchase.id);
+        }
+      }
+      window.open(ebook.file_url, "_blank");
+      toast.success("ডাউনলোড শুরু হয়েছে");
+    } else {
+      toast.error("ফাইল পাওয়া যায়নি");
+    }
   };
 
   if (isLoading) {
@@ -306,7 +358,7 @@ const EbookDetail = () => {
             {/* Action Buttons */}
             <div className="flex gap-3 flex-wrap">
               {hasPurchased || ebook.is_free ? (
-                <Button size="lg" className="gap-2 flex-1 min-w-[200px]">
+                <Button size="lg" onClick={handleDownload} className="gap-2 flex-1 min-w-[200px]">
                   <Download className="w-5 h-5" />
                   {ebook.is_free ? "ফ্রি ডাউনলোড" : "ডাউনলোড করুন"}
                 </Button>
