@@ -5,32 +5,29 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
-  ArrowLeft, ZoomIn, ZoomOut, Maximize, Minimize,
-  ChevronLeft, ChevronRight, Loader2, BookOpen, Shield
+  ArrowLeft, Maximize, Minimize,
+  Loader2, BookOpen, Shield
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const EbookReader = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [bookTitle, setBookTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const fetchReadUrl = useCallback(async () => {
+  const fetchAndLoadPdf = useCallback(async () => {
     if (!user || !slug) return;
 
     try {
       setLoading(true);
       setError(null);
 
-      // Get product id from slug
       const { data: product } = await supabase
         .from("digital_products")
         .select("id, title_bn")
@@ -72,7 +69,21 @@ const EbookReader = () => {
       }
 
       const data = await response.json();
-      setPdfUrl(data.url);
+
+      // Fetch PDF as blob to avoid Chrome blocking iframe with external URLs
+      const pdfResponse = await fetch(data.url);
+      if (!pdfResponse.ok) {
+        setError("পিডিএফ লোড করতে সমস্যা হচ্ছে");
+        return;
+      }
+
+      const blob = await pdfResponse.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
+      setBlobUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return objectUrl;
+      });
     } catch {
       setError("কিছু ভুল হয়েছে");
     } finally {
@@ -86,15 +97,25 @@ const EbookReader = () => {
       navigate(`/ebooks/${slug}`);
       return;
     }
-    fetchReadUrl();
-  }, [user, fetchReadUrl, navigate, slug]);
+    fetchAndLoadPdf();
+  }, [user, fetchAndLoadPdf, navigate, slug]);
 
-  // Refresh URL before expiry (every 12 minutes for 15-min URLs)
+  // Cleanup blob URL on unmount
   useEffect(() => {
-    if (!pdfUrl) return;
-    const interval = setInterval(fetchReadUrl, 12 * 60 * 1000);
+    return () => {
+      setBlobUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    };
+  }, []);
+
+  // Refresh before expiry (every 12 minutes)
+  useEffect(() => {
+    if (!blobUrl) return;
+    const interval = setInterval(fetchAndLoadPdf, 12 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [pdfUrl, fetchReadUrl]);
+  }, [blobUrl, fetchAndLoadPdf]);
 
   // Disable right-click
   useEffect(() => {
@@ -103,7 +124,6 @@ const EbookReader = () => {
     return () => document.removeEventListener("contextmenu", handler);
   }, []);
 
-  // Fullscreen toggle
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
@@ -157,7 +177,6 @@ const EbookReader = () => {
       className="min-h-screen bg-zinc-900 flex flex-col select-none"
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* Top Bar */}
       <div className="bg-zinc-800/95 backdrop-blur border-b border-zinc-700 px-4 py-2 flex items-center justify-between z-50 shrink-0">
         <div className="flex items-center gap-3">
           <Button
@@ -174,7 +193,6 @@ const EbookReader = () => {
             <span className="text-sm font-medium truncate max-w-[300px]">{bookTitle}</span>
           </div>
         </div>
-
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -187,23 +205,17 @@ const EbookReader = () => {
         </div>
       </div>
 
-      {/* PDF Viewer */}
       <div className="flex-1 relative">
-        {pdfUrl && (
+        {blobUrl && (
           <iframe
-            ref={iframeRef}
-            src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
+            src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
             className="w-full h-full absolute inset-0"
             title={bookTitle}
-            sandbox="allow-scripts allow-same-origin"
             style={{ userSelect: "none" }}
           />
         )}
-        {/* Overlay to prevent save-as on PDF */}
-        <div className="absolute top-0 right-0 w-12 h-12 bg-transparent" />
       </div>
 
-      {/* Security notice */}
       <div className="bg-zinc-800/80 text-center py-1.5 text-[11px] text-zinc-500 border-t border-zinc-700 shrink-0">
         <Shield className="w-3 h-3 inline mr-1 -mt-0.5" />
         সুরক্ষিত রিডার — শুধুমাত্র পড়ার জন্য
