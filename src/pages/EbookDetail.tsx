@@ -156,8 +156,22 @@ const EbookDetail = () => {
             .eq("id", purchase.id);
         }
       }
-      window.open(ebook.file_url, "_blank");
-      toast.success("ডাউনলোড শুরু হয়েছে");
+      // Use fetch to download without exposing URL
+      try {
+        const response = await fetch(ebook.file_url);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = ebook.file_name || `${ebook.slug}.${ebook.file_format || "pdf"}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+        toast.success("ডাউনলোড শুরু হয়েছে");
+      } catch {
+        toast.error("ডাউনলোড করতে সমস্যা হয়েছে");
+      }
     } else {
       toast.error("ফাইল পাওয়া যায়নি");
     }
