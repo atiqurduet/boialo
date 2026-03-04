@@ -99,6 +99,7 @@ import AdminMarketingAutomation from "./pages/admin/AdminMarketingAutomation";
 import GiftCards from "./pages/GiftCards";
 import Compare from "./pages/Compare";
 import Ebooks from "./pages/Ebooks";
+import EbookDetail from "./pages/EbookDetail";
 import Eproducts from "./pages/Eproducts";
 import AdminInventory from "./pages/admin/AdminInventory";
 import AdminDeliveryZones from "./pages/admin/AdminDeliveryZones";
@@ -169,6 +170,7 @@ const App = () => (
                 <Route path="/bundles" element={<Bundles />} />
                 <Route path="/compare" element={<Compare />} />
                 <Route path="/ebooks" element={<Ebooks />} />
+                <Route path="/ebooks/:slug" element={<EbookDetail />} />
                 <Route path="/eproducts" element={<Eproducts />} />
                 <Route path="/wishlist/shared/:shareCode" element={<SharedWishlist />} />
                 
