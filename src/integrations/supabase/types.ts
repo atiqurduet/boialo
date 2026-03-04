@@ -3675,6 +3675,48 @@ export type Database = {
           },
         ]
       }
+      roles_config: {
+        Row: {
+          created_at: string | null
+          description_bn: string | null
+          description_en: string | null
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          label_bn: string
+          label_en: string
+          role_key: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description_bn?: string | null
+          description_en?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          label_bn: string
+          label_en?: string
+          role_key: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description_bn?: string | null
+          description_en?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          label_bn?: string
+          label_en?: string
+          role_key?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       saved_cart_items: {
         Row: {
           created_at: string
