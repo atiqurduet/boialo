@@ -13,12 +13,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -26,8 +20,6 @@ import {
 } from "@/components/ui/accordion";
 import { toast } from "sonner";
 import { Loader2, Shield, Save, Check, X } from "lucide-react";
-
-type AppRole = "admin" | "manager" | "support";
 
 interface Permission {
   id: string;
@@ -40,53 +32,62 @@ interface Permission {
 }
 
 interface RolePermission {
-  role: AppRole;
+  role: string;
   permission_id: string;
 }
 
-const ROLES: { value: AppRole; label: string; color: string }[] = [
-  { value: "admin", label: "এডমিন", color: "bg-red-100 text-red-800" },
-  { value: "manager", label: "ম্যানেজার", color: "bg-blue-100 text-blue-800" },
-  { value: "support", label: "সাপোর্ট", color: "bg-green-100 text-green-800" },
-];
+interface RoleConfig {
+  id: string;
+  role_key: string;
+  label_bn: string;
+  label_en: string;
+  description_bn: string | null;
+  is_system: boolean | null;
+  is_active: boolean | null;
+  sort_order: number | null;
+}
 
 const MODULE_GROUPS: { key: string; label: string; modules: string[] }[] = [
-  { 
-    key: "core", 
-    label: "মূল ফিচার", 
-    modules: ["dashboard", "orders", "tasks", "chat"] 
-  },
-  { 
-    key: "products", 
-    label: "প্রোডাক্ট ম্যানেজমেন্ট", 
-    modules: ["products", "universal_products", "categories", "writers", "publishers"] 
-  },
-  { 
-    key: "users", 
-    label: "ইউজার ম্যানেজমেন্ট", 
-    modules: ["customers", "staff", "roles"] 
-  },
-  { 
-    key: "marketing", 
-    label: "মার্কেটিং", 
-    modules: ["coupons", "offers", "banners", "email_marketing"] 
-  },
-  { 
-    key: "design", 
-    label: "সাইট ডিজাইন", 
-    modules: ["homepage", "menu", "footer", "branding"] 
-  },
-  { 
-    key: "settings", 
-    label: "সেটিংস", 
-    modules: ["settings", "couriers", "payments", "refunds", "reports"] 
-  },
+  { key: "core", label: "মূল ফিচার", modules: ["dashboard", "orders", "tasks", "chat"] },
+  { key: "products", label: "প্রোডাক্ট ম্যানেজমেন্ট", modules: ["products", "universal_products", "categories", "writers", "publishers"] },
+  { key: "users", label: "ইউজার ম্যানেজমেন্ট", modules: ["customers", "staff", "roles"] },
+  { key: "marketing", label: "মার্কেটিং", modules: ["coupons", "offers", "banners", "email_marketing"] },
+  { key: "design", label: "সাইট ডিজাইন", modules: ["homepage", "menu", "footer", "branding"] },
+  { key: "settings", label: "সেটিংস", modules: ["settings", "couriers", "payments", "refunds", "reports"] },
+];
+
+const ROLE_COLORS = [
+  "bg-red-100 text-red-800",
+  "bg-blue-100 text-blue-800",
+  "bg-green-100 text-green-800",
+  "bg-purple-100 text-purple-800",
+  "bg-orange-100 text-orange-800",
+  "bg-teal-100 text-teal-800",
+  "bg-pink-100 text-pink-800",
+  "bg-yellow-100 text-yellow-800",
 ];
 
 const AdminRolePermissions = () => {
   const queryClient = useQueryClient();
-  const [selectedRole, setSelectedRole] = useState<AppRole>("manager");
+  const [selectedRole, setSelectedRole] = useState<string>("");
   const [pendingChanges, setPendingChanges] = useState<Map<string, boolean>>(new Map());
+
+  // Fetch dynamic roles from roles_config
+  const { data: rolesConfig = [], isLoading: rolesLoading } = useQuery({
+    queryKey: ["roles-config-permissions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("roles_config")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return data as RoleConfig[];
+    },
+  });
+
+  // Auto-select first non-admin role
+  const effectiveSelectedRole = selectedRole || rolesConfig.find(r => r.role_key !== "admin")?.role_key || "";
 
   // Fetch all permissions
   const { data: permissions = [], isLoading: permissionsLoading } = useQuery({
@@ -96,7 +97,6 @@ const AdminRolePermissions = () => {
         .from("permissions")
         .select("*")
         .order("sort_order");
-      
       if (error) throw error;
       return data as Permission[];
     },
@@ -104,34 +104,30 @@ const AdminRolePermissions = () => {
 
   // Fetch role permissions
   const { data: rolePermissions = [], isLoading: rolePermissionsLoading } = useQuery({
-    queryKey: ["role-permissions", selectedRole],
+    queryKey: ["role-permissions", effectiveSelectedRole],
     queryFn: async () => {
+      if (!effectiveSelectedRole) return [];
       const { data, error } = await supabase
         .from("role_permissions")
         .select("role, permission_id")
-        .eq("role", selectedRole);
-      
+        .eq("role", effectiveSelectedRole as any);
       if (error) throw error;
-      return data as RolePermission[];
+      return data as unknown as RolePermission[];
     },
+    enabled: !!effectiveSelectedRole,
   });
 
-  // Group permissions by module
   const permissionsByModule = permissions.reduce((acc, perm) => {
     if (!acc[perm.module]) acc[perm.module] = [];
     acc[perm.module].push(perm);
     return acc;
   }, {} as Record<string, Permission[]>);
 
-  // Check if permission is enabled for current role
   const hasPermission = (permissionId: string): boolean => {
-    if (pendingChanges.has(permissionId)) {
-      return pendingChanges.get(permissionId)!;
-    }
+    if (pendingChanges.has(permissionId)) return pendingChanges.get(permissionId)!;
     return rolePermissions.some(rp => rp.permission_id === permissionId);
   };
 
-  // Toggle permission
   const togglePermission = (permissionId: string) => {
     const current = hasPermission(permissionId);
     setPendingChanges(prev => {
@@ -141,31 +137,25 @@ const AdminRolePermissions = () => {
     });
   };
 
-  // Toggle all permissions for a module
   const toggleModule = (module: string, enabled: boolean) => {
     const modulePerms = permissionsByModule[module] || [];
     setPendingChanges(prev => {
       const next = new Map(prev);
-      modulePerms.forEach(perm => {
-        next.set(perm.id, enabled);
-      });
+      modulePerms.forEach(perm => next.set(perm.id, enabled));
       return next;
     });
   };
 
-  // Check if all module permissions are enabled
   const isModuleFullyEnabled = (module: string): boolean => {
     const modulePerms = permissionsByModule[module] || [];
     return modulePerms.every(perm => hasPermission(perm.id));
   };
 
-  // Check if any module permission is enabled
   const isModulePartiallyEnabled = (module: string): boolean => {
     const modulePerms = permissionsByModule[module] || [];
     return modulePerms.some(perm => hasPermission(perm.id)) && !isModuleFullyEnabled(module);
   };
 
-  // Save changes
   const saveMutation = useMutation({
     mutationFn: async () => {
       const toAdd: string[] = [];
@@ -173,43 +163,38 @@ const AdminRolePermissions = () => {
 
       pendingChanges.forEach((enabled, permissionId) => {
         const wasEnabled = rolePermissions.some(rp => rp.permission_id === permissionId);
-        if (enabled && !wasEnabled) {
-          toAdd.push(permissionId);
-        } else if (!enabled && wasEnabled) {
-          toRemove.push(permissionId);
-        }
+        if (enabled && !wasEnabled) toAdd.push(permissionId);
+        else if (!enabled && wasEnabled) toRemove.push(permissionId);
       });
 
-      // Add new permissions
       if (toAdd.length > 0) {
         const { error } = await supabase
           .from("role_permissions")
-          .insert(toAdd.map(id => ({ role: selectedRole, permission_id: id })));
+          .insert(toAdd.map(id => ({ role: effectiveSelectedRole as any, permission_id: id })));
         if (error) throw error;
       }
 
-      // Remove permissions
       if (toRemove.length > 0) {
         const { error } = await supabase
           .from("role_permissions")
           .delete()
-          .eq("role", selectedRole)
+          .eq("role", effectiveSelectedRole as any)
           .in("permission_id", toRemove);
         if (error) throw error;
       }
     },
     onSuccess: () => {
       toast.success("পার্মিশন সেভ হয়েছে");
-      queryClient.invalidateQueries({ queryKey: ["role-permissions", selectedRole] });
+      queryClient.invalidateQueries({ queryKey: ["role-permissions", effectiveSelectedRole] });
       setPendingChanges(new Map());
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 
-  const isLoading = permissionsLoading || rolePermissionsLoading;
+  const isAdmin = effectiveSelectedRole === "admin";
+  const isLoading = permissionsLoading || rolePermissionsLoading || rolesLoading;
   const hasPendingChanges = pendingChanges.size > 0;
+  const currentRoleConfig = rolesConfig.find(r => r.role_key === effectiveSelectedRole);
 
   return (
     <AdminLayout>
@@ -220,38 +205,29 @@ const AdminRolePermissions = () => {
             <p className="text-muted-foreground">প্রতিটি রোলের জন্য সিস্টেম অ্যাক্সেস কন্ট্রোল করুন</p>
           </div>
           {hasPendingChanges && (
-            <Button
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending}
-            >
-              {saveMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
+            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
               পরিবর্তন সেভ করুন
             </Button>
           )}
         </div>
 
-        {/* Role Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {ROLES.map((role) => (
+        {/* Dynamic Role Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {rolesConfig.map((role, idx) => (
             <Card
-              key={role.value}
+              key={role.id}
               className={`cursor-pointer transition-all ${
-                selectedRole === role.value
-                  ? "ring-2 ring-primary shadow-lg"
-                  : "hover:shadow-md"
+                effectiveSelectedRole === role.role_key ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"
               }`}
               onClick={() => {
                 if (pendingChanges.size > 0) {
                   if (confirm("আনসেভড পরিবর্তন আছে। রোল পরিবর্তন করতে চান?")) {
                     setPendingChanges(new Map());
-                    setSelectedRole(role.value);
+                    setSelectedRole(role.role_key);
                   }
                 } else {
-                  setSelectedRole(role.value);
+                  setSelectedRole(role.role_key);
                 }
               }}
             >
@@ -261,12 +237,13 @@ const AdminRolePermissions = () => {
                     <Shield className="h-6 w-6" />
                   </div>
                   <div>
-                    <Badge className={role.color}>{role.label}</Badge>
+                    <Badge className={ROLE_COLORS[idx % ROLE_COLORS.length]}>{role.label_bn}</Badge>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {role.value === "admin" && "সম্পূর্ণ অ্যাক্সেস"}
-                      {role.value === "manager" && "প্রোডাক্ট ও অর্ডার ম্যানেজমেন্ট"}
-                      {role.value === "support" && "কাস্টমার সাপোর্ট"}
+                      {role.description_bn || role.label_en}
                     </p>
+                    {role.is_system && (
+                      <Badge variant="outline" className="text-xs mt-1">সিস্টেম</Badge>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -279,13 +256,12 @@ const AdminRolePermissions = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              {ROLES.find(r => r.value === selectedRole)?.label} পার্মিশন
+              {currentRoleConfig?.label_bn || effectiveSelectedRole} পার্মিশন
             </CardTitle>
             <CardDescription>
-              {selectedRole === "admin" 
+              {isAdmin
                 ? "এডমিন রোলের সব পার্মিশন আছে (পরিবর্তন করা যাবে না)"
-                : "যেসব মডিউলে অ্যাক্সেস দিতে চান সেগুলো সিলেক্ট করুন"
-              }
+                : "যেসব মডিউলে অ্যাক্সেস দিতে চান সেগুলো সিলেক্ট করুন"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -301,9 +277,9 @@ const AdminRolePermissions = () => {
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{group.label}</span>
                         <Badge variant="outline" className="ml-2">
-                          {group.modules.reduce((count, mod) => 
+                          {group.modules.reduce((count, mod) =>
                             count + (permissionsByModule[mod]?.filter(p => hasPermission(p.id)).length || 0), 0
-                          )} / {group.modules.reduce((count, mod) => 
+                          )} / {group.modules.reduce((count, mod) =>
                             count + (permissionsByModule[mod]?.length || 0), 0
                           )}
                         </Badge>
@@ -314,7 +290,6 @@ const AdminRolePermissions = () => {
                         {group.modules.map((module) => {
                           const modulePerms = permissionsByModule[module] || [];
                           if (modulePerms.length === 0) return null;
-
                           return (
                             <div key={module} className="border rounded-lg p-4">
                               <div className="flex items-center justify-between mb-3">
@@ -322,11 +297,9 @@ const AdminRolePermissions = () => {
                                   <Checkbox
                                     checked={isModuleFullyEnabled(module)}
                                     onCheckedChange={(checked) => toggleModule(module, !!checked)}
-                                    disabled={selectedRole === "admin"}
+                                    disabled={isAdmin}
                                   />
-                                  <span className="font-medium capitalize">
-                                    {module.replace(/_/g, " ")}
-                                  </span>
+                                  <span className="font-medium capitalize">{module.replace(/_/g, " ")}</span>
                                   {isModulePartiallyEnabled(module) && (
                                     <Badge variant="secondary" className="text-xs">আংশিক</Badge>
                                   )}
@@ -337,15 +310,13 @@ const AdminRolePermissions = () => {
                                   <label
                                     key={perm.id}
                                     className={`flex items-center gap-2 p-2 rounded-md border cursor-pointer transition-colors ${
-                                      hasPermission(perm.id)
-                                        ? "bg-primary/10 border-primary"
-                                        : "hover:bg-muted"
-                                    } ${selectedRole === "admin" ? "opacity-50 cursor-not-allowed" : ""}`}
+                                      hasPermission(perm.id) ? "bg-primary/10 border-primary" : "hover:bg-muted"
+                                    } ${isAdmin ? "opacity-50 cursor-not-allowed" : ""}`}
                                   >
                                     <Checkbox
                                       checked={hasPermission(perm.id)}
                                       onCheckedChange={() => togglePermission(perm.id)}
-                                      disabled={selectedRole === "admin"}
+                                      disabled={isAdmin}
                                     />
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-medium truncate">{perm.name_bn}</p>

@@ -3651,19 +3651,19 @@ export type Database = {
           created_at: string
           id: string
           permission_id: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
         }
         Insert: {
           created_at?: string
           id?: string
           permission_id: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
         }
         Update: {
           created_at?: string
           id?: string
           permission_id?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role?: string
         }
         Relationships: [
           {
@@ -4827,21 +4827,21 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role?: string
           updated_at?: string
           user_id?: string
         }
@@ -5016,10 +5016,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      get_least_loaded_staff: {
-        Args: { _role: Database["public"]["Enums"]["app_role"] }
-        Returns: string
-      }
+      get_least_loaded_staff:
+        | {
+            Args: { _role: Database["public"]["Enums"]["app_role"] }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.get_least_loaded_staff(_role => text), public.get_least_loaded_staff(_role => app_role). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
+        | {
+            Args: { _role: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.get_least_loaded_staff(_role => text), public.get_least_loaded_staff(_role => app_role). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
       get_order_tracking: { Args: { p_order_number: string }; Returns: Json }
       get_visitor_chat_messages: {
         Args: { p_conversation_id: string; p_visitor_id: string }
@@ -5070,13 +5079,15 @@ export type Database = {
         Args: { _action: string; _module: string; _user_id: string }
         Returns: boolean
       }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      has_role:
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["app_role"]
+              _user_id: string
+            }
+            Returns: boolean
+          }
+        | { Args: { _role: string; _user_id: string }; Returns: boolean }
       insert_visitor_chat_message: {
         Args: {
           p_attachment_name?: string
