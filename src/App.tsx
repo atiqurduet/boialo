@@ -106,6 +106,8 @@ import AdminSocialMedia from "./pages/admin/AdminSocialMedia";
 import AdminDynamicPricing from "./pages/admin/AdminDynamicPricing";
 import AdminSEOTools from "./pages/admin/AdminSEOTools";
 import AdminPopupBanners from "./pages/admin/AdminPopupBanners";
+import AdminEbooks from "./pages/admin/AdminEbooks";
+import AdminEproducts from "./pages/admin/AdminEproducts";
 import { ThemeInitializer } from "./components/ThemeInitializer";
 import { CompareFloatingBar } from "./components/CompareFloatingBar";
 import { PopupBannerRenderer } from "./components/PopupBannerRenderer";
@@ -223,6 +225,8 @@ const App = () => (
                 <Route path="/admin/dynamic-pricing" element={<AdminDynamicPricing />} />
                 <Route path="/admin/seo-tools" element={<AdminSEOTools />} />
                 <Route path="/admin/popup-banners" element={<AdminPopupBanners />} />
+                <Route path="/admin/ebooks" element={<AdminEbooks />} />
+                <Route path="/admin/eproducts" element={<AdminEproducts />} />
                 
                 {/* Dynamic Page Route - must be before catch-all */}
                 <Route path="/:slug" element={<DynamicPage />} />

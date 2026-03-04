@@ -107,6 +107,15 @@ export const menuCategories: MenuCategory[] = [
     ]
   },
   {
+    icon: BookOpen,
+    label: 'ডিজিটাল প্রোডাক্ট',
+    roles: ['admin', 'manager'],
+    items: [
+      { icon: BookOpen, label: 'ই-বুক', href: '/admin/ebooks', roles: ['admin', 'manager'] },
+      { icon: Package, label: 'ই-প্রোডাক্ট', href: '/admin/eproducts', roles: ['admin', 'manager'] },
+    ]
+  },
+  {
     icon: Megaphone,
     label: 'মার্কেটিং',
     roles: ['admin', 'manager'],

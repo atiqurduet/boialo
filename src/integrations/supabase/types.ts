@@ -1111,6 +1111,211 @@ export type Database = {
         }
         Relationships: []
       }
+      digital_product_reviews: {
+        Row: {
+          created_at: string | null
+          digital_product_id: string
+          id: string
+          is_approved: boolean | null
+          is_verified_purchase: boolean | null
+          rating: number
+          review_text: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          digital_product_id: string
+          id?: string
+          is_approved?: boolean | null
+          is_verified_purchase?: boolean | null
+          rating?: number
+          review_text?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          digital_product_id?: string
+          id?: string
+          is_approved?: boolean | null
+          is_verified_purchase?: boolean | null
+          rating?: number
+          review_text?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_product_reviews_digital_product_id_fkey"
+            columns: ["digital_product_id"]
+            isOneToOne: false
+            referencedRelation: "digital_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digital_product_versions: {
+        Row: {
+          changelog_bn: string | null
+          changelog_en: string | null
+          created_at: string | null
+          digital_product_id: string
+          file_size_mb: number | null
+          file_url: string | null
+          id: string
+          is_current: boolean | null
+          release_date: string | null
+          version: string
+        }
+        Insert: {
+          changelog_bn?: string | null
+          changelog_en?: string | null
+          created_at?: string | null
+          digital_product_id: string
+          file_size_mb?: number | null
+          file_url?: string | null
+          id?: string
+          is_current?: boolean | null
+          release_date?: string | null
+          version: string
+        }
+        Update: {
+          changelog_bn?: string | null
+          changelog_en?: string | null
+          created_at?: string | null
+          digital_product_id?: string
+          file_size_mb?: number | null
+          file_url?: string | null
+          id?: string
+          is_current?: boolean | null
+          release_date?: string | null
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_product_versions_digital_product_id_fkey"
+            columns: ["digital_product_id"]
+            isOneToOne: false
+            referencedRelation: "digital_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digital_products: {
+        Row: {
+          avg_rating: number | null
+          category: string | null
+          cover_image: string | null
+          created_at: string | null
+          description_bn: string | null
+          description_en: string | null
+          discount_percent: number | null
+          download_expiry_days: number | null
+          drm_enabled: boolean | null
+          file_format: string | null
+          file_name: string | null
+          file_size_mb: number | null
+          file_url: string | null
+          gallery_images: Json | null
+          id: string
+          is_active: boolean | null
+          is_featured: boolean | null
+          is_free: boolean | null
+          max_downloads: number | null
+          meta_description: string | null
+          meta_title: string | null
+          original_price: number | null
+          preview_pages: number | null
+          preview_url: string | null
+          price: number
+          product_type: string
+          review_count: number | null
+          slug: string
+          subcategory: string | null
+          tags: string[] | null
+          title_bn: string
+          title_en: string | null
+          total_downloads: number | null
+          total_sales: number | null
+          updated_at: string | null
+          watermark_enabled: boolean | null
+        }
+        Insert: {
+          avg_rating?: number | null
+          category?: string | null
+          cover_image?: string | null
+          created_at?: string | null
+          description_bn?: string | null
+          description_en?: string | null
+          discount_percent?: number | null
+          download_expiry_days?: number | null
+          drm_enabled?: boolean | null
+          file_format?: string | null
+          file_name?: string | null
+          file_size_mb?: number | null
+          file_url?: string | null
+          gallery_images?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          is_free?: boolean | null
+          max_downloads?: number | null
+          meta_description?: string | null
+          meta_title?: string | null
+          original_price?: number | null
+          preview_pages?: number | null
+          preview_url?: string | null
+          price?: number
+          product_type?: string
+          review_count?: number | null
+          slug: string
+          subcategory?: string | null
+          tags?: string[] | null
+          title_bn: string
+          title_en?: string | null
+          total_downloads?: number | null
+          total_sales?: number | null
+          updated_at?: string | null
+          watermark_enabled?: boolean | null
+        }
+        Update: {
+          avg_rating?: number | null
+          category?: string | null
+          cover_image?: string | null
+          created_at?: string | null
+          description_bn?: string | null
+          description_en?: string | null
+          discount_percent?: number | null
+          download_expiry_days?: number | null
+          drm_enabled?: boolean | null
+          file_format?: string | null
+          file_name?: string | null
+          file_size_mb?: number | null
+          file_url?: string | null
+          gallery_images?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          is_free?: boolean | null
+          max_downloads?: number | null
+          meta_description?: string | null
+          meta_title?: string | null
+          original_price?: number | null
+          preview_pages?: number | null
+          preview_url?: string | null
+          price?: number
+          product_type?: string
+          review_count?: number | null
+          slug?: string
+          subcategory?: string | null
+          tags?: string[] | null
+          title_bn?: string
+          title_en?: string | null
+          total_downloads?: number | null
+          total_sales?: number | null
+          updated_at?: string | null
+          watermark_enabled?: boolean | null
+        }
+        Relationships: []
+      }
       digital_purchases: {
         Row: {
           created_at: string
@@ -1191,6 +1396,86 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      ebook_metadata: {
+        Row: {
+          audio_duration_minutes: number | null
+          audio_url: string | null
+          author: string | null
+          author_id: string | null
+          created_at: string | null
+          digital_product_id: string
+          edition: string | null
+          format: string | null
+          has_audio: boolean | null
+          id: string
+          isbn: string | null
+          language: string | null
+          page_count: number | null
+          publish_year: number | null
+          publisher: string | null
+          publisher_id: string | null
+          sample_chapter_url: string | null
+          table_of_contents: Json | null
+          translator: string | null
+          translator_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          audio_duration_minutes?: number | null
+          audio_url?: string | null
+          author?: string | null
+          author_id?: string | null
+          created_at?: string | null
+          digital_product_id: string
+          edition?: string | null
+          format?: string | null
+          has_audio?: boolean | null
+          id?: string
+          isbn?: string | null
+          language?: string | null
+          page_count?: number | null
+          publish_year?: number | null
+          publisher?: string | null
+          publisher_id?: string | null
+          sample_chapter_url?: string | null
+          table_of_contents?: Json | null
+          translator?: string | null
+          translator_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          audio_duration_minutes?: number | null
+          audio_url?: string | null
+          author?: string | null
+          author_id?: string | null
+          created_at?: string | null
+          digital_product_id?: string
+          edition?: string | null
+          format?: string | null
+          has_audio?: boolean | null
+          id?: string
+          isbn?: string | null
+          language?: string | null
+          page_count?: number | null
+          publish_year?: number | null
+          publisher?: string | null
+          publisher_id?: string | null
+          sample_chapter_url?: string | null
+          table_of_contents?: Json | null
+          translator?: string | null
+          translator_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ebook_metadata_digital_product_id_fkey"
+            columns: ["digital_product_id"]
+            isOneToOne: false
+            referencedRelation: "digital_products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_campaigns: {
         Row: {
@@ -2995,6 +3280,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      product_licenses: {
+        Row: {
+          activated_at: string | null
+          activation_count: number | null
+          created_at: string | null
+          digital_product_id: string
+          expires_at: string | null
+          id: string
+          license_key: string
+          max_activations: number | null
+          metadata: Json | null
+          order_id: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          activation_count?: number | null
+          created_at?: string | null
+          digital_product_id: string
+          expires_at?: string | null
+          id?: string
+          license_key: string
+          max_activations?: number | null
+          metadata?: Json | null
+          order_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          activation_count?: number | null
+          created_at?: string | null
+          digital_product_id?: string
+          expires_at?: string | null
+          id?: string
+          license_key?: string
+          max_activations?: number | null
+          metadata?: Json | null
+          order_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_licenses_digital_product_id_fkey"
+            columns: ["digital_product_id"]
+            isOneToOne: false
+            referencedRelation: "digital_products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_questions: {
         Row: {
