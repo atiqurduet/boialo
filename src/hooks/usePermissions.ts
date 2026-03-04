@@ -24,7 +24,7 @@ interface UserPermissions {
 export function usePermissions(): UserPermissions & { isLoading: boolean } {
   const { user } = useAuth();
 
-  type AppRole = "admin" | "manager" | "support";
+  type AppRole = string;
   
   const { data: userRole } = useQuery({
     queryKey: ["user-role", user?.id],
