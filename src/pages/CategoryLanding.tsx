@@ -455,81 +455,85 @@ const CategoryLanding = () => {
       <Header />
 
       <main className="container mx-auto px-4 py-6">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-sm mb-4 flex-wrap">
-          <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">হোম</Link>
-          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
-          <Link to={`/category/${productType}`} className="text-muted-foreground hover:text-primary transition-colors">
-            {getTypeLabel(productType) || PRODUCT_TYPE_LABELS[productType] || productType}
-          </Link>
-          {parentCategory && (
-            <>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
-              <Link to={`/category/${productType}/${parentCategory.slug}`} className="text-muted-foreground hover:text-primary transition-colors">
-                {parentCategory.name_bn}
-              </Link>
-            </>
-          )}
-          {currentCategory && (
-            <>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
-              <span className="text-foreground font-medium">{currentCategory.name_bn}</span>
-            </>
-          )}
-        </nav>
-
-        {/* Category Title */}
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-4">{pageTitle}</h1>
-
-        {/* Subcategories - horizontal scrollable carousel */}
-        {subcategories.length > 0 && (
-          <div className="relative mb-6">
-            {canScrollLeft && (
-              <button
-                onClick={() => scrollSub('left')}
-                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-card shadow-md border border-border/50 flex items-center justify-center hover:bg-muted transition-colors -translate-x-2"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-            )}
-            <div
-              ref={subScrollRef}
-              className="flex gap-1 overflow-x-auto border-b border-border/50 pb-3"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              {subcategories.map((sub) => (
-                <Link
-                  key={sub.id}
-                  to={`/category/${productType}/${sub.slug}`}
-                  className="flex items-center gap-1.5 px-4 py-2 text-sm whitespace-nowrap text-muted-foreground hover:text-primary border-b-2 border-transparent hover:border-primary transition-all flex-shrink-0"
-                >
-                  <span>{sub.name_bn}</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </Link>
-              ))}
-            </div>
-            {canScrollRight && (
-              <button
-                onClick={() => scrollSub('right')}
-                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-card shadow-md border border-border/50 flex items-center justify-center hover:bg-muted transition-colors translate-x-2"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        )}
-
         {/* Main content: Sidebar + Products */}
         <div className="flex gap-6 lg:gap-8">
           {/* Desktop Sidebar */}
           <aside className="hidden lg:block w-60 xl:w-64 flex-shrink-0">
             <div className="sticky top-24 bg-card rounded-lg border border-border/50 p-4 shadow-sm">
+              <h3 className="font-semibold text-sm mb-3 pb-2 border-b border-border/50">ফিল্টার</h3>
               <FilterSidebar />
             </div>
           </aside>
 
           {/* Products area */}
           <div className="flex-1 min-w-0">
+            {/* Breadcrumb */}
+            <nav className="flex items-center gap-1.5 text-sm mb-3 flex-wrap">
+              <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">হোম</Link>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+              <Link to={`/category/${productType}`} className="text-muted-foreground hover:text-primary transition-colors">
+                {getTypeLabel(productType) || PRODUCT_TYPE_LABELS[productType] || productType}
+              </Link>
+              {parentCategory && (
+                <>
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+                  <Link to={`/category/${productType}/${parentCategory.slug}`} className="text-muted-foreground hover:text-primary transition-colors">
+                    {parentCategory.name_bn}
+                  </Link>
+                </>
+              )}
+              {currentCategory && (
+                <>
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+                  <span className="text-foreground font-medium">{currentCategory.name_bn}</span>
+                </>
+              )}
+            </nav>
+
+            {/* Category Title */}
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-1">{pageTitle}</h1>
+            <p className="text-sm text-muted-foreground mb-4">
+              <span className="font-semibold text-foreground">{sortedProducts.length}</span> টি পণ্য পাওয়া গেছে
+            </p>
+
+            {/* Subcategories - horizontal scrollable carousel */}
+            {subcategories.length > 0 && (
+              <div className="relative mb-5">
+                {canScrollLeft && (
+                  <button
+                    onClick={() => scrollSub('left')}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-card shadow-md border border-border/50 flex items-center justify-center hover:bg-muted transition-colors -translate-x-2"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                )}
+                <div
+                  ref={subScrollRef}
+                  className="flex gap-1 overflow-x-auto border-b border-border/50 pb-3"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  {subcategories.map((sub) => (
+                    <Link
+                      key={sub.id}
+                      to={`/category/${productType}/${sub.slug}`}
+                      className="flex items-center gap-1.5 px-4 py-2 text-sm whitespace-nowrap text-muted-foreground hover:text-primary border-b-2 border-transparent hover:border-primary transition-all flex-shrink-0"
+                    >
+                      <span>{sub.name_bn}</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+                  ))}
+                </div>
+                {canScrollRight && (
+                  <button
+                    onClick={() => scrollSub('right')}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-card shadow-md border border-border/50 flex items-center justify-center hover:bg-muted transition-colors translate-x-2"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Top bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
               <div className="flex items-center gap-3">
@@ -553,10 +557,6 @@ const CategoryLanding = () => {
                     </div>
                   </SheetContent>
                 </Sheet>
-
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-semibold text-foreground">{sortedProducts.length}</span> টি প্রোডাক্ট
-                </p>
               </div>
 
               <div className="flex items-center gap-3">
