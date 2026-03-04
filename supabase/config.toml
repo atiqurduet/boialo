@@ -45,3 +45,6 @@ verify_jwt = false
 [functions.social-media-post]
 verify_jwt = false
 
+[functions.admin-create-user]
+verify_jwt = false
+
