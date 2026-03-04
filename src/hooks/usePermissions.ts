@@ -42,7 +42,7 @@ export function usePermissions(): UserPermissions & { isLoading: boolean } {
     enabled: !!user?.id,
   });
 
-  const isAdmin = userRole === "admin";
+  const isAdmin = userRole === "admin" || userRole === "super_admin";
 
   const { data: permissions = [], isLoading } = useQuery({
     queryKey: ["user-permissions", user?.id, userRole],

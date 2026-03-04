@@ -178,6 +178,7 @@ export const menuCategories: MenuCategory[] = [
 ];
 
 export const roleLabels: Record<string, string> = {
+  super_admin: 'সুপার এডমিন',
   admin: 'এডমিন',
   manager: 'ম্যানেজার',
   support: 'সাপোর্ট'
