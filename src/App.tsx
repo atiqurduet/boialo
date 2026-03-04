@@ -98,6 +98,8 @@ import AdminContactMessages from "./pages/admin/AdminContactMessages";
 import AdminMarketingAutomation from "./pages/admin/AdminMarketingAutomation";
 import GiftCards from "./pages/GiftCards";
 import Compare from "./pages/Compare";
+import Ebooks from "./pages/Ebooks";
+import Eproducts from "./pages/Eproducts";
 import AdminInventory from "./pages/admin/AdminInventory";
 import AdminDeliveryZones from "./pages/admin/AdminDeliveryZones";
 import AdminReferralProgram from "./pages/admin/AdminReferralProgram";
@@ -166,6 +168,8 @@ const App = () => (
                 <Route path="/gift-cards" element={<GiftCards />} />
                 <Route path="/bundles" element={<Bundles />} />
                 <Route path="/compare" element={<Compare />} />
+                <Route path="/ebooks" element={<Ebooks />} />
+                <Route path="/eproducts" element={<Eproducts />} />
                 <Route path="/wishlist/shared/:shareCode" element={<SharedWishlist />} />
                 
                 {/* Admin Routes */}

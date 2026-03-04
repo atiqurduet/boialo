@@ -222,7 +222,7 @@ export const EbookSection = ({
           </Badge>
         </div>
         <Link
-          to="/digital-library"
+          to="/ebooks"
           className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
         >
           সব দেখুন <ChevronRight className="w-4 h-4" />
