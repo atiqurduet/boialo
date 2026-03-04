@@ -242,6 +242,10 @@ const AdminUsers = () => {
 
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      if (role === 'admin') throw new Error('সুপার এডমিন রোল অ্যাসাইন করা যাবে না');
+      // Prevent changing the existing admin's role
+      const existingAdmin = staffMembers.find(s => s.role === 'admin');
+      if (existingAdmin && existingAdmin.user_id === userId) throw new Error('সুপার এডমিনের রোল পরিবর্তন করা যাবে না');
       const { error } = await supabase.from('user_roles').update({ role: role as any }).eq('user_id', userId);
       if (error) throw error;
     },
@@ -252,6 +256,8 @@ const AdminUsers = () => {
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
       if (userId === user?.id) throw new Error('আপনি নিজেকে রিমুভ করতে পারবেন না');
+      const adminUser = staffMembers.find(s => s.role === 'admin');
+      if (adminUser && adminUser.user_id === userId) throw new Error('সুপার এডমিনকে রিমুভ করা যাবে না');
       const { error } = await supabase.from('user_roles').delete().eq('user_id', userId);
       if (error) throw error;
     },
@@ -359,7 +365,7 @@ const AdminUsers = () => {
   };
 
   const RoleSelectItems = () => (
-    <>{rolesConfig.map(r => (
+    <>{rolesConfig.filter(r => r.role_key !== 'admin').map(r => (
       <SelectItem key={r.role_key} value={r.role_key}>
         <span>{r.label_bn}</span>
         <span className="text-xs text-muted-foreground ml-2">— {r.description_bn}</span>
