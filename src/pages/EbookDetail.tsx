@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
@@ -27,6 +27,7 @@ const EbookDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const { addToCart } = useCart();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("description");
   const [selectedImage, setSelectedImage] = useState(0);
 
@@ -433,21 +434,34 @@ const EbookDetail = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3">
+              <div className="space-y-2">
                 {hasPurchased || ebook.is_free ? (
-                  <Button size="lg" onClick={handleDownload} className="gap-2 flex-1">
-                    <Download className="w-5 h-5" />
-                    {ebook.is_free ? "ফ্রি ডাউনলোড" : "ডাউনলোড করুন"}
-                  </Button>
+                  <>
+                    <div className="flex gap-2">
+                      <Button size="lg" onClick={() => navigate(`/ebooks/${slug}/read`)} className="gap-2 flex-1">
+                        <BookOpen className="w-5 h-5" />
+                        অনলাইনে পড়ুন
+                      </Button>
+                      <Button variant="outline" size="lg" className="px-3">
+                        <Heart className="w-5 h-5" />
+                      </Button>
+                    </div>
+                    <Button size="lg" variant="secondary" onClick={handleDownload} className="gap-2 w-full">
+                      <Download className="w-5 h-5" />
+                      {ebook.is_free ? "ফ্রি ডাউনলোড" : "ডাউনলোড করুন"}
+                    </Button>
+                  </>
                 ) : (
-                  <Button size="lg" onClick={handleAddToCart} className="gap-2 flex-1">
-                    <ShoppingCart className="w-5 h-5" />
-                    কার্টে যোগ করুন
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="lg" onClick={handleAddToCart} className="gap-2 flex-1">
+                      <ShoppingCart className="w-5 h-5" />
+                      কার্টে যোগ করুন
+                    </Button>
+                    <Button variant="outline" size="lg" className="px-3">
+                      <Heart className="w-5 h-5" />
+                    </Button>
+                  </div>
                 )}
-                <Button variant="outline" size="lg" className="px-3">
-                  <Heart className="w-5 h-5" />
-                </Button>
               </div>
             </div>
 

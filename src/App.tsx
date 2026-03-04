@@ -43,6 +43,7 @@ import BlogPost from "./pages/BlogPost";
 import DigitalLibrary from "./pages/DigitalLibrary";
 import Bundles from "./pages/Bundles";
 import SharedWishlist from "./pages/SharedWishlist";
+import EbookReader from "./pages/EbookReader";
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
@@ -171,6 +172,7 @@ const App = () => (
                 <Route path="/compare" element={<Compare />} />
                 <Route path="/ebooks" element={<Ebooks />} />
                 <Route path="/ebooks/:slug" element={<EbookDetail />} />
+                <Route path="/ebooks/:slug/read" element={<EbookReader />} />
                 <Route path="/eproducts" element={<Eproducts />} />
                 <Route path="/wishlist/shared/:shareCode" element={<SharedWishlist />} />
                 
