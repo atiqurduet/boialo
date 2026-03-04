@@ -58,11 +58,13 @@ const AdminEbooks = () => {
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const [uploadingPreview, setUploadingPreview] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
+  const [uploadingSample, setUploadingSample] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const previewInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const sampleInputRef = useRef<HTMLInputElement>(null);
   const perPage = 20;
 
   const [formTab, setFormTab] = useState("basic");
@@ -245,6 +247,19 @@ const AdminEbooks = () => {
       toast.success("প্রিভিউ আপলোড হয়েছে");
     } catch { toast.error("আপলোড ব্যর্থ"); }
     finally { setUploadingPreview(false); if (previewInputRef.current) previewInputRef.current.value = ''; }
+  };
+
+  const handleSampleChapterUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { toast.error("ফাইল সাইজ ২০MB এর বেশি"); return; }
+    setUploadingSample(true);
+    try {
+      const { url } = await uploadFile(file, 'product-previews', 'sample-chapters');
+      setForm((f: any) => ({ ...f, sample_chapter_url: url }));
+      toast.success("স্যাম্পল চ্যাপ্টার আপলোড হয়েছে");
+    } catch { toast.error("আপলোড ব্যর্থ"); }
+    finally { setUploadingSample(false); if (sampleInputRef.current) sampleInputRef.current.value = ''; }
   };
 
   const removeGalleryImage = (index: number) => {
@@ -481,6 +496,7 @@ const AdminEbooks = () => {
       <input ref={audioInputRef} type="file" accept="audio/*" onChange={handleAudioUpload} className="hidden" />
       <input ref={previewInputRef} type="file" accept="image/*,.pdf" onChange={handlePreviewUpload} className="hidden" />
       <input ref={galleryInputRef} type="file" accept="image/*" multiple onChange={handleGalleryUpload} className="hidden" />
+      <input ref={sampleInputRef} type="file" accept=".pdf,image/*" onChange={handleSampleChapterUpload} className="hidden" />
     </>
   );
 
@@ -1087,10 +1103,32 @@ const AdminEbooks = () => {
                     )}
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><Label>প্রিভিউ পৃষ্ঠা সংখ্যা</Label><Input type="number" value={form.preview_pages} onChange={e => setForm({ ...form, preview_pages: Number(e.target.value) })} /></div>
-                  <div><Label>স্যাম্পল চ্যাপ্টার URL</Label><Input value={form.sample_chapter_url} onChange={e => setForm({ ...form, sample_chapter_url: e.target.value })} /></div>
                 </div>
+              </div>
+
+              {/* Sample Chapter Upload */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <h4 className="font-medium flex items-center gap-2"><BookOpen className="w-4 h-4 text-amber-500" /> স্যাম্পল চ্যাপ্টার</h4>
+                {form.sample_chapter_url ? (
+                  <div className="flex items-center gap-3 bg-muted/50 rounded-lg p-3">
+                    <FileText className="w-6 h-6 text-amber-500" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">স্যাম্পল চ্যাপ্টার আপলোড হয়েছে</p>
+                      <a href={form.sample_chapter_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">দেখুন</a>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => setForm({ ...form, sample_chapter_url: '' })}><X className="w-4 h-4" /></Button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors" onClick={() => sampleInputRef.current?.click()}>
+                    {uploadingSample ? (
+                      <div className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /><span>আপলোড হচ্ছে...</span></div>
+                    ) : (
+                      <><BookOpen className="w-8 h-8 mx-auto text-muted-foreground mb-2" /><p className="text-sm">স্যাম্পল চ্যাপ্টার PDF/ইমেজ আপলোড করুন</p><p className="text-xs text-muted-foreground">সর্বোচ্চ ২০MB</p></>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Audio Upload */}
