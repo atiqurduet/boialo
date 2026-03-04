@@ -70,9 +70,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const validRoles = ["admin", "manager", "support"];
+    const validRoles = ["manager", "support"];
     if (role && !validRoles.includes(role)) {
-      return new Response(JSON.stringify({ error: "Invalid role" }), {
+      return new Response(JSON.stringify({ error: "Invalid role. Admin role cannot be assigned." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
