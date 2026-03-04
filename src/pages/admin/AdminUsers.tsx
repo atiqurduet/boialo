@@ -79,6 +79,7 @@ const AdminUsers = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [addDirectOpen, setAddDirectOpen] = useState(false);
+  const [createUserOpen, setCreateUserOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<StaffMember | null>(null);
   const [viewingUser, setViewingUser] = useState<StaffMember | null>(null);
 
@@ -89,6 +90,13 @@ const AdminUsers = () => {
   // Direct add form
   const [directEmail, setDirectEmail] = useState('');
   const [directRole, setDirectRole] = useState<AppRole>('support');
+
+  // Create user form
+  const [createEmail, setCreateEmail] = useState('');
+  const [createPassword, setCreatePassword] = useState('');
+  const [createName, setCreateName] = useState('');
+  const [createPhone, setCreatePhone] = useState('');
+  const [createRole, setCreateRole] = useState<AppRole>('support');
 
   // Edit form
   const [editRole, setEditRole] = useState<AppRole>('support');
@@ -341,7 +349,32 @@ const AdminUsers = () => {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Filtered staff
+  // Create user mutation (via edge function)
+  const createUserMutation = useMutation({
+    mutationFn: async ({ email, password, full_name, phone, role }: {
+      email: string; password: string; full_name: string; phone: string; role: AppRole;
+    }) => {
+      const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        body: { email: email.trim().toLowerCase(), password, full_name: full_name.trim(), phone: phone.trim(), role },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('নতুন ইউজার তৈরি হয়েছে');
+      queryClient.invalidateQueries({ queryKey: ['admin-users-staff'] });
+      setCreateUserOpen(false);
+      setCreateEmail('');
+      setCreatePassword('');
+      setCreateName('');
+      setCreatePhone('');
+      setCreateRole('support');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+
   const filteredStaff = staffMembers.filter(s => {
     const matchSearch = !search ||
       s.profile?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -393,6 +426,11 @@ const AdminUsers = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setCreateUserOpen(true)}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  নতুন ইউজার তৈরি করুন
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setInviteDialogOpen(true)}>
                   <Mail className="h-4 w-4 mr-2" />
                   ইমেইলে ইনভাইটেশন পাঠান
@@ -808,6 +846,87 @@ const AdminUsers = () => {
                   {inviteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                   <Send className="h-4 w-4 mr-2" />
                   ইনভাইট পাঠান
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create User Dialog */}
+        <Dialog open={createUserOpen} onOpenChange={setCreateUserOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>নতুন ইউজার তৈরি করুন</DialogTitle>
+              <DialogDescription>ইমেইল, পাসওয়ার্ড ও অন্যান্য তথ্য দিয়ে সরাসরি ইউজার তৈরি করুন</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>ইমেইল <span className="text-destructive">*</span></Label>
+                  <Input
+                    type="email"
+                    value={createEmail}
+                    onChange={e => setCreateEmail(e.target.value)}
+                    placeholder="user@example.com"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>পাসওয়ার্ড <span className="text-destructive">*</span></Label>
+                  <Input
+                    type="password"
+                    value={createPassword}
+                    onChange={e => setCreatePassword(e.target.value)}
+                    placeholder="ন্যূনতম ৬ অক্ষর"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>পুরো নাম</Label>
+                  <Input
+                    value={createName}
+                    onChange={e => setCreateName(e.target.value)}
+                    placeholder="নাম লিখুন"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>ফোন নম্বর</Label>
+                  <Input
+                    value={createPhone}
+                    onChange={e => setCreatePhone(e.target.value)}
+                    placeholder="01XXXXXXXXX"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>রোল <span className="text-destructive">*</span></Label>
+                <Select value={createRole} onValueChange={v => setCreateRole(v as AppRole)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ROLES.map(r => (
+                      <SelectItem key={r.value} value={r.value}>
+                        <span>{r.label}</span>
+                        <span className="text-xs text-muted-foreground ml-2">— {r.description}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                <p>• ইমেইল স্বয়ংক্রিয়ভাবে ভেরিফাই হবে</p>
+                <p>• ইউজার সরাসরি লগইন করতে পারবে</p>
+                <p>• প্রোফাইল তথ্য অটো সেভ হবে</p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setCreateUserOpen(false)}>বাতিল</Button>
+                <Button
+                  onClick={() => createUserMutation.mutate({
+                    email: createEmail, password: createPassword,
+                    full_name: createName, phone: createPhone, role: createRole,
+                  })}
+                  disabled={createUserMutation.isPending || !createEmail.trim() || !createPassword || createPassword.length < 6}
+                >
+                  {createUserMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  ইউজার তৈরি করুন
                 </Button>
               </div>
             </div>
