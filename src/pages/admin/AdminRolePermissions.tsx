@@ -258,6 +258,9 @@ const AdminRolePermissions = () => {
 
   // Stats for each role
   const getRoleStats = (roleKey: string) => {
+    if (roleKey === 'super_admin') {
+      return { count: permissions.length, total: permissions.length };
+    }
     const perms = allRolePermissions.filter(rp => rp.role === roleKey);
     return { count: perms.length, total: permissions.length };
   };
