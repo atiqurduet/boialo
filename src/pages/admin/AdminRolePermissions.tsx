@@ -145,11 +145,11 @@ const AdminRolePermissions = () => {
         .eq("is_active", true)
         .order("sort_order");
       if (error) throw error;
-      return data as RoleConfig[];
+      return (data as RoleConfig[]).filter(r => r.role_key !== 'super_admin');
     },
   });
 
-  const effectiveSelectedRole = selectedRole || rolesConfig.find(r => r.role_key !== "admin")?.role_key || "";
+  const effectiveSelectedRole = selectedRole || rolesConfig[0]?.role_key || "";
 
   // Fetch all permissions
   const { data: permissions = [], isLoading: permissionsLoading } = useQuery({
