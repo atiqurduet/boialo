@@ -117,63 +117,52 @@ const EbookDetail = () => {
   const handleDownload = async () => {
     if (!ebook) return;
 
-    if (ebook.is_free) {
-      if (!user) {
-        toast.error("ডাউনলোড করতে লগইন করুন");
-        return;
-      }
-      if (!hasPurchased) {
-        await supabase.from("digital_purchases").insert({
-          user_id: user.id,
-          product_id: ebook.id,
-          product_type: "ebook",
-          max_downloads: ebook.max_downloads || 5,
-        });
-      }
+    if (!user) {
+      toast.error("ডাউনলোড করতে লগইন করুন");
+      return;
     }
 
-    if (ebook.file_url) {
-      if (user && hasPurchased) {
-        const { data: purchase } = await supabase
-          .from("digital_purchases")
-          .select("id, download_count, max_downloads, expires_at")
-          .eq("product_id", ebook.id)
-          .eq("user_id", user.id)
-          .maybeSingle();
+    try {
+      toast.info("ডাউনলোড প্রস্তুত হচ্ছে...");
+      
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      
+      if (!token) {
+        toast.error("অনুগ্রহ করে আবার লগইন করুন");
+        return;
+      }
 
-        if (purchase) {
-          if (purchase.max_downloads && purchase.download_count >= purchase.max_downloads) {
-            toast.error("ডাউনলোড সীমা শেষ হয়ে গেছে");
-            return;
-          }
-          if (purchase.expires_at && new Date(purchase.expires_at) < new Date()) {
-            toast.error("ডাউনলোড মেয়াদ শেষ হয়ে গেছে");
-            return;
-          }
-          await supabase
-            .from("digital_purchases")
-            .update({ download_count: (purchase.download_count || 0) + 1 })
-            .eq("id", purchase.id);
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/secure-download`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ product_id: ebook.id }),
         }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast.error(errorData.error || "ডাউনলোড করতে সমস্যা হয়েছে");
+        return;
       }
-      // Use fetch to download without exposing URL
-      try {
-        const response = await fetch(ebook.file_url);
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = blobUrl;
-        a.download = ebook.file_name || `${ebook.slug}.${ebook.file_format || "pdf"}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(blobUrl);
-        toast.success("ডাউনলোড শুরু হয়েছে");
-      } catch {
-        toast.error("ডাউনলোড করতে সমস্যা হয়েছে");
-      }
-    } else {
-      toast.error("ফাইল পাওয়া যায়নি");
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = ebook.file_name || `${ebook.slug}.${ebook.file_format || "pdf"}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      toast.success("ডাউনলোড শুরু হয়েছে");
+    } catch {
+      toast.error("ডাউনলোড করতে সমস্যা হয়েছে");
     }
   };
 
