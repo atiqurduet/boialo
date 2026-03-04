@@ -65,6 +65,8 @@ const AdminEbooks = () => {
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const perPage = 20;
 
+  const [formTab, setFormTab] = useState("basic");
+
   const [form, setForm] = useState<any>({
     title_bn: '', title_en: '', slug: '', description_bn: '', description_en: '',
     product_type: 'ebook', category: '', subcategory: '', price: 0, original_price: 0, discount_percent: 0,
@@ -72,8 +74,8 @@ const AdminEbooks = () => {
     preview_url: '', preview_pages: 10, is_active: true, is_featured: false, is_free: false,
     max_downloads: 5, download_expiry_days: 365, drm_enabled: false, watermark_enabled: false,
     tags: [], meta_title: '', meta_description: '',
-    isbn: '', language: 'bn', page_count: 0, publisher: '', publisher_id: '', author: '', author_id: '',
-    translator: '', translator_id: '', edition: '', publish_year: new Date().getFullYear(), format: 'pdf',
+    isbn: '', language: 'bn', page_count: 0, publisher: '', publisher_id: 'none', author: '', author_id: 'none',
+    translator: '', translator_id: 'none', edition: '', publish_year: new Date().getFullYear(), format: 'pdf',
     has_audio: false, audio_url: '', audio_duration_minutes: 0, sample_chapter_url: '',
     table_of_contents: [],
   });
@@ -298,7 +300,7 @@ const AdminEbooks = () => {
       productData.gallery_images = gallery_images;
 
       // Clean empty strings to null for optional fields
-      const cleanStr = (v: any) => (v && String(v).trim()) ? String(v).trim() : null;
+      const cleanStr = (v: any) => (v && String(v).trim() && String(v).trim() !== 'none') ? String(v).trim() : null;
       const cleanNum = (v: any) => (v && Number(v) > 0) ? Number(v) : null;
 
       const ebookMeta = {
@@ -424,15 +426,16 @@ const AdminEbooks = () => {
       drm_enabled: item.drm_enabled || false, watermark_enabled: item.watermark_enabled || false,
       tags: item.tags || [], meta_title: item.meta_title || '', meta_description: item.meta_description || '',
       isbn: meta.isbn || '', language: meta.language || 'bn', page_count: meta.page_count || 0,
-      publisher: meta.publisher || '', publisher_id: meta.publisher_id || '',
-      author: meta.author || '', author_id: meta.author_id || '',
-      translator: meta.translator || '', translator_id: meta.translator_id || '',
+      publisher: meta.publisher || '', publisher_id: meta.publisher_id || 'none',
+      author: meta.author || '', author_id: meta.author_id || 'none',
+      translator: meta.translator || '', translator_id: meta.translator_id || 'none',
       edition: meta.edition || '', publish_year: meta.publish_year || new Date().getFullYear(),
       format: meta.format || 'pdf', has_audio: meta.has_audio || false, audio_url: meta.audio_url || '',
       audio_duration_minutes: meta.audio_duration_minutes || 0,
       sample_chapter_url: meta.sample_chapter_url || '', table_of_contents: meta.table_of_contents || [],
     });
     setEditingId(item.id);
+    setFormTab("basic");
     setShowForm(true);
   };
 
@@ -444,12 +447,13 @@ const AdminEbooks = () => {
       preview_url: '', preview_pages: 10, is_active: true, is_featured: false, is_free: false,
       max_downloads: 5, download_expiry_days: 365, drm_enabled: false, watermark_enabled: false,
       tags: [], meta_title: '', meta_description: '',
-      isbn: '', language: 'bn', page_count: 0, publisher: '', publisher_id: '', author: '', author_id: '',
-      translator: '', translator_id: '', edition: '', publish_year: new Date().getFullYear(), format: 'pdf',
+      isbn: '', language: 'bn', page_count: 0, publisher: '', publisher_id: 'none', author: '', author_id: 'none',
+      translator: '', translator_id: 'none', edition: '', publish_year: new Date().getFullYear(), format: 'pdf',
       has_audio: false, audio_url: '', audio_duration_minutes: 0, sample_chapter_url: '',
       table_of_contents: [],
     });
     setEditingId(null);
+    setFormTab("basic");
     setShowForm(true);
   };
 
@@ -877,7 +881,7 @@ const AdminEbooks = () => {
             </DialogTitle>
           </DialogHeader>
 
-          <Tabs defaultValue="basic" className="w-full">
+          <Tabs value={formTab} onValueChange={setFormTab} className="w-full">
             <TabsList className="w-full flex flex-wrap">
               <TabsTrigger value="basic">বেসিক</TabsTrigger>
               <TabsTrigger value="metadata">মেটাডাটা</TabsTrigger>
@@ -971,13 +975,14 @@ const AdminEbooks = () => {
                 {/* Writer from DB */}
                 <div>
                   <Label>লেখক (ডাটাবেস থেকে)</Label>
-                  <Select value={form.author_id} onValueChange={v => {
+                  <Select value={form.author_id || 'none'} onValueChange={v => {
+                    if (v === 'none') { setForm({ ...form, author_id: 'none', author: '' }); return; }
                     const w = writers.find((wr: any) => wr.id === v);
                     setForm({ ...form, author_id: v, author: w?.name_bn || '' });
                   }}>
                     <SelectTrigger><SelectValue placeholder="লেখক বাছুন" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">নির্বাচন করুন</SelectItem>
+                      <SelectItem value="none">নির্বাচন করুন</SelectItem>
                       {writers.map((w: any) => (
                         <SelectItem key={w.id} value={w.id}>{w.name_bn} {w.name_en ? `(${w.name_en})` : ''}</SelectItem>
                       ))}
@@ -988,13 +993,14 @@ const AdminEbooks = () => {
                 {/* Publisher from DB */}
                 <div>
                   <Label>প্রকাশনী (ডাটাবেস থেকে)</Label>
-                  <Select value={form.publisher_id} onValueChange={v => {
+                  <Select value={form.publisher_id || 'none'} onValueChange={v => {
+                    if (v === 'none') { setForm({ ...form, publisher_id: 'none', publisher: '' }); return; }
                     const p = publishers.find((pub: any) => pub.id === v);
                     setForm({ ...form, publisher_id: v, publisher: p?.name_bn || '' });
                   }}>
                     <SelectTrigger><SelectValue placeholder="প্রকাশনী বাছুন" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">নির্বাচন করুন</SelectItem>
+                      <SelectItem value="none">নির্বাচন করুন</SelectItem>
                       {publishers.map((p: any) => (
                         <SelectItem key={p.id} value={p.id}>{p.name_bn} {p.name_en ? `(${p.name_en})` : ''}</SelectItem>
                       ))}
@@ -1005,13 +1011,14 @@ const AdminEbooks = () => {
                 {/* Translator from DB */}
                 <div>
                   <Label>অনুবাদক (ডাটাবেস থেকে)</Label>
-                  <Select value={form.translator_id} onValueChange={v => {
+                  <Select value={form.translator_id || 'none'} onValueChange={v => {
+                    if (v === 'none') { setForm({ ...form, translator_id: 'none', translator: '' }); return; }
                     const w = writers.find((wr: any) => wr.id === v);
                     setForm({ ...form, translator_id: v, translator: w?.name_bn || '' });
                   }}>
                     <SelectTrigger><SelectValue placeholder="অনুবাদক বাছুন" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">নির্বাচন করুন</SelectItem>
+                      <SelectItem value="none">নির্বাচন করুন</SelectItem>
                       {writers.map((w: any) => (
                         <SelectItem key={w.id} value={w.id}>{w.name_bn}</SelectItem>
                       ))}
