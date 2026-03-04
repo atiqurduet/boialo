@@ -75,6 +75,7 @@ export const menuCategories: MenuCategory[] = [
       { icon: ShoppingCart, label: 'সকল অর্ডার', href: '/admin/orders', roles: ['admin', 'manager', 'support'] },
       { icon: ClipboardList, label: 'টাস্ক ম্যানেজমেন্ট', href: '/admin/tasks', roles: ['admin', 'manager', 'support'] },
       { icon: ShoppingBag, label: 'অসম্পূর্ণ অর্ডার', href: '/admin/abandoned-carts', roles: ['admin', 'manager', 'support'] },
+      { icon: ShoppingCart, label: 'কার্ট/উইশলিস্ট', href: '/admin/cart-wishlist-customers', roles: ['admin', 'manager', 'support'] },
       { icon: RefreshCw, label: 'রিফান্ড রিকোয়েস্ট', href: '/admin/refund-requests', roles: ['admin', 'manager', 'support'] },
       { icon: AlertTriangle, label: 'ফ্রড রিভিউ', href: '/admin/fraud-review', roles: ['admin', 'manager'] },
       { icon: MessageCircle, label: 'লাইভ চ্যাট', href: '/admin/chat', roles: ['admin', 'manager', 'support'] },
@@ -146,7 +147,6 @@ export const menuCategories: MenuCategory[] = [
     roles: ['admin', 'manager', 'support'],
     items: [
       { icon: Users, label: 'কাস্টমার', href: '/admin/customers', roles: ['admin', 'manager', 'support'] },
-      { icon: ShoppingCart, label: 'কার্ট/উইশলিস্ট', href: '/admin/cart-wishlist-customers', roles: ['admin', 'manager', 'support'] },
       { icon: UserCog, label: 'স্টাফ ম্যানেজমেন্ট', href: '/admin/users', roles: ['admin'] },
       { icon: Shield, label: 'রোল ও পার্মিশন', href: '/admin/role-permissions', roles: ['admin'] },
     ]
