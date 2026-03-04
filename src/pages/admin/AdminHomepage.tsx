@@ -1041,24 +1041,34 @@ const AdminHomepage = () => {
               <Label>নির্দিষ্ট ক্যাটাগরি নির্বাচন করুন (ঐচ্ছিক)</Label>
               <p className="text-xs text-muted-foreground mb-2">খালি রাখলে সব প্যারেন্ট ক্যাটাগরি দেখাবে</p>
               <div className="border rounded-lg max-h-48 overflow-y-auto">
+                {categories.filter(c => !categories.some(p => p.id === (c as any).parent_id && (c as any).parent_id)).length > 0 && (
+                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted/50 sticky top-0">📚 বই ক্যাটাগরি</div>
+                )}
                 {categories.filter(c => !categories.some(p => p.id === (c as any).parent_id && (c as any).parent_id)).map(cat => (
-                  <label 
-                    key={cat.id} 
-                    className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer"
-                  >
+                  <label key={cat.id} className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer">
                     <Checkbox
                       checked={selectedCatIds.includes(cat.id)}
                       onCheckedChange={(checked) => {
-                        const newIds = checked 
-                          ? [...selectedCatIds, cat.id]
-                          : selectedCatIds.filter(id => id !== cat.id);
-                        setFormData({
-                          ...formData,
-                          settings: { ...formData.settings, category_ids: newIds }
-                        });
+                        const newIds = checked ? [...selectedCatIds, cat.id] : selectedCatIds.filter(id => id !== cat.id);
+                        setFormData({ ...formData, settings: { ...formData.settings, category_ids: newIds } });
                       }}
                     />
                     <span className="text-sm">{cat.name_bn}</span>
+                  </label>
+                ))}
+                {universalCategories.length > 0 && (
+                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted/50 sticky top-0 mt-1">🛍️ অন্যান্য ক্যাটাগরি</div>
+                )}
+                {universalCategories.map(cat => (
+                  <label key={cat.id} className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer">
+                    <Checkbox
+                      checked={selectedCatIds.includes(cat.id)}
+                      onCheckedChange={(checked) => {
+                        const newIds = checked ? [...selectedCatIds, cat.id] : selectedCatIds.filter(id => id !== cat.id);
+                        setFormData({ ...formData, settings: { ...formData.settings, category_ids: newIds } });
+                      }}
+                    />
+                    <span className="text-sm">{cat.name_bn} <span className="text-xs text-muted-foreground">({cat.product_type})</span></span>
                   </label>
                 ))}
               </div>
@@ -1122,24 +1132,34 @@ const AdminHomepage = () => {
               <Label>নির্দিষ্ট ক্যাটাগরি নির্বাচন (ঐচ্ছিক)</Label>
               <p className="text-xs text-muted-foreground mb-2">খালি রাখলে প্রোডাক্ট আছে এমন সব ক্যাটাগরি দেখাবে</p>
               <div className="border rounded-lg max-h-48 overflow-y-auto">
+                {categories.length > 0 && (
+                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted/50 sticky top-0">📚 বই ক্যাটাগরি</div>
+                )}
                 {categories.map(cat => (
-                  <label 
-                    key={cat.id} 
-                    className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer"
-                  >
+                  <label key={cat.id} className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer">
                     <Checkbox
                       checked={selectedTopCatIds.includes(cat.id)}
                       onCheckedChange={(checked) => {
-                        const newIds = checked 
-                          ? [...selectedTopCatIds, cat.id]
-                          : selectedTopCatIds.filter(id => id !== cat.id);
-                        setFormData({
-                          ...formData,
-                          settings: { ...formData.settings, category_ids: newIds }
-                        });
+                        const newIds = checked ? [...selectedTopCatIds, cat.id] : selectedTopCatIds.filter(id => id !== cat.id);
+                        setFormData({ ...formData, settings: { ...formData.settings, category_ids: newIds } });
                       }}
                     />
                     <span className="text-sm">{cat.name_bn}</span>
+                  </label>
+                ))}
+                {universalCategories.length > 0 && (
+                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted/50 sticky top-0 mt-1">🛍️ অন্যান্য ক্যাটাগরি</div>
+                )}
+                {universalCategories.map(cat => (
+                  <label key={cat.id} className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer">
+                    <Checkbox
+                      checked={selectedTopCatIds.includes(cat.id)}
+                      onCheckedChange={(checked) => {
+                        const newIds = checked ? [...selectedTopCatIds, cat.id] : selectedTopCatIds.filter(id => id !== cat.id);
+                        setFormData({ ...formData, settings: { ...formData.settings, category_ids: newIds } });
+                      }}
+                    />
+                    <span className="text-sm">{cat.name_bn} <span className="text-xs text-muted-foreground">({cat.product_type})</span></span>
                   </label>
                 ))}
               </div>
