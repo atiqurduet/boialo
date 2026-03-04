@@ -13,6 +13,7 @@ interface Permission {
 
 interface UserPermissions {
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   permissions: Permission[];
   hasPermission: (module: string, action: string) => boolean;
   canView: (module: string) => boolean;
@@ -42,15 +43,15 @@ export function usePermissions(): UserPermissions & { isLoading: boolean } {
     enabled: !!user?.id,
   });
 
-  const isAdmin = userRole === "admin" || userRole === "super_admin";
+  const isSuperAdmin = userRole === "super_admin";
 
   const { data: permissions = [], isLoading } = useQuery({
     queryKey: ["user-permissions", user?.id, userRole],
     queryFn: async () => {
       if (!user?.id || !userRole) return [];
       
-      // If admin, get all permissions
-      if (isAdmin) {
+      // If super_admin, get all permissions
+      if (isSuperAdmin) {
         const { data, error } = await supabase
           .from("permissions")
           .select("*")
@@ -85,7 +86,7 @@ export function usePermissions(): UserPermissions & { isLoading: boolean } {
   });
 
   const hasPermission = (module: string, action: string): boolean => {
-    if (isAdmin) return true;
+    if (isSuperAdmin) return true;
     return permissions.some(p => p.module === module && p.action === action);
   };
 
@@ -95,7 +96,8 @@ export function usePermissions(): UserPermissions & { isLoading: boolean } {
   const canDelete = (module: string): boolean => hasPermission(module, "delete");
 
   return {
-    isAdmin,
+    isAdmin: isSuperAdmin || !!userRole,
+    isSuperAdmin,
     permissions,
     hasPermission,
     canView,
