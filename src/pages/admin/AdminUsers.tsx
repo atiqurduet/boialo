@@ -7,64 +7,48 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from '@/components/ui/dialog';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import {
-  Tabs, TabsContent, TabsList, TabsTrigger,
-} from '@/components/ui/tabs';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
+import { bn } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 import {
   Search, Shield, Trash2, UserPlus, Users, Mail, Clock, CheckCircle, XCircle,
   MoreHorizontal, Edit, Loader2, RefreshCw, Send, Copy, UserCheck,
-  Filter, ChevronDown, Eye, Plus, Settings2,
+  Filter, ChevronDown, Eye, Plus, Settings2, Activity, BarChart3,
+  ShieldCheck, AlertCircle, KeyRound,
 } from 'lucide-react';
 
 // ── Types ──
 interface RoleConfig {
-  id: string;
-  role_key: string;
-  label_bn: string;
-  label_en: string;
-  description_bn: string;
-  description_en: string;
-  is_system: boolean;
-  is_active: boolean;
-  sort_order: number;
+  id: string; role_key: string; label_bn: string; label_en: string;
+  description_bn: string; description_en: string; is_system: boolean; is_active: boolean; sort_order: number;
 }
 
 interface StaffMember {
-  id: string;
-  user_id: string;
-  role: string;
-  created_at: string;
+  id: string; user_id: string; role: string; created_at: string;
   profile?: { full_name: string | null; email: string | null; phone: string | null; avatar_url: string | null; created_at: string | null };
-  pending_tasks: number;
+  pending_tasks: number; in_progress_tasks: number; completed_tasks: number;
+  last_login?: string | null;
 }
 
 interface Invitation {
-  id: string;
-  email: string;
-  role: string;
-  token: string;
-  status: string;
-  expires_at: string;
-  accepted_at: string | null;
-  created_at: string;
+  id: string; email: string; role: string; token: string; status: string;
+  expires_at: string; accepted_at: string | null; created_at: string;
+}
+
+interface AuditEntry {
+  id: string; action: string; table_name: string | null; created_at: string; user_id: string | null;
+  new_values: any; old_values: any;
 }
 
 // ── Color helper ──
@@ -79,6 +63,7 @@ const getRoleColor = (role: string) => ROLE_COLORS[role] || 'bg-purple-100 text-
 const AdminUsers = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // UI state
   const [search, setSearch] = useState('');
@@ -103,8 +88,6 @@ const AdminUsers = () => {
   const [createPhone, setCreatePhone] = useState('');
   const [createRole, setCreateRole] = useState('support');
   const [editRole, setEditRole] = useState('support');
-
-  // Role creation form
   const [newRoleKey, setNewRoleKey] = useState('');
   const [newRoleLabelBn, setNewRoleLabelBn] = useState('');
   const [newRoleLabelEn, setNewRoleLabelEn] = useState('');
@@ -112,59 +95,61 @@ const AdminUsers = () => {
   const [newRoleDescEn, setNewRoleDescEn] = useState('');
 
   // ── Queries ──
-
-  // Fetch dynamic roles
   const { data: rolesConfig = [] } = useQuery({
     queryKey: ['roles-config'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('roles_config')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order');
+      const { data, error } = await supabase.from('roles_config').select('*').eq('is_active', true).order('sort_order');
       if (error) throw error;
       return data as RoleConfig[];
     },
   });
 
-  // All roles (including inactive for management)
   const { data: allRolesConfig = [] } = useQuery({
     queryKey: ['all-roles-config'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('roles_config')
-        .select('*')
-        .order('sort_order');
+      const { data, error } = await supabase.from('roles_config').select('*').order('sort_order');
       if (error) throw error;
       return data as RoleConfig[];
     },
   });
 
-  const getRoleLabel = (roleKey: string) => {
-    const found = rolesConfig.find(r => r.role_key === roleKey);
-    return found?.label_bn || roleKey;
-  };
+  const getRoleLabel = (roleKey: string) => rolesConfig.find(r => r.role_key === roleKey)?.label_bn || roleKey;
 
-  const getRoleDesc = (roleKey: string) => {
-    const found = rolesConfig.find(r => r.role_key === roleKey);
-    return found?.description_bn || '';
-  };
-
-  // Fetch staff
+  // Fetch staff with task stats & last login
   const { data: staffMembers = [], isLoading: staffLoading, refetch: refetchStaff } = useQuery({
     queryKey: ['admin-users-staff'],
     queryFn: async () => {
       const { data: roles, error } = await supabase.from('user_roles').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       const userIds = roles.map(r => r.user_id);
-      const { data: profiles } = await supabase.from('profiles').select('id, full_name, email, phone, avatar_url, created_at').in('id', userIds);
-      const { data: tasks } = await supabase.from('order_tasks').select('assigned_to').eq('status', 'pending').in('assigned_to', userIds);
-      const taskCounts: Record<string, number> = {};
-      tasks?.forEach(t => { taskCounts[t.assigned_to] = (taskCounts[t.assigned_to] || 0) + 1; });
+      if (userIds.length === 0) return [];
+
+      const [profilesRes, pendingRes, inProgressRes, completedRes, loginRes] = await Promise.all([
+        supabase.from('profiles').select('id, full_name, email, phone, avatar_url, created_at').in('id', userIds),
+        supabase.from('order_tasks').select('assigned_to').eq('status', 'pending').in('assigned_to', userIds),
+        supabase.from('order_tasks').select('assigned_to').eq('status', 'in_progress').in('assigned_to', userIds),
+        supabase.from('order_tasks').select('assigned_to').eq('status', 'completed').in('assigned_to', userIds),
+        supabase.from('login_logs').select('user_id, created_at').eq('event_type', 'login').eq('success', true).in('user_id', userIds).order('created_at', { ascending: false }).limit(100),
+      ]);
+
+      const pendingCounts: Record<string, number> = {};
+      pendingRes.data?.forEach(t => { pendingCounts[t.assigned_to] = (pendingCounts[t.assigned_to] || 0) + 1; });
+      const inProgressCounts: Record<string, number> = {};
+      inProgressRes.data?.forEach(t => { inProgressCounts[t.assigned_to] = (inProgressCounts[t.assigned_to] || 0) + 1; });
+      const completedCounts: Record<string, number> = {};
+      completedRes.data?.forEach(t => { completedCounts[t.assigned_to] = (completedCounts[t.assigned_to] || 0) + 1; });
+
+      // Get latest login per user
+      const lastLogins: Record<string, string> = {};
+      loginRes.data?.forEach(l => { if (!lastLogins[l.user_id!]) lastLogins[l.user_id!] = l.created_at; });
+
       return roles.map(role => ({
         ...role,
-        profile: profiles?.find(p => p.id === role.user_id),
-        pending_tasks: taskCounts[role.user_id] || 0,
+        profile: profilesRes.data?.find(p => p.id === role.user_id),
+        pending_tasks: pendingCounts[role.user_id] || 0,
+        in_progress_tasks: inProgressCounts[role.user_id] || 0,
+        completed_tasks: completedCounts[role.user_id] || 0,
+        last_login: lastLogins[role.user_id] || null,
       })) as StaffMember[];
     },
   });
@@ -179,9 +164,25 @@ const AdminUsers = () => {
     },
   });
 
-  // ── Mutations ──
+  // Fetch recent audit logs for staff
+  const { data: recentActivity = [] } = useQuery({
+    queryKey: ['staff-activity-log'],
+    queryFn: async () => {
+      const staffIds = staffMembers.map(s => s.user_id);
+      if (staffIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('admin_audit_logs')
+        .select('*')
+        .in('user_id', staffIds)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data as AuditEntry[];
+    },
+    enabled: staffMembers.length > 0,
+  });
 
-  // Send invitation
+  // ── Mutations ──
   const inviteMutation = useMutation({
     mutationFn: async ({ email, role }: { email: string; role: string }) => {
       const { data: existing } = await supabase.from('profiles').select('id').eq('email', email.trim().toLowerCase()).maybeSingle();
@@ -215,7 +216,6 @@ const AdminUsers = () => {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Direct add
   const directAddMutation = useMutation({
     mutationFn: async ({ email, role }: { email: string; role: string }) => {
       const { data: profile, error: pErr } = await supabase.from('profiles').select('id').eq('email', email.trim().toLowerCase()).single();
@@ -229,7 +229,6 @@ const AdminUsers = () => {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Create user
   const createUserMutation = useMutation({
     mutationFn: async (data: { email: string; password: string; full_name: string; phone: string; role: string }) => {
       const { data: res, error } = await supabase.functions.invoke('admin-create-user', { body: data });
@@ -241,7 +240,6 @@ const AdminUsers = () => {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Update role
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
       const { error } = await supabase.from('user_roles').update({ role: role as any }).eq('user_id', userId);
@@ -251,7 +249,6 @@ const AdminUsers = () => {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Delete user role
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
       if (userId === user?.id) throw new Error('আপনি নিজেকে রিমুভ করতে পারবেন না');
@@ -262,14 +259,12 @@ const AdminUsers = () => {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Delete invitation
   const deleteInviteMutation = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from('staff_invitations').delete().eq('id', id); if (error) throw error; },
     onSuccess: () => { toast.success('ইনভাইটেশন বাতিল হয়েছে'); queryClient.invalidateQueries({ queryKey: ['admin-users-invitations'] }); },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Resend invitation
   const resendInviteMutation = useMutation({
     mutationFn: async (invite: Invitation) => {
       const newToken = crypto.randomUUID();
@@ -285,7 +280,6 @@ const AdminUsers = () => {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Bulk delete
   const bulkDeleteMutation = useMutation({
     mutationFn: async (userIds: string[]) => {
       const filtered = userIds.filter(id => id !== user?.id);
@@ -297,17 +291,13 @@ const AdminUsers = () => {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Create role
   const createRoleMutation = useMutation({
     mutationFn: async (data: { role_key: string; label_bn: string; label_en: string; description_bn: string; description_en: string }) => {
       const { error } = await supabase.from('roles_config').insert({
         role_key: data.role_key.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
-        label_bn: data.label_bn,
-        label_en: data.label_en,
-        description_bn: data.description_bn,
-        description_en: data.description_en,
-        is_system: false,
-        sort_order: allRolesConfig.length + 1,
+        label_bn: data.label_bn, label_en: data.label_en,
+        description_bn: data.description_bn, description_en: data.description_en,
+        is_system: false, sort_order: allRolesConfig.length + 1,
       });
       if (error) throw error;
     },
@@ -321,7 +311,6 @@ const AdminUsers = () => {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Update role config
   const updateRoleConfigMutation = useMutation({
     mutationFn: async (data: { id: string; label_bn: string; label_en: string; description_bn: string; description_en: string; is_active: boolean }) => {
       const { id, ...rest } = data;
@@ -337,7 +326,6 @@ const AdminUsers = () => {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Delete role config
   const deleteRoleConfigMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('roles_config').delete().eq('id', id);
@@ -366,19 +354,23 @@ const AdminUsers = () => {
     admins: staffMembers.filter(s => s.role === 'admin').length,
     pendingInvites: invitations.filter(i => i.status === 'pending').length,
     totalRoles: allRolesConfig.length,
+    totalPendingTasks: staffMembers.reduce((s, m) => s + m.pending_tasks, 0),
+    totalCompletedTasks: staffMembers.reduce((s, m) => s + m.completed_tasks, 0),
   };
 
-  // Role select options helper
   const RoleSelectItems = () => (
-    <>
-      {rolesConfig.map(r => (
-        <SelectItem key={r.role_key} value={r.role_key}>
-          <span>{r.label_bn}</span>
-          <span className="text-xs text-muted-foreground ml-2">— {r.description_bn}</span>
-        </SelectItem>
-      ))}
-    </>
+    <>{rolesConfig.map(r => (
+      <SelectItem key={r.role_key} value={r.role_key}>
+        <span>{r.label_bn}</span>
+        <span className="text-xs text-muted-foreground ml-2">— {r.description_bn}</span>
+      </SelectItem>
+    ))}</>
   );
+
+  const getStaffName = (userId: string | null) => {
+    const staff = staffMembers.find(s => s.user_id === userId);
+    return staff?.profile?.full_name || staff?.profile?.email || userId?.slice(0, 8) || 'অজানা';
+  };
 
   return (
     <AdminLayout>
@@ -386,21 +378,24 @@ const AdminUsers = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">ইউজার ম্যানেজমেন্ট</h1>
-            <p className="text-muted-foreground">সুপার এডমিন - সকল ইউজার ও রোল ম্যানেজ করুন</p>
+            <h1 className="text-2xl font-bold">স্টাফ ম্যানেজমেন্ট</h1>
+            <p className="text-muted-foreground">সুপার এডমিন — সকল স্টাফ, রোল ও অ্যাক্টিভিটি ম্যানেজ করুন</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => navigate('/admin/role-permissions')}>
+              <KeyRound className="h-4 w-4 mr-2" />পার্মিশন সেটিংস
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button><UserPlus className="h-4 w-4 mr-2" />নতুন ইউজার<ChevronDown className="h-4 w-4 ml-1" /></Button>
+                <Button><UserPlus className="h-4 w-4 mr-2" />নতুন স্টাফ<ChevronDown className="h-4 w-4 ml-1" /></Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setCreateUserOpen(true)}>
-                  <UserPlus className="h-4 w-4 mr-2" />নতুন ইউজার তৈরি করুন
+                  <UserPlus className="h-4 w-4 mr-2" />সরাসরি তৈরি করুন
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setInviteDialogOpen(true)}>
-                  <Mail className="h-4 w-4 mr-2" />ইমেইলে ইনভাইটেশন পাঠান
+                  <Mail className="h-4 w-4 mr-2" />ইমেইলে ইনভাইটেশন
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setAddDirectOpen(true)}>
@@ -412,19 +407,21 @@ const AdminUsers = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {[
             { label: 'মোট স্টাফ', value: stats.total, icon: Users, bg: 'bg-primary/10', fg: 'text-primary' },
-            { label: 'সুপার এডমিন', value: stats.admins, icon: Shield, bg: 'bg-destructive/10', fg: 'text-destructive' },
-            { label: 'পেন্ডিং ইনভাইট', value: stats.pendingInvites, icon: Clock, bg: 'bg-accent', fg: 'text-accent-foreground' },
+            { label: 'এডমিন', value: stats.admins, icon: Shield, bg: 'bg-destructive/10', fg: 'text-destructive' },
             { label: 'মোট রোল', value: stats.totalRoles, icon: Settings2, bg: 'bg-secondary', fg: 'text-secondary-foreground' },
+            { label: 'পেন্ডিং ইনভাইট', value: stats.pendingInvites, icon: Clock, bg: 'bg-accent', fg: 'text-accent-foreground' },
+            { label: 'পেন্ডিং টাস্ক', value: stats.totalPendingTasks, icon: AlertCircle, bg: 'bg-orange-100 dark:bg-orange-900/20', fg: 'text-orange-600' },
+            { label: 'সম্পন্ন টাস্ক', value: stats.totalCompletedTasks, icon: CheckCircle, bg: 'bg-green-100 dark:bg-green-900/20', fg: 'text-green-600' },
           ].map(stat => (
             <Card key={stat.label}>
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-center gap-2">
                   <div className={`p-2 rounded-lg ${stat.bg}`}><stat.icon className={`h-4 w-4 ${stat.fg}`} /></div>
                   <div>
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                    <p className="text-[11px] text-muted-foreground leading-tight">{stat.label}</p>
                     <p className="text-xl font-bold">{stat.value}</p>
                   </div>
                 </div>
@@ -435,10 +432,12 @@ const AdminUsers = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="staff">
-          <TabsList>
-            <TabsTrigger value="staff"><Users className="h-4 w-4 mr-1" />সক্রিয় ইউজার ({staffMembers.length})</TabsTrigger>
+          <TabsList className="flex-wrap h-auto">
+            <TabsTrigger value="staff"><Users className="h-4 w-4 mr-1" />স্টাফ ({staffMembers.length})</TabsTrigger>
             <TabsTrigger value="invitations"><Mail className="h-4 w-4 mr-1" />ইনভাইটেশন ({invitations.length})</TabsTrigger>
-            <TabsTrigger value="roles"><Shield className="h-4 w-4 mr-1" />রোল ম্যানেজমেন্ট ({allRolesConfig.length})</TabsTrigger>
+            <TabsTrigger value="workload"><BarChart3 className="h-4 w-4 mr-1" />ওয়ার্কলোড</TabsTrigger>
+            <TabsTrigger value="roles"><Shield className="h-4 w-4 mr-1" />রোল ({allRolesConfig.length})</TabsTrigger>
+            <TabsTrigger value="activity"><Activity className="h-4 w-4 mr-1" />অ্যাক্টিভিটি</TabsTrigger>
           </TabsList>
 
           {/* ── Staff Tab ── */}
@@ -472,16 +471,16 @@ const AdminUsers = () => {
                 {staffLoading ? (
                   <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
                 ) : filteredStaff.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">{search || roleFilter !== 'all' ? 'কোনো ইউজার পাওয়া যায়নি' : 'কোনো স্টাফ নেই।'}</div>
+                  <div className="text-center py-12 text-muted-foreground">{search || roleFilter !== 'all' ? 'কোনো স্টাফ পাওয়া যায়নি' : 'কোনো স্টাফ নেই।'}</div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-10"><Checkbox checked={selectedIds.length === filteredStaff.length && filteredStaff.length > 0} onCheckedChange={toggleSelectAll} /></TableHead>
-                        <TableHead>ইউজার</TableHead>
+                        <TableHead>স্টাফ</TableHead>
                         <TableHead>রোল</TableHead>
-                        <TableHead className="hidden md:table-cell">ফোন</TableHead>
-                        <TableHead className="hidden md:table-cell">পেন্ডিং টাস্ক</TableHead>
+                        <TableHead className="hidden md:table-cell">টাস্ক</TableHead>
+                        <TableHead className="hidden lg:table-cell">শেষ লগইন</TableHead>
                         <TableHead className="hidden lg:table-cell">যোগদান</TableHead>
                         <TableHead className="text-right">অ্যাকশন</TableHead>
                       </TableRow>
@@ -489,6 +488,8 @@ const AdminUsers = () => {
                     <TableBody>
                       {filteredStaff.map(staff => {
                         const isSelf = staff.user_id === user?.id;
+                        const totalTasks = staff.pending_tasks + staff.in_progress_tasks + staff.completed_tasks;
+                        const completionRate = totalTasks > 0 ? Math.round((staff.completed_tasks / totalTasks) * 100) : 0;
                         return (
                           <TableRow key={staff.user_id}>
                             <TableCell><Checkbox checked={selectedIds.includes(staff.user_id)} onCheckedChange={() => toggleSelect(staff.user_id)} disabled={isSelf} /></TableCell>
@@ -502,14 +503,26 @@ const AdminUsers = () => {
                                     {staff.profile?.full_name || 'N/A'}
                                     {isSelf && <Badge variant="outline" className="text-[10px] px-1 py-0">আপনি</Badge>}
                                   </p>
-                                  <p className="text-sm text-muted-foreground truncate">{staff.profile?.email}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{staff.profile?.email}</p>
+                                  {staff.profile?.phone && <p className="text-xs text-muted-foreground md:hidden">{staff.profile.phone}</p>}
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell><Badge className={getRoleColor(staff.role)}>{getRoleLabel(staff.role)}</Badge></TableCell>
-                            <TableCell className="hidden md:table-cell text-sm">{staff.profile?.phone || '—'}</TableCell>
                             <TableCell className="hidden md:table-cell">
-                              {staff.pending_tasks > 0 ? <Badge variant="outline">{staff.pending_tasks}</Badge> : <span className="text-sm text-muted-foreground">০</span>}
+                              <div className="flex items-center gap-2">
+                                <div className="flex gap-1 text-xs">
+                                  {staff.pending_tasks > 0 && <Badge variant="outline" className="text-orange-600 border-orange-200 px-1.5">{staff.pending_tasks}</Badge>}
+                                  {staff.in_progress_tasks > 0 && <Badge variant="outline" className="text-blue-600 border-blue-200 px-1.5">{staff.in_progress_tasks}</Badge>}
+                                  <Badge variant="outline" className="text-green-600 border-green-200 px-1.5">{staff.completed_tasks}</Badge>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                              {staff.last_login
+                                ? formatDistanceToNow(new Date(staff.last_login), { addSuffix: true, locale: bn })
+                                : <span className="text-xs text-muted-foreground/50">লগইন নেই</span>
+                              }
                             </TableCell>
                             <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{format(new Date(staff.created_at), 'dd/MM/yyyy')}</TableCell>
                             <TableCell className="text-right">
@@ -599,6 +612,60 @@ const AdminUsers = () => {
             </Card>
           </TabsContent>
 
+          {/* ── Workload Tab ── */}
+          <TabsContent value="workload" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {staffMembers.map(staff => {
+                const total = staff.pending_tasks + staff.in_progress_tasks + staff.completed_tasks;
+                const completionRate = total > 0 ? Math.round((staff.completed_tasks / total) * 100) : 0;
+                return (
+                  <Card key={staff.user_id}>
+                    <CardContent className="pt-5 pb-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                            <span className="text-primary font-semibold">{staff.profile?.full_name?.[0]?.toUpperCase() || '?'}</span>
+                          </div>
+                          <div>
+                            <p className="font-medium">{staff.profile?.full_name || 'N/A'}</p>
+                            <Badge className={`${getRoleColor(staff.role)} text-[10px]`}>{getRoleLabel(staff.role)}</Badge>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold">{completionRate}%</p>
+                          <p className="text-xs text-muted-foreground">সম্পন্ন</p>
+                        </div>
+                      </div>
+                      <Progress value={completionRate} className="h-2 mb-3" />
+                      <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-2">
+                          <p className="font-bold text-orange-600">{staff.pending_tasks}</p>
+                          <p className="text-[10px] text-muted-foreground">পেন্ডিং</p>
+                        </div>
+                        <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-2">
+                          <p className="font-bold text-blue-600">{staff.in_progress_tasks}</p>
+                          <p className="text-[10px] text-muted-foreground">চলমান</p>
+                        </div>
+                        <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-2">
+                          <p className="font-bold text-green-600">{staff.completed_tasks}</p>
+                          <p className="text-[10px] text-muted-foreground">সম্পন্ন</p>
+                        </div>
+                      </div>
+                      {staff.last_login && (
+                        <p className="text-xs text-muted-foreground mt-3">
+                          শেষ লগইন: {formatDistanceToNow(new Date(staff.last_login), { addSuffix: true, locale: bn })}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              {staffMembers.length === 0 && (
+                <div className="col-span-2 text-center py-12 text-muted-foreground">কোনো স্টাফ নেই।</div>
+              )}
+            </div>
+          </TabsContent>
+
           {/* ── Roles Management Tab ── */}
           <TabsContent value="roles" className="space-y-4">
             <Card>
@@ -608,47 +675,85 @@ const AdminUsers = () => {
                     <CardTitle>রোল ম্যানেজমেন্ট</CardTitle>
                     <CardDescription>সিস্টেমের সকল রোল তৈরি, এডিট ও ম্যানেজ করুন</CardDescription>
                   </div>
-                  <Button onClick={() => setCreateRoleOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />নতুন রোল তৈরি
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => navigate('/admin/role-permissions')}>
+                      <ShieldCheck className="h-4 w-4 mr-2" />পার্মিশন ম্যাট্রিক্স
+                    </Button>
+                    <Button onClick={() => setCreateRoleOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />নতুন রোল
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {allRolesConfig.map(role => (
-                    <div key={role.id} className={`border rounded-lg p-4 ${!role.is_active ? 'opacity-60' : ''}`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Badge className={getRoleColor(role.role_key)}>{role.label_bn}</Badge>
-                          {role.label_en && <span className="text-sm text-muted-foreground">({role.label_en})</span>}
-                          {role.is_system && <Badge variant="outline" className="text-[10px]">সিস্টেম</Badge>}
-                          {!role.is_active && <Badge variant="destructive" className="text-[10px]">নিষ্ক্রিয়</Badge>}
+                  {allRolesConfig.map(role => {
+                    const usersWithRole = staffMembers.filter(s => s.role === role.role_key).length;
+                    return (
+                      <div key={role.id} className={`border rounded-lg p-4 ${!role.is_active ? 'opacity-60' : ''}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <Badge className={getRoleColor(role.role_key)}>{role.label_bn}</Badge>
+                            {role.label_en && <span className="text-sm text-muted-foreground">({role.label_en})</span>}
+                            {role.is_system && <Badge variant="outline" className="text-[10px]">সিস্টেম</Badge>}
+                            {!role.is_active && <Badge variant="destructive" className="text-[10px]">নিষ্ক্রিয়</Badge>}
+                            <Badge variant="secondary" className="text-[10px]">{usersWithRole} জন</Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => setEditingRole(role)}><Edit className="h-4 w-4" /></Button>
+                            {!role.is_system && (
+                              <Button variant="ghost" size="icon" onClick={() => {
+                                if (usersWithRole > 0) { toast.error(`এই রোলে ${usersWithRole} জন ইউজার আছে। প্রথমে তাদের অন্য রোলে সরান।`); return; }
+                                if (confirm(`"${role.label_bn}" রোল ডিলিট করতে চান?`)) deleteRoleConfigMutation.mutate(role.id);
+                              }}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground mr-2">
-                            {staffMembers.filter(s => s.role === role.role_key).length} জন ইউজার
-                          </span>
-                          <Button variant="ghost" size="icon" onClick={() => setEditingRole(role)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {!role.is_system && (
-                            <Button variant="ghost" size="icon" onClick={() => {
-                              const usersWithRole = staffMembers.filter(s => s.role === role.role_key).length;
-                              if (usersWithRole > 0) { toast.error(`এই রোলে ${usersWithRole} জন ইউজার আছে। প্রথমে তাদের অন্য রোলে সরান।`); return; }
-                              if (confirm(`"${role.label_bn}" রোল ডিলিট করতে চান?`)) deleteRoleConfigMutation.mutate(role.id);
-                            }}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          )}
-                        </div>
+                        {role.description_bn && <p className="text-sm text-muted-foreground mt-2">{role.description_bn}</p>}
                       </div>
-                      {role.description_bn && <p className="text-sm text-muted-foreground mt-2">{role.description_bn}</p>}
-                    </div>
-                  ))}
+                    );
+                  })}
                   {allRolesConfig.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">কোনো রোল কনফিগার করা হয়নি।</div>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Activity Log Tab ── */}
+          <TabsContent value="activity" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" />স্টাফ অ্যাক্টিভিটি লগ</CardTitle>
+                <CardDescription>সাম্প্রতিক ৫০টি এডমিন কার্যক্রম</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {recentActivity.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">কোনো অ্যাক্টিভিটি নেই।</div>
+                ) : (
+                  <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                    {recentActivity.map(entry => (
+                      <div key={entry.id} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Activity className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm">{getStaffName(entry.user_id)}</span>
+                            <Badge variant="outline" className="text-[10px]">{entry.action}</Badge>
+                            {entry.table_name && <Badge variant="secondary" className="text-[10px]">{entry.table_name}</Badge>}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true, locale: bn })}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -660,8 +765,8 @@ const AdminUsers = () => {
         <Dialog open={createUserOpen} onOpenChange={setCreateUserOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>নতুন ইউজার তৈরি করুন</DialogTitle>
-              <DialogDescription>ইমেইল, পাসওয়ার্ড ও তথ্য দিয়ে সরাসরি ইউজার তৈরি করুন</DialogDescription>
+              <DialogTitle>নতুন স্টাফ তৈরি করুন</DialogTitle>
+              <DialogDescription>ইমেইল, পাসওয়ার্ড ও তথ্য দিয়ে সরাসরি তৈরি করুন</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -682,13 +787,13 @@ const AdminUsers = () => {
               </div>
               <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
                 <p>• ইমেইল স্বয়ংক্রিয়ভাবে ভেরিফাই হবে</p>
-                <p>• ইউজার সরাসরি লগইন করতে পারবে</p>
+                <p>• স্টাফ সরাসরি লগইন করতে পারবে</p>
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setCreateUserOpen(false)}>বাতিল</Button>
                 <Button onClick={() => createUserMutation.mutate({ email: createEmail, password: createPassword, full_name: createName, phone: createPhone, role: createRole })} disabled={createUserMutation.isPending || !createEmail.trim() || !createPassword || createPassword.length < 6}>
                   {createUserMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  <UserPlus className="h-4 w-4 mr-2" />ইউজার তৈরি করুন
+                  <UserPlus className="h-4 w-4 mr-2" />তৈরি করুন
                 </Button>
               </div>
             </div>
@@ -698,7 +803,7 @@ const AdminUsers = () => {
         {/* Invite Dialog */}
         <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
           <DialogContent>
-            <DialogHeader><DialogTitle>ইমেইলে ইনভাইটেশন পাঠান</DialogTitle><DialogDescription>ইউজারের ইমেইলে ইনভাইটেশন লিংক পাঠানো হবে</DialogDescription></DialogHeader>
+            <DialogHeader><DialogTitle>ইমেইলে ইনভাইটেশন পাঠান</DialogTitle><DialogDescription>স্টাফের ইমেইলে ইনভাইটেশন লিংক পাঠানো হবে</DialogDescription></DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2"><Label>ইমেইল</Label><Input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="email@example.com" /></div>
               <div className="space-y-2"><Label>রোল</Label><Select value={inviteRole} onValueChange={setInviteRole}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><RoleSelectItems /></SelectContent></Select></div>
@@ -755,27 +860,55 @@ const AdminUsers = () => {
 
         {/* View User Dialog */}
         <Dialog open={!!viewingUser} onOpenChange={() => setViewingUser(null)}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>ইউজার বিস্তারিত</DialogTitle></DialogHeader>
-            {viewingUser && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
-                    <span className="text-primary font-bold text-xl">{viewingUser.profile?.full_name?.[0]?.toUpperCase() || '?'}</span>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader><DialogTitle>স্টাফ বিস্তারিত</DialogTitle></DialogHeader>
+            {viewingUser && (() => {
+              const total = viewingUser.pending_tasks + viewingUser.in_progress_tasks + viewingUser.completed_tasks;
+              const completionRate = total > 0 ? Math.round((viewingUser.completed_tasks / total) * 100) : 0;
+              return (
+                <div className="space-y-5">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                      <span className="text-primary font-bold text-2xl">{viewingUser.profile?.full_name?.[0]?.toUpperCase() || '?'}</span>
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold">{viewingUser.profile?.full_name || 'N/A'}</p>
+                      <Badge className={getRoleColor(viewingUser.role)}>{getRoleLabel(viewingUser.role)}</Badge>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-lg font-semibold">{viewingUser.profile?.full_name || 'N/A'}</p>
-                    <Badge className={getRoleColor(viewingUser.role)}>{getRoleLabel(viewingUser.role)}</Badge>
+                  <div className="grid grid-cols-2 gap-4 text-sm border-t pt-4">
+                    <div><p className="text-muted-foreground">ইমেইল</p><p className="font-medium">{viewingUser.profile?.email || '—'}</p></div>
+                    <div><p className="text-muted-foreground">ফোন</p><p className="font-medium">{viewingUser.profile?.phone || '—'}</p></div>
+                    <div><p className="text-muted-foreground">রোল যোগ</p><p className="font-medium">{format(new Date(viewingUser.created_at), 'dd/MM/yyyy hh:mm a')}</p></div>
+                    <div>
+                      <p className="text-muted-foreground">শেষ লগইন</p>
+                      <p className="font-medium">{viewingUser.last_login
+                        ? formatDistanceToNow(new Date(viewingUser.last_login), { addSuffix: true, locale: bn })
+                        : 'লগইন নেই'
+                      }</p>
+                    </div>
+                  </div>
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-medium mb-3">টাস্ক পারফরম্যান্স</p>
+                    <Progress value={completionRate} className="h-2 mb-3" />
+                    <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                      <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-2.5">
+                        <p className="font-bold text-orange-600 text-lg">{viewingUser.pending_tasks}</p>
+                        <p className="text-xs text-muted-foreground">পেন্ডিং</p>
+                      </div>
+                      <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-2.5">
+                        <p className="font-bold text-blue-600 text-lg">{viewingUser.in_progress_tasks}</p>
+                        <p className="text-xs text-muted-foreground">চলমান</p>
+                      </div>
+                      <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-2.5">
+                        <p className="font-bold text-green-600 text-lg">{viewingUser.completed_tasks}</p>
+                        <p className="text-xs text-muted-foreground">সম্পন্ন</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 text-sm border-t pt-4">
-                  <div><p className="text-muted-foreground">ইমেইল</p><p className="font-medium">{viewingUser.profile?.email || '—'}</p></div>
-                  <div><p className="text-muted-foreground">ফোন</p><p className="font-medium">{viewingUser.profile?.phone || '—'}</p></div>
-                  <div><p className="text-muted-foreground">রোল যোগ</p><p className="font-medium">{format(new Date(viewingUser.created_at), 'dd/MM/yyyy hh:mm a')}</p></div>
-                  <div><p className="text-muted-foreground">পেন্ডিং টাস্ক</p><p className="font-medium">{viewingUser.pending_tasks}</p></div>
-                </div>
-              </div>
-            )}
+              );
+            })()}
           </DialogContent>
         </Dialog>
 
@@ -784,7 +917,7 @@ const AdminUsers = () => {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>নতুন রোল তৈরি করুন</DialogTitle>
-              <DialogDescription>কাস্টম রোল তৈরি করে ইউজারদের অ্যাসাইন করুন</DialogDescription>
+              <DialogDescription>কাস্টম রোল তৈরি করে স্টাফদের অ্যাসাইন করুন</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -793,23 +926,11 @@ const AdminUsers = () => {
                 <p className="text-xs text-muted-foreground">শুধু ইংরেজি ছোট হাতের অক্ষর ও আন্ডারস্কোর</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>নাম (বাংলা) <span className="text-destructive">*</span></Label>
-                  <Input value={newRoleLabelBn} onChange={e => setNewRoleLabelBn(e.target.value)} placeholder="যেমন: এডিটর" />
-                </div>
-                <div className="space-y-2">
-                  <Label>নাম (English)</Label>
-                  <Input value={newRoleLabelEn} onChange={e => setNewRoleLabelEn(e.target.value)} placeholder="e.g. Editor" />
-                </div>
+                <div className="space-y-2"><Label>নাম (বাংলা) <span className="text-destructive">*</span></Label><Input value={newRoleLabelBn} onChange={e => setNewRoleLabelBn(e.target.value)} placeholder="যেমন: এডিটর" /></div>
+                <div className="space-y-2"><Label>নাম (English)</Label><Input value={newRoleLabelEn} onChange={e => setNewRoleLabelEn(e.target.value)} placeholder="e.g. Editor" /></div>
               </div>
-              <div className="space-y-2">
-                <Label>বিবরণ (বাংলা)</Label>
-                <Textarea value={newRoleDescBn} onChange={e => setNewRoleDescBn(e.target.value)} placeholder="এই রোলের কাজ কী..." rows={2} />
-              </div>
-              <div className="space-y-2">
-                <Label>বিবরণ (English)</Label>
-                <Textarea value={newRoleDescEn} onChange={e => setNewRoleDescEn(e.target.value)} placeholder="What this role does..." rows={2} />
-              </div>
+              <div className="space-y-2"><Label>বিবরণ (বাংলা)</Label><Textarea value={newRoleDescBn} onChange={e => setNewRoleDescBn(e.target.value)} placeholder="এই রোলের কাজ কী..." rows={2} /></div>
+              <div className="space-y-2"><Label>বিবরণ (English)</Label><Textarea value={newRoleDescEn} onChange={e => setNewRoleDescEn(e.target.value)} placeholder="What this role does..." rows={2} /></div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setCreateRoleOpen(false)}>বাতিল</Button>
                 <Button onClick={() => createRoleMutation.mutate({ role_key: newRoleKey, label_bn: newRoleLabelBn, label_en: newRoleLabelEn, description_bn: newRoleDescBn, description_en: newRoleDescEn })} disabled={createRoleMutation.isPending || !newRoleKey.trim() || !newRoleLabelBn.trim()}>
@@ -843,10 +964,9 @@ const AdminUsers = () => {
   );
 };
 
-// ── Edit Role Form (extracted to avoid hooks issues) ──
+// ── Edit Role Form ──
 const EditRoleForm = ({ role, isPending, onSave, onCancel }: {
-  role: RoleConfig;
-  isPending: boolean;
+  role: RoleConfig; isPending: boolean;
   onSave: (data: { id: string; label_bn: string; label_en: string; description_bn: string; description_en: string; is_active: boolean }) => void;
   onCancel: () => void;
 }) => {

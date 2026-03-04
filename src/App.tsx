@@ -77,7 +77,7 @@ import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminChat from "./pages/admin/AdminChat";
 import AdminRefundPolicy from "./pages/admin/AdminRefundPolicy";
 import AdminRefundRequests from "./pages/admin/AdminRefundRequests";
-import AdminStaffManagement from "./pages/admin/AdminStaffManagement";
+
 import AdminAutoAssign from "./pages/admin/AdminAutoAssign";
 import AdminRolePermissions from "./pages/admin/AdminRolePermissions";
 import AdminCartWishlistCustomers from "./pages/admin/AdminCartWishlistCustomers";
@@ -200,7 +200,7 @@ const App = () => (
                 <Route path="/admin/chat" element={<AdminChat />} />
                 <Route path="/admin/refund-policy" element={<AdminRefundPolicy />} />
                 <Route path="/admin/refund-requests" element={<AdminRefundRequests />} />
-                <Route path="/admin/staff" element={<AdminStaffManagement />} />
+                <Route path="/admin/staff" element={<AdminUsers />} />
                 <Route path="/admin/auto-assign" element={<AdminAutoAssign />} />
                 <Route path="/admin/role-permissions" element={<AdminRolePermissions />} />
                 <Route path="/admin/cart-wishlist-customers" element={<AdminCartWishlistCustomers />} />
