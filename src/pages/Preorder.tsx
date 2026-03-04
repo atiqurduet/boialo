@@ -1,16 +1,63 @@
+import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { ProductCard, Product } from "@/components/ProductCard";
-import { Clock, BookOpen, Bell } from "lucide-react";
+import { Clock, BookOpen, Bell, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { bn } from "date-fns/locale";
+import { toast } from "sonner";
+import { trackSubscribe } from "@/lib/analytics";
 
 const Preorder = () => {
+  const [subEmail, setSubEmail] = useState("");
+  const [subLoading, setSubLoading] = useState(false);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subEmail || !subEmail.includes('@')) {
+      toast.error("সঠিক ইমেইল ঠিকানা দিন");
+      return;
+    }
+    setSubLoading(true);
+    try {
+      const { data: existing } = await supabase
+        .from('email_subscribers')
+        .select('id, status')
+        .eq('email', subEmail.trim().toLowerCase())
+        .maybeSingle();
+
+      if (existing) {
+        if (existing.status === 'active') {
+          toast.info("আপনি ইতিমধ্যে সাবস্ক্রাইব করেছেন");
+        } else {
+          await supabase
+            .from('email_subscribers')
+            .update({ status: 'active', unsubscribed_at: null, updated_at: new Date().toISOString() })
+            .eq('id', existing.id);
+          toast.success("আবার সাবস্ক্রাইব করা হয়েছে!");
+        }
+      } else {
+        const { error } = await supabase
+          .from('email_subscribers')
+          .insert({ email: subEmail.trim().toLowerCase(), source: 'preorder_page', status: 'active' });
+        if (error) throw error;
+        trackSubscribe('preorder');
+        toast.success("সফলভাবে সাবস্ক্রাইব করা হয়েছে!");
+      }
+      setSubEmail("");
+    } catch (error) {
+      console.error('Subscription error:', error);
+      toast.error("সাবস্ক্রাইব করতে সমস্যা হয়েছে");
+    } finally {
+      setSubLoading(false);
+    }
+  };
   // Fetch preorder products from database
   const { data: dbProducts = [], isLoading } = useQuery({
     queryKey: ['preorder-products'],
@@ -147,14 +194,18 @@ const Preorder = () => {
           <p className="text-muted-foreground mb-4 max-w-md mx-auto">
             নতুন কোনো বই প্রি-অর্ডারে এলে সবার আগে জানতে সাবস্ক্রাইব করুন
           </p>
-          <div className="flex gap-2 max-w-md mx-auto">
-            <input
+          <form onSubmit={handleSubscribe} className="flex gap-2 max-w-md mx-auto">
+            <Input
               type="email"
               placeholder="আপনার ইমেইল"
-              className="flex-1 px-4 py-2 border border-border rounded-lg"
+              value={subEmail}
+              onChange={(e) => setSubEmail(e.target.value)}
+              disabled={subLoading}
             />
-            <Button className="btn-primary">সাবস্ক্রাইব</Button>
-          </div>
+            <Button type="submit" disabled={subLoading}>
+              {subLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'সাবস্ক্রাইব'}
+            </Button>
+          </form>
         </div>
       </main>
 
