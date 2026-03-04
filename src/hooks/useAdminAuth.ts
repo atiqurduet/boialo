@@ -64,8 +64,8 @@ export const useAdminAuth = (): AdminAuthState => {
     const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
     const userLevel = roleHierarchy[role] ?? 0;
     
-    // Super admin & admin have all permissions
-    if (role === 'super_admin' || role === 'admin') return true;
+    // Only super admin has all permissions automatically
+    if (role === 'super_admin') return true;
     
     // Check if user's role level is >= any of the required roles
     return roles.some(r => userLevel >= (roleHierarchy[r] ?? 0));
