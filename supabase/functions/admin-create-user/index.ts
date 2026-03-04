@@ -45,7 +45,8 @@ Deno.serve(async (req) => {
       .eq("user_id", callingUser.id)
       .maybeSingle();
 
-    if (!roleData || roleData.role !== "admin") {
+    const allowedRoles = ["super_admin", "admin"];
+    if (!roleData || !allowedRoles.includes(roleData.role)) {
       return new Response(JSON.stringify({ error: "Only admins can create users" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
