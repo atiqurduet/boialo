@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
-export type AppRole = 'admin' | 'manager' | 'support';
+export type AppRole = 'super_admin' | 'admin' | 'manager' | 'support';
 
 interface AdminAuthState {
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   role: AppRole | null;
   loading: boolean;
   hasPermission: (requiredRole: AppRole | AppRole[]) => boolean;
@@ -54,23 +55,25 @@ export const useAdminAuth = (): AdminAuthState => {
     if (!role) return false;
     
     const roleHierarchy: Record<AppRole, number> = {
+      super_admin: 4,
       admin: 3,
       manager: 2,
       support: 1
     };
 
     const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-    const userLevel = roleHierarchy[role];
+    const userLevel = roleHierarchy[role] ?? 0;
     
-    // Admin has all permissions
-    if (role === 'admin') return true;
+    // Super admin & admin have all permissions
+    if (role === 'super_admin' || role === 'admin') return true;
     
     // Check if user's role level is >= any of the required roles
-    return roles.some(r => userLevel >= roleHierarchy[r]);
+    return roles.some(r => userLevel >= (roleHierarchy[r] ?? 0));
   }, [role]);
 
   return {
     isAdmin: role !== null,
+    isSuperAdmin: role === 'super_admin',
     role,
     loading: loading || authLoading,
     hasPermission

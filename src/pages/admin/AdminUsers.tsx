@@ -53,6 +53,7 @@ interface AuditEntry {
 
 // ── Color helper ──
 const ROLE_COLORS: Record<string, string> = {
+  super_admin: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
   admin: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
   manager: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
   support: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
@@ -242,10 +243,9 @@ const AdminUsers = () => {
 
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      if (role === 'admin') throw new Error('সুপার এডমিন রোল অ্যাসাইন করা যাবে না');
-      // Prevent changing the existing admin's role
-      const existingAdmin = staffMembers.find(s => s.role === 'admin');
-      if (existingAdmin && existingAdmin.user_id === userId) throw new Error('সুপার এডমিনের রোল পরিবর্তন করা যাবে না');
+      if (role === 'super_admin') throw new Error('সুপার এডমিন রোল অ্যাসাইন করা যাবে না');
+      const existingSuperAdmin = staffMembers.find(s => s.role === 'super_admin');
+      if (existingSuperAdmin && existingSuperAdmin.user_id === userId) throw new Error('সুপার এডমিনের রোল পরিবর্তন করা যাবে না');
       const { error } = await supabase.from('user_roles').update({ role: role as any }).eq('user_id', userId);
       if (error) throw error;
     },
@@ -256,8 +256,8 @@ const AdminUsers = () => {
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
       if (userId === user?.id) throw new Error('আপনি নিজেকে রিমুভ করতে পারবেন না');
-      const adminUser = staffMembers.find(s => s.role === 'admin');
-      if (adminUser && adminUser.user_id === userId) throw new Error('সুপার এডমিনকে রিমুভ করা যাবে না');
+      const superAdmin = staffMembers.find(s => s.role === 'super_admin');
+      if (superAdmin && superAdmin.user_id === userId) throw new Error('সুপার এডমিনকে রিমুভ করা যাবে না');
       const { error } = await supabase.from('user_roles').delete().eq('user_id', userId);
       if (error) throw error;
     },
@@ -365,7 +365,7 @@ const AdminUsers = () => {
   };
 
   const RoleSelectItems = () => (
-    <>{rolesConfig.filter(r => r.role_key !== 'admin').map(r => (
+    <>{rolesConfig.filter(r => r.role_key !== 'super_admin').map(r => (
       <SelectItem key={r.role_key} value={r.role_key}>
         <span>{r.label_bn}</span>
         <span className="text-xs text-muted-foreground ml-2">— {r.description_bn}</span>
