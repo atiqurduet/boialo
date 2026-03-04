@@ -61,6 +61,14 @@ const sectionTypeLabels: Record<string, string> = {
   top_selling_products: '🔥 টপ বিক্রিত বই',
   top_authors: '👨‍🏫 টপ লেখক',
   top_selling_universal_products: '📦 টপ বিক্রিত সাধারণ প্রোডাক্ট',
+  recently_sold: '🕐 সম্প্রতি বিক্রিত',
+  offer_products: '🏷️ অফার প্রোডাক্ট',
+  ebooks: '📱 ই-বুক',
+  weekly_best_books: '📅 সাপ্তাহিক সেরা বই',
+  weekly_best_universal: '📅 সাপ্তাহিক সেরা প্রোডাক্ট',
+  bundle_showcase: '📦 বান্ডেল অফার',
+  best_selling_brands: '🏢 জনপ্রিয় ব্র্যান্ড',
+  best_selling_publishers: '📚 জনপ্রিয় প্রকাশনী',
 };
 
 const sectionTypes = Object.entries(sectionTypeLabels).map(([value, label]) => ({
@@ -165,7 +173,19 @@ const AdminHomepage = () => {
       case 'preorder_products':
       case 'top_selling':
       case 'top_selling_universal_products':
+      case 'recently_sold':
+      case 'offer_products':
+      case 'weekly_best_books':
+      case 'weekly_best_universal':
         return '/shop';
+      case 'ebooks':
+        return '/digital-library';
+      case 'bundle_showcase':
+        return '/bundles';
+      case 'best_selling_brands':
+        return '/shop';
+      case 'best_selling_publishers':
+        return '/publishers';
       case 'top_authors':
         return '/authors';
       default:
@@ -720,6 +740,14 @@ const AdminHomepage = () => {
       case 'recommended':
       case 'featured_products':
       case 'preorder_products':
+      case 'recently_sold':
+      case 'offer_products':
+      case 'ebooks':
+      case 'weekly_best_books':
+      case 'weekly_best_universal':
+      case 'bundle_showcase':
+      case 'best_selling_brands':
+      case 'best_selling_publishers':
       case 'universal_flash_sale':
         return (
           <div className="space-y-4 border-t pt-4 mt-4">
