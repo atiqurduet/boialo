@@ -20,11 +20,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import {
   CheckCircle2, Clock, ListChecks, Loader2, RefreshCw, Target,
-  TrendingUp, AlertTriangle, BarChart3, User, Eye, Play, Pause,
+  TrendingUp, AlertTriangle, BarChart3, User, Eye, EyeOff, Play, Pause,
   ArrowUpRight, ArrowRight, Zap, Calendar, Timer, Award,
   ShieldCheck, Users, ChevronRight, Circle, Package,
   MessageSquarePlus, Bell, BellRing, Send, Pin, PinOff, Trash2,
-  Mail, MailOpen, AlertCircle, Megaphone
+  Mail, MailOpen, AlertCircle, Megaphone, Lock
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -619,7 +619,7 @@ const AdminMyDashboard = () => {
         </div>
 
         <Tabs defaultValue="my-tasks">
-          <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-5' : 'grid-cols-3'}`}>
+          <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-6' : 'grid-cols-4'}`}>
             <TabsTrigger value="my-tasks"><ListChecks className="h-4 w-4 mr-1 hidden sm:inline" /> আমার টাস্ক</TabsTrigger>
             <TabsTrigger value="messages" className="relative">
               <Megaphone className="h-4 w-4 mr-1 hidden sm:inline" /> বার্তা
@@ -630,6 +630,7 @@ const AdminMyDashboard = () => {
               )}
             </TabsTrigger>
             <TabsTrigger value="my-activity"><Zap className="h-4 w-4 mr-1 hidden sm:inline" /> অ্যাক্টিভিটি</TabsTrigger>
+            <TabsTrigger value="change-password"><ShieldCheck className="h-4 w-4 mr-1 hidden sm:inline" /> পাসওয়ার্ড</TabsTrigger>
             {isSuperAdmin && <TabsTrigger value="team"><Users className="h-4 w-4 mr-1 hidden sm:inline" /> টিম</TabsTrigger>}
             {isSuperAdmin && <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-1 hidden sm:inline" /> অ্যানালিটিক্স</TabsTrigger>}
           </TabsList>
@@ -791,7 +792,22 @@ const AdminMyDashboard = () => {
             </div>
           </TabsContent>
 
-          {/* ═══ Team Performance (Super Admin) ═══ */}
+          {/* ═══ Change Password Tab ═══ */}
+          <TabsContent value="change-password" className="space-y-4">
+            <Card className="max-w-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-primary" /> পাসওয়ার্ড পরিবর্তন করুন
+                </CardTitle>
+                <CardDescription>আপনার বর্তমান পাসওয়ার্ড দিয়ে নতুন পাসওয়ার্ড সেট করুন</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChangePasswordForm />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+
           {isSuperAdmin && (
             <TabsContent value="team" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -969,3 +985,111 @@ const AdminMyDashboard = () => {
 };
 
 export default AdminMyDashboard;
+
+// ═══════════════════════════════════════════════
+// Change Password Form Component
+// ═══════════════════════════════════════════════
+const ChangePasswordForm = () => {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error('সব ফিল্ড পূরণ করুন');
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error('নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষর হতে হবে');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('পাসওয়ার্ড মিলছে না');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Verify current password by attempting sign in
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) throw new Error('User not found');
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+      if (signInError) {
+        toast.error('বর্তমান পাসওয়ার্ড ভুল');
+        setLoading(false);
+        return;
+      }
+
+      // Update password
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success('পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'পাসওয়ার্ড পরিবর্তন করা যায়নি');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <label className="text-sm font-medium">বর্তমান পাসওয়ার্ড</label>
+        <div className="relative">
+          <Input
+            type={showCurrent ? 'text' : 'password'}
+            placeholder="বর্তমান পাসওয়ার্ড দিন"
+            value={currentPassword}
+            onChange={e => setCurrentPassword(e.target.value)}
+            disabled={loading}
+          />
+          <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+            {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">নতুন পাসওয়ার্ড</label>
+        <div className="relative">
+          <Input
+            type={showNew ? 'text' : 'password'}
+            placeholder="কমপক্ষে ৬ অক্ষর"
+            value={newPassword}
+            onChange={e => setNewPassword(e.target.value)}
+            disabled={loading}
+          />
+          <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+            {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">পাসওয়ার্ড নিশ্চিত করুন</label>
+        <Input
+          type="password"
+          placeholder="আবার নতুন পাসওয়ার্ড দিন"
+          value={confirmPassword}
+          onChange={e => setConfirmPassword(e.target.value)}
+          disabled={loading}
+        />
+      </div>
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />পরিবর্তন হচ্ছে...</> : <><Lock className="h-4 w-4 mr-2" />পাসওয়ার্ড পরিবর্তন করুন</>}
+      </Button>
+    </form>
+  );
+};
