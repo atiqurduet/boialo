@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { trackCompleteRegistration, trackLogin } from "@/lib/analytics";
 import { logLoginEvent } from "@/hooks/useAuditLog";
+import { useSessionTracker } from "@/hooks/useSessionTracker";
 
 interface AuthContextType {
   user: User | null;
@@ -20,8 +21,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const signOutFn = useCallback(async () => {
+    const currentUser = user;
+    await supabase.auth.signOut();
+    if (currentUser?.email) {
+      logLoginEvent(currentUser.email, true, 'logout');
+    }
+  }, [user]);
+
+  // Session tracker for auto-logout
+  const { endSession } = useSessionTracker(user?.id ?? null, signOutFn);
+
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
@@ -30,7 +41,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -69,23 +79,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     if (!error) {
       trackLogin('email');
-      // Log successful login (async, don't await)
       logLoginEvent(email, true, 'login');
     } else {
-      // Log failed login attempt
       logLoginEvent(email, false, 'login_failed');
     }
     
     return { error: error as Error | null };
   };
 
-  const signOut = async () => {
-    const currentUser = user;
-    await supabase.auth.signOut();
-    if (currentUser?.email) {
-      logLoginEvent(currentUser.email, true, 'logout');
-    }
-  };
+  const signOut = useCallback(async () => {
+    await endSession();
+    await signOutFn();
+  }, [endSession, signOutFn]);
 
   return (
     <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut }}>

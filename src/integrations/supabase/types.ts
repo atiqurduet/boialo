@@ -74,6 +74,42 @@ export type Database = {
         }
         Relationships: []
       }
+      active_sessions: {
+        Row: {
+          id: string
+          ip_address: string | null
+          is_active: boolean
+          last_activity_at: string
+          logged_in_at: string
+          logged_out_at: string | null
+          session_token: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean
+          last_activity_at?: string
+          logged_in_at?: string
+          logged_out_at?: string | null
+          session_token: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean
+          last_activity_at?: string
+          logged_in_at?: string
+          logged_out_at?: string | null
+          session_token?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       address_book: {
         Row: {
           address: string
@@ -158,6 +194,33 @@ export type Database = {
           record_id?: string | null
           table_name?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      auto_logout_settings: {
+        Row: {
+          id: string
+          is_enabled: boolean
+          timeout_minutes: number
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_enabled?: boolean
+          timeout_minutes?: number
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_enabled?: boolean
+          timeout_minutes?: number
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
         }
         Relationships: []
       }
