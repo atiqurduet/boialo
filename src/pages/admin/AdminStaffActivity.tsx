@@ -20,7 +20,7 @@ import {
   Download, Search, Activity, Eye, Clock, User, Filter, ShoppingCart,
   LogIn, CheckCircle2, XCircle, BarChart3, TrendingUp, Loader2, RefreshCw,
   Monitor, Smartphone, Tablet, AlertTriangle, Zap, Timer, UserCheck,
-  Shield, ArrowUpRight, ArrowDownRight, Minus
+  Shield, ArrowUpRight, ArrowDownRight, Minus, Wifi, WifiOff, Settings2, Save, Power
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -63,6 +63,214 @@ const ROLE_COLORS: Record<string, string> = {
 };
 const ROLE_LABELS: Record<string, string> = {
   super_admin: 'সুপার এডমিন', admin: 'এডমিন', manager: 'ম্যানেজার', support: 'সাপোর্ট',
+};
+
+// ── Active Sessions Panel ──
+const ActiveSessionsPanel = ({ staffProfiles, getStaffName, getStaffRole, getDeviceIcon, getBrowserFromUA }: {
+  staffProfiles: any[]; getStaffName: (id: string | null) => string; getStaffRole: (id: string | null) => string;
+  getDeviceIcon: (ua: string | null) => React.ReactNode; getBrowserFromUA: (ua: string | null) => string;
+}) => {
+  const [editingTimeout, setEditingTimeout] = useState<Record<string, number>>({});
+  const [savingTimeout, setSavingTimeout] = useState<string | null>(null);
+
+  const { data: activeSessions = [], isLoading: sessionsLoading, refetch: refetchSessions } = useQuery({
+    queryKey: ['active-sessions'],
+    queryFn: async () => {
+      const { data } = await supabase.from('active_sessions').select('*').eq('is_active', true).order('last_activity_at', { ascending: false });
+      return data || [];
+    },
+    refetchInterval: 30_000,
+  });
+
+  const { data: logoutSettings = [], refetch: refetchSettings } = useQuery({
+    queryKey: ['auto-logout-settings'],
+    queryFn: async () => {
+      const { data } = await supabase.from('auto_logout_settings').select('*');
+      return data || [];
+    },
+  });
+
+  const getTimeoutForUser = (userId: string) => {
+    const setting = logoutSettings.find((s: any) => s.user_id === userId);
+    return setting?.timeout_minutes ?? 30;
+  };
+
+  const isTimeoutEnabled = (userId: string) => {
+    const setting = logoutSettings.find((s: any) => s.user_id === userId);
+    return setting?.is_enabled ?? true;
+  };
+
+  const getInactiveMinutes = (lastActivity: string) => {
+    return Math.round((Date.now() - new Date(lastActivity).getTime()) / 60_000);
+  };
+
+  const getStatusColor = (lastActivity: string) => {
+    const mins = getInactiveMinutes(lastActivity);
+    if (mins < 5) return 'bg-green-500';
+    if (mins < 15) return 'bg-amber-500';
+    return 'bg-red-500';
+  };
+
+  const getStatusText = (lastActivity: string) => {
+    const mins = getInactiveMinutes(lastActivity);
+    if (mins < 2) return 'এখন অ্যাক্টিভ';
+    if (mins < 5) return `${mins} মিনিট আগে`;
+    if (mins < 60) return `${mins} মিনিট নিষ্ক্রিয়`;
+    return `${Math.floor(mins / 60)} ঘন্টা নিষ্ক্রিয়`;
+  };
+
+  const handleSaveTimeout = async (userId: string) => {
+    setSavingTimeout(userId);
+    const timeout = editingTimeout[userId] ?? getTimeoutForUser(userId);
+    const existing = logoutSettings.find((s: any) => s.user_id === userId);
+    if (existing) {
+      await supabase.from('auto_logout_settings').update({ timeout_minutes: timeout, updated_at: new Date().toISOString() }).eq('user_id', userId);
+    } else {
+      await supabase.from('auto_logout_settings').insert({ user_id: userId, timeout_minutes: timeout, is_enabled: true });
+    }
+    await refetchSettings();
+    setSavingTimeout(null);
+    setEditingTimeout(prev => { const n = { ...prev }; delete n[userId]; return n; });
+  };
+
+  const handleToggleEnabled = async (userId: string) => {
+    const existing = logoutSettings.find((s: any) => s.user_id === userId);
+    if (existing) {
+      await supabase.from('auto_logout_settings').update({ is_enabled: !(existing as any).is_enabled, updated_at: new Date().toISOString() }).eq('user_id', userId);
+    } else {
+      await supabase.from('auto_logout_settings').insert({ user_id: userId, timeout_minutes: 30, is_enabled: true });
+    }
+    await refetchSettings();
+  };
+
+  const handleForceLogout = async (sessionId: string) => {
+    await supabase.from('active_sessions').update({ is_active: false, logged_out_at: new Date().toISOString() }).eq('id', sessionId);
+    await refetchSessions();
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Active Now */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Wifi className="h-4 w-4 text-green-500" /> বর্তমান অ্যাক্টিভ সেশন
+              <Badge variant="secondary" className="text-xs">{activeSessions.length} জন</Badge>
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={() => refetchSessions()}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1" /> রিফ্রেশ
+            </Button>
+          </div>
+          <CardDescription>কারা এখন লগইন করে আছেন এবং তাদের সর্বশেষ কার্যকলাপ</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {sessionsLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : activeSessions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <WifiOff className="h-10 w-10 mx-auto mb-2 opacity-40" />
+              <p>এই মুহূর্তে কেউ অ্যাক্টিভ নেই</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {activeSessions.map((session: any) => (
+                <div key={session.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/30 transition-colors">
+                  <div className="relative">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="text-sm font-semibold">{getStaffName(session.user_id)?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <span className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-background ${getStatusColor(session.last_activity_at)}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm truncate">{getStaffName(session.user_id)}</span>
+                      {getStaffRole(session.user_id) && (
+                        <Badge className={`text-[9px] ${ROLE_COLORS[getStaffRole(session.user_id)] || 'bg-muted'}`}>
+                          {ROLE_LABELS[getStaffRole(session.user_id)] || getStaffRole(session.user_id)}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-0.5">
+                      <span className="flex items-center gap-1">{getDeviceIcon(session.user_agent)} {getBrowserFromUA(session.user_agent)}</span>
+                      <span>IP: {session.ip_address || 'N/A'}</span>
+                      <span>লগইন: {format(new Date(session.logged_in_at), 'dd MMM, h:mm a', { locale: bn })}</span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <Badge className={`text-[10px] ${getInactiveMinutes(session.last_activity_at) < 5 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : getInactiveMinutes(session.last_activity_at) < 15 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                      {getStatusText(session.last_activity_at)}
+                    </Badge>
+                    <div className="mt-1.5">
+                      <Button variant="ghost" size="sm" className="h-6 text-[10px] text-destructive hover:text-destructive" onClick={() => handleForceLogout(session.id)}>
+                        <Power className="h-3 w-3 mr-1" /> ফোর্স লগআউট
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Auto Logout Settings per User */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Settings2 className="h-4 w-4 text-primary" /> অটো লগআউট সেটিংস
+          </CardTitle>
+          <CardDescription>প্রতিটি ইউজারের জন্য আলাদা নিষ্ক্রিয়তার সময়সীমা নির্ধারণ করুন</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>স্টাফ</TableHead>
+                <TableHead>রোল</TableHead>
+                <TableHead>টাইমআউট (মিনিট)</TableHead>
+                <TableHead>স্ট্যাটাস</TableHead>
+                <TableHead className="text-right">অ্যাকশন</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {staffProfiles.map((staff: any) => (
+                <TableRow key={staff.id}>
+                  <TableCell className="font-medium">{staff.full_name || staff.email}</TableCell>
+                  <TableCell>
+                    <Badge className={`text-[10px] ${ROLE_COLORS[staff.role] || 'bg-muted'}`}>
+                      {ROLE_LABELS[staff.role] || staff.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min={5}
+                      max={480}
+                      className="w-24 h-8 text-sm"
+                      value={editingTimeout[staff.id] ?? getTimeoutForUser(staff.id)}
+                      onChange={(e) => setEditingTimeout(prev => ({ ...prev, [staff.id]: parseInt(e.target.value) || 30 }))}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={isTimeoutEnabled(staff.id) ? 'default' : 'secondary'} className="text-[10px] cursor-pointer" onClick={() => handleToggleEnabled(staff.id)}>
+                      {isTimeoutEnabled(staff.id) ? '✓ সক্রিয়' : '✗ নিষ্ক্রিয়'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleSaveTimeout(staff.id)} disabled={savingTimeout === staff.id}>
+                      {savingTimeout === staff.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3 mr-1" />}
+                      সেভ
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
 };
 
 const AdminStaffActivity = () => {
@@ -504,14 +712,20 @@ const AdminStaffActivity = () => {
           </Card>
         </div>
 
-        {/* Tabs — 4 tabs (no Activity tab) */}
-        <Tabs defaultValue="login">
-          <TabsList className="grid w-full grid-cols-4">
+        {/* Tabs — 5 tabs */}
+        <Tabs defaultValue="sessions">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="sessions"><Wifi className="h-4 w-4 mr-1 hidden sm:inline" /> অ্যাক্টিভ সেশন</TabsTrigger>
             <TabsTrigger value="login"><LogIn className="h-4 w-4 mr-1 hidden sm:inline" /> লগইন ইতিহাস</TabsTrigger>
             <TabsTrigger value="orders"><ShoppingCart className="h-4 w-4 mr-1 hidden sm:inline" /> অর্ডার লগ</TabsTrigger>
             <TabsTrigger value="performance"><BarChart3 className="h-4 w-4 mr-1 hidden sm:inline" /> পারফরম্যান্স</TabsTrigger>
             <TabsTrigger value="analytics"><TrendingUp className="h-4 w-4 mr-1 hidden sm:inline" /> অ্যানালিটিক্স</TabsTrigger>
           </TabsList>
+
+          {/* ═══ Active Sessions Tab ═══ */}
+          <TabsContent value="sessions" className="space-y-4">
+            <ActiveSessionsPanel staffProfiles={staffProfiles} getStaffName={getStaffName} getStaffRole={getStaffRole} getDeviceIcon={getDeviceIcon} getBrowserFromUA={getBrowserFromUA} />
+          </TabsContent>
 
           {/* ═══ Login Tab ═══ */}
           <TabsContent value="login" className="space-y-4">
