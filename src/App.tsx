@@ -110,6 +110,7 @@ import AdminSocialMedia from "./pages/admin/AdminSocialMedia";
 import AdminDynamicPricing from "./pages/admin/AdminDynamicPricing";
 import AdminSEOTools from "./pages/admin/AdminSEOTools";
 import AdminPopupBanners from "./pages/admin/AdminPopupBanners";
+import AdminStaffActivity from "./pages/admin/AdminStaffActivity";
 import AdminEbooks from "./pages/admin/AdminEbooks";
 import AdminEproducts from "./pages/admin/AdminEproducts";
 import { ThemeInitializer } from "./components/ThemeInitializer";
@@ -219,6 +220,7 @@ const App = () => (
                 <Route path="/admin/appearance" element={<AdminAppearance />} />
                 <Route path="/admin/backup" element={<AdminBackupRestore />} />
                 <Route path="/admin/audit-log" element={<AdminAuditLog />} />
+                <Route path="/admin/staff-activity" element={<AdminStaffActivity />} />
                 <Route path="/admin/blog" element={<AdminBlog />} />
                 <Route path="/admin/gift-cards" element={<AdminGiftCards />} />
                 <Route path="/admin/loyalty-points" element={<AdminLoyaltyPoints />} />

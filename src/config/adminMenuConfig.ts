@@ -157,6 +157,7 @@ export const menuCategories: MenuCategory[] = [
     items: [
       { icon: Users, label: 'কাস্টমার', href: '/admin/customers', roles: ['super_admin', 'admin', 'manager', 'support'] },
       { icon: UserCog, label: 'স্টাফ ম্যানেজমেন্ট', href: '/admin/users', roles: ['super_admin'] },
+      { icon: Activity, label: 'স্টাফ অ্যাক্টিভিটি', href: '/admin/staff-activity', roles: ['super_admin', 'admin'] },
       { icon: Shield, label: 'রোল ও পার্মিশন', href: '/admin/role-permissions', roles: ['super_admin'] },
     ]
   },
