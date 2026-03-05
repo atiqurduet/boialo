@@ -24,7 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Shield, Trash2, UserPlus, Users, Mail, Clock, CheckCircle, XCircle,
   MoreHorizontal, Edit, Loader2, RefreshCw, Send, Copy, UserCheck,
-  Filter, ChevronDown, Eye, Plus, Settings2, Activity, BarChart3,
+  Filter, ChevronDown, Eye, EyeOff, Plus, Settings2, Activity, BarChart3,
   ShieldCheck, AlertCircle, KeyRound,
 } from 'lucide-react';
 
@@ -77,6 +77,9 @@ const AdminUsers = () => {
   const [editingUser, setEditingUser] = useState<StaffMember | null>(null);
   const [viewingUser, setViewingUser] = useState<StaffMember | null>(null);
   const [editingRole, setEditingRole] = useState<RoleConfig | null>(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState<StaffMember | null>(null);
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   // Form state
   const [inviteEmail, setInviteEmail] = useState('');
@@ -344,6 +347,23 @@ const AdminUsers = () => {
     },
     onError: (err: Error) => toast.error(err.message),
   });
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ userId, newPassword }: { userId: string; newPassword: string }) => {
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: { user_id: userId, new_password: newPassword },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('পাসওয়ার্ড রিসেট হয়েছে');
+      setResetPasswordUser(null);
+      setResetNewPassword('');
+      setShowResetPassword(false);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   // ── Filtered data ──
   const filteredStaff = staffMembers.filter(s => {
@@ -537,6 +557,7 @@ const AdminUsers = () => {
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem onClick={() => setViewingUser(staff)}><Eye className="h-4 w-4 mr-2" />বিস্তারিত দেখুন</DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => { setEditingUser(staff); setEditRole(staff.role); }}><Edit className="h-4 w-4 mr-2" />রোল পরিবর্তন</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { setResetPasswordUser(staff); setResetNewPassword(''); setShowResetPassword(false); }}><KeyRound className="h-4 w-4 mr-2" />পাসওয়ার্ড রিসেট</DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem className="text-destructive" disabled={isSelf} onClick={() => { if (confirm('রিমুভ করতে চান?')) deleteUserMutation.mutate(staff.user_id); }}>
                                     <Trash2 className="h-4 w-4 mr-2" />রিমুভ করুন
@@ -857,6 +878,66 @@ const AdminUsers = () => {
                   <Button variant="outline" onClick={() => setEditingUser(null)}>বাতিল</Button>
                   <Button onClick={() => updateRoleMutation.mutate({ userId: editingUser.user_id, role: editRole })} disabled={updateRoleMutation.isPending}>
                     {updateRoleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}আপডেট করুন
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Reset Password Dialog */}
+        <Dialog open={!!resetPasswordUser} onOpenChange={() => { setResetPasswordUser(null); setResetNewPassword(''); setShowResetPassword(false); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-primary" />পাসওয়ার্ড রিসেট</DialogTitle>
+              <DialogDescription>এই স্টাফের পাসওয়ার্ড রিসেট করুন</DialogDescription>
+            </DialogHeader>
+            {resetPasswordUser && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <span className="text-primary font-semibold">{resetPasswordUser.profile?.full_name?.[0]?.toUpperCase() || '?'}</span>
+                  </div>
+                  <div>
+                    <p className="font-medium">{resetPasswordUser.profile?.full_name || 'N/A'}</p>
+                    <p className="text-sm text-muted-foreground">{resetPasswordUser.profile?.email}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>নতুন পাসওয়ার্ড</Label>
+                  <div className="relative">
+                    <Input
+                      type={showResetPassword ? 'text' : 'password'}
+                      placeholder="কমপক্ষে ৬ অক্ষর"
+                      value={resetNewPassword}
+                      onChange={e => setResetNewPassword(e.target.value)}
+                    />
+                    <button type="button" onClick={() => setShowResetPassword(!showResetPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showResetPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+                    let pwd = '';
+                    for (let i = 0; i < 12; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+                    setResetNewPassword(pwd);
+                    setShowResetPassword(true);
+                  }}
+                >
+                  🔑 র‍্যান্ডম পাসওয়ার্ড তৈরি করুন
+                </Button>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => { setResetPasswordUser(null); setResetNewPassword(''); }}>বাতিল</Button>
+                  <Button
+                    onClick={() => resetPasswordMutation.mutate({ userId: resetPasswordUser.user_id, newPassword: resetNewPassword })}
+                    disabled={resetPasswordMutation.isPending || resetNewPassword.length < 6}
+                  >
+                    {resetPasswordMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    পাসওয়ার্ড রিসেট করুন
                   </Button>
                 </div>
               </div>
