@@ -4901,25 +4901,37 @@ export type Database = {
       task_auto_assign_rules: {
         Row: {
           assigned_role: Database["public"]["Enums"]["app_role"]
+          assignment_strategy: string
+          auto_create_on_order: boolean
           created_at: string
+          default_priority: string
           id: string
           is_active: boolean | null
+          max_tasks_per_staff: number | null
           task_type: string
           updated_at: string
         }
         Insert: {
           assigned_role?: Database["public"]["Enums"]["app_role"]
+          assignment_strategy?: string
+          auto_create_on_order?: boolean
           created_at?: string
+          default_priority?: string
           id?: string
           is_active?: boolean | null
+          max_tasks_per_staff?: number | null
           task_type: string
           updated_at?: string
         }
         Update: {
           assigned_role?: Database["public"]["Enums"]["app_role"]
+          assignment_strategy?: string
+          auto_create_on_order?: boolean
           created_at?: string
+          default_priority?: string
           id?: string
           is_active?: boolean | null
+          max_tasks_per_staff?: number | null
           task_type?: string
           updated_at?: string
         }
@@ -5522,6 +5534,10 @@ export type Database = {
         }
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      smart_auto_assign: {
+        Args: { _order_id?: string; _task_type: string }
+        Returns: string
+      }
       update_visitor_conversation_timestamp: {
         Args: { p_conversation_id: string; p_visitor_id: string }
         Returns: undefined
