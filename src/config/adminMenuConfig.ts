@@ -62,6 +62,7 @@ export const menuCategories: MenuCategory[] = [
     roles: ['super_admin', 'admin', 'manager', 'support'],
     items: [
       { icon: LayoutDashboard, label: 'ড্যাশবোর্ড', href: '/admin', roles: ['super_admin', 'admin', 'manager', 'support'] },
+      { icon: ClipboardList, label: 'আমার টাস্ক', href: '/admin/my-dashboard', roles: ['super_admin', 'admin', 'manager', 'support'] },
       { icon: BarChart3, label: 'রিপোর্ট ও অ্যানালিটিক্স', href: '/admin/reports', roles: ['super_admin', 'admin', 'manager'] },
       { icon: BarChart3, label: 'চেকআউট অ্যানালিটিক্স', href: '/admin/checkout-analytics', roles: ['super_admin', 'admin', 'manager'] },
       { icon: BarChart3, label: 'ভিজিটর অ্যানালিটিক্স', href: '/admin/visitor-analytics', roles: ['super_admin', 'admin', 'manager'] },
