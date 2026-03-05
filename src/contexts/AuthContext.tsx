@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { trackCompleteRegistration, trackLogin } from "@/lib/analytics";
 import { logLoginEvent } from "@/hooks/useAuditLog";
 import { useSessionTracker } from "@/hooks/useSessionTracker";
+import { toast } from "sonner";
 
 interface AuthContextType {
   user: User | null;
@@ -26,6 +27,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
     if (currentUser?.email) {
       logLoginEvent(currentUser.email, true, 'logout');
+      toast.success(`${currentUser.email} → লগ আউট সফল`);
     }
   }, [user]);
 
@@ -80,8 +82,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!error) {
       trackLogin('email');
       logLoginEvent(email, true, 'login');
+      toast.success(`${email} → লগইন সফল`);
     } else {
       logLoginEvent(email, false, 'login_failed');
+      toast.error('লগইন ব্যর্থ হয়েছে');
     }
     
     return { error: error as Error | null };
