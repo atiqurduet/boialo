@@ -54,7 +54,6 @@ export const Header = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    toast.success("সফলভাবে লগ আউট হয়েছে");
     navigate("/");
   };
 
