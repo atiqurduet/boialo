@@ -4898,6 +4898,45 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_messages: {
+        Row: {
+          created_at: string
+          id: string
+          is_pinned: boolean
+          is_read: boolean
+          message: string
+          priority: string
+          read_at: string | null
+          recipient_id: string
+          sender_id: string
+          subject: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          is_read?: boolean
+          message: string
+          priority?: string
+          read_at?: string | null
+          recipient_id: string
+          sender_id: string
+          subject: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          is_read?: boolean
+          message?: string
+          priority?: string
+          read_at?: string | null
+          recipient_id?: string
+          sender_id?: string
+          subject?: string
+        }
+        Relationships: []
+      }
       task_auto_assign_rules: {
         Row: {
           assigned_role: Database["public"]["Enums"]["app_role"]

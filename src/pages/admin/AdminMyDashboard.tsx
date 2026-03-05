@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,13 +14,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import {
   CheckCircle2, Clock, ListChecks, Loader2, RefreshCw, Target,
   TrendingUp, AlertTriangle, BarChart3, User, Eye, Play, Pause,
   ArrowUpRight, ArrowRight, Zap, Calendar, Timer, Award,
-  ShieldCheck, Users, ChevronRight, Circle, Package
+  ShieldCheck, Users, ChevronRight, Circle, Package,
+  MessageSquarePlus, Bell, BellRing, Send, Pin, PinOff, Trash2,
+  Mail, MailOpen, AlertCircle, Megaphone
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -34,6 +38,13 @@ const PRIORITY_CONFIG: Record<string, { label: string; color: string; icon: stri
   high: { label: 'উচ্চ', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: '🟠' },
   medium: { label: 'মাঝারি', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', icon: '🟡' },
   low: { label: 'নিম্ন', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: '🟢' },
+};
+
+const MSG_PRIORITY_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode; bgColor: string }> = {
+  emergency: { label: 'ইমার্জেন্সি', color: 'text-red-600', icon: <AlertCircle className="h-4 w-4 text-red-500" />, bgColor: 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-800' },
+  urgent: { label: 'জরুরি', color: 'text-orange-600', icon: <BellRing className="h-4 w-4 text-orange-500" />, bgColor: 'bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-800' },
+  normal: { label: 'সাধারণ', color: 'text-blue-600', icon: <Bell className="h-4 w-4 text-blue-500" />, bgColor: 'bg-background border' },
+  info: { label: 'তথ্য', color: 'text-muted-foreground', icon: <Mail className="h-4 w-4 text-muted-foreground" />, bgColor: 'bg-muted/30 border' },
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
@@ -172,16 +183,76 @@ const StaffPerformanceCard = ({ staff, onClick }: { staff: any; onClick: () => v
 };
 
 // ═══════════════════════════════════════════════
+// Message Card Component
+// ═══════════════════════════════════════════════
+const MessageCard = ({ msg, currentUserId, senderName, onMarkRead, onPin, onDelete }: {
+  msg: any; currentUserId: string; senderName: string;
+  onMarkRead: (id: string) => void; onPin: (id: string, pinned: boolean) => void; onDelete: (id: string) => void;
+}) => {
+  const config = MSG_PRIORITY_CONFIG[msg.priority] || MSG_PRIORITY_CONFIG.normal;
+  const isMine = msg.sender_id === currentUserId;
+  const isUnread = !msg.is_read && msg.recipient_id === currentUserId;
+
+  return (
+    <div className={`border rounded-xl p-4 transition-all ${config.bgColor} ${isUnread ? 'ring-2 ring-primary/50 shadow-md' : ''} ${msg.is_pinned ? 'border-amber-400 dark:border-amber-600' : ''}`}>
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5">{config.icon}</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            {msg.is_pinned && <Pin className="h-3 w-3 text-amber-500" />}
+            <h3 className="font-semibold text-sm">{msg.subject}</h3>
+            <Badge className={`text-[9px] ${msg.priority === 'emergency' ? 'bg-red-500 text-white animate-pulse' : msg.priority === 'urgent' ? 'bg-orange-500 text-white' : 'bg-muted text-muted-foreground'}`}>
+              {config.label}
+            </Badge>
+            {isUnread && <Badge variant="destructive" className="text-[9px]">নতুন</Badge>}
+          </div>
+          <p className="text-sm text-foreground/90 whitespace-pre-wrap">{msg.message}</p>
+          <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
+            <span>{isMine ? 'আপনি পাঠিয়েছেন' : `প্রেরক: ${senderName}`}</span>
+            <span>•</span>
+            <span>{formatDistanceToNow(new Date(msg.created_at), { addSuffix: true, locale: bn })}</span>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1 shrink-0">
+          {isUnread && (
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onMarkRead(msg.id)} title="পড়া হয়েছে">
+              <MailOpen className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onPin(msg.id, !msg.is_pinned)} title={msg.is_pinned ? 'আনপিন' : 'পিন'}>
+            {msg.is_pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+          </Button>
+          {isMine && (
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => onDelete(msg.id)} title="মুছুন">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════
 // Main Component
 // ═══════════════════════════════════════════════
 const AdminMyDashboard = () => {
   const { user } = useAuth();
   const { role, isSuperAdmin } = useAdminAuth();
+  const isAdminOrSuper = role === 'super_admin' || role === 'admin';
   const queryClient = useQueryClient();
   const [changingTaskId, setChangingTaskId] = useState<string | null>(null);
   const [staffFilter, setStaffFilter] = useState('all');
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [taskStatusFilter, setTaskStatusFilter] = useState('all');
+
+  // Message compose state
+  const [showCompose, setShowCompose] = useState(false);
+  const [msgRecipient, setMsgRecipient] = useState('all');
+  const [msgSubject, setMsgSubject] = useState('');
+  const [msgBody, setMsgBody] = useState('');
+  const [msgPriority, setMsgPriority] = useState('normal');
+  const [isSending, setIsSending] = useState(false);
 
   // ── My Tasks ──
   const { data: myTasks = [], isLoading: tasksLoading, refetch: refetchTasks } = useQuery({
@@ -193,6 +264,23 @@ const AdminMyDashboard = () => {
         .select('*, orders(order_number, status, total)')
         .eq('assigned_to', user.id)
         .order('created_at', { ascending: false });
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  // ── My Messages ──
+  const { data: myMessages = [], refetch: refetchMessages } = useQuery({
+    queryKey: ['my-staff-messages', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from('staff_messages')
+        .select('*')
+        .or(`recipient_id.eq.${user.id},sender_id.eq.${user.id}`)
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(50);
       return data || [];
     },
     enabled: !!user,
@@ -225,7 +313,7 @@ const AdminMyDashboard = () => {
         role: roles.find(r => r.user_id === p.id)?.role || 'unknown',
       }));
     },
-    enabled: isSuperAdmin,
+    enabled: !!user,
   });
 
   // ── My Audit Logs (recent) ──
@@ -243,6 +331,21 @@ const AdminMyDashboard = () => {
     },
     enabled: !!user,
   });
+
+  // ── Realtime messages ──
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('staff-messages-rt')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'staff_messages', filter: `recipient_id=eq.${user.id}` }, (payload) => {
+        refetchMessages();
+        const p = payload.new as any;
+        const pri = MSG_PRIORITY_CONFIG[p.priority];
+        toast(p.subject, { description: p.message?.slice(0, 60), icon: p.priority === 'emergency' ? '🚨' : '📩' });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   // ── Status change mutation ──
   const statusMutation = useMutation({
@@ -262,6 +365,70 @@ const AdminMyDashboard = () => {
     onError: (err: Error) => { toast.error(err.message); setChangingTaskId(null); },
   });
 
+  // ── Send message ──
+  const sendMessage = async () => {
+    if (!user || !msgSubject.trim() || !msgBody.trim()) {
+      toast.error('বিষয় এবং বার্তা পূরণ করুন');
+      return;
+    }
+    setIsSending(true);
+    try {
+      if (msgRecipient === 'all') {
+        // Send to all staff except self
+        const recipients = staffProfiles.filter((s: any) => s.id !== user.id);
+        if (recipients.length === 0) { toast.error('কোনো স্টাফ পাওয়া যায়নি'); return; }
+        const rows = recipients.map((s: any) => ({
+          sender_id: user.id,
+          recipient_id: s.id,
+          subject: msgSubject.trim(),
+          message: msgBody.trim(),
+          priority: msgPriority,
+        }));
+        const { error } = await supabase.from('staff_messages').insert(rows);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('staff_messages').insert({
+          sender_id: user.id,
+          recipient_id: msgRecipient,
+          subject: msgSubject.trim(),
+          message: msgBody.trim(),
+          priority: msgPriority,
+        });
+        if (error) throw error;
+      }
+      toast.success('বার্তা পাঠানো হয়েছে');
+      setShowCompose(false);
+      setMsgSubject('');
+      setMsgBody('');
+      setMsgPriority('normal');
+      setMsgRecipient('all');
+      refetchMessages();
+    } catch (err: any) {
+      toast.error(err.message || 'বার্তা পাঠানো যায়নি');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  // ── Mark read ──
+  const markAsRead = async (id: string) => {
+    await supabase.from('staff_messages').update({ is_read: true, read_at: new Date().toISOString() }).eq('id', id);
+    refetchMessages();
+  };
+
+  // ── Pin/unpin ──
+  const togglePin = async (id: string, pinned: boolean) => {
+    await supabase.from('staff_messages').update({ is_pinned: pinned }).eq('id', id);
+    refetchMessages();
+  };
+
+  // ── Delete ──
+  const deleteMessage = async (id: string) => {
+    await supabase.from('staff_messages').delete().eq('id', id);
+    refetchMessages();
+    toast.success('বার্তা মুছে ফেলা হয়েছে');
+  };
+
   // ── Derived Stats ──
   const myPending = myTasks.filter(t => t.status === 'pending');
   const myInProgress = myTasks.filter(t => t.status === 'in_progress');
@@ -269,6 +436,7 @@ const AdminMyDashboard = () => {
   const myCompleted = myTasks.filter(t => t.status === 'completed');
   const myOverdue = myTasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'completed');
   const myCompletionRate = myTasks.length > 0 ? Math.round((myCompleted.length / myTasks.length) * 100) : 0;
+  const unreadCount = myMessages.filter(m => !m.is_read && m.recipient_id === user?.id).length;
 
   const myAvgCompletionTime = useMemo(() => {
     const times = myCompleted
@@ -372,10 +540,29 @@ const AdminMyDashboard = () => {
                 : 'আজকের টাস্ক, অগ্রগতি এবং কার্যকলাপ'}
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => refetchTasks()}>
-            <RefreshCw className="h-4 w-4 mr-1" /> রিফ্রেশ
-          </Button>
+          <div className="flex gap-2">
+            {isAdminOrSuper && (
+              <Button onClick={() => setShowCompose(true)} className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white">
+                <MessageSquarePlus className="h-4 w-4 mr-1" /> বার্তা পাঠান
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => { refetchTasks(); refetchMessages(); }}>
+              <RefreshCw className="h-4 w-4 mr-1" /> রিফ্রেশ
+            </Button>
+          </div>
         </div>
+
+        {/* Emergency Messages Banner */}
+        {myMessages.filter(m => !m.is_read && m.recipient_id === user?.id && (m.priority === 'emergency' || m.priority === 'urgent')).length > 0 && (
+          <Card className="border-red-400 dark:border-red-700 bg-red-50 dark:bg-red-900/10 animate-pulse">
+            <CardContent className="py-3 flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
+              <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+                আপনার {myMessages.filter(m => !m.is_read && m.recipient_id === user?.id && (m.priority === 'emergency' || m.priority === 'urgent')).length}টি জরুরি/ইমার্জেন্সি বার্তা আছে — নিচে "বার্তা" ট্যাবে দেখুন
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* ═══ My Stats ═══ */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -419,27 +606,36 @@ const AdminMyDashboard = () => {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className={unreadCount > 0 ? 'border-red-300 dark:border-red-700' : ''}>
             <CardContent className="pt-4 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg"><Timer className="h-4 w-4 text-purple-600" /></div>
-                <div><p className="text-xl font-bold">{myAvgCompletionTime}</p><p className="text-[10px] text-muted-foreground">গড় মিনিট</p></div>
+                <div className={`p-2 rounded-lg ${unreadCount > 0 ? 'bg-red-100 dark:bg-red-900/20' : 'bg-purple-100 dark:bg-purple-900/20'}`}>
+                  <BellRing className={`h-4 w-4 ${unreadCount > 0 ? 'text-red-600' : 'text-purple-600'}`} />
+                </div>
+                <div><p className="text-xl font-bold">{unreadCount}</p><p className="text-[10px] text-muted-foreground">অপঠিত বার্তা</p></div>
               </div>
             </CardContent>
           </Card>
         </div>
 
         <Tabs defaultValue="my-tasks">
-          <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-4' : 'grid-cols-2'}`}>
+          <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-5' : 'grid-cols-3'}`}>
             <TabsTrigger value="my-tasks"><ListChecks className="h-4 w-4 mr-1 hidden sm:inline" /> আমার টাস্ক</TabsTrigger>
-            <TabsTrigger value="my-activity"><Zap className="h-4 w-4 mr-1 hidden sm:inline" /> আমার অ্যাক্টিভিটি</TabsTrigger>
-            {isSuperAdmin && <TabsTrigger value="team"><Users className="h-4 w-4 mr-1 hidden sm:inline" /> টিম পারফরম্যান্স</TabsTrigger>}
+            <TabsTrigger value="messages" className="relative">
+              <Megaphone className="h-4 w-4 mr-1 hidden sm:inline" /> বার্তা
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] rounded-full h-4 w-4 flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="my-activity"><Zap className="h-4 w-4 mr-1 hidden sm:inline" /> অ্যাক্টিভিটি</TabsTrigger>
+            {isSuperAdmin && <TabsTrigger value="team"><Users className="h-4 w-4 mr-1 hidden sm:inline" /> টিম</TabsTrigger>}
             {isSuperAdmin && <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-1 hidden sm:inline" /> অ্যানালিটিক্স</TabsTrigger>}
           </TabsList>
 
           {/* ═══ My Tasks Tab ═══ */}
           <TabsContent value="my-tasks" className="space-y-4">
-            {/* Filters */}
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex gap-1.5">
                 {[
@@ -461,8 +657,6 @@ const AdminMyDashboard = () => {
                 ))}
               </div>
             </div>
-
-            {/* Task List */}
             {tasksLoading ? (
               <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
             ) : filteredMyTasks.length === 0 ? (
@@ -489,10 +683,43 @@ const AdminMyDashboard = () => {
             )}
           </TabsContent>
 
+          {/* ═══ Messages Tab ═══ */}
+          <TabsContent value="messages" className="space-y-4">
+            {isAdminOrSuper && (
+              <div className="flex justify-end">
+                <Button onClick={() => setShowCompose(true)} size="sm">
+                  <MessageSquarePlus className="h-4 w-4 mr-1" /> নতুন বার্তা
+                </Button>
+              </div>
+            )}
+            {myMessages.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Mail className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                  <h3 className="font-semibold text-lg mb-1">কোনো বার্তা নেই</h3>
+                  <p className="text-sm text-muted-foreground">নতুন বার্তা আসলে এখানে দেখা যাবে</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {myMessages.map(msg => (
+                  <MessageCard
+                    key={msg.id}
+                    msg={msg}
+                    currentUserId={user?.id || ''}
+                    senderName={getStaffName(msg.sender_id)}
+                    onMarkRead={markAsRead}
+                    onPin={togglePin}
+                    onDelete={deleteMessage}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
           {/* ═══ My Activity Tab ═══ */}
           <TabsContent value="my-activity" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Recent Activity Feed */}
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -526,8 +753,6 @@ const AdminMyDashboard = () => {
                   </ScrollArea>
                 </CardContent>
               </Card>
-
-              {/* Completion Summary */}
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -583,8 +808,6 @@ const AdminMyDashboard = () => {
                   </Card>
                 )}
               </div>
-
-              {/* Staff Detail Dialog */}
               <Dialog open={!!selectedStaffId} onOpenChange={(open) => !open && setSelectedStaffId(null)}>
                 <DialogContent className="max-w-2xl max-h-[80vh]">
                   <DialogHeader>
@@ -614,7 +837,6 @@ const AdminMyDashboard = () => {
           {isSuperAdmin && (
             <TabsContent value="analytics" className="space-y-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Daily Trend */}
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">৭ দিনের টাস্ক ট্রেন্ড</CardTitle>
@@ -631,8 +853,6 @@ const AdminMyDashboard = () => {
                     </ResponsiveContainer>
                   </CardContent>
                 </Card>
-
-                {/* Task Type Distribution */}
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">টাস্ক টাইপ বণ্টন</CardTitle>
@@ -652,8 +872,6 @@ const AdminMyDashboard = () => {
                     )}
                   </CardContent>
                 </Card>
-
-                {/* Staff Comparison Chart */}
                 <Card className="lg:col-span-2">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">স্টাফ তুলনা</CardTitle>
@@ -683,6 +901,69 @@ const AdminMyDashboard = () => {
           )}
         </Tabs>
       </div>
+
+      {/* ═══ Compose Message Dialog ═══ */}
+      <Dialog open={showCompose} onOpenChange={setShowCompose}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquarePlus className="h-5 w-5 text-primary" /> স্টাফকে বার্তা পাঠান
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">প্রাপক</label>
+              <Select value={msgRecipient} onValueChange={setMsgRecipient}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">📢 সকল স্টাফ</SelectItem>
+                  {staffProfiles.filter((s: any) => s.id !== user?.id).map((s: any) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.full_name || s.email} ({ROLE_LABELS[s.role] || s.role})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">প্রায়োরিটি</label>
+              <Select value={msgPriority} onValueChange={setMsgPriority}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="emergency">🚨 ইমার্জেন্সি — তাৎক্ষণিক প্রয়োজন</SelectItem>
+                  <SelectItem value="urgent">🔔 জরুরি</SelectItem>
+                  <SelectItem value="normal">📩 সাধারণ</SelectItem>
+                  <SelectItem value="info">ℹ️ তথ্য / নোট</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">বিষয়</label>
+              <Input
+                placeholder="বার্তার বিষয় লিখুন..."
+                value={msgSubject}
+                onChange={e => setMsgSubject(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">বার্তা</label>
+              <Textarea
+                placeholder="বিস্তারিত বার্তা লিখুন..."
+                rows={4}
+                value={msgBody}
+                onChange={e => setMsgBody(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCompose(false)}>বাতিল</Button>
+            <Button onClick={sendMessage} disabled={isSending} className={msgPriority === 'emergency' ? 'bg-red-600 hover:bg-red-700' : ''}>
+              {isSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}
+              পাঠান
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
