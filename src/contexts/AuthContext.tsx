@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { trackCompleteRegistration, trackLogin } from "@/lib/analytics";
+import { logLoginEvent } from "@/hooks/useAuditLog";
 
 interface AuthContextType {
   user: User | null;
@@ -68,13 +69,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     if (!error) {
       trackLogin('email');
+      // Log successful login (async, don't await)
+      logLoginEvent(email, true, 'login');
+    } else {
+      // Log failed login attempt
+      logLoginEvent(email, false, 'login_failed');
     }
     
     return { error: error as Error | null };
   };
 
   const signOut = async () => {
+    const currentUser = user;
     await supabase.auth.signOut();
+    if (currentUser?.email) {
+      logLoginEvent(currentUser.email, true, 'logout');
+    }
   };
 
   return (
