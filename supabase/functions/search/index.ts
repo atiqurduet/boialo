@@ -294,6 +294,12 @@ serve(async (req) => {
       suggestions.push(...authors as string[], ...publishers as string[]);
     }
 
+    // Track search analytics (fire and forget)
+    supabase.from("search_analytics").insert({
+      query: query.slice(0, 200),
+      results_count: allResults.length,
+    }).then();
+
     return new Response(JSON.stringify({
       products: allResults.map(({ score, matches, source, ...p }) => ({ ...p, source })),
       categories: categories.map(({ score, matches, ...c }) => c),
