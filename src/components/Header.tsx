@@ -153,6 +153,9 @@ export const Header = () => {
                 {showMobileSearch ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
               </Button>
 
+              {/* Notifications */}
+              <NotificationBell />
+
               {/* Wishlist */}
               <Link
                 to="/wishlist"
