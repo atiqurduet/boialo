@@ -223,7 +223,7 @@ serve(async (req) => {
       .map(product => {
         const nameBnMatch = multiVariantMatch(query, product.name_bn || "");
         const nameEnMatch = multiVariantMatch(query, product.name_en || "");
-        const brandMatch = multiVariantMatch(query, product.brand_name || "");
+        const brandMatch = multiVariantMatch(query, product.brand || "");
 
         const bestScore = Math.max(
           nameBnMatch.score * 1.3,
