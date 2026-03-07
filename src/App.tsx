@@ -61,6 +61,7 @@ const Compare = lazy(() => import("./pages/Compare"));
 const Ebooks = lazy(() => import("./pages/Ebooks"));
 const EbookDetail = lazy(() => import("./pages/EbookDetail"));
 const Eproducts = lazy(() => import("./pages/Eproducts"));
+const Rewards = lazy(() => import("./pages/Rewards"));
 
 // Admin Pages - lazy loaded
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
