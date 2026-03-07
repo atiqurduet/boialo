@@ -132,7 +132,53 @@ const AdminNotifications = () => {
     setSelectedEvent(null);
   };
 
-  const getSettingsByCategory = (category: string) => {
+  // Recent push notifications
+  const { data: recentPushNotifs, refetch: refetchPush } = useQuery({
+    queryKey: ["admin-push-notifications"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_notifications")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(30);
+      return (data || []) as any[];
+    },
+  });
+
+  const sendPushNotification = async () => {
+    if (!pushTitle.trim() || !pushMessage.trim()) {
+      toast.error("টাইটেল ও মেসেজ দিন");
+      return;
+    }
+    setPushSending(true);
+    try {
+      const { data: users } = await supabase.from("profiles").select("id");
+      if (!users?.length) { toast.error("কোনো ইউজার নেই"); return; }
+
+      const notifs = users.map((u: any) => ({
+        user_id: u.id,
+        title: pushTitle.trim(),
+        message: pushMessage.trim(),
+        type: pushType,
+        link: pushLink.trim() || null,
+      }));
+
+      for (let i = 0; i < notifs.length; i += 100) {
+        const { error } = await supabase.from("user_notifications").insert(notifs.slice(i, i + 100) as any);
+        if (error) throw error;
+      }
+
+      toast.success(`${users.length} জনকে পুশ নোটিফিকেশন পাঠানো হয়েছে`);
+      setPushTitle(""); setPushMessage(""); setPushLink("");
+      refetchPush();
+    } catch (err: any) {
+      toast.error("ত্রুটি: " + err.message);
+    } finally {
+      setPushSending(false);
+    }
+  };
+
+
     const eventTypes = eventCategories[category as keyof typeof eventCategories] || [];
     return settings?.filter(s => eventTypes.includes(s.event_type)) || [];
   };
