@@ -102,9 +102,9 @@ export const useSearch = () => {
           .limit(limit),
         supabase
           .from('universal_products')
-          .select('id, name_bn, name_en, slug, price, original_price, discount_percent, brand_name, images, product_type')
+          .select('id, name_bn, name_en, slug, price, original_price, discount_percent, brand, images, product_type')
           .eq('is_active', true)
-          .or(`name_bn.ilike.%${sanitizedQuery}%,name_en.ilike.%${sanitizedQuery}%,brand_name.ilike.%${sanitizedQuery}%`)
+          .or(`name_bn.ilike.%${sanitizedQuery}%,name_en.ilike.%${sanitizedQuery}%,brand.ilike.%${sanitizedQuery}%`)
           .limit(limit),
         supabase
           .from('categories')
@@ -114,8 +114,7 @@ export const useSearch = () => {
           .limit(5),
       ]);
 
-      // Normalize universal products to same shape
-      const normalizedUniversal = (universalRes.data || []).map(p => ({
+      const normalizedUniversal = (universalRes.data || []).map((p: any) => ({
         id: p.id,
         title_bn: p.name_bn,
         title_en: p.name_en,
@@ -123,7 +122,7 @@ export const useSearch = () => {
         price: p.price,
         original_price: p.original_price,
         discount_percent: p.discount_percent,
-        author: p.brand_name,
+        author: p.brand,
         publisher: p.product_type,
         images: p.images,
         source: 'universal' as const,
