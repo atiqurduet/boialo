@@ -184,40 +184,53 @@ export const SearchDropdown = ({
             {/* Products Section */}
             {results.products.length > 0 && (
               <div>
-                {results.products.map((product) => (
-                  <Link
-                    key={product.id}
-                    to={`/product/${product.slug}`}
-                    className="flex items-center gap-3 p-3 hover:bg-muted transition-colors"
-                    onClick={handleProductClick}
-                  >
-                    <img
-                      src={getProductImage(product)}
-                      alt={product.title_bn}
-                      className="w-12 h-16 object-cover rounded"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/placeholder.svg';
-                      }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm line-clamp-1">{product.title_bn}</p>
-                      <p className="text-xs text-muted-foreground">{product.author || product.title_en}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-sm text-primary font-bold">৳{product.price}</p>
-                        {product.original_price && product.original_price > product.price && (
-                          <p className="text-xs text-muted-foreground line-through">
-                            ৳{product.original_price}
-                          </p>
-                        )}
-                        {product.discount_percent && product.discount_percent > 0 && (
-                          <span className="text-xs bg-destructive/10 text-destructive px-1.5 py-0.5 rounded">
-                            -{product.discount_percent}%
-                          </span>
-                        )}
+                {results.products.map((product: any) => {
+                  const isUniversal = product.source === 'universal';
+                  const productLink = isUniversal 
+                    ? `/${product.publisher || 'lifestyle'}/${product.slug}` 
+                    : `/product/${product.slug}`;
+                  return (
+                    <Link
+                      key={product.id}
+                      to={productLink}
+                      className="flex items-center gap-3 p-3 hover:bg-muted transition-colors"
+                      onClick={handleProductClick}
+                    >
+                      <img
+                        src={getProductImage(product)}
+                        alt={product.title_bn}
+                        className="w-12 h-16 object-cover rounded"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder.svg';
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm line-clamp-1">{product.title_bn}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {product.author || product.title_en}
+                          {isUniversal && (
+                            <span className="ml-1.5 px-1.5 py-0.5 bg-accent/10 text-accent rounded text-[10px]">
+                              {product.publisher}
+                            </span>
+                          )}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-sm text-primary font-bold">৳{product.price}</p>
+                          {product.original_price && product.original_price > product.price && (
+                            <p className="text-xs text-muted-foreground line-through">
+                              ৳{product.original_price}
+                            </p>
+                          )}
+                          {product.discount_percent && product.discount_percent > 0 && (
+                            <span className="text-xs bg-destructive/10 text-destructive px-1.5 py-0.5 rounded">
+                              -{product.discount_percent}%
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             )}
 
