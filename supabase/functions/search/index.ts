@@ -242,7 +242,7 @@ serve(async (req) => {
           price: product.price,
           original_price: product.original_price,
           discount_percent: product.discount_percent,
-          author: product.brand_name,
+          author: product.brand,
           publisher: product.product_type,
           images: product.images,
           score: bestScore,
