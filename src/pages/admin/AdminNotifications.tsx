@@ -549,6 +549,7 @@ const AdminNotifications = () => {
                 </Card>
               </div>
             </TabsContent>
+          </Tabs>
         )}
 
         {/* Info Section */}
