@@ -178,7 +178,7 @@ const AdminNotifications = () => {
     }
   };
 
-
+  const getSettingsByCategory = (category: string) => {
     const eventTypes = eventCategories[category as keyof typeof eventCategories] || [];
     return settings?.filter(s => eventTypes.includes(s.event_type)) || [];
   };
