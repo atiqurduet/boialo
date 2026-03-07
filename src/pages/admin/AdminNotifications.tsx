@@ -422,6 +422,10 @@ const AdminNotifications = () => {
                 <Key className="w-4 h-4" />
                 অথেনটিকেশন ({getSettingsByCategory('auth').length})
               </TabsTrigger>
+              <TabsTrigger value="push" className="gap-2 py-2.5 px-4">
+                <Send className="w-4 h-4" />
+                পুশ নোটিফিকেশন
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="order" className="space-y-4">
