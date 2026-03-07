@@ -4249,6 +4249,33 @@ export type Database = {
         }
         Relationships: []
       }
+      search_analytics: {
+        Row: {
+          created_at: string | null
+          id: string
+          query: string
+          results_count: number | null
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          query: string
+          results_count?: number | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          query?: string
+          results_count?: number | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       seo_redirects: {
         Row: {
           created_at: string
