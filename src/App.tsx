@@ -198,6 +198,7 @@ const App = () => (
                 <Route path="/gift-cards" element={<GiftCards />} />
                 <Route path="/bundles" element={<Bundles />} />
                 <Route path="/compare" element={<Compare />} />
+                <Route path="/rewards" element={<Rewards />} />
                 <Route path="/ebooks" element={<Ebooks />} />
                 <Route path="/ebooks/:slug" element={<EbookDetail />} />
                 <Route path="/ebooks/:slug/read" element={<EbookReader />} />
