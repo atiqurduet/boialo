@@ -61,6 +61,7 @@ const Compare = lazy(() => import("./pages/Compare"));
 const Ebooks = lazy(() => import("./pages/Ebooks"));
 const EbookDetail = lazy(() => import("./pages/EbookDetail"));
 const Eproducts = lazy(() => import("./pages/Eproducts"));
+const Rewards = lazy(() => import("./pages/Rewards"));
 
 // Admin Pages - lazy loaded
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -197,6 +198,7 @@ const App = () => (
                 <Route path="/gift-cards" element={<GiftCards />} />
                 <Route path="/bundles" element={<Bundles />} />
                 <Route path="/compare" element={<Compare />} />
+                <Route path="/rewards" element={<Rewards />} />
                 <Route path="/ebooks" element={<Ebooks />} />
                 <Route path="/ebooks/:slug" element={<EbookDetail />} />
                 <Route path="/ebooks/:slug/read" element={<EbookReader />} />
