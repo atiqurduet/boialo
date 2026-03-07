@@ -6,48 +6,57 @@
 
 @layer base {
   :root {
-    /* Color Scheme */
+    /* Color Scheme - Refined professional palette */
     --background: 0 0% 97%;
-    --foreground: 0 0% 15%;
+    --foreground: 220 15% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 15%;
+    --card-foreground: 220 15% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 15%;
+    --popover-foreground: 220 15% 15%;
 
-    /* Primary Red */
-    --primary: 4 82% 56%;
+    /* Primary Red - deeper and richer */
+    --primary: 4 80% 52%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary Gray */
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 15%;
+    /* Secondary */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 15% 15%;
 
-    --muted: 0 0% 94%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 8% 46%;
 
-    /* Accent - Teal for offers */
-    --accent: 174 60% 45%;
+    /* Accent - Emerald for offers/success */
+    --accent: 160 60% 42%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 4 82% 56%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 4 80% 52%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
 
     /* Custom brand tokens */
-    --brand-primary: 4 82% 56%;
-    --brand-primary-dark: 4 82% 45%;
-    --brand-gray: 0 0% 97%;
-    --brand-dark: 0 0% 20%;
-    --discount-badge: 120 60% 40%;
-    --price-original: 0 0% 60%;
-    --price-sale: 4 82% 50%;
+    --brand-primary: 4 80% 52%;
+    --brand-primary-dark: 4 80% 42%;
+    --brand-gray: 220 14% 96%;
+    --brand-dark: 220 15% 18%;
+    --discount-badge: 142 60% 38%;
+    --price-original: 220 8% 55%;
+    --price-sale: 4 80% 48%;
+
+    /* Gradient tokens */
+    --gradient-hero: linear-gradient(135deg, hsl(4, 80%, 52%) 0%, hsl(340, 65%, 47%) 100%);
+    --gradient-section: linear-gradient(180deg, hsl(220, 14%, 96%) 0%, hsl(0, 0%, 100%) 100%);
+
+    /* Shadow tokens */
+    --shadow-card: 0 1px 3px 0 rgba(0,0,0,0.06), 0 1px 2px -1px rgba(0,0,0,0.06);
+    --shadow-card-hover: 0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
+    --shadow-elevated: 0 20px 40px -12px rgba(0,0,0,0.12);
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -60,33 +69,33 @@
   }
 
   .dark {
-    --background: 0 0% 8%;
-    --foreground: 0 0% 95%;
+    --background: 220 15% 7%;
+    --foreground: 220 14% 95%;
 
-    --card: 0 0% 12%;
-    --card-foreground: 0 0% 95%;
+    --card: 220 15% 10%;
+    --card-foreground: 220 14% 95%;
 
-    --popover: 0 0% 12%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 220 15% 10%;
+    --popover-foreground: 220 14% 95%;
 
-    --primary: 4 82% 56%;
+    --primary: 4 80% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 18%;
-    --secondary-foreground: 0 0% 95%;
+    --secondary: 220 15% 16%;
+    --secondary-foreground: 220 14% 95%;
 
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 220 15% 16%;
+    --muted-foreground: 220 8% 65%;
 
-    --accent: 174 60% 45%;
+    --accent: 160 60% 42%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 4 82% 56%;
+    --border: 220 15% 18%;
+    --input: 220 15% 18%;
+    --ring: 4 80% 55%;
 
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
@@ -106,11 +115,19 @@
 
   html {
     scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Hind Siliguri', sans-serif;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Optimize image rendering */
+  img {
+    content-visibility: auto;
   }
 }
 
@@ -124,15 +141,18 @@
   }
 
   .product-card {
-    @apply bg-card rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg border border-border/50;
+    @apply bg-card rounded-xl overflow-hidden transition-all duration-300 border border-border/40;
+    box-shadow: var(--shadow-card);
   }
 
   .product-card:hover {
+    box-shadow: var(--shadow-card-hover);
     transform: translateY(-4px);
   }
 
   .discount-badge {
-    @apply absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-md;
+    @apply absolute top-2.5 left-2.5 text-primary-foreground text-xs font-bold px-2.5 py-1 rounded-lg;
+    background: hsl(var(--discount-badge));
   }
 
   .price-original {
@@ -140,11 +160,12 @@
   }
 
   .price-sale {
-    @apply text-primary font-bold;
+    @apply font-bold;
+    color: hsl(var(--price-sale));
   }
 
   .category-card {
-    @apply flex flex-col items-center p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer;
+    @apply flex flex-col items-center p-4 rounded-xl hover:bg-muted/50 transition-all duration-200 cursor-pointer;
   }
 
   .search-input {
@@ -152,19 +173,39 @@
   }
 
   .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-6 py-2 rounded-md font-medium;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-all px-6 py-2 rounded-lg font-medium;
   }
 
   .btn-outline-primary {
-    @apply border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors px-6 py-2 rounded-md font-medium;
+    @apply border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all px-6 py-2 rounded-lg font-medium;
   }
 
   .section-title {
-    @apply text-xl font-bold text-foreground mb-4;
+    @apply text-xl md:text-2xl font-bold text-foreground;
+  }
+
+  .section-header {
+    @apply flex items-center justify-between mb-6;
   }
 
   .filter-checkbox {
     @apply flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground cursor-pointer py-1;
+  }
+
+  /* Professional section wrapper */
+  .section-wrapper {
+    @apply py-8 md:py-12;
+  }
+
+  /* Trust badge style */
+  .trust-badge-card {
+    @apply flex items-center gap-3 p-4 md:p-5 bg-card rounded-xl border border-border/40 transition-all duration-200;
+    box-shadow: var(--shadow-card);
+  }
+
+  .trust-badge-card:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
   }
 }
 
@@ -224,5 +265,11 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Content visibility for off-screen sections */
+  .content-lazy {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 500px;
   }
 }
