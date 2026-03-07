@@ -475,7 +475,80 @@ const AdminNotifications = () => {
                 {getSettingsByCategory('auth').map(renderNotificationCard)}
               </div>
             </TabsContent>
-          </Tabs>
+
+            <TabsContent value="push" className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Send className="w-4 h-4" />
+                      সকল কাস্টমারকে পুশ নোটিফিকেশন পাঠান
+                    </CardTitle>
+                    <CardDescription>রিয়েলটাইম ইন-অ্যাপ নোটিফিকেশন</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="mb-1 block">টাইটেল</Label>
+                      <Input value={pushTitle} onChange={(e) => setPushTitle(e.target.value)} placeholder="নোটিফিকেশন টাইটেল..." maxLength={100} />
+                    </div>
+                    <div>
+                      <Label className="mb-1 block">মেসেজ</Label>
+                      <Textarea value={pushMessage} onChange={(e) => setPushMessage(e.target.value)} placeholder="নোটিফিকেশন মেসেজ..." rows={3} maxLength={500} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="mb-1 block">ধরন</Label>
+                        <Select value={pushType} onValueChange={setPushType}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="general">সাধারণ</SelectItem>
+                            <SelectItem value="offer">অফার</SelectItem>
+                            <SelectItem value="loyalty">লয়্যালটি</SelectItem>
+                            <SelectItem value="order">অর্ডার</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="mb-1 block">লিংক (ঐচ্ছিক)</Label>
+                        <Input value={pushLink} onChange={(e) => setPushLink(e.target.value)} placeholder="/offers" />
+                      </div>
+                    </div>
+                    <Button onClick={sendPushNotification} disabled={pushSending} className="w-full gap-2">
+                      {pushSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      {pushSending ? "পাঠানো হচ্ছে..." : "নোটিফিকেশন পাঠান"}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">সাম্প্রতিক পুশ নোটিফিকেশন</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 max-h-[350px] overflow-y-auto">
+                      {!recentPushNotifs?.length ? (
+                        <p className="text-sm text-muted-foreground text-center py-6">কোনো নোটিফিকেশন নেই</p>
+                      ) : (
+                        recentPushNotifs.map((n: any) => (
+                          <div key={n.id} className="flex items-start gap-2 p-2.5 rounded-lg border text-sm">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium truncate">{n.title}</span>
+                                <Badge variant="outline" className="text-[10px] shrink-0">{n.type}</Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{n.message}</p>
+                            </div>
+                            <Badge variant={n.is_read ? "secondary" : "default"} className="text-[10px] shrink-0">
+                              {n.is_read ? "পঠিত" : "অপঠিত"}
+                            </Badge>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
         )}
 
         {/* Info Section */}
