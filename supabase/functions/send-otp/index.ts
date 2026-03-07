@@ -220,6 +220,21 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     if (action === "send") {
+      // Rate limiting: max 3 OTPs per phone per hour
+      const { data: recentOTPs } = await supabase
+        .from("phone_verifications")
+        .select("created_at")
+        .eq("phone", phone)
+        .gte("created_at", new Date(Date.now() - 3600000).toISOString())
+        .order("created_at", { ascending: false });
+
+      if (recentOTPs && recentOTPs.length >= 3) {
+        return new Response(
+          JSON.stringify({ error: "অনেকবার OTP পাঠানো হয়েছে। ১ ঘণ্টা পর চেষ্টা করুন।" }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // Generate 6-digit OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes

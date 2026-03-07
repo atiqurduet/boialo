@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { 
   Bell, 
@@ -79,6 +80,13 @@ const AdminNotifications = () => {
   const [testPhone, setTestPhone] = useState("");
   const [testEmail, setTestEmail] = useState("");
   const [smsTemplate, setSmsTemplate] = useState("");
+  
+  // Push notification state
+  const [pushTitle, setPushTitle] = useState("");
+  const [pushMessage, setPushMessage] = useState("");
+  const [pushType, setPushType] = useState("general");
+  const [pushLink, setPushLink] = useState("");
+  const [pushSending, setPushSending] = useState(false);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["notification-settings"],
@@ -122,6 +130,52 @@ const AdminNotifications = () => {
   const saveSmsTemplate = (id: string) => {
     updateMutation.mutate({ id, updates: { sms_template: smsTemplate } });
     setSelectedEvent(null);
+  };
+
+  // Recent push notifications
+  const { data: recentPushNotifs, refetch: refetchPush } = useQuery({
+    queryKey: ["admin-push-notifications"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_notifications")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(30);
+      return (data || []) as any[];
+    },
+  });
+
+  const sendPushNotification = async () => {
+    if (!pushTitle.trim() || !pushMessage.trim()) {
+      toast.error("টাইটেল ও মেসেজ দিন");
+      return;
+    }
+    setPushSending(true);
+    try {
+      const { data: users } = await supabase.from("profiles").select("id");
+      if (!users?.length) { toast.error("কোনো ইউজার নেই"); return; }
+
+      const notifs = users.map((u: any) => ({
+        user_id: u.id,
+        title: pushTitle.trim(),
+        message: pushMessage.trim(),
+        type: pushType,
+        link: pushLink.trim() || null,
+      }));
+
+      for (let i = 0; i < notifs.length; i += 100) {
+        const { error } = await supabase.from("user_notifications").insert(notifs.slice(i, i + 100) as any);
+        if (error) throw error;
+      }
+
+      toast.success(`${users.length} জনকে পুশ নোটিফিকেশন পাঠানো হয়েছে`);
+      setPushTitle(""); setPushMessage(""); setPushLink("");
+      refetchPush();
+    } catch (err: any) {
+      toast.error("ত্রুটি: " + err.message);
+    } finally {
+      setPushSending(false);
+    }
   };
 
   const getSettingsByCategory = (category: string) => {
@@ -368,6 +422,10 @@ const AdminNotifications = () => {
                 <Key className="w-4 h-4" />
                 অথেনটিকেশন ({getSettingsByCategory('auth').length})
               </TabsTrigger>
+              <TabsTrigger value="push" className="gap-2 py-2.5 px-4">
+                <Send className="w-4 h-4" />
+                পুশ নোটিফিকেশন
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="order" className="space-y-4">
@@ -415,6 +473,80 @@ const AdminNotifications = () => {
               </div>
               <div className="grid gap-4">
                 {getSettingsByCategory('auth').map(renderNotificationCard)}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="push" className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Send className="w-4 h-4" />
+                      সকল কাস্টমারকে পুশ নোটিফিকেশন পাঠান
+                    </CardTitle>
+                    <CardDescription>রিয়েলটাইম ইন-অ্যাপ নোটিফিকেশন</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="mb-1 block">টাইটেল</Label>
+                      <Input value={pushTitle} onChange={(e) => setPushTitle(e.target.value)} placeholder="নোটিফিকেশন টাইটেল..." maxLength={100} />
+                    </div>
+                    <div>
+                      <Label className="mb-1 block">মেসেজ</Label>
+                      <Textarea value={pushMessage} onChange={(e) => setPushMessage(e.target.value)} placeholder="নোটিফিকেশন মেসেজ..." rows={3} maxLength={500} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="mb-1 block">ধরন</Label>
+                        <Select value={pushType} onValueChange={setPushType}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="general">সাধারণ</SelectItem>
+                            <SelectItem value="offer">অফার</SelectItem>
+                            <SelectItem value="loyalty">লয়্যালটি</SelectItem>
+                            <SelectItem value="order">অর্ডার</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="mb-1 block">লিংক (ঐচ্ছিক)</Label>
+                        <Input value={pushLink} onChange={(e) => setPushLink(e.target.value)} placeholder="/offers" />
+                      </div>
+                    </div>
+                    <Button onClick={sendPushNotification} disabled={pushSending} className="w-full gap-2">
+                      {pushSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      {pushSending ? "পাঠানো হচ্ছে..." : "নোটিফিকেশন পাঠান"}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">সাম্প্রতিক পুশ নোটিফিকেশন</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 max-h-[350px] overflow-y-auto">
+                      {!recentPushNotifs?.length ? (
+                        <p className="text-sm text-muted-foreground text-center py-6">কোনো নোটিফিকেশন নেই</p>
+                      ) : (
+                        recentPushNotifs.map((n: any) => (
+                          <div key={n.id} className="flex items-start gap-2 p-2.5 rounded-lg border text-sm">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium truncate">{n.title}</span>
+                                <Badge variant="outline" className="text-[10px] shrink-0">{n.type}</Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{n.message}</p>
+                            </div>
+                            <Badge variant={n.is_read ? "secondary" : "default"} className="text-[10px] shrink-0">
+                              {n.is_read ? "পঠিত" : "অপঠিত"}
+                            </Badge>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
           </Tabs>
