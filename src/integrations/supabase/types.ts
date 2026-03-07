@@ -74,6 +74,48 @@ export type Database = {
         }
         Relationships: []
       }
+      achievement_badges: {
+        Row: {
+          badge_type: string
+          condition_type: string
+          condition_value: number
+          created_at: string
+          description_bn: string | null
+          icon: string
+          id: string
+          is_active: boolean
+          name_bn: string
+          points_reward: number
+          sort_order: number
+        }
+        Insert: {
+          badge_type?: string
+          condition_type: string
+          condition_value?: number
+          created_at?: string
+          description_bn?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name_bn: string
+          points_reward?: number
+          sort_order?: number
+        }
+        Update: {
+          badge_type?: string
+          condition_type?: string
+          condition_value?: number
+          created_at?: string
+          description_bn?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name_bn?: string
+          points_reward?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
       active_sessions: {
         Row: {
           id: string
@@ -1125,6 +1167,33 @@ export type Database = {
           successful_orders?: number | null
           total_orders?: number | null
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      daily_checkins: {
+        Row: {
+          checkin_date: string
+          created_at: string
+          id: string
+          points_earned: number
+          streak_count: number
+          user_id: string
+        }
+        Insert: {
+          checkin_date?: string
+          created_at?: string
+          id?: string
+          points_earned?: number
+          streak_count?: number
+          user_id: string
+        }
+        Update: {
+          checkin_date?: string
+          created_at?: string
+          id?: string
+          points_earned?: number
+          streak_count?: number
           user_id?: string
         }
         Relationships: []
@@ -4862,6 +4931,77 @@ export type Database = {
           },
         ]
       }
+      spin_wheel_history: {
+        Row: {
+          id: string
+          prize_id: string | null
+          prize_label: string
+          prize_type: string
+          prize_value: number
+          spun_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          prize_id?: string | null
+          prize_label: string
+          prize_type: string
+          prize_value?: number
+          spun_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          prize_id?: string | null
+          prize_label?: string
+          prize_type?: string
+          prize_value?: number
+          spun_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spin_wheel_history_prize_id_fkey"
+            columns: ["prize_id"]
+            isOneToOne: false
+            referencedRelation: "spin_wheel_prizes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spin_wheel_prizes: {
+        Row: {
+          color: string
+          id: string
+          is_active: boolean
+          label_bn: string
+          prize_type: string
+          prize_value: number
+          probability: number
+          sort_order: number
+        }
+        Insert: {
+          color?: string
+          id?: string
+          is_active?: boolean
+          label_bn: string
+          prize_type?: string
+          prize_value?: number
+          probability?: number
+          sort_order?: number
+        }
+        Update: {
+          color?: string
+          id?: string
+          is_active?: boolean
+          label_bn?: string
+          prize_type?: string
+          prize_value?: number
+          probability?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
       staff_invitations: {
         Row: {
           accepted_at: string | null
@@ -5271,6 +5411,35 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "universal_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_badges"
             referencedColumns: ["id"]
           },
         ]
