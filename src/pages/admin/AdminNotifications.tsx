@@ -79,6 +79,13 @@ const AdminNotifications = () => {
   const [testPhone, setTestPhone] = useState("");
   const [testEmail, setTestEmail] = useState("");
   const [smsTemplate, setSmsTemplate] = useState("");
+  
+  // Push notification state
+  const [pushTitle, setPushTitle] = useState("");
+  const [pushMessage, setPushMessage] = useState("");
+  const [pushType, setPushType] = useState("general");
+  const [pushLink, setPushLink] = useState("");
+  const [pushSending, setPushSending] = useState(false);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["notification-settings"],
