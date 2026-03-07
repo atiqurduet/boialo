@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Heart, ShoppingBag, User, Menu, LogOut, Package, Search, ChevronDown, X } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SearchDropdown } from "@/components/SearchDropdown";
@@ -151,6 +152,9 @@ export const Header = () => {
               >
                 {showMobileSearch ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
               </Button>
+
+              {/* Notifications */}
+              <NotificationBell />
 
               {/* Wishlist */}
               <Link
