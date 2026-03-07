@@ -1,4 +1,3 @@
-import { Layout } from "@/components/Layout";
 import { DailyCheckin } from "@/components/gamification/DailyCheckin";
 import { SpinWheel } from "@/components/gamification/SpinWheel";
 import { AchievementBadges } from "@/components/gamification/AchievementBadges";
@@ -6,6 +5,9 @@ import { LoyaltyPointsWidget } from "@/components/LoyaltyPointsWidget";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Gift } from "lucide-react";
+import { AnnouncementBar } from "@/components/AnnouncementBar";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 
 export default function Rewards() {
   const { user, loading } = useAuth();
