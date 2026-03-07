@@ -519,15 +519,21 @@ const Index = () => {
       {/* Trust Badges - always show at top */}
       <TrustBadges />
 
-      <div className="container py-8">
+      <div className="container py-6 md:py-10 space-y-2">
         {/* Featured Offer Banner */}
         <FeaturedOfferBanner />
 
-        {/* Render sections in order */}
-        {sections.map(section => renderSection(section))}
+        {/* Render sections in order with lazy visibility */}
+        {sections.map((section, index) => (
+          <div key={section.id} className={index > 2 ? "content-lazy" : ""}>
+            {renderSection(section)}
+          </div>
+        ))}
 
         {/* Recently Viewed Products */}
-        <RecentlyViewed />
+        <div className="content-lazy">
+          <RecentlyViewed />
+        </div>
       </div>
 
       {/* Newsletter Section - always show at bottom */}
