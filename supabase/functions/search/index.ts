@@ -191,7 +191,7 @@ serve(async (req) => {
         .limit(200),
       supabase
         .from("universal_products")
-        .select("id, name_bn, name_en, slug, price, original_price, discount_percent, brand_name, images, is_active, product_type")
+        .select("id, name_bn, name_en, slug, price, original_price, discount_percent, brand, images, is_active, product_type")
         .eq("is_active", true)
         .limit(200),
     ]);
