@@ -57,19 +57,38 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background animate-page-in">
+      <div className="min-h-screen bg-background">
         <AnnouncementBar />
         <Header />
         <main>
-        <Skeleton className="h-[350px] w-full" />
-        <div className="container py-8 space-y-8">
-          <Skeleton className="h-[200px] w-full rounded-xl" />
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-[280px] rounded-xl" />
-            ))}
+          {/* Hero skeleton */}
+          <Skeleton className="h-[300px] md:h-[450px] w-full" />
+          
+          {/* Trust badges skeleton */}
+          <div className="container py-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-[72px] rounded-xl" />
+              ))}
+            </div>
           </div>
-        </div>
+
+          {/* Content skeleton */}
+          <div className="container py-4 space-y-8">
+            <div className="space-y-4">
+              <Skeleton className="h-8 w-48" />
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="space-y-3">
+                    <Skeleton className="aspect-[3/4] rounded-xl" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-5 w-20" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </main>
         <Footer />
       </div>
@@ -500,15 +519,21 @@ const Index = () => {
       {/* Trust Badges - always show at top */}
       <TrustBadges />
 
-      <div className="container py-8">
+      <div className="container py-6 md:py-10 space-y-2">
         {/* Featured Offer Banner */}
         <FeaturedOfferBanner />
 
-        {/* Render sections in order */}
-        {sections.map(section => renderSection(section))}
+        {/* Render sections in order with lazy visibility */}
+        {sections.map((section, index) => (
+          <div key={section.id} className={index > 2 ? "content-lazy" : ""}>
+            {renderSection(section)}
+          </div>
+        ))}
 
         {/* Recently Viewed Products */}
-        <RecentlyViewed />
+        <div className="content-lazy">
+          <RecentlyViewed />
+        </div>
       </div>
 
       {/* Newsletter Section - always show at bottom */}

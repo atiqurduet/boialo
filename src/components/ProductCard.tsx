@@ -1,4 +1,4 @@
-import { Heart } from "lucide-react";
+import { Heart, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useCartContext } from "@/contexts/CartContext";
@@ -46,12 +46,13 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
     return (
       <Link
         to={`/product/${product.slug}`}
-        className="flex items-center gap-3 p-3 bg-card rounded-lg hover:bg-muted/50 transition-colors group"
+        className="flex items-center gap-3 p-3 bg-card rounded-xl hover:bg-muted/50 transition-colors group border border-border/30"
       >
         <img
           src={product.image}
           alt={product.title}
-          className="w-16 h-20 object-cover rounded"
+          className="w-16 h-20 object-cover rounded-lg"
+          loading="lazy"
         />
         <div className="flex-1 min-w-0">
           <h4 className="font-medium text-sm text-foreground group-hover:text-primary transition-colors line-clamp-2">
@@ -64,10 +65,10 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
           >
             {product.author}
           </Link>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-primary font-bold text-sm">৳{product.price}</span>
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="price-sale text-sm">৳{product.price}</span>
             {hasDiscount && (
-              <span className="text-muted-foreground line-through text-xs">
+              <span className="price-original text-xs">
                 ৳{product.originalPrice}
               </span>
             )}
@@ -81,17 +82,17 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
     <div className="product-card group relative">
       {/* Preorder Badge */}
       {product.isPreorder && (
-        <div className="absolute top-2 left-2 z-10 bg-accent text-accent-foreground px-2 py-1 rounded-md text-xs font-medium">
+        <div className="absolute top-2.5 left-2.5 z-10 bg-accent text-accent-foreground px-2.5 py-1 rounded-lg text-xs font-semibold shadow-sm">
           প্রি-অর্ডার
         </div>
       )}
 
       {/* Discount Badge */}
       {hasDiscount && !product.isPreorder && (
-        <div className="discount-badge">
-          {product.discount}%
+        <div className="discount-badge shadow-sm">
+          <span className="text-sm font-bold">{product.discount}%</span>
           <br />
-          <span className="text-[10px]">OFF</span>
+          <span className="text-[10px] font-medium">ছাড়</span>
         </div>
       )}
 
@@ -99,7 +100,7 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
       <button
         onClick={handleToggleWishlist}
         className={cn(
-          "absolute top-2 right-2 p-2 bg-card/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-card z-10",
+          "absolute top-2.5 right-2.5 p-2 bg-card/90 backdrop-blur-sm rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-card hover:scale-110 z-10",
           inWishlist && "opacity-100"
         )}
         aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
@@ -113,35 +114,42 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
       </button>
 
       {/* Product Image */}
-      <Link to={`/product/${product.slug}`} className="block aspect-[3/4] overflow-hidden">
+      <Link to={`/product/${product.slug}`} className="block aspect-[3/4] overflow-hidden bg-muted/30">
         <img
           src={product.image}
           alt={product.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+          loading="lazy"
+          decoding="async"
         />
       </Link>
 
       {/* Product Info */}
-      <div className="p-4">
+      <div className="p-3.5 md:p-4 space-y-1.5">
         <Link to={`/product/${product.slug}`}>
-          <h3 className="font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2 mb-1 text-sm md:text-base">
+          <h3 className="font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2 text-sm leading-snug">
             {product.title}
           </h3>
         </Link>
         <Link 
           to={`/shop?author=${encodeURIComponent(product.author)}`}
           onClick={(e) => e.stopPropagation()}
-          className="text-sm text-muted-foreground mb-2 line-clamp-1 hover:text-primary transition-colors block"
+          className="text-xs text-muted-foreground hover:text-primary transition-colors block truncate"
         >
           {product.author}
         </Link>
-        <div className="flex items-center gap-2 mb-3">
-          <span className="price-sale text-lg">৳{product.price}</span>
+        <div className="flex items-center gap-2 pt-0.5">
+          <span className="price-sale text-base md:text-lg">৳{product.price}</span>
           {hasDiscount && (
-            <span className="price-original">৳{product.originalPrice}</span>
+            <span className="price-original text-xs">৳{product.originalPrice}</span>
           )}
         </div>
-        <Button onClick={handleAddToCart} className="w-full btn-primary text-sm" size="sm">
+        <Button 
+          onClick={handleAddToCart} 
+          className="w-full btn-primary text-sm mt-2 gap-2 h-9" 
+          size="sm"
+        >
+          <ShoppingBag className="w-3.5 h-3.5" />
           অর্ডার করুন
         </Button>
       </div>

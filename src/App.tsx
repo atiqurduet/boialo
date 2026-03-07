@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,117 +9,140 @@ import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { CompareProvider } from "@/contexts/CompareContext";
 import { AnalyticsProvider } from "@/components/AnalyticsProvider";
-import Index from "./pages/Index";
-import Shop from "./pages/Shop";
-import ProductDetail from "./pages/ProductDetail";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import OrderConfirmation from "./pages/OrderConfirmation";
-import OrderHistory from "./pages/OrderHistory";
-import OrderTracking from "./pages/OrderTracking";
-import SignIn from "./pages/SignIn";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Authors from "./pages/Authors";
-import WriterDetail from "./pages/WriterDetail";
-import Publishers from "./pages/Publishers";
-import PublisherDetail from "./pages/PublisherDetail";
-import Wishlist from "./pages/Wishlist";
-import Offers from "./pages/Offers";
-import Preorder from "./pages/Preorder";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import FAQ from "./pages/FAQ";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import Profile from "./pages/Profile";
-import NotFound from "./pages/NotFound";
-import CategoryLanding from "./pages/CategoryLanding";
-import CategoryDetail from "./pages/CategoryDetail";
-import UniversalProductDetail from "./pages/UniversalProductDetail";
-import BkashCallback from "./pages/BkashCallback";
-import Categories from "./pages/Categories";
-import Blog from "./pages/Blog";
-import BlogPost from "./pages/BlogPost";
-import DigitalLibrary from "./pages/DigitalLibrary";
-import Bundles from "./pages/Bundles";
-import SharedWishlist from "./pages/SharedWishlist";
-import EbookReader from "./pages/EbookReader";
-// Admin Pages
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminProducts from "./pages/admin/AdminProducts";
-import AdminCategories from "./pages/admin/AdminCategories";
-import AdminOrders from "./pages/admin/AdminOrders";
-import AdminBanners from "./pages/admin/AdminBanners";
-import AdminCoupons from "./pages/admin/AdminCoupons";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminReports from "./pages/admin/AdminReports";
-import AdminSettings from "./pages/admin/AdminSettings";
-import AdminHomepage from "./pages/admin/AdminHomepage";
-import AdminPayments from "./pages/admin/AdminPayments";
-import AdminCouriers from "./pages/admin/AdminCouriers";
-import AdminCustomers from "./pages/admin/AdminCustomers";
-import AdminFraudReview from "./pages/admin/AdminFraudReview";
-import AdminSMS from "./pages/admin/AdminSMS";
-import AdminWriters from "./pages/admin/AdminWriters";
-import AdminPublishers from "./pages/admin/AdminPublishers";
-import AdminBranding from "./pages/admin/AdminBranding";
-import AdminBrands from "./pages/admin/AdminBrands";
-import AdminMenu from "./pages/admin/AdminMenu";
-import AdminFooter from "./pages/admin/AdminFooter";
-import AdminAbandonedCarts from "./pages/admin/AdminAbandonedCarts";
-import AdminCheckoutAnalytics from "./pages/admin/AdminCheckoutAnalytics";
-import AdminUniversalProducts from "./pages/admin/AdminUniversalProducts";
-import AdminUniversalCategories from "./pages/admin/AdminUniversalCategories";
-import AdminProductTypes from "./pages/admin/AdminProductTypes";
-import AdminOffers from "./pages/admin/AdminOffers";
-import AdminEmailMarketing from "./pages/admin/AdminEmailMarketing";
-import AdminTasks from "./pages/admin/AdminTasks";
-import AdminNotifications from "./pages/admin/AdminNotifications";
-import AdminChat from "./pages/admin/AdminChat";
-import AdminRefundPolicy from "./pages/admin/AdminRefundPolicy";
-import AdminRefundRequests from "./pages/admin/AdminRefundRequests";
-
-import AdminAutoAssign from "./pages/admin/AdminAutoAssign";
-import AdminRolePermissions from "./pages/admin/AdminRolePermissions";
-import AdminCartWishlistCustomers from "./pages/admin/AdminCartWishlistCustomers";
-import AdminPages from "./pages/admin/AdminPages";
-import AdminPageEditor from "./pages/admin/AdminPageEditor";
-import AdminAppearance from "./pages/admin/AdminAppearance";
-import AdminBackupRestore from "./pages/admin/AdminBackupRestore";
-import AdminAuditLog from "./pages/admin/AdminAuditLog";
-import RefundPolicy from "./pages/RefundPolicy";
-import RefundRequests from "./pages/RefundRequests";
-import ChatWidget from "./components/ChatWidget";
-import DynamicPage from "./pages/DynamicPage";
-import AdminBlog from "./pages/admin/AdminBlog";
-import AdminGiftCards from "./pages/admin/AdminGiftCards";
-import AdminBundles from "./pages/admin/AdminBundles";
-import AdminLoyaltyPoints from "./pages/admin/AdminLoyaltyPoints";
-import AdminContactMessages from "./pages/admin/AdminContactMessages";
-import AdminMarketingAutomation from "./pages/admin/AdminMarketingAutomation";
-import GiftCards from "./pages/GiftCards";
-import Compare from "./pages/Compare";
-import Ebooks from "./pages/Ebooks";
-import EbookDetail from "./pages/EbookDetail";
-import Eproducts from "./pages/Eproducts";
-import AdminInventory from "./pages/admin/AdminInventory";
-import AdminDeliveryZones from "./pages/admin/AdminDeliveryZones";
-import AdminReferralProgram from "./pages/admin/AdminReferralProgram";
-import AdminVisitorAnalytics from "./pages/admin/AdminVisitorAnalytics";
-import AdminSocialMedia from "./pages/admin/AdminSocialMedia";
-import AdminDynamicPricing from "./pages/admin/AdminDynamicPricing";
-import AdminSEOTools from "./pages/admin/AdminSEOTools";
-import AdminPopupBanners from "./pages/admin/AdminPopupBanners";
-import AdminStaffActivity from "./pages/admin/AdminStaffActivity";
-import AdminMyDashboard from "./pages/admin/AdminMyDashboard";
-import AdminEbooks from "./pages/admin/AdminEbooks";
-import AdminEproducts from "./pages/admin/AdminEproducts";
 import { ThemeInitializer } from "./components/ThemeInitializer";
 import { CompareFloatingBar } from "./components/CompareFloatingBar";
 import { PopupBannerRenderer } from "./components/PopupBannerRenderer";
+import ChatWidget from "./components/ChatWidget";
 
-const queryClient = new QueryClient();
+// Critical path - load immediately
+import Index from "./pages/Index";
+
+// Lazy-loaded pages
+const Shop = lazy(() => import("./pages/Shop"));
+const ProductDetail = lazy(() => import("./pages/ProductDetail"));
+const Cart = lazy(() => import("./pages/Cart"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation"));
+const OrderHistory = lazy(() => import("./pages/OrderHistory"));
+const OrderTracking = lazy(() => import("./pages/OrderTracking"));
+const SignIn = lazy(() => import("./pages/SignIn"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Authors = lazy(() => import("./pages/Authors"));
+const WriterDetail = lazy(() => import("./pages/WriterDetail"));
+const Publishers = lazy(() => import("./pages/Publishers"));
+const PublisherDetail = lazy(() => import("./pages/PublisherDetail"));
+const Wishlist = lazy(() => import("./pages/Wishlist"));
+const Offers = lazy(() => import("./pages/Offers"));
+const Preorder = lazy(() => import("./pages/Preorder"));
+const About = lazy(() => import("./pages/About"));
+const Contact = lazy(() => import("./pages/Contact"));
+const FAQ = lazy(() => import("./pages/FAQ"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Profile = lazy(() => import("./pages/Profile"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const CategoryLanding = lazy(() => import("./pages/CategoryLanding"));
+const CategoryDetail = lazy(() => import("./pages/CategoryDetail"));
+const UniversalProductDetail = lazy(() => import("./pages/UniversalProductDetail"));
+const BkashCallback = lazy(() => import("./pages/BkashCallback"));
+const Categories = lazy(() => import("./pages/Categories"));
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
+const DigitalLibrary = lazy(() => import("./pages/DigitalLibrary"));
+const Bundles = lazy(() => import("./pages/Bundles"));
+const SharedWishlist = lazy(() => import("./pages/SharedWishlist"));
+const EbookReader = lazy(() => import("./pages/EbookReader"));
+const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
+const RefundRequests = lazy(() => import("./pages/RefundRequests"));
+const DynamicPage = lazy(() => import("./pages/DynamicPage"));
+const GiftCards = lazy(() => import("./pages/GiftCards"));
+const Compare = lazy(() => import("./pages/Compare"));
+const Ebooks = lazy(() => import("./pages/Ebooks"));
+const EbookDetail = lazy(() => import("./pages/EbookDetail"));
+const Eproducts = lazy(() => import("./pages/Eproducts"));
+
+// Admin Pages - lazy loaded
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
+const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
+const AdminBanners = lazy(() => import("./pages/admin/AdminBanners"));
+const AdminCoupons = lazy(() => import("./pages/admin/AdminCoupons"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const AdminHomepage = lazy(() => import("./pages/admin/AdminHomepage"));
+const AdminPayments = lazy(() => import("./pages/admin/AdminPayments"));
+const AdminCouriers = lazy(() => import("./pages/admin/AdminCouriers"));
+const AdminCustomers = lazy(() => import("./pages/admin/AdminCustomers"));
+const AdminFraudReview = lazy(() => import("./pages/admin/AdminFraudReview"));
+const AdminSMS = lazy(() => import("./pages/admin/AdminSMS"));
+const AdminWriters = lazy(() => import("./pages/admin/AdminWriters"));
+const AdminPublishers = lazy(() => import("./pages/admin/AdminPublishers"));
+const AdminBranding = lazy(() => import("./pages/admin/AdminBranding"));
+const AdminBrands = lazy(() => import("./pages/admin/AdminBrands"));
+const AdminMenu = lazy(() => import("./pages/admin/AdminMenu"));
+const AdminFooter = lazy(() => import("./pages/admin/AdminFooter"));
+const AdminAbandonedCarts = lazy(() => import("./pages/admin/AdminAbandonedCarts"));
+const AdminCheckoutAnalytics = lazy(() => import("./pages/admin/AdminCheckoutAnalytics"));
+const AdminUniversalProducts = lazy(() => import("./pages/admin/AdminUniversalProducts"));
+const AdminUniversalCategories = lazy(() => import("./pages/admin/AdminUniversalCategories"));
+const AdminProductTypes = lazy(() => import("./pages/admin/AdminProductTypes"));
+const AdminOffers = lazy(() => import("./pages/admin/AdminOffers"));
+const AdminEmailMarketing = lazy(() => import("./pages/admin/AdminEmailMarketing"));
+const AdminTasks = lazy(() => import("./pages/admin/AdminTasks"));
+const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications"));
+const AdminChat = lazy(() => import("./pages/admin/AdminChat"));
+const AdminRefundPolicy = lazy(() => import("./pages/admin/AdminRefundPolicy"));
+const AdminRefundRequests = lazy(() => import("./pages/admin/AdminRefundRequests"));
+const AdminAutoAssign = lazy(() => import("./pages/admin/AdminAutoAssign"));
+const AdminRolePermissions = lazy(() => import("./pages/admin/AdminRolePermissions"));
+const AdminCartWishlistCustomers = lazy(() => import("./pages/admin/AdminCartWishlistCustomers"));
+const AdminPages = lazy(() => import("./pages/admin/AdminPages"));
+const AdminPageEditor = lazy(() => import("./pages/admin/AdminPageEditor"));
+const AdminAppearance = lazy(() => import("./pages/admin/AdminAppearance"));
+const AdminBackupRestore = lazy(() => import("./pages/admin/AdminBackupRestore"));
+const AdminAuditLog = lazy(() => import("./pages/admin/AdminAuditLog"));
+const AdminBlog = lazy(() => import("./pages/admin/AdminBlog"));
+const AdminGiftCards = lazy(() => import("./pages/admin/AdminGiftCards"));
+const AdminBundles = lazy(() => import("./pages/admin/AdminBundles"));
+const AdminLoyaltyPoints = lazy(() => import("./pages/admin/AdminLoyaltyPoints"));
+const AdminContactMessages = lazy(() => import("./pages/admin/AdminContactMessages"));
+const AdminMarketingAutomation = lazy(() => import("./pages/admin/AdminMarketingAutomation"));
+const AdminInventory = lazy(() => import("./pages/admin/AdminInventory"));
+const AdminDeliveryZones = lazy(() => import("./pages/admin/AdminDeliveryZones"));
+const AdminReferralProgram = lazy(() => import("./pages/admin/AdminReferralProgram"));
+const AdminVisitorAnalytics = lazy(() => import("./pages/admin/AdminVisitorAnalytics"));
+const AdminSocialMedia = lazy(() => import("./pages/admin/AdminSocialMedia"));
+const AdminDynamicPricing = lazy(() => import("./pages/admin/AdminDynamicPricing"));
+const AdminSEOTools = lazy(() => import("./pages/admin/AdminSEOTools"));
+const AdminPopupBanners = lazy(() => import("./pages/admin/AdminPopupBanners"));
+const AdminStaffActivity = lazy(() => import("./pages/admin/AdminStaffActivity"));
+const AdminMyDashboard = lazy(() => import("./pages/admin/AdminMyDashboard"));
+const AdminEbooks = lazy(() => import("./pages/admin/AdminEbooks"));
+const AdminEproducts = lazy(() => import("./pages/admin/AdminEproducts"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+// Global loading fallback
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+      <p className="text-sm text-muted-foreground">লোড হচ্ছে...</p>
+    </div>
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -132,6 +156,7 @@ const App = () => (
             <ThemeInitializer />
             <BrowserRouter>
               <AnalyticsProvider>
+              <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/shop" element={<Shop />} />
@@ -245,6 +270,7 @@ const App = () => (
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </Suspense>
               <ChatWidget />
               <CompareFloatingBar />
               <PopupBannerRenderer />
