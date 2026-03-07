@@ -13,6 +13,8 @@ interface Product {
   author: string | null;
   publisher: string | null;
   images: any;
+  source?: 'book' | 'universal';
+  product_type?: string;
 }
 
 interface Category {
@@ -45,12 +47,10 @@ export const useSearch = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const search = useCallback(async (query: string, limit = 10) => {
-    // Clear previous timeout
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
 
-    // Abort previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -64,7 +64,6 @@ export const useSearch = () => {
     setLoading(true);
     setError(null);
 
-    // Debounce the search
     debounceRef.current = setTimeout(async () => {
       abortControllerRef.current = new AbortController();
 
@@ -75,7 +74,6 @@ export const useSearch = () => {
 
         if (fnError) throw fnError;
 
-        // Track search event
         trackSearch({ search_term: query });
 
         setResults(data || { products: [], categories: [], suggestions: [], autocomplete: [], totalProducts: 0 });
@@ -83,42 +81,64 @@ export const useSearch = () => {
         if (err.name !== 'AbortError') {
           console.error('Search error:', err);
           setError(err.message);
-          
-          // Fallback to local search if edge function fails
           await fallbackSearch(query, limit);
         }
       } finally {
         setLoading(false);
       }
-    }, 150); // 150ms debounce for responsive feel
+    }, 150);
   }, []);
 
-  // Fallback local search when edge function is unavailable
   const fallbackSearch = async (query: string, limit: number) => {
     try {
-      // Sanitize query to prevent injection via ilike patterns
       const sanitizedQuery = query.replace(/[%_\\]/g, '\\$&').slice(0, 200);
       
-      const { data: products } = await supabase
-        .from('products')
-        .select('id, title_bn, title_en, slug, price, original_price, discount_percent, author, publisher, images')
-        .eq('is_active', true)
-        .or(`title_bn.ilike.%${sanitizedQuery}%,title_en.ilike.%${sanitizedQuery}%,author.ilike.%${sanitizedQuery}%,publisher.ilike.%${sanitizedQuery}%`)
-        .limit(limit);
+      const [productsRes, universalRes, categoriesRes] = await Promise.all([
+        supabase
+          .from('products')
+          .select('id, title_bn, title_en, slug, price, original_price, discount_percent, author, publisher, images')
+          .eq('is_active', true)
+          .or(`title_bn.ilike.%${sanitizedQuery}%,title_en.ilike.%${sanitizedQuery}%,author.ilike.%${sanitizedQuery}%,publisher.ilike.%${sanitizedQuery}%`)
+          .limit(limit),
+        supabase
+          .from('universal_products')
+          .select('id, name_bn, name_en, slug, price, original_price, discount_percent, brand_name, images, product_type')
+          .eq('is_active', true)
+          .or(`name_bn.ilike.%${sanitizedQuery}%,name_en.ilike.%${sanitizedQuery}%,brand_name.ilike.%${sanitizedQuery}%`)
+          .limit(limit),
+        supabase
+          .from('categories')
+          .select('id, name_bn, name_en, slug, image_url')
+          .eq('is_active', true)
+          .or(`name_bn.ilike.%${sanitizedQuery}%,name_en.ilike.%${sanitizedQuery}%`)
+          .limit(5),
+      ]);
 
-      const { data: categories } = await supabase
-        .from('categories')
-        .select('id, name_bn, name_en, slug, image_url')
-        .eq('is_active', true)
-        .or(`name_bn.ilike.%${sanitizedQuery}%,name_en.ilike.%${sanitizedQuery}%`)
-        .limit(5);
+      // Normalize universal products to same shape
+      const normalizedUniversal = (universalRes.data || []).map(p => ({
+        id: p.id,
+        title_bn: p.name_bn,
+        title_en: p.name_en,
+        slug: p.slug,
+        price: p.price,
+        original_price: p.original_price,
+        discount_percent: p.discount_percent,
+        author: p.brand_name,
+        publisher: p.product_type,
+        images: p.images,
+        source: 'universal' as const,
+        product_type: p.product_type,
+      }));
+
+      const bookProducts = (productsRes.data || []).map(p => ({ ...p, source: 'book' as const }));
+      const allProducts = [...bookProducts, ...normalizedUniversal].slice(0, limit);
 
       setResults({
-        products: products || [],
-        categories: categories || [],
+        products: allProducts,
+        categories: categoriesRes.data || [],
         suggestions: [],
         autocomplete: [],
-        totalProducts: products?.length || 0,
+        totalProducts: allProducts.length,
       });
     } catch (err) {
       console.error('Fallback search error:', err);
@@ -130,7 +150,6 @@ export const useSearch = () => {
     setError(null);
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
