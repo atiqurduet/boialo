@@ -228,11 +228,14 @@ export const SearchDropdown = ({
     const items: { type: string; value: string; link?: string }[] = [];
     if (query.length >= 1) {
       results.autocomplete?.forEach(a => items.push({ type: 'autocomplete', value: a }));
-      results.products.forEach((p: any) => items.push({ 
-        type: 'product', 
-        value: p.title_bn, 
-        link: p.source === 'universal' ? `/${p.publisher || 'lifestyle'}/${p.slug}` : `/product/${p.slug}` 
-      }));
+      results.products.forEach((p: any) => {
+        const link = p.source === 'digital'
+          ? `/ebooks/${p.slug}`
+          : p.source === 'universal' 
+            ? `/${p.publisher || 'lifestyle'}/${p.slug}` 
+            : `/product/${p.slug}`;
+        items.push({ type: 'product', value: p.title_bn, link });
+      });
     }
     return items;
   })();
