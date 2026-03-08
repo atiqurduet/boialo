@@ -340,10 +340,16 @@ const AdminBackupRestore = () => {
                     <p className="text-xs text-muted-foreground">অর্ডার</p>
                   </div>
                 </div>
-                <Button onClick={() => exportBackup()} disabled={exporting} size="lg" className="w-full">
-                  {exporting ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Database className="h-5 w-5 mr-2" />}
-                  সম্পূর্ণ ব্যাকআপ ডাউনলোড করুন
-                </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Button onClick={() => exportBackup(undefined, 'json')} disabled={exporting} size="lg">
+                    {exporting ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Database className="h-5 w-5 mr-2" />}
+                    JSON ব্যাকআপ
+                  </Button>
+                  <Button onClick={() => exportBackup(undefined, 'sql')} disabled={exporting} size="lg" variant="secondary">
+                    {exporting ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <FileText className="h-5 w-5 mr-2" />}
+                    SQL ব্যাকআপ (.sql)
+                  </Button>
+                </div>
                 <Button onClick={loadTableCounts} variant="outline" size="sm" disabled={loadingCounts}>
                   <RefreshCw className={`h-4 w-4 mr-1 ${loadingCounts ? 'animate-spin' : ''}`} /> কাউন্ট রিফ্রেশ
                 </Button>
