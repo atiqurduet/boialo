@@ -289,6 +289,7 @@ serve(async (req) => {
       case "pathao": bookingResult = await bookPathao(order, provider.config); break;
       case "steadfast": bookingResult = await bookSteadfast(order, provider.config); break;
       case "redx": bookingResult = await bookRedX(order, provider.config); break;
+      case "ecourier": bookingResult = await bookECourier(order, provider.config); break;
       case "manual": bookingResult = { success: true, message: "Manual tracking - no API booking needed" }; break;
       default: return new Response(JSON.stringify({ error: `Unsupported courier provider: ${courier_provider}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
