@@ -174,6 +174,53 @@ async function bookRedX(order: Order, config: Record<string, string>): Promise<B
   } catch (error: unknown) { const errorMessage = error instanceof Error ? error.message : "Unknown error"; return { success: false, message: `RedX API error: ${errorMessage}` }; }
 }
 
+async function bookECourier(order: Order, config: Record<string, string>): Promise<BookingResult> {
+  const { api_key, api_secret, user_id, sandbox } = config;
+  if (!api_key || !api_secret || !user_id) return { success: false, message: "eCourier credentials not configured (api_key, api_secret, user_id required)" };
+  const baseUrl = sandbox === "true" ? "https://staging.ecourier.com.bd/api" : "https://backoffice.ecourier.com.bd/api";
+  try {
+    const orderPayload = {
+      recipient_name: order.full_name,
+      recipient_mobile: order.phone.replace("+88", ""),
+      recipient_city: order.delivery_area || "Dhaka",
+      recipient_area: order.delivery_area || "",
+      recipient_thana: "",
+      recipient_address: order.address,
+      package_code: "#" + order.order_number,
+      product_price: order.total.toString(),
+      payment_method: order.payment_method === "cod" ? "COD" : "MPAY",
+      product_id: order.order_number,
+      parcel_type: "BOX",
+      requested_delivery_time: "any",
+      delivery_hour: "any",
+      pick_hub: "0",
+      comments: `Order #${order.order_number}`,
+      number_of_item: "1",
+      actual_product_price: order.total.toString(),
+    };
+    console.log("eCourier payload:", JSON.stringify(orderPayload));
+    const response = await fetch(`${baseUrl}/order-place`, {
+      method: "POST",
+      headers: {
+        "API-KEY": api_key,
+        "API-SECRET": api_secret,
+        "USER-ID": user_id,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(orderPayload),
+    });
+    const result = await response.json();
+    console.log("eCourier response:", JSON.stringify(result));
+    if (response.ok && result.ID) {
+      return { success: true, consignment_id: result.ID, tracking_code: result.ID, raw_response: result };
+    }
+    return { success: false, message: result.message || result.errors?.toString() || "eCourier booking failed", raw_response: result };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, message: `eCourier API error: ${errorMessage}` };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
