@@ -289,6 +289,10 @@ const AdminCouriers = () => {
         provider_id: courier.id,
       });
       setConfigStatus(data.config_status || {});
+      setConfig((prev) => ({
+        ...prev,
+        sandbox: data.sandbox_mode ? "true" : "false",
+      }));
     } catch (err) {
       // Ignore
     }
