@@ -214,7 +214,7 @@ export const EmailTemplateBuilder = ({
   const { data: products = [] } = useQuery({
     queryKey: ['email-builder-products', productSearch],
     queryFn: async () => {
-      let query = supabase.from('products').select('id, title_bn, slug, price, discount_price, image_url').eq('is_active', true).limit(20);
+      let query = supabase.from('products').select('id, title_bn, slug, price, discount_percent, image_url').eq('is_active', true).limit(20);
       if (productSearch) query = query.ilike('title_bn', `%${productSearch}%`);
       const { data } = await query;
       return data || [];
