@@ -531,7 +531,7 @@ const AdminEmailMarketing = () => {
                     নতুন ক্যাম্পেইন
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>{editingCampaign ? "ক্যাম্পেইন এডিট করুন" : "নতুন ক্যাম্পেইন"}</DialogTitle>
                   </DialogHeader>
