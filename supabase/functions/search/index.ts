@@ -205,17 +205,26 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Fetch products and universal products in parallel
+    // For single char queries, use server-side filtering to reduce data transfer
+    const isSingleChar = query.length === 1;
+    const productQuery = supabase
+      .from("products")
+      .select("id, title_bn, title_en, slug, price, original_price, discount_percent, author, publisher, images, is_active")
+      .eq("is_active", true);
+    const universalQuery = supabase
+      .from("universal_products")
+      .select("id, name_bn, name_en, slug, price, original_price, discount_percent, brand, images, is_active, product_type")
+      .eq("is_active", true);
+
+    // For single characters, apply server-side ilike filter to reduce dataset
+    if (isSingleChar) {
+      productQuery.or(`title_bn.ilike.${query}%,title_en.ilike.${query}%,author.ilike.${query}%`);
+      universalQuery.or(`name_bn.ilike.${query}%,name_en.ilike.${query}%,brand.ilike.${query}%`);
+    }
+
     const [productsRes, universalRes] = await Promise.all([
-      supabase
-        .from("products")
-        .select("id, title_bn, title_en, slug, price, original_price, discount_percent, author, publisher, images, is_active")
-        .eq("is_active", true)
-        .limit(200),
-      supabase
-        .from("universal_products")
-        .select("id, name_bn, name_en, slug, price, original_price, discount_percent, brand, images, is_active, product_type")
-        .eq("is_active", true)
-        .limit(200),
+      productQuery.limit(200),
+      universalQuery.limit(200),
     ]);
 
     if (productsRes.error) throw productsRes.error;
