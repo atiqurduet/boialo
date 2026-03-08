@@ -200,28 +200,43 @@ const AdminCouriers = () => {
     updateMutation.mutate({ id: courier.id, updates: { is_active: !courier.is_active } });
   };
 
+  const invokeProviderConfig = async (body: Record<string, unknown>) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) throw new Error("No active session");
+
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-provider-config`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify(body),
+      }
+    );
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || `Status ${res.status}`);
+    return data;
+  };
+
   const saveConfig = async () => {
     if (!editingCourier) return;
     try {
-      const response = await supabase.functions.invoke("update-provider-config", {
-        body: {
-          action: "update",
-          provider_table: "courier_providers",
-          provider_id: editingCourier.id,
-          provider_type: editingCourier.provider,
-          config,
-        },
+      await invokeProviderConfig({
+        action: "update",
+        provider_table: "courier_providers",
+        provider_id: editingCourier.id,
+        provider_type: editingCourier.provider,
+        config,
       });
-      console.log("Config save response:", response);
-      if (response.error || !response.data?.success) {
-        toast.error("আপডেট ব্যর্থ: " + (response.data?.error || response.error?.message));
-        return;
-      }
       toast.success("কুরিয়ার প্রোভাইডার কনফিগার হয়েছে");
       setEditingCourier(null);
       setConfig({});
-    } catch (err) {
-      toast.error("কনফিগারেশন সেভ ব্যর্থ");
+    } catch (err: any) {
+      toast.error("আপডেট ব্যর্থ: " + (err.message || "কনফিগারেশন সেভ ব্যর্থ"));
     }
   };
 
@@ -248,16 +263,12 @@ const AdminCouriers = () => {
     setConfig({});
     setConfigStatus({});
     try {
-      const response = await supabase.functions.invoke("update-provider-config", {
-        body: {
-          action: "get_status",
-          provider_table: "courier_providers",
-          provider_id: courier.id,
-        },
+      const data = await invokeProviderConfig({
+        action: "get_status",
+        provider_table: "courier_providers",
+        provider_id: courier.id,
       });
-      if (response.data?.success) {
-        setConfigStatus(response.data.config_status || {});
-      }
+      setConfigStatus(data.config_status || {});
     } catch (err) {
       // Ignore
     }
