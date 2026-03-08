@@ -75,22 +75,51 @@ async function syncPathaoStatus(
   
   const isSandbox = config.sandbox === "true";
   const token = await getPathaoToken(config, isSandbox);
-  if (!token) return { updated: false, error: "Failed to authenticate" };
+  if (!token) return { updated: false, error: "Failed to authenticate with Pathao" };
   
   const baseUrl = isSandbox ? "https://courier-api-sandbox.pathao.com" : "https://api-hermes.pathao.com";
   
   try {
-    const response = await fetch(`${baseUrl}/aladdin/api/v1/orders/${booking.consignment_id}`, {
-      headers: { "Authorization": `Bearer ${token}` },
+    // Try order info endpoint first
+    console.log(`Pathao sync: fetching status for consignment ${booking.consignment_id}`);
+    
+    const response = await fetch(`${baseUrl}/aladdin/api/v1/orders/${booking.consignment_id}/info`, {
+      headers: { 
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
     });
     
+    let result;
     if (!response.ok) {
-      return { updated: false, error: `API error: ${response.status}` };
+      // Fallback to basic order endpoint
+      console.log(`Pathao: /info failed (${response.status}), trying basic endpoint`);
+      const fallbackResponse = await fetch(`${baseUrl}/aladdin/api/v1/orders/${booking.consignment_id}`, {
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      
+      if (!fallbackResponse.ok) {
+        const errorText = await fallbackResponse.text();
+        console.error(`Pathao API error: ${fallbackResponse.status}`, errorText);
+        return { updated: false, error: `Pathao API error: ${fallbackResponse.status}` };
+      }
+      result = await fallbackResponse.json();
+    } else {
+      result = await response.json();
     }
     
-    const result = await response.json();
-    const rawStatus = result.data?.order_status || result.data?.status;
-    const mappedStatus = pathaoStatusMap[rawStatus] || rawStatus?.toLowerCase() || booking.booking_status;
+    console.log(`Pathao response:`, JSON.stringify(result));
+    
+    // Pathao returns status in different fields depending on endpoint
+    const rawStatus = result.data?.order_status || result.data?.status || result.order_status || result.status;
+    console.log(`Pathao raw status: ${rawStatus}`);
+    
+    if (!rawStatus) {
+      return { updated: false, error: "No status in Pathao response", status: booking.booking_status };
+    }
+    
+    const mappedStatus = pathaoStatusMap[rawStatus] || rawStatus?.toLowerCase().replace(/ /g, "_") || booking.booking_status;
+    console.log(`Pathao mapped status: ${mappedStatus} (was: ${booking.booking_status})`);
     
     if (mappedStatus !== booking.booking_status) {
       // Update courier_bookings
@@ -101,12 +130,17 @@ async function syncPathaoStatus(
       }).eq("id", booking.id);
       
       // Update orders table
-      await supabase.from("orders").update({
-        courier_status: mappedStatus,
-        ...(mappedStatus === "delivered" ? { status: "delivered", delivered_at: new Date().toISOString() } : {}),
-        ...(mappedStatus === "cancelled" ? { status: "cancelled" } : {}),
-        ...(mappedStatus === "returned" ? { status: "returned" } : {}),
-      }).eq("id", booking.order_id);
+      const orderUpdate: Record<string, unknown> = { courier_status: mappedStatus };
+      if (mappedStatus === "delivered") {
+        orderUpdate.status = "delivered";
+        orderUpdate.delivered_at = new Date().toISOString();
+      } else if (mappedStatus === "cancelled") {
+        orderUpdate.status = "cancelled";
+      } else if (mappedStatus === "returned") {
+        orderUpdate.status = "returned";
+      }
+      
+      await supabase.from("orders").update(orderUpdate).eq("id", booking.order_id);
       
       // Add status history
       await supabase.from("order_status_history").insert({
