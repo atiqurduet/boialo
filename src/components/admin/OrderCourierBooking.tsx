@@ -59,6 +59,30 @@ export const OrderCourierBooking = ({
   const [selectedCourier, setSelectedCourier] = useState<string>(currentCourier || "");
   const [manualTracking, setManualTracking] = useState<string>("");
 
+  // Realtime subscription for courier booking updates
+  useEffect(() => {
+    const channel = supabase
+      .channel(`courier-booking-${orderId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'courier_bookings',
+          filter: `order_id=eq.${orderId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["courier-booking", orderId] });
+          queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [orderId, queryClient]);
+
   // Fetch available couriers
   const { data: couriers } = useQuery({
     queryKey: ["active-courier-providers"],
