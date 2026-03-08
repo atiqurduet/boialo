@@ -37,7 +37,9 @@ type BlockType =
   | "columns" | "hero_banner" | "social_links" | "footer" | "coupon_box"
   | "testimonial" | "feature_list" | "countdown" | "video_embed"
   | "banner_strip" | "rating_block" | "stats_row" | "cta_section"
-  | "image_text" | "price_table" | "faq_block" | "brand_showcase";
+  | "image_text" | "price_table" | "faq_block" | "brand_showcase"
+  | "trust_badges" | "urgency_bar" | "multi_banner" | "progress_bar"
+  | "order_summary" | "personalized_header" | "deal_grid";
 
 interface EmailBlock {
   id: string;
