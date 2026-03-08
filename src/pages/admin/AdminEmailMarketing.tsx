@@ -573,12 +573,10 @@ const AdminEmailMarketing = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>কনটেন্ট (HTML)</Label>
-                      <Textarea 
-                        value={campaignForm.content}
-                        onChange={e => setCampaignForm(f => ({ ...f, content: e.target.value }))}
-                        placeholder="ইমেইল কনটেন্ট..."
-                        rows={8}
+                      <Label>কনটেন্ট</Label>
+                      <EmailTemplateBuilder
+                        initialHtml={campaignForm.content}
+                        onHtmlChange={(html) => setCampaignForm(f => ({ ...f, content: html }))}
                       />
                     </div>
                     <div className="space-y-2">
