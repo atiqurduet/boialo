@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Send, Loader2, ChevronDown, Check } from "lucide-react";
+import { invokeCourierBooking } from "@/lib/courierBooking";
 
 interface CourierProvider {
   id: string;
@@ -54,15 +55,7 @@ export const QuickCourierSend = ({
 
   // Book courier mutation
   const bookCourierMutation = useMutation({
-    mutationFn: async (courierProvider: string) => {
-      const { data, error } = await supabase.functions.invoke("courier-booking", {
-        body: { order_id: orderId, courier_provider: courierProvider },
-      });
-
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
-      return data;
-    },
+    mutationFn: async (courierProvider: string) => invokeCourierBooking(orderId, courierProvider),
     onSuccess: (data) => {
       toast.success(`${orderNumber} কুরিয়ার বুক হয়েছে! ট্র্যাকিং: ${data.tracking_code || "N/A"}`);
       queryClient.invalidateQueries({ queryKey: ["courier-booking", orderId] });
