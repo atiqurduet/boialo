@@ -212,6 +212,7 @@ const AdminCouriers = () => {
           config,
         },
       });
+      console.log("Config save response:", response);
       if (response.error || !response.data?.success) {
         toast.error("আপডেট ব্যর্থ: " + (response.data?.error || response.error?.message));
         return;
