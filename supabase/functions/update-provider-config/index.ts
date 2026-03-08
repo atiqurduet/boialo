@@ -66,7 +66,7 @@ serve(async (req) => {
       .eq("user_id", userData.user.id)
       .maybeSingle();
 
-    if (!roleData || roleData.role !== "admin") {
+    if (!roleData || !['super_admin', 'admin'].includes(roleData.role)) {
       return new Response(JSON.stringify({ success: false, error: "Admin access required" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
