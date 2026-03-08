@@ -200,6 +200,30 @@ const AdminBackupRestore = () => {
     }
   };
 
+  const exportTableSQL = async (tableName: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { toast.error('লগইন প্রয়োজন'); return; }
+      const response = await supabase.functions.invoke('admin-backup', {
+        body: { action: 'export', tables: [tableName] },
+      });
+      if (response.error) throw response.error;
+      const rows = response.data?.data?.[tableName] || [];
+      if (rows.length === 0) { toast.error('কোন ডাটা নেই'); return; }
+      const sql = convertToSQL({ [tableName]: rows });
+      const blob = new Blob([sql], { type: 'application/sql;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${tableName}-${format(new Date(), 'yyyy-MM-dd')}.sql`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${tableName} SQL এক্সপোর্ট হয়েছে!`);
+    } catch {
+      toast.error('SQL এক্সপোর্ট সমস্যা');
+    }
+  };
+
   const importBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
