@@ -271,6 +271,11 @@ const AdminCouriers = () => {
       case "redx": return [
         { key: "api_token", label: "API Token", placeholder: "Live API Token দিন" },
       ];
+      case "ecourier": return [
+        { key: "api_key", label: "API Key", placeholder: "eCourier API Key দিন" },
+        { key: "api_secret", label: "API Secret", placeholder: "eCourier API Secret দিন" },
+        { key: "user_id", label: "User ID", placeholder: "eCourier User ID দিন" },
+      ];
       default: return [];
     }
   };
@@ -289,6 +294,11 @@ const AdminCouriers = () => {
       ];
       case "redx": return [
         { key: "sandbox_api_token", label: "API Token", placeholder: "Sandbox API Token দিন" },
+      ];
+      case "ecourier": return [
+        { key: "sandbox_api_key", label: "API Key", placeholder: "Staging API Key দিন" },
+        { key: "sandbox_api_secret", label: "API Secret", placeholder: "Staging API Secret দিন" },
+        { key: "sandbox_user_id", label: "User ID", placeholder: "Staging User ID দিন" },
       ];
       default: return [];
     }
