@@ -376,9 +376,12 @@ const AdminBackupRestore = () => {
                         <TableRow key={table}>
                           <TableCell className="font-mono text-sm">{table}</TableCell>
                           <TableCell className="text-right">{count.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">
-                            <Button size="sm" variant="ghost" onClick={() => exportCSV(table)} disabled={count === 0}>
+                          <TableCell className="text-right flex gap-1 justify-end">
+                            <Button size="sm" variant="ghost" onClick={() => exportCSV(table)} disabled={count === 0} title="CSV">
                               <Download className="h-3 w-3" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => exportBackup(undefined, 'sql')} disabled={count === 0} title="SQL">
+                              <FileText className="h-3 w-3" />
                             </Button>
                           </TableCell>
                         </TableRow>
