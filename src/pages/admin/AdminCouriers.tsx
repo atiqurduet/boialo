@@ -226,9 +226,9 @@ const AdminCouriers = () => {
 
   const getProviderConfig = (provider: string) => {
     switch (provider) {
-      case "pathao": return ["client_id", "client_secret", "username", "password", "sandbox"];
-      case "steadfast": return ["api_key", "secret_key", "sandbox"];
-      case "redx": return ["api_token", "sandbox"];
+      case "pathao": return ["sandbox", "client_id", "client_secret", "username", "password", "sandbox_client_id", "sandbox_client_secret", "sandbox_username", "sandbox_password"];
+      case "steadfast": return ["sandbox", "api_key", "secret_key"];
+      case "redx": return ["sandbox", "api_token"];
       case "manual": return [];
       default: return [];
     }
