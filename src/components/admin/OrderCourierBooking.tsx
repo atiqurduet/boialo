@@ -127,7 +127,6 @@ export const OrderCourierBooking = ({
   const bookCourierMutation = useMutation({
     mutationFn: async (courierProvider: string) => {
       if (courierProvider === "manual") {
-        // For manual, just update the order directly
         const { error } = await supabase
           .from("orders")
           .update({
@@ -139,7 +138,6 @@ export const OrderCourierBooking = ({
         if (error) throw error;
         return { success: true, tracking_code: manualTracking };
       }
-
       return invokeCourierBooking(orderId, courierProvider);
     },
     onSuccess: (data) => {
@@ -150,6 +148,29 @@ export const OrderCourierBooking = ({
     },
     onError: (error: Error) => {
       toast.error(`বুকিং ব্যর্থ: ${error.message}`);
+    },
+  });
+
+  // Sync status mutation
+  const syncStatusMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("courier-status-sync", {
+        body: { order_id: orderId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      if (data.synced > 0) {
+        toast.success("স্ট্যাটাস আপডেট হয়েছে");
+      } else {
+        toast.info("কোনো পরিবর্তন নেই");
+      }
+      queryClient.invalidateQueries({ queryKey: ["courier-booking", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+    },
+    onError: (error: Error) => {
+      toast.error(`সিঙ্ক ব্যর্থ: ${error.message}`);
     },
   });
 
