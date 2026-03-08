@@ -129,9 +129,26 @@ serve(async (req) => {
         }
       }
 
+      const { data: existingData, error: existingError } = await supabaseService
+        .from(provider_table)
+        .select("config")
+        .eq("id", provider_id)
+        .single();
+
+      if (existingError || !existingData) {
+        return new Response(JSON.stringify({ success: false, error: "Provider not found" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const mergedConfig = {
+        ...((existingData.config as Record<string, string>) || {}),
+        ...sanitizedConfig,
+      };
+
       const { error } = await supabaseService
         .from(provider_table)
-        .update({ config: sanitizedConfig })
+        .update({ config: mergedConfig })
         .eq("id", provider_id);
 
       if (error) {
