@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,30 @@ export const OrderCourierBooking = ({
   const queryClient = useQueryClient();
   const [selectedCourier, setSelectedCourier] = useState<string>(currentCourier || "");
   const [manualTracking, setManualTracking] = useState<string>("");
+
+  // Realtime subscription for courier booking updates
+  useEffect(() => {
+    const channel = supabase
+      .channel(`courier-booking-${orderId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'courier_bookings',
+          filter: `order_id=eq.${orderId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["courier-booking", orderId] });
+          queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [orderId, queryClient]);
 
   // Fetch available couriers
   const { data: couriers } = useQuery({
