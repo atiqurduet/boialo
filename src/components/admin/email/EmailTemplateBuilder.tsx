@@ -1575,6 +1575,157 @@ const BlockSettings = ({
         </div>
       );
 
+    // ── Alibaba/AliExpress Dynamic Block Settings ──
+    case "trust_badges": {
+      const items = c.items || [];
+      return (
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold">🛡️ ট্রাস্ট ব্যাজ আইটেম</Label>
+          {items.map((item: any, i: number) => (
+            <div key={i} className="border rounded-lg p-2 space-y-1.5">
+              <div className="flex gap-1.5">
+                <Input value={item.icon} onChange={e => { const n = [...items]; n[i] = { ...n[i], icon: e.target.value }; onContentChange("items", n); }} placeholder="🚚" className="h-7 text-xs w-12" />
+                <Input value={item.title} onChange={e => { const n = [...items]; n[i] = { ...n[i], title: e.target.value }; onContentChange("items", n); }} placeholder="টাইটেল" className="h-7 text-xs flex-1" />
+              </div>
+              <div className="flex gap-1.5">
+                <Input value={item.subtitle} onChange={e => { const n = [...items]; n[i] = { ...n[i], subtitle: e.target.value }; onContentChange("items", n); }} placeholder="সাবটাইটেল" className="h-7 text-xs flex-1" />
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0" onClick={() => onContentChange("items", items.filter((_: any, j: number) => j !== i))}><X className="h-3 w-3" /></Button>
+              </div>
+            </div>
+          ))}
+          <Button size="sm" variant="outline" className="text-xs w-full" onClick={() => onContentChange("items", [...items, { icon: "✅", title: "ব্যাজ", subtitle: "বিবরণ" }])}><Plus className="h-3 w-3 mr-1" /> যোগ করুন</Button>
+          {renderCommonSettings()}
+        </div>
+      );
+    }
+
+    case "urgency_bar":
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">প্রধান টেক্সট</Label><Input value={c.text || ''} onChange={e => onContentChange("text", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">সাব টেক্সট</Label><Input value={c.subtext || ''} onChange={e => onContentChange("subtext", e.target.value)} className="h-8 text-xs" /></div>
+          {renderGradientPicker(c.bgGradient || '', v => onContentChange("bgGradient", v))}
+          <div className="flex flex-wrap gap-1">
+            <p className="text-[10px] w-full text-muted-foreground mb-1">ভেরিয়েবল:</p>
+            {["{{viewers}}", "{{stock}}", "{{sold}}"].map(tag => (
+              <button key={tag} onClick={() => onContentChange("text", (c.text || '') + ' ' + tag)} className="text-[10px] px-2 py-0.5 bg-muted rounded-full hover:bg-primary/10 transition-colors">{tag}</button>
+            ))}
+          </div>
+          {renderCommonSettings()}
+        </div>
+      );
+
+    case "multi_banner": {
+      const banners = c.banners || [];
+      return (
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold">🎯 ব্যানার আইটেম (সর্বোচ্চ ৪টি)</Label>
+          {banners.map((b: any, i: number) => (
+            <div key={i} className="border rounded-lg p-2 space-y-1.5">
+              <div className="flex gap-1.5">
+                <Input value={b.title} onChange={e => { const n = [...banners]; n[i] = { ...n[i], title: e.target.value }; onContentChange("banners", n); }} placeholder="শিরোনাম" className="h-7 text-xs flex-1" />
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0" onClick={() => onContentChange("banners", banners.filter((_: any, j: number) => j !== i))}><X className="h-3 w-3" /></Button>
+              </div>
+              <Input value={b.subtitle} onChange={e => { const n = [...banners]; n[i] = { ...n[i], subtitle: e.target.value }; onContentChange("banners", n); }} placeholder="সাবটাইটেল" className="h-7 text-xs" />
+              <Input value={b.url || ''} onChange={e => { const n = [...banners]; n[i] = { ...n[i], url: e.target.value }; onContentChange("banners", n); }} placeholder="লিংক URL" className="h-7 text-xs" />
+            </div>
+          ))}
+          {banners.length < 4 && (
+            <Button size="sm" variant="outline" className="text-xs w-full" onClick={() => onContentChange("banners", [...banners, { title: "ব্যানার", subtitle: "সাবটাইটেল", bgGradient: "linear-gradient(135deg,#667eea,#764ba2)", url: "#" }])}><Plus className="h-3 w-3 mr-1" /> ব্যানার যোগ</Button>
+          )}
+          {renderCommonSettings()}
+        </div>
+      );
+    }
+
+    case "progress_bar":
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">শিরোনাম</Label><Input value={c.title || ''} onChange={e => onContentChange("title", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">বর্তমান মান</Label><Input type="number" value={c.current || 0} onChange={e => onContentChange("current", parseInt(e.target.value))} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">টার্গেট</Label><Input type="number" value={c.target || 100} onChange={e => onContentChange("target", parseInt(e.target.value))} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">ইউনিট</Label><Input value={c.unit || '%'} onChange={e => onContentChange("unit", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">সাবটাইটেল</Label><Input value={c.subtitle || ''} onChange={e => onContentChange("subtitle", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">বার কালার</Label>
+            <div className="flex gap-2"><input type="color" value={c.bgColor || '#ff4757'} onChange={e => onContentChange("bgColor", e.target.value)} className="w-8 h-8 rounded cursor-pointer border" /><Input value={c.bgColor || ''} onChange={e => onContentChange("bgColor", e.target.value)} className="h-8 text-xs flex-1" /></div>
+          </div>
+          {renderCommonSettings()}
+        </div>
+      );
+
+    case "order_summary": {
+      const items = c.items || [];
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">অর্ডার নম্বর</Label><Input value={c.orderNumber || ''} onChange={e => onContentChange("orderNumber", e.target.value)} className="h-8 text-xs" /></div>
+          <Label className="text-xs font-semibold">আইটেম</Label>
+          {items.map((item: any, i: number) => (
+            <div key={i} className="flex gap-1.5 items-center">
+              <Input value={item.name} onChange={e => { const n = [...items]; n[i] = { ...n[i], name: e.target.value }; onContentChange("items", n); }} placeholder="নাম" className="h-7 text-xs flex-1" />
+              <Input type="number" value={item.qty} onChange={e => { const n = [...items]; n[i] = { ...n[i], qty: parseInt(e.target.value) }; onContentChange("items", n); }} className="h-7 text-xs w-12" />
+              <Input value={item.price} onChange={e => { const n = [...items]; n[i] = { ...n[i], price: e.target.value }; onContentChange("items", n); }} placeholder="৳0" className="h-7 text-xs w-16" />
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0" onClick={() => onContentChange("items", items.filter((_: any, j: number) => j !== i))}><X className="h-3 w-3" /></Button>
+            </div>
+          ))}
+          <Button size="sm" variant="outline" className="text-xs w-full" onClick={() => onContentChange("items", [...items, { name: "প্রোডাক্ট", qty: 1, price: "৳0" }])}><Plus className="h-3 w-3 mr-1" /> আইটেম যোগ</Button>
+          <div><Label className="text-xs">সাবটোটাল</Label><Input value={c.subtotal || ''} onChange={e => onContentChange("subtotal", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">শিপিং</Label><Input value={c.shipping || ''} onChange={e => onContentChange("shipping", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">মোট</Label><Input value={c.total || ''} onChange={e => onContentChange("total", e.target.value)} className="h-8 text-xs" /></div>
+          {renderCommonSettings()}
+        </div>
+      );
+    }
+
+    case "personalized_header":
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">অভিবাদন</Label><Input value={c.greeting || ''} onChange={e => onContentChange("greeting", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">সাবটাইটেল</Label><Input value={c.subtitle || ''} onChange={e => onContentChange("subtitle", e.target.value)} className="h-8 text-xs" /></div>
+          <div className="flex items-center gap-2">
+            <input type="checkbox" checked={c.showMemberBadge || false} onChange={e => onContentChange("showMemberBadge", e.target.checked)} />
+            <Label className="text-xs">মেম্বার ব্যাজ দেখান</Label>
+          </div>
+          {c.showMemberBadge && <div><Label className="text-xs">মেম্বার লেভেল</Label><Input value={c.memberLevel || ''} onChange={e => onContentChange("memberLevel", e.target.value)} placeholder="Gold, Premium, VIP" className="h-8 text-xs" /></div>}
+          {renderGradientPicker(c.bgGradient || '', v => onContentChange("bgGradient", v))}
+          <div className="flex flex-wrap gap-1">
+            <p className="text-[10px] w-full text-muted-foreground mb-1">ভেরিয়েবল:</p>
+            {["{{name}}", "{{shop_name}}", "{{member_level}}"].map(tag => (
+              <button key={tag} onClick={() => onContentChange("greeting", (c.greeting || '') + ' ' + tag)} className="text-[10px] px-2 py-0.5 bg-muted rounded-full hover:bg-primary/10 transition-colors">{tag}</button>
+            ))}
+          </div>
+          {renderCommonSettings()}
+        </div>
+      );
+
+    case "deal_grid": {
+      const deals = c.deals || [];
+      return (
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold">💰 ডিল আইটেম</Label>
+          {deals.map((deal: any, i: number) => (
+            <div key={i} className="border rounded-lg p-2 space-y-1.5">
+              <div className="flex gap-1.5">
+                <Input value={deal.title} onChange={e => { const n = [...deals]; n[i] = { ...n[i], title: e.target.value }; onContentChange("deals", n); }} placeholder="শিরোনাম" className="h-7 text-xs flex-1" />
+                <Input value={deal.discount} onChange={e => { const n = [...deals]; n[i] = { ...n[i], discount: e.target.value }; onContentChange("deals", n); }} placeholder="70%" className="h-7 text-xs w-16" />
+              </div>
+              <div className="flex gap-1.5">
+                <Input value={deal.originalPrice} onChange={e => { const n = [...deals]; n[i] = { ...n[i], originalPrice: e.target.value }; onContentChange("deals", n); }} placeholder="আসল মূল্য" className="h-7 text-xs flex-1" />
+                <Input value={deal.salePrice} onChange={e => { const n = [...deals]; n[i] = { ...n[i], salePrice: e.target.value }; onContentChange("deals", n); }} placeholder="সেল মূল্য" className="h-7 text-xs flex-1" />
+              </div>
+              <div className="flex gap-1.5">
+                <Input value={deal.timeLeft} onChange={e => { const n = [...deals]; n[i] = { ...n[i], timeLeft: e.target.value }; onContentChange("deals", n); }} placeholder="2h 30m" className="h-7 text-xs flex-1" />
+                <Input type="number" value={deal.sold} onChange={e => { const n = [...deals]; n[i] = { ...n[i], sold: parseInt(e.target.value) }; onContentChange("deals", n); }} placeholder="বিক্রি" className="h-7 text-xs w-14" />
+                <Input type="number" value={deal.total} onChange={e => { const n = [...deals]; n[i] = { ...n[i], total: parseInt(e.target.value) }; onContentChange("deals", n); }} placeholder="মোট" className="h-7 text-xs w-14" />
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0" onClick={() => onContentChange("deals", deals.filter((_: any, j: number) => j !== i))}><X className="h-3 w-3" /></Button>
+              </div>
+            </div>
+          ))}
+          <Button size="sm" variant="outline" className="text-xs w-full" onClick={() => onContentChange("deals", [...deals, { title: "নতুন ডিল", discount: "50%", originalPrice: "৳500", salePrice: "৳250", timeLeft: "3h", sold: 50, total: 100 }])}><Plus className="h-3 w-3 mr-1" /> ডিল যোগ</Button>
+          {renderCommonSettings()}
+        </div>
+      );
+    }
+
     default:
       return <p className="text-xs text-muted-foreground">কোনো সেটিংস নেই</p>;
   }
