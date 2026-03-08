@@ -527,25 +527,55 @@ const AdminCouriers = () => {
                             <DialogHeader>
                               <DialogTitle>Configure {courier.name_en}</DialogTitle>
                             </DialogHeader>
-                            <div className="space-y-4">
-                              {getProviderConfig(courier.provider).map((field) => (
-                                <div key={field} className="space-y-2">
-                                  <Label htmlFor={field} className="capitalize">
-                                    {field.startsWith("sandbox_") ? `🧪 Sandbox ${field.replace("sandbox_", "").replace(/_/g, " ")}` : field.replace(/_/g, " ")}
-                                  </Label>
-                                  {field === "sandbox" ? (
-                                    <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                                      <Switch id={field} checked={config[field] === "true"} onCheckedChange={(checked) => setConfig({ ...config, [field]: checked.toString() })} />
-                                      <div>
-                                        <span className="text-sm font-medium">{config[field] === "true" ? "🧪 Sandbox/Test Mode" : "🟢 Live/Production Mode"}</span>
-                                        <p className="text-xs text-muted-foreground">{config[field] === "true" ? "টেস্ট API ব্যবহার হবে" : "লাইভ API ব্যবহার হবে"}</p>
-                                      </div>
+                            <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+                              {/* Sandbox Toggle */}
+                              {courier.provider !== "manual" && (
+                                <div className="space-y-2">
+                                  <Label className="capitalize">Environment</Label>
+                                  <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+                                    <Switch checked={config.sandbox === "true"} onCheckedChange={(checked) => setConfig({ ...config, sandbox: checked.toString() })} />
+                                    <div>
+                                      <span className="text-sm font-medium">{config.sandbox === "true" ? "🧪 Sandbox/Test Mode" : "🟢 Live/Production Mode"}</span>
+                                      <p className="text-xs text-muted-foreground">{config.sandbox === "true" ? "টেস্ট API ব্যবহার হবে" : "লাইভ API ব্যবহার হবে"}</p>
                                     </div>
-                                  ) : (
-                                    <Input id={field} type={field.includes("secret") || field.includes("password") || field.includes("token") || field.includes("key") ? "password" : "text"} value={config[field] || ""} onChange={(e) => setConfig({ ...config, [field]: e.target.value })} placeholder={configStatus[field] ? "••••••• (configured - enter new value to change)" : `Enter ${field.replace(/_/g, " ")}`} />
-                                  )}
+                                  </div>
                                 </div>
-                              ))}
+                              )}
+
+                              {/* Live Credentials Section */}
+                              {config.sandbox !== "true" && getProviderLiveFields(courier.provider).length > 0 && (
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-2 pt-2">
+                                    <div className="h-px flex-1 bg-border" />
+                                    <span className="text-xs font-semibold text-muted-foreground">🟢 Live Credentials</span>
+                                    <div className="h-px flex-1 bg-border" />
+                                  </div>
+                                  {getProviderLiveFields(courier.provider).map((field) => (
+                                    <div key={field} className="space-y-2">
+                                      <Label htmlFor={field} className="capitalize">{field.replace(/_/g, " ")}</Label>
+                                      <Input id={field} type={field.includes("secret") || field.includes("password") || field.includes("token") || field.includes("key") ? "password" : "text"} value={config[field] || ""} onChange={(e) => setConfig({ ...config, [field]: e.target.value })} placeholder={configStatus[field] ? "••••••• (configured)" : `Enter ${field.replace(/_/g, " ")}`} />
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Sandbox Credentials Section */}
+                              {config.sandbox === "true" && getProviderSandboxFields(courier.provider).length > 0 && (
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-2 pt-2">
+                                    <div className="h-px flex-1 bg-border" />
+                                    <span className="text-xs font-semibold text-muted-foreground">🧪 Sandbox Credentials</span>
+                                    <div className="h-px flex-1 bg-border" />
+                                  </div>
+                                  {getProviderSandboxFields(courier.provider).map((field) => (
+                                    <div key={field} className="space-y-2">
+                                      <Label htmlFor={field} className="capitalize">{field.replace("sandbox_", "").replace(/_/g, " ")}</Label>
+                                      <Input id={field} type={field.includes("secret") || field.includes("password") || field.includes("token") || field.includes("key") ? "password" : "text"} value={config[field] || ""} onChange={(e) => setConfig({ ...config, [field]: e.target.value })} placeholder={configStatus[field] ? "••••••• (configured)" : `Enter ${field.replace("sandbox_", "").replace(/_/g, " ")}`} />
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
                               <Button onClick={saveConfig} className="w-full"><Save className="h-4 w-4 mr-2" /> Save Configuration</Button>
                             </div>
                           </DialogContent>
