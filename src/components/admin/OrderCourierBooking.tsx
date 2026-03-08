@@ -45,6 +45,7 @@ const courierTrackingUrls: Record<string, string> = {
   pathao: "https://merchant.pathao.com/tracking/",
   steadfast: "https://steadfast.com.bd/tracking/",
   redx: "https://redx.com.bd/track/",
+  ecourier: "https://ecourier.com.bd/tracking/",
   paperfly: "https://go.paperfly.com.bd/tracking/",
 };
 
