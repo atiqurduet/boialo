@@ -893,11 +893,9 @@ const AdminEmailMarketing = () => {
                     </div>
                     <div className="space-y-2">
                       <Label>HTML কনটেন্ট</Label>
-                      <Textarea 
-                        value={templateForm.html_content}
-                        onChange={e => setTemplateForm(f => ({ ...f, html_content: e.target.value }))}
-                        placeholder="HTML কনটেন্ট... {{variable_name}} ব্যবহার করুন"
-                        rows={10}
+                      <EmailTemplateBuilder
+                        initialHtml={templateForm.html_content}
+                        onHtmlChange={(html) => setTemplateForm(f => ({ ...f, html_content: html }))}
                       />
                     </div>
                     <div className="flex items-center space-x-2">
