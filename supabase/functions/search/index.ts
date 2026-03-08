@@ -204,8 +204,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch products and universal products in parallel
-    // For single char queries, use server-side filtering to reduce data transfer
+    // Fetch products, universal products, and digital products in parallel
     const isSingleChar = query.length === 1;
     const productQuery = supabase
       .from("products")
@@ -215,16 +214,22 @@ serve(async (req) => {
       .from("universal_products")
       .select("id, name_bn, name_en, slug, price, original_price, discount_percent, brand, images, is_active, product_type")
       .eq("is_active", true);
+    const digitalQuery = supabase
+      .from("digital_products")
+      .select("id, title_bn, title_en, slug, price, original_price, discount_percent, cover_image, product_type, is_free, category")
+      .eq("is_active", true);
 
     // For single characters, apply server-side ilike filter to reduce dataset
     if (isSingleChar) {
       productQuery.or(`title_bn.ilike.${query}%,title_en.ilike.${query}%,author.ilike.${query}%`);
       universalQuery.or(`name_bn.ilike.${query}%,name_en.ilike.${query}%,brand.ilike.${query}%`);
+      digitalQuery.or(`title_bn.ilike.${query}%,title_en.ilike.${query}%,category.ilike.${query}%`);
     }
 
-    const [productsRes, universalRes] = await Promise.all([
+    const [productsRes, universalRes, digitalRes] = await Promise.all([
       productQuery.limit(200),
       universalQuery.limit(200),
+      digitalQuery.limit(200),
     ]);
 
     if (productsRes.error) throw productsRes.error;
@@ -264,7 +269,6 @@ serve(async (req) => {
 
         const matches = nameBnMatch.matches || nameEnMatch.matches || brandMatch.matches;
         
-        // Normalize to common product shape
         return {
           id: product.id,
           title_bn: product.name_bn,
@@ -284,8 +288,45 @@ serve(async (req) => {
       })
       .filter(p => p.matches);
 
+    // Search digital products (ebooks, etc.) with multi-variant matching
+    const digitalResults = (digitalRes.data || [])
+      .map(product => {
+        const titleBnMatch = multiVariantMatch(query, product.title_bn || "");
+        const titleEnMatch = multiVariantMatch(query, product.title_en || "");
+        const categoryMatch = multiVariantMatch(query, product.category || "");
+        const typeMatch = multiVariantMatch(query, product.product_type || "");
+
+        const bestScore = Math.max(
+          titleBnMatch.score * 1.3,
+          titleEnMatch.score * 1.2,
+          categoryMatch.score,
+          typeMatch.score
+        );
+
+        const matches = titleBnMatch.matches || titleEnMatch.matches || categoryMatch.matches || typeMatch.matches;
+
+        return {
+          id: product.id,
+          title_bn: product.title_bn,
+          title_en: product.title_en,
+          slug: product.slug,
+          price: product.price,
+          original_price: product.original_price,
+          discount_percent: product.discount_percent,
+          author: product.category,
+          publisher: product.product_type,
+          images: product.cover_image ? [product.cover_image] : null,
+          score: bestScore,
+          matches,
+          source: 'digital' as const,
+          product_type: product.product_type,
+          is_free: product.is_free,
+        };
+      })
+      .filter(p => p.matches);
+
     // Merge and sort all results
-    const allResults = [...bookResults, ...universalResults]
+    const allResults = [...bookResults, ...universalResults, ...digitalResults]
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
 
