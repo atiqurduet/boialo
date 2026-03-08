@@ -404,7 +404,7 @@ const AdminBackupRestore = () => {
                             <Button size="sm" variant="ghost" onClick={() => exportCSV(table)} disabled={count === 0} title="CSV">
                               <Download className="h-3 w-3" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => exportBackup(undefined, 'sql')} disabled={count === 0} title="SQL">
+                            <Button size="sm" variant="ghost" onClick={() => exportTableSQL(table)} disabled={count === 0} title="SQL">
                               <FileText className="h-3 w-3" />
                             </Button>
                           </TableCell>
