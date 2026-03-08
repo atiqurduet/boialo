@@ -34,9 +34,13 @@ interface BookingResult {
 }
 
 async function bookPathao(order: Order, config: Record<string, string>): Promise<BookingResult> {
-  const { client_id, client_secret, username, password, sandbox } = config;
+  const isSandbox = config.sandbox === "true";
+  const client_id = isSandbox ? (config.sandbox_client_id || config.client_id) : config.client_id;
+  const client_secret = isSandbox ? (config.sandbox_client_secret || config.client_secret) : config.client_secret;
+  const username = isSandbox ? (config.sandbox_username || config.username) : config.username;
+  const password = isSandbox ? (config.sandbox_password || config.password) : config.password;
   if (!client_id || !client_secret || !username || !password) return { success: false, message: "Pathao credentials not configured" };
-  const baseUrl = sandbox === "true" ? "https://hermes-api.p-stageenv.xyz" : "https://api-hermes.pathao.com";
+  const baseUrl = isSandbox ? "https://courier-api-sandbox.pathao.com" : "https://api-hermes.pathao.com";
   try {
     const tokenResponse = await fetch(`${baseUrl}/aladdin/api/v1/issue-token`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ client_id, client_secret, username, password, grant_type: "password" }) });
     if (!tokenResponse.ok) { const error = await tokenResponse.text(); return { success: false, message: "Failed to authenticate with Pathao", raw_response: error }; }
