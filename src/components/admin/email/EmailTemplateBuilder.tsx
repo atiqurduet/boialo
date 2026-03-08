@@ -225,6 +225,100 @@ const PRESET_TEMPLATES = [
       { id: "5", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#fff5f5" } },
     ]
   },
+  // ── Alibaba/AliExpress Inspired Professional Templates ──
+  {
+    id: "mega-sale-alibaba", name: "মেগা সেল", icon: "🔥", description: "Alibaba 11.11 স্টাইল", color: "#ff4500",
+    blocks: [
+      { id: "1", type: "urgency_bar" as BlockType, content: { text: "🔥 ২৪ ঘণ্টার মেগা সেল লাইভ!", subtext: "{{viewers}} জন এখন শপিং করছে", bgGradient: "linear-gradient(90deg,#ff4500,#ff6b35)", animated: true }, settings: { padding: "12px 20px" } },
+      { id: "2", type: "hero_banner" as BlockType, content: { title: "🛒 মেগা সেল ফেস্টিভ্যাল", subtitle: "৮০% পর্যন্ত ছাড় — সব ক্যাটাগরিতে!", bgGradient: "linear-gradient(135deg,#ff4500 0%,#cc0000 50%,#8b0000 100%)" }, settings: { padding: "50px 30px", textColor: "#ffffff" } },
+      { id: "3", type: "countdown" as BlockType, content: { endDate: "2026-04-01", title: "সেল শেষ হচ্ছে" }, settings: { padding: "20px 30px", backgroundColor: "#1a1a1a" } },
+      { id: "4", type: "multi_banner" as BlockType, content: { banners: [{ title: "📚 বই", subtitle: "৫০% ছাড়", bgGradient: "linear-gradient(135deg,#ff4500,#ff6b35)", url: "#" }, { title: "📱 ইবুক", subtitle: "BOGO ফ্রি", bgGradient: "linear-gradient(135deg,#e91e63,#f06292)", url: "#" }, { title: "🛍️ স্টেশনারি", subtitle: "৪০% ছাড়", bgGradient: "linear-gradient(135deg,#ff9800,#ffb74d)", url: "#" }, { title: "🎁 গিফট", subtitle: "ফ্রি শিপিং", bgGradient: "linear-gradient(135deg,#4caf50,#81c784)", url: "#" }] }, settings: { padding: "10px 20px" } },
+      { id: "5", type: "deal_grid" as BlockType, content: { deals: [{ title: "সুপার ডিল #1", discount: "70%", originalPrice: "৳500", salePrice: "৳150", timeLeft: "2h 30m", sold: 85, total: 100 }, { title: "হট ডিল #2", discount: "60%", originalPrice: "৳800", salePrice: "৳320", timeLeft: "5h 15m", sold: 62, total: 100 }], style: "aliexpress" }, settings: { padding: "15px 20px" } },
+      { id: "6", type: "header" as BlockType, content: { text: "⚡ ফ্ল্যাশ ডিলস — বই", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "7", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "sale" }, settings: { padding: "10px 30px" } },
+      { id: "8", type: "progress_bar" as BlockType, content: { title: "🎯 সেল গোল", current: 78, target: 100, unit: "%", subtitle: "গোল পূর্ণ হলে সবার জন্য এক্সট্রা ১০% ছাড়!", bgColor: "#ff4500" }, settings: { padding: "20px 30px", backgroundColor: "#fff3e0" } },
+      { id: "9", type: "trust_badges" as BlockType, content: { items: [{ icon: "🚚", title: "ফ্রি শিপিং", subtitle: "৳500+" }, { icon: "🔒", title: "সিকিউর", subtitle: "100%" }, { icon: "🔄", title: "ইজি রিটার্ন", subtitle: "7 দিন" }, { icon: "⭐", title: "রেটিং", subtitle: "4.9/5" }], style: "ali" }, settings: { padding: "16px 20px", backgroundColor: "#fff8f0" } },
+      { id: "10", type: "coupon_box" as BlockType, content: { code: "MEGA80", discount: "৳200", description: "৳1000+ অর্ডারে", bgGradient: "linear-gradient(135deg,#ff4500,#cc0000)" }, settings: { padding: "15px 30px" } },
+      { id: "11", type: "button" as BlockType, content: { text: "🛒 এখনই শপিং করুন →", url: "#", bgColor: "#ff4500" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "12", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}} | মেগা সেল ফেস্টিভ্যাল", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#1a1a1a", textColor: "#999" } },
+    ]
+  },
+  {
+    id: "daily-deals-ali", name: "ডেইলি ডিলস", icon: "💰", description: "AliExpress স্টাইল", color: "#e91e63",
+    blocks: [
+      { id: "1", type: "banner_strip" as BlockType, content: { text: "⏰ আজকের ডিল — মধ্যরাত পর্যন্ত!", bgColor: "#e91e63" }, settings: { padding: "12px 20px" } },
+      { id: "2", type: "personalized_header" as BlockType, content: { greeting: "হ্যালো {{name}}! 👋", subtitle: "আজকের সেরা ডিলগুলো শুধু আপনার জন্য", avatar: "", bgGradient: "linear-gradient(135deg,#e91e63 0%,#f06292 100%)", showMemberBadge: true, memberLevel: "Gold" }, settings: { padding: "30px", textColor: "#ffffff" } },
+      { id: "3", type: "deal_grid" as BlockType, content: { deals: [{ title: "ডিল অফ দ্য ডে", discount: "65%", originalPrice: "৳1200", salePrice: "৳420", timeLeft: "8h 45m", sold: 73, total: 100 }, { title: "লিমিটেড অফার", discount: "55%", originalPrice: "৳900", salePrice: "৳405", timeLeft: "4h 20m", sold: 55, total: 100 }], style: "aliexpress" }, settings: { padding: "15px 20px" } },
+      { id: "4", type: "header" as BlockType, content: { text: "📚 আজকের বেস্ট বই ডিল", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "5", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "sale" }, settings: { padding: "10px 30px" } },
+      { id: "6", type: "header" as BlockType, content: { text: "📱 ইবুক ডিলস", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "7", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "8", type: "urgency_bar" as BlockType, content: { text: "⚠️ স্টক সীমিত!", subtext: "দ্রুত অর্ডার করুন — প্রতিটি ডিলে সীমিত পরিমাণ", bgGradient: "linear-gradient(90deg,#ff6a00,#ee0979)", animated: true }, settings: { padding: "14px 20px" } },
+      { id: "9", type: "trust_badges" as BlockType, content: { items: [{ icon: "✅", title: "অথেনটিক", subtitle: "100% আসল" }, { icon: "🚀", title: "ফাস্ট শিপিং", subtitle: "1-3 দিন" }, { icon: "💳", title: "COD", subtitle: "ক্যাশ অন ডেলিভারি" }, { icon: "🎁", title: "ফ্রি গিফট", subtitle: "৳1000+ এ" }], style: "ali" }, settings: { padding: "16px 20px", backgroundColor: "#fce4ec" } },
+      { id: "10", type: "button" as BlockType, content: { text: "সব ডিল দেখুন →", url: "#", bgColor: "#e91e63" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "11", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#1a1a2e", textColor: "#999" } },
+    ]
+  },
+  {
+    id: "personalized-picks", name: "পার্সোনালাইজড", icon: "🎯", description: "AI রেকমেন্ডেশন", color: "#9c27b0",
+    blocks: [
+      { id: "1", type: "personalized_header" as BlockType, content: { greeting: "{{name}}, আপনার পছন্দের প্রোডাক্ট! 🎯", subtitle: "আপনার ব্রাউজিং হিস্ট্রি অনুযায়ী বাছাই করা", avatar: "", bgGradient: "linear-gradient(135deg,#9c27b0 0%,#e040fb 100%)", showMemberBadge: true, memberLevel: "Premium" }, settings: { padding: "30px", textColor: "#ffffff" } },
+      { id: "2", type: "header" as BlockType, content: { text: "📚 আপনার জন্য বাছাই করা বই", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "left" as const } },
+      { id: "3", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "modern" }, settings: { padding: "10px 30px" } },
+      { id: "4", type: "header" as BlockType, content: { text: "📱 আপনি এগুলো পছন্দ করবেন", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "left" as const } },
+      { id: "5", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "6", type: "header" as BlockType, content: { text: "🛍️ ট্রেন্ডিং প্রোডাক্ট", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "left" as const } },
+      { id: "7", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "8", type: "coupon_box" as BlockType, content: { code: "FORYOU25", discount: "25%", description: "শুধু আপনার জন্য — ৪৮ ঘণ্টা ভ্যালিড", bgGradient: "linear-gradient(135deg,#9c27b0,#e040fb)" }, settings: { padding: "15px 30px" } },
+      { id: "9", type: "stats_row" as BlockType, content: { items: [{ value: "25%", label: "ডিসকাউন্ট" }, { value: "48h", label: "ভ্যালিড" }, { value: "∞", label: "ব্যবহার" }] }, settings: { padding: "20px 30px", backgroundColor: "#f3e5f5" } },
+      { id: "10", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}} — AI-Powered রেকমেন্ডেশন", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#1a1a2e", textColor: "#999" } },
+    ]
+  },
+  {
+    id: "reengagement", name: "রি-এনগেজমেন্ট", icon: "💌", description: "Win-back ইমেইল", color: "#ff6f00",
+    blocks: [
+      { id: "1", type: "personalized_header" as BlockType, content: { greeting: "{{name}}, আমরা আপনাকে মিস করছি! 😢", subtitle: "অনেকদিন দেখা হয়নি — স্পেশাল অফার নিয়ে ফিরে আসুন", avatar: "", bgGradient: "linear-gradient(135deg,#ff6f00 0%,#ffab40 100%)", showMemberBadge: false, memberLevel: "" }, settings: { padding: "30px", textColor: "#ffffff" } },
+      { id: "2", type: "text" as BlockType, content: { text: "প্রিয় {{name}},\n\nআপনি শেষবার কেনাকাটা করেছিলেন অনেকদিন আগে। আপনার জন্য একটি স্পেশাল ডিসকাউন্ট কোড রাখা হয়েছে!" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "3", type: "coupon_box" as BlockType, content: { code: "MISSYOU30", discount: "30%", description: "আপনার পরবর্তী অর্ডারে — ৭২ ঘণ্টা ভ্যালিড", bgGradient: "linear-gradient(135deg,#ff6f00,#ffab40)" }, settings: { padding: "15px 30px" } },
+      { id: "4", type: "countdown" as BlockType, content: { endDate: "2026-03-12", title: "অফার এক্সপায়ার হচ্ছে" }, settings: { padding: "20px 30px", backgroundColor: "#fff8e1" } },
+      { id: "5", type: "header" as BlockType, content: { text: "🔥 আপনি যা মিস করেছেন", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "6", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "modern" }, settings: { padding: "10px 30px" } },
+      { id: "7", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "8", type: "trust_badges" as BlockType, content: { items: [{ icon: "🚚", title: "ফ্রি শিপিং", subtitle: "আপনার অর্ডারে" }, { icon: "🎁", title: "ফ্রি গিফট", subtitle: "৳500+ এ" }, { icon: "🔄", title: "ইজি রিটার্ন", subtitle: "7 দিন" }, { icon: "💯", title: "গ্যারান্টি", subtitle: "মানি ব্যাক" }], style: "ali" }, settings: { padding: "16px 20px", backgroundColor: "#fff8e1" } },
+      { id: "9", type: "button" as BlockType, content: { text: "এখনই ফিরে আসুন →", url: "#", bgColor: "#ff6f00" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "10", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#fff8e1" } },
+    ]
+  },
+  {
+    id: "new-arrivals-ali", name: "নতুন আগমন", icon: "✨", description: "New Arrivals শোকেস", color: "#00bcd4",
+    blocks: [
+      { id: "1", type: "banner_strip" as BlockType, content: { text: "✨ নতুন কালেকশন এসেছে — সবার আগে দেখুন!", bgColor: "#00bcd4" }, settings: { padding: "12px 20px" } },
+      { id: "2", type: "hero_banner" as BlockType, content: { title: "✨ নতুন আগমন", subtitle: "এই সপ্তাহের ফ্রেশ কালেকশন", bgGradient: "linear-gradient(135deg,#00bcd4 0%,#00838f 100%)" }, settings: { padding: "50px 30px", textColor: "#ffffff" } },
+      { id: "3", type: "multi_banner" as BlockType, content: { banners: [{ title: "📚 নতুন বই", subtitle: "এই সপ্তাহে", bgGradient: "linear-gradient(135deg,#00bcd4,#4dd0e1)", url: "#" }, { title: "📱 নতুন ইবুক", subtitle: "জাস্ট আপলোড", bgGradient: "linear-gradient(135deg,#009688,#4db6ac)", url: "#" }, { title: "🎨 স্টেশনারি", subtitle: "ফ্রেশ স্টক", bgGradient: "linear-gradient(135deg,#26c6da,#80deea)", url: "#" }, { title: "🎁 গিফট আইডিয়া", subtitle: "নতুন কালেকশন", bgGradient: "linear-gradient(135deg,#0097a7,#00bcd4)", url: "#" }] }, settings: { padding: "10px 20px" } },
+      { id: "4", type: "header" as BlockType, content: { text: "📚 সদ্য প্রকাশিত বই", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "5", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "modern" }, settings: { padding: "10px 30px" } },
+      { id: "6", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "7", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "8", type: "cta_section" as BlockType, content: { title: "সবার আগে পেতে চান?", subtitle: "আমাদের নোটিফিকেশন অন করুন!", buttonText: "শপে যান →", buttonUrl: "#", bgGradient: "linear-gradient(135deg,#00bcd4,#00838f)" }, settings: { padding: "0" } },
+      { id: "9", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}} | নতুন আগমন", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#e0f7fa" } },
+    ]
+  },
+  {
+    id: "super-deal-ali", name: "সুপার ডিল", icon: "💎", description: "প্রিমিয়াম অফার", color: "#ffd700",
+    blocks: [
+      { id: "1", type: "urgency_bar" as BlockType, content: { text: "💎 VIP এক্সক্লুসিভ — শুধুমাত্র আজ!", subtext: "সীমিত সংখ্যক — দ্রুত গ্র্যাব করুন", bgGradient: "linear-gradient(90deg,#ffd700,#ff8c00)", animated: true }, settings: { padding: "14px 20px" } },
+      { id: "2", type: "hero_banner" as BlockType, content: { title: "💎 সুপার ডিল ফেস্ট", subtitle: "এক্সক্লুসিভ প্রাইস — শুধু আজকের জন্য", bgGradient: "linear-gradient(135deg,#1a1a2e 0%,#2d1b69 50%,#44337a 100%)" }, settings: { padding: "50px 30px", textColor: "#ffd700" } },
+      { id: "3", type: "deal_grid" as BlockType, content: { deals: [{ title: "💎 প্রিমিয়াম #1", discount: "75%", originalPrice: "৳2000", salePrice: "৳500", timeLeft: "3h 45m", sold: 92, total: 100 }, { title: "💎 প্রিমিয়াম #2", discount: "65%", originalPrice: "৳1500", salePrice: "৳525", timeLeft: "6h 10m", sold: 68, total: 100 }], style: "aliexpress" }, settings: { padding: "15px 20px" } },
+      { id: "4", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "sale" }, settings: { padding: "10px 30px" } },
+      { id: "5", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "6", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "7", type: "progress_bar" as BlockType, content: { title: "⏰ ডিল স্টক", current: 92, target: 100, unit: "%", subtitle: "৯২% বিক্রি হয়ে গেছে!", bgColor: "#ffd700" }, settings: { padding: "20px 30px", backgroundColor: "#1a1a2e" } },
+      { id: "8", type: "coupon_box" as BlockType, content: { code: "SUPERDEAL", discount: "৳500", description: "৳2000+ অর্ডারে — VIP কাস্টমারদের জন্য", bgGradient: "linear-gradient(135deg,#ffd700,#ff8c00)" }, settings: { padding: "15px 30px" } },
+      { id: "9", type: "trust_badges" as BlockType, content: { items: [{ icon: "👑", title: "VIP", subtitle: "এক্সক্লুসিভ" }, { icon: "🏆", title: "বেস্ট প্রাইস", subtitle: "গ্যারান্টি" }, { icon: "🚀", title: "এক্সপ্রেস", subtitle: "ডেলিভারি" }, { icon: "💎", title: "প্রিমিয়াম", subtitle: "কোয়ালিটি" }], style: "ali" }, settings: { padding: "16px 20px", backgroundColor: "#fff8e1" } },
+      { id: "10", type: "button" as BlockType, content: { text: "💎 সুপার ডিল গ্র্যাব করুন →", url: "#", bgColor: "#ffd700", textColor: "#1a1a2e" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "11", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}} | VIP সুপার ডিল", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#1a1a2e", textColor: "#666" } },
+    ]
+  },
 ];
 
 const genId = () => Math.random().toString(36).slice(2, 10);
