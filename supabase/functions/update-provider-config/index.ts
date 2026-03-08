@@ -24,9 +24,9 @@ const ALLOWED_FIELDS: Record<string, Record<string, string[]>> = {
     cod: [],
   },
   courier_providers: {
-    pathao: ["client_id", "client_secret", "username", "password", "sandbox"],
-    steadfast: ["api_key", "secret_key", "sandbox"],
-    redx: ["api_token", "sandbox"],
+    pathao: ["client_id", "client_secret", "username", "password", "sandbox", "sandbox_client_id", "sandbox_client_secret", "sandbox_username", "sandbox_password"],
+    steadfast: ["api_key", "secret_key", "sandbox", "sandbox_api_key", "sandbox_secret_key"],
+    redx: ["api_token", "sandbox", "sandbox_api_token"],
     manual: [],
   },
 };
