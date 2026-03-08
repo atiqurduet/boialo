@@ -70,34 +70,92 @@ const AdminBackupRestore = () => {
 
   useEffect(() => { loadTableCounts(); }, []);
 
-  const exportBackup = async (group?: string) => {
+  const escapeSQL = (val: any): string => {
+    if (val === null || val === undefined) return 'NULL';
+    if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+    if (typeof val === 'number') return String(val);
+    if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
+    return `'${String(val).replace(/'/g, "''")}'`;
+  };
+
+  const convertToSQL = (backupData: Record<string, any[]>): string => {
+    const lines: string[] = [
+      '-- BoiAlo Complete Database Backup',
+      `-- Generated: ${new Date().toISOString()}`,
+      `-- Tables: ${Object.keys(backupData).length}`,
+      '',
+      'BEGIN;',
+      '',
+    ];
+
+    for (const [table, rows] of Object.entries(backupData)) {
+      if (!rows || rows.length === 0) continue;
+      lines.push(`-- Table: ${table} (${rows.length} rows)`);
+      lines.push(`DELETE FROM public.${table};`);
+
+      const columns = Object.keys(rows[0]);
+      const colList = columns.map(c => `"${c}"`).join(', ');
+
+      // Batch inserts in groups of 50
+      for (let i = 0; i < rows.length; i += 50) {
+        const batch = rows.slice(i, i + 50);
+        lines.push(`INSERT INTO public.${table} (${colList}) VALUES`);
+        const valueLines = batch.map(row => {
+          const vals = columns.map(c => escapeSQL(row[c])).join(', ');
+          return `  (${vals})`;
+        });
+        lines.push(valueLines.join(',\n') + ';');
+      }
+      lines.push('');
+    }
+
+    lines.push('COMMIT;');
+    return lines.join('\n');
+  };
+
+  const fetchBackupData = async (group?: string): Promise<any | null> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { toast.error('লগইন প্রয়োজন'); return null; }
+
+    const body: any = { action: 'export' };
+    if (group) body.group = group;
+    else if (selectedTables.length > 0) body.tables = selectedTables;
+
+    const response = await supabase.functions.invoke('admin-backup', { body });
+    if (response.error) throw response.error;
+    return response.data;
+  };
+
+  const exportBackup = async (group?: string, exportFormat: 'json' | 'sql' = 'json') => {
     setExporting(true);
     setExportProgress(10);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { toast.error('লগইন প্রয়োজন'); return; }
-
       setExportProgress(30);
-      const body: any = { action: 'export' };
-      if (group) body.group = group;
-      else if (selectedTables.length > 0) body.tables = selectedTables;
-
-      const response = await supabase.functions.invoke('admin-backup', { body });
+      const backup = await fetchBackupData(group);
+      if (!backup) return;
       setExportProgress(80);
 
-      if (response.error) throw response.error;
+      let blob: Blob;
+      let filename: string;
 
-      const backup = response.data;
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      if (exportFormat === 'sql') {
+        const sql = convertToSQL(backup.data);
+        blob = new Blob([sql], { type: 'application/sql;charset=utf-8;' });
+        filename = `backup-${group || 'full'}-${format(new Date(), 'yyyy-MM-dd-HHmm')}.sql`;
+      } else {
+        blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+        filename = `backup-${group || 'full'}-${format(new Date(), 'yyyy-MM-dd-HHmm')}.json`;
+      }
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `backup-${group || 'full'}-${format(new Date(), 'yyyy-MM-dd-HHmm')}.json`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
 
       setExportProgress(100);
-      toast.success(`ব্যাকআপ সম্পন্ন! ${backup.tables_count} টেবিল, ${backup.total_rows} রো`);
+      toast.success(`${exportFormat.toUpperCase()} ব্যাকআপ সম্পন্ন! ${backup.tables_count} টেবিল, ${backup.total_rows} রো`);
       refetchHistory();
     } catch (error: any) {
       toast.error('ব্যাকআপ তৈরি করতে সমস্যা: ' + (error.message || ''));
