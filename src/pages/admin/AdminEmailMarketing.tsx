@@ -407,6 +407,36 @@ const AdminEmailMarketing = () => {
     }
   };
 
+  // Helper: fetch all subscribers with pagination
+  const fetchAllSubscribers = async (): Promise<EmailSubscriber[] | null> => {
+    const allSubs: EmailSubscriber[] = [];
+    const pageSize = 1000;
+    let from = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('email_subscribers')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, from + pageSize - 1);
+      if (error) { toast.error("এক্সপোর্ট করতে সমস্যা হয়েছে"); return null; }
+      if (data) allSubs.push(...(data as EmailSubscriber[]));
+      hasMore = (data?.length || 0) === pageSize;
+      from += pageSize;
+    }
+    if (allSubs.length === 0) { toast.error("কোনো সাবস্ক্রাইবার নেই"); return null; }
+    return allSubs;
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Stats
   const activeSubscribers = subscribers.filter(s => s.status === 'active').length;
   const sentCampaigns = campaigns.filter(c => c.status === 'sent').length;
