@@ -236,6 +236,43 @@ const AdminEmailMarketing = () => {
     onError: () => toast.error("প্রোভাইডার আপডেট করতে সমস্যা হয়েছে")
   });
 
+  // Send campaign
+  const sendCampaignMutation = useMutation({
+    mutationFn: async (campaign: EmailCampaign) => {
+      // Get active subscribers
+      const { data: subs, error: subsError } = await supabase
+        .from('email_subscribers')
+        .select('id, email')
+        .eq('status', 'active');
+      if (subsError) throw subsError;
+      if (!subs || subs.length === 0) throw new Error("কোনো সক্রিয় সাবস্ক্রাইবার নেই");
+
+      // Update campaign status to sending
+      await supabase.from('email_campaigns').update({ 
+        status: 'sending', 
+        total_recipients: subs.length 
+      }).eq('id', campaign.id);
+
+      // Call send-email edge function
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: subs.map(s => s.email),
+          subject: campaign.subject,
+          html: campaign.content,
+          campaign_id: campaign.id,
+          subscriber_ids: subs.map(s => s.id),
+        }
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email-campaigns'] });
+      toast.success("ক্যাম্পেইন সফলভাবে পাঠানো হয়েছে!");
+    },
+    onError: (err: any) => toast.error(err?.message || "ক্যাম্পেইন পাঠাতে সমস্যা হয়েছে")
+  });
+
   // Delete campaign
   const deleteCampaignMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -551,7 +588,18 @@ const AdminEmailMarketing = () => {
                       <TableCell>{campaign.open_count}/{campaign.click_count}</TableCell>
                       <TableCell>{format(new Date(campaign.created_at), 'dd/MM/yyyy')}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-2">
+                          {campaign.status === 'draft' && (
+                            <Button 
+                              size="sm" 
+                              onClick={() => sendCampaignMutation.mutate(campaign)}
+                              disabled={sendCampaignMutation.isPending}
+                              className="gap-1"
+                            >
+                              <Send className="h-4 w-4" />
+                              পাঠান
+                            </Button>
+                          )}
                           <Button size="sm" variant="outline" onClick={() => handleEditCampaign(campaign)}>
                             <Edit className="h-4 w-4" />
                           </Button>
