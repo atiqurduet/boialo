@@ -849,7 +849,7 @@ const AdminEmailMarketing = () => {
                     নতুন টেমপ্লেট
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>{editingTemplate ? "টেমপ্লেট এডিট করুন" : "নতুন টেমপ্লেট"}</DialogTitle>
                   </DialogHeader>
