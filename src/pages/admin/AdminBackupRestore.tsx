@@ -402,9 +402,14 @@ const AdminBackupRestore = () => {
                     <CardTitle className="text-base flex items-center gap-2">{icon} {label}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <Button onClick={() => exportBackup(key)} disabled={exporting} className="w-full" variant="outline">
-                      <Download className="h-4 w-4 mr-2" /> JSON এক্সপোর্ট
-                    </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button onClick={() => exportBackup(key, 'json')} disabled={exporting} variant="outline" size="sm">
+                        <Download className="h-4 w-4 mr-1" /> JSON
+                      </Button>
+                      <Button onClick={() => exportBackup(key, 'sql')} disabled={exporting} variant="outline" size="sm">
+                        <FileText className="h-4 w-4 mr-1" /> SQL
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
