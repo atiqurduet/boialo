@@ -600,9 +600,9 @@ const AdminCouriers = () => {
                                     <div className="h-px flex-1 bg-border" />
                                   </div>
                                   {getProviderSandboxFields(courier.provider).map((field) => (
-                                    <div key={field} className="space-y-2">
-                                      <Label htmlFor={field} className="capitalize">{field.replace("sandbox_", "").replace(/_/g, " ")}</Label>
-                                      <Input id={field} type={field.includes("secret") || field.includes("password") || field.includes("token") || field.includes("key") ? "password" : "text"} value={config[field] || ""} onChange={(e) => setConfig({ ...config, [field]: e.target.value })} placeholder={configStatus[field] ? "••••••• (configured)" : `Enter ${field.replace("sandbox_", "").replace(/_/g, " ")}`} />
+                                    <div key={field.key} className="space-y-2">
+                                      <Label htmlFor={field.key} className="capitalize">{field.label}</Label>
+                                      <Input id={field.key} type={field.key.includes("secret") || field.key.includes("password") || field.key.includes("token") || field.key.includes("key") ? "password" : "text"} value={config[field.key] || ""} onChange={(e) => setConfig({ ...config, [field.key]: e.target.value })} placeholder={configStatus[field.key] ? "••••••• (configured)" : field.placeholder} />
                                     </div>
                                   ))}
                                 </div>
