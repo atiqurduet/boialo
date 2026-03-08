@@ -495,9 +495,9 @@ export const EmailTemplateBuilder = ({
         <Card className="overflow-hidden">
           <div className="bg-muted/50 px-4 py-2 border-b flex items-center gap-2">
             <div className="flex gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-red-400" />
-              <div className="w-3 h-3 rounded-full bg-yellow-400" />
-              <div className="w-3 h-3 rounded-full bg-green-400" />
+              <div className="w-3 h-3 rounded-full bg-destructive/60" />
+              <div className="w-3 h-3 rounded-full bg-accent-foreground/30" />
+              <div className="w-3 h-3 rounded-full bg-primary/40" />
             </div>
             <span className="text-xs text-muted-foreground ml-2">ইমেইল প্রিভিউ</span>
           </div>
