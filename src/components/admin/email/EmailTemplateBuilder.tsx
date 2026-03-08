@@ -1246,7 +1246,7 @@ const BlockSettings = ({
     case "image":
       return (
         <div className="space-y-3">
-          <div><Label className="text-xs">ইমেজ URL</Label><Input value={c.url || ''} onChange={e => onContentChange("url", e.target.value)} placeholder="https://..." className="h-8 text-xs" /></div>
+          <InlineImageUpload value={c.url || ''} onChange={v => onContentChange("url", v)} label="ইমেজ" />
           <div><Label className="text-xs">Alt টেক্সট</Label><Input value={c.alt || ''} onChange={e => onContentChange("alt", e.target.value)} className="h-8 text-xs" /></div>
           <div><Label className="text-xs">সর্বোচ্চ প্রস্থ</Label><Input value={c.width || '100%'} onChange={e => onContentChange("width", e.target.value)} className="h-8 text-xs" /></div>
           {renderCommonSettings()}
