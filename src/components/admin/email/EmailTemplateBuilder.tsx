@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,15 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import {
   Plus, Eye, Code, Palette, ShoppingBag, Tag, Image, Type,
   LayoutGrid, Gift, Percent, Star, ArrowRight, X, Copy, Sparkles,
   GripVertical, Trash2, MoveUp, MoveDown, Settings, AlignCenter,
   AlignLeft, AlignRight, Square, Columns, Minus, ChevronDown, ChevronUp,
-  ImagePlus, Link, Bold, Monitor, Smartphone, BookOpen, Package, FileText
+  ImagePlus, Link, Bold, Monitor, Smartphone, BookOpen, Package, FileText,
+  Clock, Play, Award, MessageSquare, Zap, Timer, MapPin, Phone,
+  Mail, TrendingUp, Heart, Users, Undo2, Redo2, Layers
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -32,7 +35,9 @@ type BlockType =
   | "header" | "text" | "image" | "button" | "divider" | "spacer"
   | "product_grid" | "ebook_grid" | "universal_grid" | "category_grid"
   | "columns" | "hero_banner" | "social_links" | "footer" | "coupon_box"
-  | "testimonial" | "feature_list";
+  | "testimonial" | "feature_list" | "countdown" | "video_embed"
+  | "banner_strip" | "rating_block" | "stats_row" | "cta_section"
+  | "image_text" | "price_table" | "faq_block" | "brand_showcase";
 
 interface EmailBlock {
   id: string;
@@ -49,96 +54,165 @@ interface EmailBlock {
 }
 
 const BLOCK_LIBRARY: { type: BlockType; label: string; icon: React.ReactNode; category: string }[] = [
-  { type: "hero_banner", label: "হিরো ব্যানার", icon: <Monitor className="h-4 w-4" />, category: "layout" },
+  // Basic
+  { type: "hero_banner", label: "হিরো ব্যানার", icon: <Sparkles className="h-4 w-4" />, category: "basic" },
   { type: "header", label: "হেডিং", icon: <Type className="h-4 w-4" />, category: "basic" },
   { type: "text", label: "টেক্সট", icon: <AlignLeft className="h-4 w-4" />, category: "basic" },
   { type: "image", label: "ইমেজ", icon: <Image className="h-4 w-4" />, category: "basic" },
   { type: "button", label: "বাটন", icon: <Square className="h-4 w-4" />, category: "basic" },
   { type: "divider", label: "ডিভাইডার", icon: <Minus className="h-4 w-4" />, category: "basic" },
   { type: "spacer", label: "স্পেসার", icon: <MoveDown className="h-4 w-4" />, category: "basic" },
+  // Layout
   { type: "columns", label: "কলাম লেআউট", icon: <Columns className="h-4 w-4" />, category: "layout" },
+  { type: "image_text", label: "ইমেজ + টেক্সট", icon: <Layers className="h-4 w-4" />, category: "layout" },
+  { type: "cta_section", label: "CTA সেকশন", icon: <Zap className="h-4 w-4" />, category: "layout" },
+  { type: "banner_strip", label: "ব্যানার স্ট্রিপ", icon: <Award className="h-4 w-4" />, category: "layout" },
+  { type: "social_links", label: "সোশ্যাল লিংক", icon: <Link className="h-4 w-4" />, category: "layout" },
+  { type: "footer", label: "ফুটার", icon: <AlignCenter className="h-4 w-4" />, category: "layout" },
+  // Products
   { type: "product_grid", label: "📚 বই গ্রিড", icon: <BookOpen className="h-4 w-4" />, category: "products" },
   { type: "ebook_grid", label: "📱 ইবুক গ্রিড", icon: <FileText className="h-4 w-4" />, category: "products" },
   { type: "universal_grid", label: "🛍️ ইউনিভার্সাল গ্রিড", icon: <Package className="h-4 w-4" />, category: "products" },
   { type: "category_grid", label: "ক্যাটাগরি গ্রিড", icon: <LayoutGrid className="h-4 w-4" />, category: "products" },
+  { type: "brand_showcase", label: "ব্র্যান্ড শোকেস", icon: <Award className="h-4 w-4" />, category: "products" },
+  // Dynamic
   { type: "coupon_box", label: "কুপন বক্স", icon: <Gift className="h-4 w-4" />, category: "dynamic" },
-  { type: "testimonial", label: "টেস্টিমোনিয়াল", icon: <Star className="h-4 w-4" />, category: "dynamic" },
+  { type: "countdown", label: "কাউন্টডাউন", icon: <Timer className="h-4 w-4" />, category: "dynamic" },
+  { type: "testimonial", label: "টেস্টিমোনিয়াল", icon: <MessageSquare className="h-4 w-4" />, category: "dynamic" },
+  { type: "rating_block", label: "রেটিং ব্লক", icon: <Star className="h-4 w-4" />, category: "dynamic" },
+  { type: "stats_row", label: "পরিসংখ্যান", icon: <TrendingUp className="h-4 w-4" />, category: "dynamic" },
   { type: "feature_list", label: "ফিচার লিস্ট", icon: <Tag className="h-4 w-4" />, category: "dynamic" },
-  { type: "social_links", label: "সোশ্যাল লিংক", icon: <Link className="h-4 w-4" />, category: "layout" },
-  { type: "footer", label: "ফুটার", icon: <AlignCenter className="h-4 w-4" />, category: "layout" },
+  { type: "video_embed", label: "ভিডিও থাম্বনেইল", icon: <Play className="h-4 w-4" />, category: "dynamic" },
+  { type: "faq_block", label: "FAQ", icon: <MessageSquare className="h-4 w-4" />, category: "dynamic" },
+  { type: "price_table", label: "প্রাইস টেবিল", icon: <Tag className="h-4 w-4" />, category: "dynamic" },
+];
+
+const GRADIENT_PRESETS = [
+  { name: "ইন্ডিগো", value: "linear-gradient(135deg,#667eea 0%,#764ba2 100%)" },
+  { name: "রেড ফায়ার", value: "linear-gradient(135deg,#ff4757 0%,#ff6b81 100%)" },
+  { name: "গ্রিন", value: "linear-gradient(135deg,#11998e 0%,#38ef7d 100%)" },
+  { name: "ওশান", value: "linear-gradient(135deg,#2193b0 0%,#6dd5ed 100%)" },
+  { name: "ডার্ক নাইট", value: "linear-gradient(135deg,#1a1a2e 0%,#0f3460 100%)" },
+  { name: "পিংক", value: "linear-gradient(135deg,#f093fb 0%,#f5576c 100%)" },
+  { name: "স্কাই ব্লু", value: "linear-gradient(135deg,#4facfe 0%,#00f2fe 100%)" },
+  { name: "ডার্ক গ্রে", value: "linear-gradient(135deg,#232526 0%,#414345 100%)" },
+  { name: "সানসেট", value: "linear-gradient(135deg,#fa709a 0%,#fee140 100%)" },
+  { name: "গোল্ড", value: "linear-gradient(135deg,#f7971e 0%,#ffd200 100%)" },
+  { name: "রোজ", value: "linear-gradient(135deg,#ffecd2 0%,#fcb69f 100%)" },
+  { name: "পার্পল ড্রিম", value: "linear-gradient(135deg,#a18cd1 0%,#fbc2eb 100%)" },
 ];
 
 const PRESET_TEMPLATES = [
   {
-    id: "modern-promo", name: "মডার্ন প্রোমো", icon: "🎯", description: "সব প্রোডাক্ট",
+    id: "modern-promo", name: "মডার্ন প্রোমো", icon: "🎯", description: "সব প্রোডাক্ট", color: "#667eea",
     blocks: [
-      { id: "1", type: "hero_banner" as BlockType, content: { title: "{{shop_name}}", subtitle: "সেরা অফার এখানে!", bgGradient: "linear-gradient(135deg,#667eea 0%,#764ba2 100%)" }, settings: { padding: "50px 30px", textColor: "#ffffff" } },
-      { id: "2", type: "text" as BlockType, content: { text: "আমাদের নতুন কালেকশন দেখুন এবং বিশেষ ছাড় উপভোগ করুন।" }, settings: { padding: "20px 30px", alignment: "center" as const } },
-      { id: "2b", type: "header" as BlockType, content: { text: "📚 সেরা বই", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "1", type: "hero_banner" as BlockType, content: { title: "{{shop_name}}", subtitle: "সেরা অফার এখানে!", bgGradient: "linear-gradient(135deg,#667eea 0%,#764ba2 100%)", showLogo: true }, settings: { padding: "60px 30px", textColor: "#ffffff" } },
+      { id: "1b", type: "stats_row" as BlockType, content: { items: [{ value: "5000+", label: "প্রোডাক্ট" }, { value: "50K+", label: "হ্যাপি কাস্টমার" }, { value: "24/7", label: "সাপোর্ট" }] }, settings: { padding: "20px 30px", backgroundColor: "#f8f9ff" } },
+      { id: "2", type: "header" as BlockType, content: { text: "📚 সেরা বই কালেকশন", level: "h2" }, settings: { padding: "30px 30px 10px", alignment: "center" as const } },
       { id: "3", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "modern" }, settings: { padding: "10px 30px" } },
-      { id: "3b", type: "header" as BlockType, content: { text: "📱 ই-বুক কালেকশন", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
-      { id: "3c", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
-      { id: "4", type: "button" as BlockType, content: { text: "এখনই কিনুন →", url: "#", bgColor: "#667eea" }, settings: { padding: "20px 30px", alignment: "center" as const } },
-      { id: "5", type: "social_links" as BlockType, content: { facebook: "#", instagram: "#", youtube: "#" }, settings: { padding: "15px 30px", alignment: "center" as const } },
-      { id: "6", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}. সকল অধিকার সংরক্ষিত।", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#f8f9fa" } },
+      { id: "4", type: "cta_section" as BlockType, content: { title: "আরও বই দেখুন", subtitle: "হাজারো বই থেকে বেছে নিন", buttonText: "শপে যান →", buttonUrl: "#", bgGradient: "linear-gradient(135deg,#667eea 0%,#764ba2 100%)" }, settings: { padding: "0" } },
+      { id: "5", type: "header" as BlockType, content: { text: "📱 ই-বুক কালেকশন", level: "h2" }, settings: { padding: "30px 30px 10px", alignment: "center" as const } },
+      { id: "6", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "7", type: "header" as BlockType, content: { text: "🛍️ লাইফস্টাইল প্রোডাক্ট", level: "h2" }, settings: { padding: "30px 30px 10px", alignment: "center" as const } },
+      { id: "8", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "9", type: "testimonial" as BlockType, content: { name: "রহিম আহমেদ", text: "অসাধারণ সার্ভিস এবং প্রোডাক্ট কোয়ালিটি! বারবার কিনব।", rating: 5, avatar: "" }, settings: { padding: "20px 30px" } },
+      { id: "10", type: "social_links" as BlockType, content: { facebook: "#", instagram: "#", youtube: "#" }, settings: { padding: "15px 30px", alignment: "center" as const } },
+      { id: "11", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}. সকল অধিকার সংরক্ষিত।", address: "ঢাকা, বাংলাদেশ", phone: "01XXXXXXXXX", unsubscribe: true }, settings: { padding: "30px", backgroundColor: "#1a1a2e", textColor: "#999" } },
     ]
   },
   {
-    id: "flash-sale", name: "ফ্ল্যাশ সেল", icon: "⚡", description: "সীমিত অফার",
+    id: "flash-sale", name: "ফ্ল্যাশ সেল", icon: "⚡", description: "সীমিত অফার", color: "#ff4757",
     blocks: [
-      { id: "1", type: "hero_banner" as BlockType, content: { title: "⚡ মেগা ফ্ল্যাশ সেল ⚡", subtitle: "সীমিত সময়ের বিশাল ছাড়!", bgGradient: "linear-gradient(135deg,#ff4757 0%,#ff6b81 100%)" }, settings: { padding: "50px 30px", textColor: "#ffffff" } },
-      { id: "2", type: "coupon_box" as BlockType, content: { code: "FLASH50", discount: "50%", description: "সব প্রোডাক্টে" }, settings: { padding: "15px 30px" } },
-      { id: "3", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "sale" }, settings: { padding: "10px 30px" } },
-      { id: "3b", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
-      { id: "4", type: "button" as BlockType, content: { text: "সব অফার দেখুন →", url: "#", bgColor: "#ff4757" }, settings: { padding: "20px 30px", alignment: "center" as const } },
-      { id: "5", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#2f3542", textColor: "#999" } },
+      { id: "1", type: "banner_strip" as BlockType, content: { text: "⏰ সীমিত সময়ের অফার — মিস করবেন না!", bgColor: "#ff4757" }, settings: { padding: "12px 20px" } },
+      { id: "2", type: "hero_banner" as BlockType, content: { title: "⚡ মেগা ফ্ল্যাশ সেল ⚡", subtitle: "৭০% পর্যন্ত ছাড়!", bgGradient: "linear-gradient(135deg,#ff4757 0%,#c44569 100%)" }, settings: { padding: "60px 30px", textColor: "#ffffff" } },
+      { id: "3", type: "countdown" as BlockType, content: { endDate: "2026-04-01", title: "অফার শেষ হচ্ছে" }, settings: { padding: "20px 30px", backgroundColor: "#fff8f8" } },
+      { id: "4", type: "coupon_box" as BlockType, content: { code: "FLASH70", discount: "70%", description: "সকল বই ও প্রোডাক্টে", bgGradient: "linear-gradient(135deg,#ff4757,#c44569)" }, settings: { padding: "15px 30px" } },
+      { id: "5", type: "header" as BlockType, content: { text: "🔥 হট ডিলস — বই", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "6", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "sale" }, settings: { padding: "10px 30px" } },
+      { id: "7", type: "header" as BlockType, content: { text: "📱 ইবুক অফার", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "8", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "9", type: "header" as BlockType, content: { text: "🛍️ লাইফস্টাইল সেল", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "10", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "11", type: "button" as BlockType, content: { text: "সব অফার দেখুন →", url: "#", bgColor: "#ff4757" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "12", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#2f3542", textColor: "#999" } },
     ]
   },
   {
-    id: "ebook-special", name: "ইবুক স্পেশাল", icon: "📱", description: "ডিজিটাল প্রোডাক্ট",
+    id: "ebook-special", name: "ইবুক স্পেশাল", icon: "📱", description: "ডিজিটাল প্রোডাক্ট", color: "#2193b0",
     blocks: [
-      { id: "1", type: "hero_banner" as BlockType, content: { title: "📱 ডিজিটাল লাইব্রেরি", subtitle: "সেরা ইবুক কালেকশন", bgGradient: "linear-gradient(135deg,#2193b0 0%,#6dd5ed 100%)" }, settings: { padding: "50px 30px", textColor: "#ffffff" } },
-      { id: "2", type: "text" as BlockType, content: { text: "যেকোনো সময়, যেকোনো জায়গায় পড়ুন। আমাদের ইবুক কালেকশন থেকে আপনার পছন্দের বই বেছে নিন।" }, settings: { padding: "20px 30px", alignment: "center" as const } },
-      { id: "3", type: "feature_list" as BlockType, content: { items: ["তাৎক্ষণিক ডাউনলোড", "PDF, EPUB ফরম্যাট", "মোবাইল ফ্রেন্ডলি", "অফলাইনে পড়ুন"] }, settings: { padding: "10px 30px" } },
+      { id: "1", type: "hero_banner" as BlockType, content: { title: "📱 ডিজিটাল লাইব্রেরি", subtitle: "হাজারো ইবুক — যেকোনো ডিভাইসে পড়ুন", bgGradient: "linear-gradient(135deg,#2193b0 0%,#6dd5ed 100%)" }, settings: { padding: "60px 30px", textColor: "#ffffff" } },
+      { id: "2", type: "feature_list" as BlockType, content: { items: ["📥 তাৎক্ষণিক ডাউনলোড", "📄 PDF, EPUB ফরম্যাট", "📱 মোবাইল ফ্রেন্ডলি", "🌐 অফলাইনে পড়ুন"], iconStyle: "emoji" }, settings: { padding: "20px 30px", backgroundColor: "#f0f9ff" } },
+      { id: "3", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "4", type: "stats_row" as BlockType, content: { items: [{ value: "1000+", label: "ইবুক" }, { value: "50+", label: "ক্যাটাগরি" }, { value: "Free", label: "কিছু ফ্রি" }] }, settings: { padding: "20px 30px", backgroundColor: "#e0f7fa" } },
+      { id: "5", type: "rating_block" as BlockType, content: { rating: 4.8, totalReviews: "2,500+", text: "আমাদের গ্রাহকদের গড় রেটিং" }, settings: { padding: "20px 30px" } },
+      { id: "6", type: "cta_section" as BlockType, content: { title: "ইবুক শপে যান", subtitle: "নতুন ইবুক প্রতিদিন", buttonText: "ইবুক দেখুন →", buttonUrl: "#", bgGradient: "linear-gradient(135deg,#2193b0 0%,#6dd5ed 100%)" }, settings: { padding: "0" } },
+      { id: "7", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#f0f9ff" } },
+    ]
+  },
+  {
+    id: "newsletter", name: "উইকলি নিউজলেটার", icon: "📰", description: "সাপ্তাহিক আপডেট", color: "#333",
+    blocks: [
+      { id: "1", type: "hero_banner" as BlockType, content: { title: "📰 সাপ্তাহিক আপডেট", subtitle: "এই সপ্তাহের সেরা বই, ইবুক ও অফার", bgGradient: "linear-gradient(135deg,#0f0c29 0%,#302b63 50%,#24243e 100%)" }, settings: { padding: "50px 30px", textColor: "#ffffff" } },
+      { id: "2", type: "image_text" as BlockType, content: { imageUrl: "", title: "📖 এডিটরস পিক", text: "এই সপ্তাহের সেরা বইটি পড়ে দেখুন — হাজারো পাঠকের পছন্দ।", buttonText: "দেখুন →", buttonUrl: "#" }, settings: { padding: "20px 30px" } },
+      { id: "3", type: "header" as BlockType, content: { text: "📚 নতুন বই", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "left" as const } },
+      { id: "4", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "modern" }, settings: { padding: "10px 30px" } },
+      { id: "5", type: "header" as BlockType, content: { text: "📱 নতুন ইবুক", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "left" as const } },
+      { id: "6", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "7", type: "header" as BlockType, content: { text: "🛍️ ট্রেন্ডিং প্রোডাক্ট", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "left" as const } },
+      { id: "8", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "9", type: "category_grid" as BlockType, content: { categoryIds: [] }, settings: { padding: "10px 30px" } },
+      { id: "10", type: "social_links" as BlockType, content: { facebook: "#", instagram: "#", youtube: "#" }, settings: { padding: "15px 30px", alignment: "center" as const } },
+      { id: "11", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", address: "ঢাকা, বাংলাদেশ", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#1a1a2e", textColor: "#999" } },
+    ]
+  },
+  {
+    id: "eid-offer", name: "ঈদ অফার", icon: "🌙", description: "ঈদ স্পেশাল", color: "#e2b714",
+    blocks: [
+      { id: "1", type: "hero_banner" as BlockType, content: { title: "🌙 ঈদ মোবারক!", subtitle: "ঈদ স্পেশাল ছাড় সকল প্রোডাক্টে", bgGradient: "linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)" }, settings: { padding: "60px 30px", textColor: "#e2b714" } },
+      { id: "2", type: "countdown" as BlockType, content: { endDate: "2026-04-01", title: "ঈদ অফার শেষ হচ্ছে" }, settings: { padding: "20px 30px", backgroundColor: "#0f3460" } },
+      { id: "3", type: "coupon_box" as BlockType, content: { code: "EID2026", discount: "30%", description: "সকল বই ও প্রোডাক্টে", bgGradient: "linear-gradient(135deg,#e2b714,#f7971e)" }, settings: { padding: "15px 30px" } },
+      { id: "4", type: "header" as BlockType, content: { text: "📚 ঈদ স্পেশাল বই", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "5", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "modern" }, settings: { padding: "10px 30px" } },
+      { id: "6", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "7", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "8", type: "button" as BlockType, content: { text: "ঈদ অফার দেখুন →", url: "#", bgColor: "#e2b714", textColor: "#1a1a2e" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "9", type: "footer" as BlockType, content: { text: "ঈদ মোবারক! © 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#1a1a2e", textColor: "rgba(255,255,255,0.5)" } },
+    ]
+  },
+  {
+    id: "universal-showcase", name: "প্রোডাক্ট শোকেস", icon: "🛍️", description: "সব প্রোডাক্ট", color: "#11998e",
+    blocks: [
+      { id: "1", type: "hero_banner" as BlockType, content: { title: "🛍️ নতুন কালেকশন", subtitle: "বই, ইবুক, স্টেশনারি, লাইফস্টাইল ও আরও অনেক কিছু", bgGradient: "linear-gradient(135deg,#11998e 0%,#38ef7d 100%)" }, settings: { padding: "60px 30px", textColor: "#ffffff" } },
+      { id: "2", type: "brand_showcase" as BlockType, content: { title: "আমাদের বিশ্বস্ত ব্র্যান্ড", brands: ["ব্র্যান্ড ১", "ব্র্যান্ড ২", "ব্র্যান্ড ৩", "ব্র্যান্ড ৪"] }, settings: { padding: "20px 30px", backgroundColor: "#f0fff4" } },
+      { id: "3", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "modern" }, settings: { padding: "10px 30px" } },
       { id: "4", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
-      { id: "5", type: "button" as BlockType, content: { text: "ইবুক শপ দেখুন →", url: "#", bgColor: "#2193b0" }, settings: { padding: "20px 30px", alignment: "center" as const } },
-      { id: "6", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#f0f9ff" } },
+      { id: "5", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "6", type: "testimonial" as BlockType, content: { name: "রহিম আহমেদ", text: "দারুণ প্রোডাক্ট! খুবই ভালো মানের।", rating: 5, avatar: "" }, settings: { padding: "15px 30px" } },
+      { id: "7", type: "cta_section" as BlockType, content: { title: "এখনই শপিং শুরু করুন", subtitle: "সীমিত স্টক — দ্রুত অর্ডার করুন", buttonText: "শপে যান →", buttonUrl: "#", bgGradient: "linear-gradient(135deg,#11998e 0%,#38ef7d 100%)" }, settings: { padding: "0" } },
+      { id: "8", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", address: "ঢাকা, বাংলাদেশ", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#1a1a2e", textColor: "#999" } },
     ]
   },
   {
-    id: "newsletter", name: "নিউজলেটার", icon: "📰", description: "সাপ্তাহিক আপডেট",
+    id: "welcome-email", name: "ওয়েলকাম ইমেইল", icon: "👋", description: "নতুন কাস্টমার", color: "#6c5ce7",
     blocks: [
-      { id: "1", type: "hero_banner" as BlockType, content: { title: "📰 সাপ্তাহিক আপডেট", subtitle: "এই সপ্তাহের সেরা বই ও অফার", bgGradient: "linear-gradient(135deg,#232526 0%,#414345 100%)" }, settings: { padding: "40px 30px", textColor: "#ffffff" } },
-      { id: "2", type: "header" as BlockType, content: { text: "📚 নতুন বই", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "left" as const } },
-      { id: "3", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "modern" }, settings: { padding: "10px 30px" } },
-      { id: "3b", type: "header" as BlockType, content: { text: "📱 নতুন ইবুক", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "left" as const } },
-      { id: "3c", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
-      { id: "3d", type: "header" as BlockType, content: { text: "🛍️ লাইফস্টাইল প্রোডাক্ট", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "left" as const } },
-      { id: "3e", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
-      { id: "4", type: "category_grid" as BlockType, content: { categoryIds: [] }, settings: { padding: "10px 30px" } },
-      { id: "5", type: "button" as BlockType, content: { text: "সব দেখুন →", url: "#", bgColor: "#333" }, settings: { padding: "20px 30px", alignment: "center" as const } },
-      { id: "6", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#f8f9fa" } },
+      { id: "1", type: "hero_banner" as BlockType, content: { title: "👋 স্বাগতম!", subtitle: "{{shop_name}}-এ আপনাকে পেয়ে আমরা আনন্দিত", bgGradient: "linear-gradient(135deg,#6c5ce7 0%,#a29bfe 100%)" }, settings: { padding: "60px 30px", textColor: "#ffffff" } },
+      { id: "2", type: "text" as BlockType, content: { text: "প্রিয় {{name}},\n\nআমাদের পরিবারে যোগ দেওয়ার জন্য ধন্যবাদ! আপনার প্রথম অর্ডারে বিশেষ ছাড় পাচ্ছেন।" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "3", type: "coupon_box" as BlockType, content: { code: "WELCOME20", discount: "20%", description: "প্রথম অর্ডারে", bgGradient: "linear-gradient(135deg,#6c5ce7,#a29bfe)" }, settings: { padding: "15px 30px" } },
+      { id: "4", type: "feature_list" as BlockType, content: { items: ["🚚 ফ্রি ডেলিভারি ঢাকায়", "🔄 ইজি রিটার্ন পলিসি", "💳 ক্যাশ অন ডেলিভারি", "📞 ২৪/৭ কাস্টমার সাপোর্ট"], iconStyle: "emoji" }, settings: { padding: "20px 30px", backgroundColor: "#f8f7ff" } },
+      { id: "5", type: "header" as BlockType, content: { text: "🌟 আমাদের বেস্টসেলার", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "6", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "modern" }, settings: { padding: "10px 30px" } },
+      { id: "7", type: "button" as BlockType, content: { text: "শপিং শুরু করুন →", url: "#", bgColor: "#6c5ce7" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "8", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#f8f7ff" } },
     ]
   },
   {
-    id: "eid-offer", name: "ঈদ অফার", icon: "🌙", description: "ঈদ স্পেশাল",
+    id: "abandoned-cart", name: "কার্ট রিমাইন্ডার", icon: "🛒", description: "পরিত্যক্ত কার্ট", color: "#e17055",
     blocks: [
-      { id: "1", type: "hero_banner" as BlockType, content: { title: "🌙 ঈদ মোবারক!", subtitle: "ঈদ স্পেশাল ছাড় সকল প্রোডাক্টে", bgGradient: "linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)" }, settings: { padding: "50px 30px", textColor: "#e2b714" } },
-      { id: "2", type: "coupon_box" as BlockType, content: { code: "EID2026", discount: "25%", description: "সকল বই ও প্রোডাক্টে" }, settings: { padding: "15px 30px" } },
-      { id: "3", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "modern" }, settings: { padding: "10px 30px" } },
-      { id: "3b", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
-      { id: "4", type: "button" as BlockType, content: { text: "ঈদ অফার দেখুন →", url: "#", bgColor: "#e2b714", textColor: "#1a1a2e" }, settings: { padding: "20px 30px", alignment: "center" as const } },
-      { id: "5", type: "footer" as BlockType, content: { text: "ঈদ মোবারক! © 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#1a1a2e", textColor: "rgba(255,255,255,0.5)" } },
-    ]
-  },
-  {
-    id: "universal-showcase", name: "প্রোডাক্ট শোকেস", icon: "🛍️", description: "লাইফস্টাইল ও অন্যান্য",
-    blocks: [
-      { id: "1", type: "hero_banner" as BlockType, content: { title: "🛍️ নতুন কালেকশন", subtitle: "স্টেশনারি, লাইফস্টাইল ও আরও অনেক কিছু", bgGradient: "linear-gradient(135deg,#11998e 0%,#38ef7d 100%)" }, settings: { padding: "50px 30px", textColor: "#ffffff" } },
-      { id: "2", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
-      { id: "3", type: "testimonial" as BlockType, content: { name: "রহিম আহমেদ", text: "দারুণ প্রোডাক্ট! খুবই ভালো মানের।", avatar: "" }, settings: { padding: "15px 30px" } },
-      { id: "4", type: "button" as BlockType, content: { text: "শপে যান →", url: "#", bgColor: "#11998e" }, settings: { padding: "20px 30px", alignment: "center" as const } },
-      { id: "5", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#f0fff4" } },
+      { id: "1", type: "hero_banner" as BlockType, content: { title: "🛒 আপনার কার্ট অপেক্ষায় আছে!", subtitle: "কিছু আইটেম রেখে গেছেন...", bgGradient: "linear-gradient(135deg,#e17055 0%,#d63031 100%)" }, settings: { padding: "50px 30px", textColor: "#ffffff" } },
+      { id: "2", type: "text" as BlockType, content: { text: "প্রিয় {{name}}, আপনি কিছু দুর্দান্ত প্রোডাক্ট কার্টে রেখে গেছেন। স্টক সীমিত — এখনই অর্ডার করুন!" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "3", type: "coupon_box" as BlockType, content: { code: "COMEBACK15", discount: "15%", description: "শুধু আপনার জন্য", bgGradient: "linear-gradient(135deg,#e17055,#d63031)" }, settings: { padding: "15px 30px" } },
+      { id: "4", type: "button" as BlockType, content: { text: "কার্টে ফিরে যান →", url: "#", bgColor: "#e17055" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "5", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#fff5f5" } },
     ]
   },
 ];
@@ -147,23 +221,33 @@ const genId = () => Math.random().toString(36).slice(2, 10);
 
 const createDefaultBlock = (type: BlockType): EmailBlock => {
   const defaults: Record<BlockType, Partial<EmailBlock>> = {
-    hero_banner: { content: { title: "আপনার শিরোনাম", subtitle: "সাবটাইটেল", bgGradient: "linear-gradient(135deg,#667eea 0%,#764ba2 100%)" }, settings: { padding: "50px 30px", textColor: "#ffffff" } },
+    hero_banner: { content: { title: "আপনার শিরোনাম", subtitle: "সাবটাইটেল", bgGradient: "linear-gradient(135deg,#667eea 0%,#764ba2 100%)" }, settings: { padding: "60px 30px", textColor: "#ffffff" } },
     header: { content: { text: "হেডিং টেক্সট", level: "h2" }, settings: { padding: "15px 30px", alignment: "center" } },
     text: { content: { text: "আপনার টেক্সট এখানে লিখুন..." }, settings: { padding: "10px 30px" } },
     image: { content: { url: "", alt: "Image", width: "100%" }, settings: { padding: "10px 30px", alignment: "center" } },
     button: { content: { text: "বাটন টেক্সট", url: "#", bgColor: "#667eea", textColor: "#ffffff" }, settings: { padding: "15px 30px", alignment: "center", borderRadius: "30px" } },
-    divider: { content: { color: "#eeeeee", thickness: "1" }, settings: { padding: "10px 30px" } },
+    divider: { content: { color: "#eeeeee", thickness: "1", style: "solid" }, settings: { padding: "10px 30px" } },
     spacer: { content: { height: "30" }, settings: {} },
     product_grid: { content: { productIds: [], columns: 2, cardStyle: "modern" }, settings: { padding: "10px 30px" } },
     ebook_grid: { content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
     universal_grid: { content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
     category_grid: { content: { categoryIds: [] }, settings: { padding: "10px 30px" } },
     columns: { content: { left: "বাম কলাম", right: "ডান কলাম" }, settings: { padding: "10px 30px" } },
-    social_links: { content: { facebook: "#", instagram: "#", youtube: "#", twitter: "" }, settings: { padding: "15px 30px", alignment: "center" } },
-    footer: { content: { text: "© 2026 আপনার শপ। সকল অধিকার সংরক্ষিত।", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#f8f9fa", alignment: "center" } },
-    coupon_box: { content: { code: "SAVE20", discount: "20%", description: "সকল প্রোডাক্টে" }, settings: { padding: "15px 30px" } },
-    testimonial: { content: { name: "গ্রাহকের নাম", text: "দারুণ সার্ভিস!", avatar: "" }, settings: { padding: "15px 30px" } },
-    feature_list: { content: { items: ["ফিচার ১", "ফিচার ২", "ফিচার ৩"] }, settings: { padding: "15px 30px" } },
+    social_links: { content: { facebook: "#", instagram: "#", youtube: "#", twitter: "", whatsapp: "" }, settings: { padding: "15px 30px", alignment: "center" } },
+    footer: { content: { text: "© 2026 আপনার শপ। সকল অধিকার সংরক্ষিত।", address: "", phone: "", unsubscribe: true }, settings: { padding: "30px", backgroundColor: "#1a1a2e", textColor: "#999", alignment: "center" } },
+    coupon_box: { content: { code: "SAVE20", discount: "20%", description: "সকল প্রোডাক্টে", bgGradient: "linear-gradient(135deg,#667eea,#764ba2)" }, settings: { padding: "15px 30px" } },
+    testimonial: { content: { name: "গ্রাহকের নাম", text: "দারুণ সার্ভিস!", rating: 5, avatar: "" }, settings: { padding: "15px 30px" } },
+    feature_list: { content: { items: ["ফিচার ১", "ফিচার ২", "ফিচার ৩"], iconStyle: "check" }, settings: { padding: "15px 30px" } },
+    countdown: { content: { endDate: "2026-04-01", title: "অফার শেষ হচ্ছে" }, settings: { padding: "20px 30px", backgroundColor: "#fff8f8" } },
+    video_embed: { content: { thumbnailUrl: "", videoUrl: "#", title: "ভিডিও দেখুন" }, settings: { padding: "15px 30px" } },
+    banner_strip: { content: { text: "🔥 বিশেষ অফার চলছে!", bgColor: "#ff4757" }, settings: { padding: "12px 20px" } },
+    rating_block: { content: { rating: 4.8, totalReviews: "2,500+", text: "গ্রাহকদের গড় রেটিং" }, settings: { padding: "20px 30px" } },
+    stats_row: { content: { items: [{ value: "5000+", label: "প্রোডাক্ট" }, { value: "50K+", label: "কাস্টমার" }, { value: "24/7", label: "সাপোর্ট" }] }, settings: { padding: "20px 30px", backgroundColor: "#f8f9ff" } },
+    cta_section: { content: { title: "এখনই শপিং শুরু করুন", subtitle: "হাজারো প্রোডাক্ট", buttonText: "শপে যান →", buttonUrl: "#", bgGradient: "linear-gradient(135deg,#667eea 0%,#764ba2 100%)" }, settings: { padding: "0" } },
+    image_text: { content: { imageUrl: "", title: "শিরোনাম", text: "বিবরণ লিখুন...", buttonText: "আরও দেখুন", buttonUrl: "#" }, settings: { padding: "20px 30px" } },
+    price_table: { content: { plans: [{ name: "বেসিক", price: "৳199", features: ["5 বই", "1 মাস ভ্যালিড"] }, { name: "প্রিমিয়াম", price: "৳499", features: ["20 বই", "6 মাস ভ্যালিড"], highlighted: true }] }, settings: { padding: "20px 30px" } },
+    faq_block: { content: { items: [{ q: "ডেলিভারি চার্জ কত?", a: "ঢাকায় ৳60, ঢাকার বাইরে ৳120" }, { q: "রিটার্ন পলিসি কী?", a: "7 দিনের মধ্যে রিটার্ন করতে পারবেন" }] }, settings: { padding: "20px 30px" } },
+    brand_showcase: { content: { title: "বিশ্বস্ত ব্র্যান্ড", brands: ["ব্র্যান্ড ১", "ব্র্যান্ড ২", "ব্র্যান্ড ৩", "ব্র্যান্ড ৪"] }, settings: { padding: "20px 30px", backgroundColor: "#f8f9fa" } },
   };
   const d = defaults[type] || {};
   return { id: genId(), type, content: d.content || {}, settings: d.settings || {} };
@@ -171,26 +255,26 @@ const createDefaultBlock = (type: BlockType): EmailBlock => {
 
 const siteUrl = "https://boialo.lovable.app";
 
-// Professional product card HTML generator
+// ── Professional HTML card generators ──
 const productCardHtml = (p: any, style: string = "modern") => {
   const img = p.imageUrl || '';
   const hasDiscount = p.discountPrice && p.discountPrice < p.price;
   const discountBadge = hasDiscount
-    ? `<div style="position:absolute;top:8px;left:8px;background:#ff4757;color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;">-${p.discount_percent || Math.round((1 - p.discountPrice / p.price) * 100)}%</div>`
+    ? `<div style="position:absolute;top:10px;left:10px;background:linear-gradient(135deg,#ff4757,#c44569);color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;box-shadow:0 2px 8px rgba(255,71,87,0.3);">-${p.discount_percent || Math.round((1 - p.discountPrice / p.price) * 100)}%</div>`
     : '';
 
   return `<td style="width:50%;padding:8px;vertical-align:top;">
-    <div style="border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.08);position:relative;">
+    <div style="border-radius:16px;overflow:hidden;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.08);position:relative;border:1px solid #f0f0f0;">
       ${discountBadge}
-      ${img ? `<img src="${img}" alt="${p.title}" style="width:100%;height:180px;object-fit:cover;display:block;" />` : `<div style="height:180px;background:linear-gradient(135deg,#f5f7fa,#c3cfe2);text-align:center;line-height:180px;font-size:40px;">📚</div>`}
-      <div style="padding:12px;">
-        <p style="font-size:13px;color:#1a1a1a;margin:0 0 4px;font-weight:600;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${p.title}</p>
-        ${p.author ? `<p style="font-size:11px;color:#888;margin:0 0 8px;">${p.author}</p>` : ''}
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span style="color:#e53e3e;font-weight:700;font-size:16px;">৳${hasDiscount ? p.discountPrice : p.price}</span>
-          ${hasDiscount ? `<span style="color:#aaa;text-decoration:line-through;font-size:12px;">৳${p.price}</span>` : ''}
+      ${img ? `<img src="${img}" alt="${p.title}" style="width:100%;height:200px;object-fit:cover;display:block;" />` : `<div style="height:200px;background:linear-gradient(135deg,#f5f7fa,#c3cfe2);text-align:center;line-height:200px;font-size:48px;">📚</div>`}
+      <div style="padding:16px;">
+        <p style="font-size:14px;color:#1a1a1a;margin:0 0 6px;font-weight:700;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${p.title}</p>
+        ${p.author ? `<p style="font-size:12px;color:#999;margin:0 0 10px;">✍️ ${p.author}</p>` : ''}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="color:#e53e3e;font-weight:800;font-size:18px;">৳${hasDiscount ? p.discountPrice : p.price}</span>
+          ${hasDiscount ? `<span style="color:#bbb;text-decoration:line-through;font-size:13px;">৳${p.price}</span>` : ''}
         </div>
-        <a href="${p.link}" style="display:block;margin-top:10px;background:${style === 'sale' ? '#ff4757' : '#667eea'};color:#fff;padding:8px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;text-align:center;">অর্ডার করুন</a>
+        <a href="${p.link}" style="display:block;background:${style === 'sale' ? 'linear-gradient(135deg,#ff4757,#c44569)' : 'linear-gradient(135deg,#667eea,#764ba2)'};color:#fff;padding:10px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700;text-align:center;box-shadow:0 4px 12px rgba(102,126,234,0.3);">🛒 অর্ডার করুন</a>
       </div>
     </div>
   </td>`;
@@ -199,21 +283,22 @@ const productCardHtml = (p: any, style: string = "modern") => {
 const ebookCardHtml = (eb: any) => {
   const hasDiscount = eb.discount_percent && eb.discount_percent > 0;
   const salePrice = hasDiscount ? Math.round(eb.price * (1 - eb.discount_percent / 100)) : null;
-  const formatBadge = eb.file_format ? `<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;">${eb.file_format}</span>` : '';
-  const discountBadge = hasDiscount ? `<span style="position:absolute;top:8px;left:8px;background:#ff4757;color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;">-${eb.discount_percent}%</span>` : '';
+  const formatBadge = eb.file_format ? `<span style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.75);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;backdrop-filter:blur(4px);">${eb.file_format}</span>` : '';
+  const discountBadge = hasDiscount ? `<span style="position:absolute;top:10px;left:10px;background:linear-gradient(135deg,#ff4757,#c44569);color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;box-shadow:0 2px 8px rgba(255,71,87,0.3);">-${eb.discount_percent}%</span>` : '';
   const img = eb.cover_image || '';
   const isFree = eb.is_free;
 
   return `<td style="width:50%;padding:8px;vertical-align:top;">
-    <div style="border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.08);position:relative;">
+    <div style="border-radius:16px;overflow:hidden;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.08);position:relative;border:1px solid #f0f0f0;">
       ${discountBadge}${formatBadge}
-      ${img ? `<img src="${img}" alt="${eb.title_bn}" style="width:100%;height:180px;object-fit:cover;display:block;" />` : `<div style="height:180px;background:linear-gradient(135deg,#e0f2fe,#bae6fd);text-align:center;line-height:180px;font-size:40px;">📱</div>`}
-      <div style="padding:12px;">
-        <p style="font-size:13px;color:#1a1a1a;margin:0 0 4px;font-weight:600;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${eb.title_bn}</p>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
-          ${isFree ? `<span style="color:#11998e;font-weight:700;font-size:14px;">ফ্রি</span>` : `<span style="color:#2193b0;font-weight:700;font-size:16px;">৳${salePrice || eb.price}</span>${salePrice ? `<span style="color:#aaa;text-decoration:line-through;font-size:12px;">৳${eb.price}</span>` : ''}`}
+      ${isFree ? `<div style="position:absolute;top:${hasDiscount ? '40' : '10'}px;left:10px;background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;">FREE</div>` : ''}
+      ${img ? `<img src="${img}" alt="${eb.title_bn}" style="width:100%;height:200px;object-fit:cover;display:block;" />` : `<div style="height:200px;background:linear-gradient(135deg,#e0f2fe,#bae6fd);text-align:center;line-height:200px;font-size:48px;">📱</div>`}
+      <div style="padding:16px;">
+        <p style="font-size:14px;color:#1a1a1a;margin:0 0 6px;font-weight:700;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${eb.title_bn}</p>
+        <div style="display:flex;align-items:center;gap:8px;margin:8px 0 12px;">
+          ${isFree ? `<span style="color:#11998e;font-weight:800;font-size:16px;">ফ্রি ✨</span>` : `<span style="color:#2193b0;font-weight:800;font-size:18px;">৳${salePrice || eb.price}</span>${salePrice ? `<span style="color:#bbb;text-decoration:line-through;font-size:13px;">৳${eb.price}</span>` : ''}`}
         </div>
-        <a href="${siteUrl}/ebooks/${eb.slug}" style="display:block;margin-top:10px;background:linear-gradient(135deg,#2193b0,#6dd5ed);color:#fff;padding:8px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;text-align:center;">${isFree ? 'ফ্রিতে পড়ুন' : 'এখনই কিনুন'}</a>
+        <a href="${siteUrl}/ebooks/${eb.slug}" style="display:block;background:linear-gradient(135deg,#2193b0,#6dd5ed);color:#fff;padding:10px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700;text-align:center;box-shadow:0 4px 12px rgba(33,147,176,0.3);">${isFree ? '📥 ফ্রিতে পড়ুন' : '🛒 এখনই কিনুন'}</a>
       </div>
     </div>
   </td>`;
@@ -224,24 +309,36 @@ const universalCardHtml = (up: any) => {
   const salePrice = hasDiscount ? Math.round(up.price * (1 - up.discount_percent / 100)) : null;
   const imgs = Array.isArray(up.images) ? up.images : [];
   const img = (imgs[0] as any)?.url || (typeof imgs[0] === 'string' ? imgs[0] : '');
-  const discountBadge = hasDiscount ? `<span style="position:absolute;top:8px;left:8px;background:#ff4757;color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;">-${up.discount_percent}%</span>` : '';
-  const typeBadge = up.product_type ? `<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;">${up.product_type}</span>` : '';
+  const discountBadge = hasDiscount ? `<span style="position:absolute;top:10px;left:10px;background:linear-gradient(135deg,#ff4757,#c44569);color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;box-shadow:0 2px 8px rgba(255,71,87,0.3);">-${up.discount_percent}%</span>` : '';
+  const typeBadge = up.product_type ? `<span style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.65);color:#fff;font-size:10px;padding:3px 8px;border-radius:20px;backdrop-filter:blur(4px);">${up.product_type}</span>` : '';
 
   return `<td style="width:50%;padding:8px;vertical-align:top;">
-    <div style="border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.08);position:relative;">
+    <div style="border-radius:16px;overflow:hidden;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.08);position:relative;border:1px solid #f0f0f0;">
       ${discountBadge}${typeBadge}
-      ${img ? `<img src="${img}" alt="${up.name_bn}" style="width:100%;height:180px;object-fit:cover;display:block;" />` : `<div style="height:180px;background:linear-gradient(135deg,#ffecd2,#fcb69f);text-align:center;line-height:180px;font-size:40px;">🛍️</div>`}
-      <div style="padding:12px;">
-        <p style="font-size:13px;color:#1a1a1a;margin:0 0 4px;font-weight:600;line-height:1.4;">${up.name_bn}</p>
-        ${up.brand_name ? `<p style="font-size:11px;color:#888;margin:0 0 6px;">${up.brand_name}</p>` : ''}
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span style="color:#11998e;font-weight:700;font-size:16px;">৳${salePrice || up.price}</span>
-          ${salePrice ? `<span style="color:#aaa;text-decoration:line-through;font-size:12px;">৳${up.price}</span>` : ''}
+      ${img ? `<img src="${img}" alt="${up.name_bn}" style="width:100%;height:200px;object-fit:cover;display:block;" />` : `<div style="height:200px;background:linear-gradient(135deg,#ffecd2,#fcb69f);text-align:center;line-height:200px;font-size:48px;">🛍️</div>`}
+      <div style="padding:16px;">
+        <p style="font-size:14px;color:#1a1a1a;margin:0 0 6px;font-weight:700;line-height:1.4;">${up.name_bn}</p>
+        ${up.brand_name ? `<p style="font-size:12px;color:#999;margin:0 0 8px;">🏷️ ${up.brand_name}</p>` : ''}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="color:#11998e;font-weight:800;font-size:18px;">৳${salePrice || up.price}</span>
+          ${salePrice ? `<span style="color:#bbb;text-decoration:line-through;font-size:13px;">৳${up.price}</span>` : ''}
         </div>
-        <a href="${siteUrl}/universal-product/${up.slug}" style="display:block;margin-top:10px;background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff;padding:8px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;text-align:center;">অর্ডার করুন</a>
+        <a href="${siteUrl}/universal-product/${up.slug}" style="display:block;background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff;padding:10px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700;text-align:center;box-shadow:0 4px 12px rgba(17,153,142,0.3);">🛒 অর্ডার করুন</a>
       </div>
     </div>
   </td>`;
+};
+
+const starsHtml = (rating: number) => {
+  const full = Math.floor(rating);
+  const half = rating % 1 >= 0.5;
+  let s = '';
+  for (let i = 0; i < 5; i++) {
+    if (i < full) s += '⭐';
+    else if (i === full && half) s += '⭐';
+    else s += '<span style="opacity:0.25;">⭐</span>';
+  }
+  return s;
 };
 
 export const EmailTemplateBuilder = ({
@@ -260,19 +357,22 @@ export const EmailTemplateBuilder = ({
   const [ebookSearch, setEbookSearch] = useState("");
   const [universalSearch, setUniversalSearch] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
+  const [presetTab, setPresetTab] = useState("all");
+  const [history, setHistory] = useState<EmailBlock[][]>([]);
+  const [historyIdx, setHistoryIdx] = useState(-1);
 
   // Fetch books
   const { data: products = [] } = useQuery({
     queryKey: ['email-builder-products', productSearch],
     queryFn: async () => {
-      let query = supabase.from('products').select('id, title_bn, title_en, slug, price, discount_percent, original_price, images').eq('is_active', true).limit(20);
+      let query = supabase.from('products').select('id, title_bn, title_en, slug, price, discount_percent, original_price, images, writer_name').eq('is_active', true).limit(30);
       if (productSearch) query = query.ilike('title_bn', `%${productSearch}%`);
       const { data } = await query;
-      return (data || []).map(p => {
+      return (data || []).map((p: any) => {
         const imgs = Array.isArray(p.images) ? p.images : [];
         const imageUrl = (imgs[0] as any)?.url || (typeof imgs[0] === 'string' ? imgs[0] : '');
         const discountPrice = p.discount_percent ? Math.round(p.price * (1 - p.discount_percent / 100)) : null;
-        return { ...p, imageUrl, discountPrice, title: p.title_bn, link: `${siteUrl}/product/${p.slug}` };
+        return { ...p, imageUrl, discountPrice, title: p.title_bn, author: p.writer_name, link: `${siteUrl}/product/${p.slug}` };
       });
     }
   });
@@ -281,7 +381,7 @@ export const EmailTemplateBuilder = ({
   const { data: ebooks = [] } = useQuery({
     queryKey: ['email-builder-ebooks', ebookSearch],
     queryFn: async () => {
-      let query = supabase.from('digital_products').select('id, title_bn, slug, price, discount_percent, original_price, cover_image, file_format, is_free, product_type').eq('is_active', true).limit(20);
+      let query = supabase.from('digital_products').select('id, title_bn, slug, price, discount_percent, original_price, cover_image, file_format, is_free, product_type').eq('is_active', true).limit(30);
       if (ebookSearch) query = query.ilike('title_bn', `%${ebookSearch}%`);
       const { data } = await query;
       return data || [];
@@ -292,10 +392,10 @@ export const EmailTemplateBuilder = ({
   const { data: universalProducts = [] } = useQuery({
     queryKey: ['email-builder-universal', universalSearch],
     queryFn: async () => {
-      let query = supabase.from('universal_products').select('id, name_bn, slug, price, discount_percent, original_price, images, product_type').eq('is_active', true).limit(20);
+      let query = supabase.from('universal_products').select('id, name_bn, slug, price, discount_percent, original_price, images, product_type').eq('is_active', true).limit(30);
       if (universalSearch) query = query.ilike('name_bn', `%${universalSearch}%`);
       const { data } = await query;
-      return (data || []).map(p => {
+      return (data || []).map((p: any) => {
         const imgs = Array.isArray(p.images) ? p.images : [];
         const img = (imgs[0] as any)?.url || (typeof imgs[0] === 'string' ? imgs[0] : '');
         return { ...p, imageUrl: img };
@@ -307,7 +407,7 @@ export const EmailTemplateBuilder = ({
   const { data: categories = [] } = useQuery({
     queryKey: ['email-builder-categories', categorySearch],
     queryFn: async () => {
-      let query = supabase.from('categories').select('id, name_bn, slug, image_url').eq('is_active', true).limit(20);
+      let query = supabase.from('categories').select('id, name_bn, slug, image_url').eq('is_active', true).limit(30);
       if (categorySearch) query = query.ilike('name_bn', `%${categorySearch}%`);
       const { data } = await query;
       return data || [];
@@ -317,6 +417,24 @@ export const EmailTemplateBuilder = ({
   useEffect(() => {
     onHtmlChange(blocksToHtml(blocks));
   }, [blocks]);
+
+  const pushHistory = useCallback((newBlocks: EmailBlock[]) => {
+    setHistory(prev => [...prev.slice(0, historyIdx + 1), newBlocks].slice(-30));
+    setHistoryIdx(prev => prev + 1);
+  }, [historyIdx]);
+
+  const undo = () => {
+    if (historyIdx > 0) {
+      setHistoryIdx(prev => prev - 1);
+      setBlocks(history[historyIdx - 1]);
+    }
+  };
+  const redo = () => {
+    if (historyIdx < history.length - 1) {
+      setHistoryIdx(prev => prev + 1);
+      setBlocks(history[historyIdx + 1]);
+    }
+  };
 
   const selectedBlock = blocks.find(b => b.id === selectedBlockId) || null;
 
@@ -333,13 +451,14 @@ export const EmailTemplateBuilder = ({
       const next = [...prev];
       if (index !== undefined) next.splice(index + 1, 0, newBlock);
       else next.push(newBlock);
+      pushHistory(next);
       return next;
     });
     setSelectedBlockId(newBlock.id);
   };
 
   const removeBlock = (id: string) => {
-    setBlocks(prev => prev.filter(b => b.id !== id));
+    setBlocks(prev => { const n = prev.filter(b => b.id !== id); pushHistory(n); return n; });
     if (selectedBlockId === id) setSelectedBlockId(null);
   };
 
@@ -364,12 +483,14 @@ export const EmailTemplateBuilder = ({
   const handleCanvasDrop = (e: React.DragEvent, idx?: number) => { e.preventDefault(); const type = e.dataTransfer.getData("block-type") as BlockType; if (type) addBlock(type, idx); setDragOverIdx(null); };
 
   const applyTemplate = (template: typeof PRESET_TEMPLATES[0]) => {
-    setBlocks(template.blocks.map(b => ({ ...b, id: genId() })));
+    const newBlocks = template.blocks.map(b => ({ ...b, id: genId() }));
+    setBlocks(newBlocks);
+    pushHistory(newBlocks);
     setSelectedBlockId(null);
     toast.success(`"${template.name}" টেমপ্লেট লোড হয়েছে`);
   };
 
-  // --- HTML Generation ---
+  // ── HTML Generation ──
   const blockToHtml = (block: EmailBlock): string => {
     const { content: c, settings: s } = block;
     const pad = s.padding || "0";
@@ -380,89 +501,205 @@ export const EmailTemplateBuilder = ({
     switch (block.type) {
       case "hero_banner":
         return `<div style="background:${c.bgGradient || '#667eea'};padding:${pad};text-align:center;">
-  <h1 style="color:${txtCol};font-size:30px;margin:0 0 10px;font-weight:800;letter-spacing:-0.5px;">${c.title || ''}</h1>
-  <p style="color:${txtCol};opacity:0.9;font-size:16px;margin:0;font-weight:400;">${c.subtitle || ''}</p>
+  <h1 style="color:${txtCol};font-size:32px;margin:0 0 12px;font-weight:900;letter-spacing:-0.5px;line-height:1.2;">${c.title || ''}</h1>
+  <p style="color:${txtCol};opacity:0.9;font-size:17px;margin:0;font-weight:400;line-height:1.5;">${c.subtitle || ''}</p>
 </div>`;
       case "header": {
         const tag = c.level || "h2";
-        const sizes: Record<string, string> = { h1: "28px", h2: "22px", h3: "18px" };
-        return `<div style="padding:${pad};background:${bgCol};text-align:${align};"><${tag} style="color:${txtCol};font-size:${sizes[tag] || '22px'};margin:0;font-weight:700;">${c.text || ''}</${tag}></div>`;
+        const sizes: Record<string, string> = { h1: "28px", h2: "24px", h3: "20px" };
+        const borders: Record<string, string> = { h1: "", h2: "border-bottom:3px solid #667eea;padding-bottom:10px;display:inline-block;", h3: "" };
+        return `<div style="padding:${pad};background:${bgCol};text-align:${align};"><${tag} style="color:${txtCol};font-size:${sizes[tag] || '24px'};margin:0;font-weight:800;${borders[tag] || ''}">${c.text || ''}</${tag}></div>`;
       }
       case "text":
-        return `<div style="padding:${pad};background:${bgCol};text-align:${align};"><p style="color:${txtCol};font-size:15px;line-height:1.7;margin:0;">${c.text || ''}</p></div>`;
+        return `<div style="padding:${pad};background:${bgCol};text-align:${align};"><p style="color:${txtCol};font-size:15px;line-height:1.8;margin:0;white-space:pre-line;">${c.text || ''}</p></div>`;
       case "image":
-        return `<div style="padding:${pad};text-align:${align};"><img src="${c.url || '/placeholder.svg'}" alt="${c.alt || ''}" style="max-width:${c.width || '100%'};border-radius:${s.borderRadius || '8px'};" /></div>`;
+        return `<div style="padding:${pad};text-align:${align};"><img src="${c.url || '/placeholder.svg'}" alt="${c.alt || ''}" style="max-width:${c.width || '100%'};border-radius:${s.borderRadius || '12px'};box-shadow:0 4px 20px rgba(0,0,0,0.1);" /></div>`;
       case "button": {
         const btnBg = c.bgColor || "#667eea";
         const btnTxt = c.textColor || "#ffffff";
-        return `<div style="padding:${pad};text-align:${align};"><a href="${c.url || '#'}" style="display:inline-block;background:${btnBg};color:${btnTxt};padding:14px 40px;border-radius:${s.borderRadius || '30px'};text-decoration:none;font-weight:700;font-size:15px;">${c.text || 'বাটন'}</a></div>`;
+        return `<div style="padding:${pad};text-align:${align};"><a href="${c.url || '#'}" style="display:inline-block;background:${btnBg};color:${btnTxt};padding:16px 48px;border-radius:${s.borderRadius || '30px'};text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 4px 15px rgba(0,0,0,0.15);letter-spacing:0.5px;">${c.text || 'বাটন'}</a></div>`;
       }
       case "divider":
-        return `<div style="padding:${pad};"><hr style="border:none;border-top:${c.thickness || '1'}px solid ${c.color || '#eeeeee'};margin:0;" /></div>`;
+        return `<div style="padding:${pad};"><hr style="border:none;border-top:${c.thickness || '1'}px ${c.style || 'solid'} ${c.color || '#eeeeee'};margin:0;" /></div>`;
       case "spacer":
         return `<div style="height:${c.height || '30'}px;"></div>`;
 
       case "product_grid": {
         const sel = products.filter(p => (c.productIds || []).includes(p.id));
-        if (sel.length === 0) return `<div style="padding:${pad};text-align:center;color:#999;font-size:13px;">📚 বই সিলেক্ট করুন</div>`;
+        if (sel.length === 0) return `<div style="padding:${pad};text-align:center;color:#999;font-size:13px;padding:30px;">📚 বই সিলেক্ট করুন</div>`;
         const rows = [];
         for (let i = 0; i < sel.length; i += 2) {
-          rows.push(`<tr>${productCardHtml(sel[i], c.cardStyle)}${sel[i + 1] ? productCardHtml(sel[i + 1], c.cardStyle) : '<td></td>'}</tr>`);
+          rows.push(`<tr>${productCardHtml(sel[i], c.cardStyle)}${sel[i + 1] ? productCardHtml(sel[i + 1], c.cardStyle) : '<td style="width:50%;"></td>'}</tr>`);
         }
         return `<div style="padding:${pad};"><table style="width:100%;border-collapse:collapse;">${rows.join('')}</table></div>`;
       }
 
       case "ebook_grid": {
         const sel = ebooks.filter(eb => (c.ebookIds || []).includes(eb.id));
-        if (sel.length === 0) return `<div style="padding:${pad};text-align:center;color:#999;font-size:13px;">📱 ইবুক সিলেক্ট করুন</div>`;
+        if (sel.length === 0) return `<div style="padding:${pad};text-align:center;color:#999;font-size:13px;padding:30px;">📱 ইবুক সিলেক্ট করুন</div>`;
         const rows = [];
         for (let i = 0; i < sel.length; i += 2) {
-          rows.push(`<tr>${ebookCardHtml(sel[i])}${sel[i + 1] ? ebookCardHtml(sel[i + 1]) : '<td></td>'}</tr>`);
+          rows.push(`<tr>${ebookCardHtml(sel[i])}${sel[i + 1] ? ebookCardHtml(sel[i + 1]) : '<td style="width:50%;"></td>'}</tr>`);
         }
         return `<div style="padding:${pad};"><table style="width:100%;border-collapse:collapse;">${rows.join('')}</table></div>`;
       }
 
       case "universal_grid": {
         const sel = universalProducts.filter(up => (c.universalIds || []).includes(up.id));
-        if (sel.length === 0) return `<div style="padding:${pad};text-align:center;color:#999;font-size:13px;">🛍️ প্রোডাক্ট সিলেক্ট করুন</div>`;
+        if (sel.length === 0) return `<div style="padding:${pad};text-align:center;color:#999;font-size:13px;padding:30px;">🛍️ প্রোডাক্ট সিলেক্ট করুন</div>`;
         const rows = [];
         for (let i = 0; i < sel.length; i += 2) {
-          rows.push(`<tr>${universalCardHtml(sel[i])}${sel[i + 1] ? universalCardHtml(sel[i + 1]) : '<td></td>'}</tr>`);
+          rows.push(`<tr>${universalCardHtml(sel[i])}${sel[i + 1] ? universalCardHtml(sel[i + 1]) : '<td style="width:50%;"></td>'}</tr>`);
         }
         return `<div style="padding:${pad};"><table style="width:100%;border-collapse:collapse;">${rows.join('')}</table></div>`;
       }
 
       case "category_grid": {
         const sel = categories.filter(ct => (c.categoryIds || []).includes(ct.id));
-        if (sel.length === 0) return `<div style="padding:${pad};text-align:center;color:#999;font-size:13px;">ক্যাটাগরি সিলেক্ট করুন</div>`;
+        if (sel.length === 0) return `<div style="padding:${pad};text-align:center;color:#999;font-size:13px;padding:30px;">ক্যাটাগরি সিলেক্ট করুন</div>`;
         const colW = Math.floor(100 / Math.min(sel.length, 4));
         return `<div style="padding:${pad};"><table style="width:100%;border-collapse:collapse;"><tr>${sel.map((ct, i) => {
-          const card = `<td style="width:${colW}%;padding:8px;text-align:center;vertical-align:top;"><a href="${siteUrl}/category/${ct.slug}" style="text-decoration:none;">${ct.image_url ? `<img src="${ct.image_url}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;display:block;margin:0 auto;border:3px solid #f0f0f0;" />` : `<div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#f5f7fa,#c3cfe2);margin:0 auto;line-height:72px;font-size:28px;">📂</div>`}<p style="color:#333;font-size:13px;margin-top:8px;font-weight:600;">${ct.name_bn}</p></a></td>`;
+          const card = `<td style="width:${colW}%;padding:8px;text-align:center;vertical-align:top;"><a href="${siteUrl}/category/${ct.slug}" style="text-decoration:none;">${ct.image_url ? `<img src="${ct.image_url}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block;margin:0 auto;border:3px solid #f0f0f0;box-shadow:0 2px 10px rgba(0,0,0,0.08);" />` : `<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#f5f7fa,#c3cfe2);margin:0 auto;line-height:80px;font-size:30px;">📂</div>`}<p style="color:#333;font-size:13px;margin-top:10px;font-weight:700;">${ct.name_bn}</p></a></td>`;
           return card + ((i % 4 === 3 && i < sel.length - 1) ? '</tr><tr>' : '');
         }).join('')}</tr></table></div>`;
       }
 
       case "coupon_box":
-        return `<div style="padding:${pad};"><div style="border:2px dashed #667eea;border-radius:16px;padding:24px;text-align:center;background:linear-gradient(135deg,#f8f9ff,#eef0ff);"><p style="font-size:13px;color:#666;margin:0 0 10px;">${c.description || ''}</p><div style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;display:inline-block;padding:12px 36px;border-radius:10px;font-size:22px;font-weight:800;letter-spacing:4px;">${c.code || 'CODE'}</div><p style="font-size:28px;font-weight:800;color:#667eea;margin:12px 0 0;">${c.discount || ''} ছাড়</p></div></div>`;
+        return `<div style="padding:${pad};"><div style="border:2px dashed rgba(102,126,234,0.4);border-radius:20px;padding:30px;text-align:center;background:linear-gradient(135deg,#f8f9ff,#eef0ff);position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(102,126,234,0.08);border-radius:50%;"></div>
+  <div style="position:absolute;bottom:-30px;left:-30px;width:100px;height:100px;background:rgba(102,126,234,0.06);border-radius:50%;"></div>
+  <p style="font-size:14px;color:#666;margin:0 0 12px;letter-spacing:0.5px;">${c.description || ''}</p>
+  <div style="background:${c.bgGradient || 'linear-gradient(135deg,#667eea,#764ba2)'};color:#fff;display:inline-block;padding:14px 44px;border-radius:12px;font-size:24px;font-weight:900;letter-spacing:5px;box-shadow:0 4px 20px rgba(102,126,234,0.3);">${c.code || 'CODE'}</div>
+  <p style="font-size:32px;font-weight:900;background:${c.bgGradient || 'linear-gradient(135deg,#667eea,#764ba2)'};-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:14px 0 0;">${c.discount || ''} ছাড়</p>
+</div></div>`;
 
-      case "testimonial":
-        return `<div style="padding:${pad};"><div style="background:#f8f9fa;border-radius:16px;padding:24px;text-align:center;border-left:4px solid #667eea;"><p style="font-size:15px;color:#555;margin:0 0 12px;font-style:italic;line-height:1.6;">"${c.text || ''}"</p><p style="font-size:14px;color:#333;margin:0;font-weight:600;">— ${c.name || ''}</p></div></div>`;
+      case "testimonial": {
+        const stars = c.rating ? starsHtml(c.rating) : '';
+        return `<div style="padding:${pad};"><div style="background:linear-gradient(135deg,#f8f9fa,#fff);border-radius:20px;padding:28px;text-align:center;border:1px solid #f0f0f0;box-shadow:0 2px 12px rgba(0,0,0,0.04);">
+  ${stars ? `<div style="margin-bottom:12px;font-size:18px;">${stars}</div>` : ''}
+  <p style="font-size:16px;color:#444;margin:0 0 16px;font-style:italic;line-height:1.7;">"${c.text || ''}"</p>
+  <div style="width:40px;height:2px;background:linear-gradient(90deg,#667eea,#764ba2);margin:0 auto 12px;border-radius:2px;"></div>
+  <p style="font-size:14px;color:#333;margin:0;font-weight:700;">— ${c.name || ''}</p>
+</div></div>`;
+      }
 
       case "feature_list": {
         const items = c.items || [];
-        return `<div style="padding:${pad};"><table style="width:100%;border-collapse:collapse;">${items.map((item: string) => `<tr><td style="padding:6px 0;"><span style="display:inline-block;width:24px;height:24px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:12px;margin-right:10px;">✓</span><span style="font-size:14px;color:#333;">${item}</span></td></tr>`).join('')}</table></div>`;
+        const useEmoji = c.iconStyle === "emoji";
+        return `<div style="padding:${pad};background:${bgCol};"><table style="width:100%;border-collapse:collapse;">${items.map((item: string) => {
+          const hasEmoji = /^\p{Emoji}/u.test(item);
+          const icon = useEmoji || hasEmoji ? '' : `<span style="display:inline-block;width:26px;height:26px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:50%;text-align:center;line-height:26px;font-size:12px;margin-right:12px;box-shadow:0 2px 6px rgba(102,126,234,0.3);">✓</span>`;
+          return `<tr><td style="padding:8px 0;font-size:14px;color:#444;line-height:1.6;">${icon}${item}</td></tr>`;
+        }).join('')}</table></div>`;
+      }
+
+      case "countdown":
+        return `<div style="padding:${pad};background:${bgCol};text-align:center;">
+  <p style="color:${s.textColor || '#666'};font-size:13px;margin:0 0 12px;font-weight:600;text-transform:uppercase;letter-spacing:2px;">${c.title || 'অফার শেষ হচ্ছে'}</p>
+  <table style="margin:0 auto;border-collapse:collapse;"><tr>
+    ${['দিন', 'ঘণ্টা', 'মিনিট', 'সেকেন্ড'].map((l, i) => `<td style="padding:0 6px;text-align:center;"><div style="background:linear-gradient(135deg,#ff4757,#c44569);color:#fff;width:64px;height:64px;border-radius:14px;display:table-cell;vertical-align:middle;text-align:center;font-size:28px;font-weight:900;box-shadow:0 4px 15px rgba(255,71,87,0.25);">${['00', '00', '00', '00'][i]}</div><p style="font-size:10px;color:#999;margin:6px 0 0;font-weight:600;">${l}</p></td>`).join('')}
+  </tr></table>
+  <p style="color:#999;font-size:11px;margin:12px 0 0;">⏰ ${c.endDate || ''} পর্যন্ত</p>
+</div>`;
+
+      case "video_embed":
+        return `<div style="padding:${pad};text-align:center;">
+  <div style="position:relative;display:inline-block;border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.12);">
+    ${c.thumbnailUrl ? `<img src="${c.thumbnailUrl}" style="width:100%;max-width:520px;display:block;" />` : `<div style="width:520px;max-width:100%;height:300px;background:linear-gradient(135deg,#1a1a2e,#0f3460);"></div>`}
+    <a href="${c.videoUrl || '#'}" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:72px;height:72px;background:rgba(255,255,255,0.95);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,0.2);text-decoration:none;">
+      <div style="width:0;height:0;border-left:22px solid #ff4757;border-top:14px solid transparent;border-bottom:14px solid transparent;margin-left:6px;"></div>
+    </a>
+  </div>
+  ${c.title ? `<p style="font-size:15px;color:#333;margin-top:14px;font-weight:700;">${c.title}</p>` : ''}
+</div>`;
+
+      case "banner_strip":
+        return `<div style="background:${c.bgColor || '#ff4757'};padding:${pad};text-align:center;">
+  <p style="color:#fff;font-size:14px;margin:0;font-weight:700;letter-spacing:0.5px;">${c.text || ''}</p>
+</div>`;
+
+      case "rating_block":
+        return `<div style="padding:${pad};text-align:center;background:${bgCol};">
+  <div style="font-size:36px;margin-bottom:4px;">${starsHtml(c.rating || 0)}</div>
+  <p style="font-size:36px;font-weight:900;color:#333;margin:0;">${c.rating || '0'}<span style="font-size:18px;color:#999;font-weight:400;">/5</span></p>
+  <p style="font-size:13px;color:#999;margin:6px 0 0;">${c.text || ''} • ${c.totalReviews || '0'} রিভিউ</p>
+</div>`;
+
+      case "stats_row": {
+        const items = c.items || [];
+        return `<div style="padding:${pad};background:${bgCol};"><table style="width:100%;border-collapse:collapse;"><tr>${items.map((it: any) =>
+          `<td style="text-align:center;padding:16px 8px;"><p style="font-size:28px;font-weight:900;color:#667eea;margin:0;line-height:1;">${it.value}</p><p style="font-size:12px;color:#888;margin:6px 0 0;font-weight:600;">${it.label}</p></td>`
+        ).join('')}</tr></table></div>`;
+      }
+
+      case "cta_section":
+        return `<div style="background:${c.bgGradient || 'linear-gradient(135deg,#667eea,#764ba2)'};padding:40px 30px;text-align:center;">
+  <h2 style="color:#fff;font-size:26px;font-weight:900;margin:0 0 8px;">${c.title || ''}</h2>
+  <p style="color:rgba(255,255,255,0.85);font-size:15px;margin:0 0 24px;">${c.subtitle || ''}</p>
+  <a href="${c.buttonUrl || '#'}" style="display:inline-block;background:#fff;color:#333;padding:14px 40px;border-radius:30px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 4px 15px rgba(0,0,0,0.15);">${c.buttonText || 'শপে যান'}</a>
+</div>`;
+
+      case "image_text":
+        return `<div style="padding:${pad};"><table style="width:100%;border-collapse:collapse;"><tr>
+  <td style="width:40%;padding:10px;vertical-align:middle;">${c.imageUrl ? `<img src="${c.imageUrl}" style="width:100%;border-radius:14px;box-shadow:0 4px 15px rgba(0,0,0,0.1);" />` : `<div style="width:100%;padding-top:100%;background:linear-gradient(135deg,#f5f7fa,#c3cfe2);border-radius:14px;"></div>`}</td>
+  <td style="width:60%;padding:16px 10px 16px 20px;vertical-align:middle;">
+    <h3 style="color:#333;font-size:20px;font-weight:800;margin:0 0 10px;">${c.title || ''}</h3>
+    <p style="color:#666;font-size:14px;line-height:1.7;margin:0 0 16px;">${c.text || ''}</p>
+    ${c.buttonText ? `<a href="${c.buttonUrl || '#'}" style="display:inline-block;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:10px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;">${c.buttonText}</a>` : ''}
+  </td>
+</tr></table></div>`;
+
+      case "price_table": {
+        const plans = c.plans || [];
+        return `<div style="padding:${pad};"><table style="width:100%;border-collapse:collapse;"><tr>${plans.map((p: any) =>
+          `<td style="width:${100 / plans.length}%;padding:8px;vertical-align:top;">
+            <div style="border-radius:16px;${p.highlighted ? 'border:2px solid #667eea;box-shadow:0 4px 20px rgba(102,126,234,0.15);' : 'border:1px solid #eee;'}padding:24px;text-align:center;background:#fff;">
+              ${p.highlighted ? '<div style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:10px;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-block;margin-bottom:12px;">জনপ্রিয়</div>' : ''}
+              <p style="font-size:18px;font-weight:800;color:#333;margin:0 0 8px;">${p.name}</p>
+              <p style="font-size:32px;font-weight:900;color:#667eea;margin:0 0 16px;">${p.price}</p>
+              ${(p.features || []).map((f: string) => `<p style="font-size:13px;color:#666;margin:4px 0;line-height:1.6;">✓ ${f}</p>`).join('')}
+              <a href="#" style="display:block;margin-top:16px;background:${p.highlighted ? 'linear-gradient(135deg,#667eea,#764ba2)' : '#f0f0f0'};color:${p.highlighted ? '#fff' : '#333'};padding:12px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;">নির্বাচন করুন</a>
+            </div>
+          </td>`
+        ).join('')}</tr></table></div>`;
+      }
+
+      case "faq_block": {
+        const items = c.items || [];
+        return `<div style="padding:${pad};background:${bgCol};">${items.map((it: any) =>
+          `<div style="border:1px solid #f0f0f0;border-radius:12px;padding:18px;margin-bottom:10px;background:#fff;">
+            <p style="font-size:14px;font-weight:700;color:#333;margin:0 0 8px;">❓ ${it.q}</p>
+            <p style="font-size:13px;color:#666;margin:0;line-height:1.6;">${it.a}</p>
+          </div>`
+        ).join('')}</div>`;
+      }
+
+      case "brand_showcase": {
+        const brands = c.brands || [];
+        return `<div style="padding:${pad};background:${bgCol};text-align:center;">
+  ${c.title ? `<p style="font-size:13px;color:#999;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin:0 0 16px;">${c.title}</p>` : ''}
+  <table style="width:100%;border-collapse:collapse;"><tr>${brands.map((b: string) =>
+    `<td style="padding:10px;text-align:center;"><div style="background:#fff;border:1px solid #f0f0f0;border-radius:12px;padding:16px 8px;box-shadow:0 1px 4px rgba(0,0,0,0.04);"><p style="font-size:13px;color:#555;font-weight:700;margin:0;">${b}</p></div></td>`
+  ).join('')}</tr></table>
+</div>`;
       }
 
       case "social_links":
-        return `<div style="padding:${pad};text-align:${align};">
-  ${c.facebook ? `<a href="${c.facebook}" style="display:inline-block;margin:0 6px;"><img src="https://cdn-icons-png.flaticon.com/32/733/733547.png" width="32" height="32" style="border-radius:8px;" /></a>` : ''}
-  ${c.instagram ? `<a href="${c.instagram}" style="display:inline-block;margin:0 6px;"><img src="https://cdn-icons-png.flaticon.com/32/2111/2111463.png" width="32" height="32" style="border-radius:8px;" /></a>` : ''}
-  ${c.youtube ? `<a href="${c.youtube}" style="display:inline-block;margin:0 6px;"><img src="https://cdn-icons-png.flaticon.com/32/1384/1384060.png" width="32" height="32" style="border-radius:8px;" /></a>` : ''}
-  ${c.twitter ? `<a href="${c.twitter}" style="display:inline-block;margin:0 6px;"><img src="https://cdn-icons-png.flaticon.com/32/733/733579.png" width="32" height="32" style="border-radius:8px;" /></a>` : ''}
+        return `<div style="padding:${pad};text-align:${align};background:${bgCol};">
+  ${c.facebook ? `<a href="${c.facebook}" style="display:inline-block;margin:0 6px;"><img src="https://cdn-icons-png.flaticon.com/32/733/733547.png" width="36" height="36" style="border-radius:10px;" /></a>` : ''}
+  ${c.instagram ? `<a href="${c.instagram}" style="display:inline-block;margin:0 6px;"><img src="https://cdn-icons-png.flaticon.com/32/2111/2111463.png" width="36" height="36" style="border-radius:10px;" /></a>` : ''}
+  ${c.youtube ? `<a href="${c.youtube}" style="display:inline-block;margin:0 6px;"><img src="https://cdn-icons-png.flaticon.com/32/1384/1384060.png" width="36" height="36" style="border-radius:10px;" /></a>` : ''}
+  ${c.twitter ? `<a href="${c.twitter}" style="display:inline-block;margin:0 6px;"><img src="https://cdn-icons-png.flaticon.com/32/733/733579.png" width="36" height="36" style="border-radius:10px;" /></a>` : ''}
+  ${c.whatsapp ? `<a href="https://wa.me/${c.whatsapp}" style="display:inline-block;margin:0 6px;"><img src="https://cdn-icons-png.flaticon.com/32/733/733585.png" width="36" height="36" style="border-radius:10px;" /></a>` : ''}
 </div>`;
 
       case "footer":
-        return `<div style="padding:${pad};background:${bgCol};text-align:${align};${s.borderTop ? `border-top:${s.borderTop};` : ''}"><p style="color:${txtCol};font-size:12px;margin:0;">${c.text || ''}</p>${c.unsubscribe ? `<p style="color:#999;font-size:11px;margin:8px 0 0;"><a href="#" style="color:#999;text-decoration:underline;">আনসাবস্ক্রাইব</a></p>` : ''}</div>`;
+        return `<div style="padding:${pad};background:${bgCol};text-align:${align};">
+  <p style="color:${txtCol};font-size:13px;margin:0;">${c.text || ''}</p>
+  ${c.address ? `<p style="color:${txtCol};font-size:12px;margin:8px 0 0;opacity:0.7;">📍 ${c.address}</p>` : ''}
+  ${c.phone ? `<p style="color:${txtCol};font-size:12px;margin:4px 0 0;opacity:0.7;">📞 ${c.phone}</p>` : ''}
+  ${c.unsubscribe ? `<p style="margin:12px 0 0;"><a href="#" style="color:${txtCol};font-size:11px;text-decoration:underline;opacity:0.6;">আনসাবস্ক্রাইব</a></p>` : ''}
+</div>`;
 
       case "columns":
         return `<div style="padding:${pad};"><table style="width:100%;border-collapse:collapse;"><tr><td style="width:50%;padding:10px;vertical-align:top;">${c.left || ''}</td><td style="width:50%;padding:10px;vertical-align:top;">${c.right || ''}</td></tr></table></div>`;
@@ -474,7 +711,7 @@ export const EmailTemplateBuilder = ({
 
   const blocksToHtml = (blocks: EmailBlock[]): string => {
     if (blocks.length === 0) return '';
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head><body style="margin:0;padding:0;background:#f0f0f0;"><div style="max-width:600px;margin:0 auto;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#ffffff;">\n${blocks.map(b => blockToHtml(b)).join('\n')}\n</div></body></html>`;
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><style>body{margin:0;padding:0;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}img{border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;}table{border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;}td{border-collapse:collapse;}</style></head><body style="margin:0;padding:0;background:#e8e8e8;"><div style="max-width:600px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#ffffff;border-radius:0;overflow:hidden;">\n${blocks.map(b => blockToHtml(b)).join('\n')}\n</div></body></html>`;
   };
 
   const blockLabel = (type: BlockType) => BLOCK_LIBRARY.find(b => b.type === type)?.label || type;
@@ -483,14 +720,20 @@ export const EmailTemplateBuilder = ({
     <div className="flex flex-col gap-4">
       {/* Presets */}
       <div>
-        <Label className="text-sm font-semibold mb-3 block">🎨 প্রিসেট টেমপ্লেট</Label>
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+        <div className="flex items-center justify-between mb-3">
+          <Label className="text-sm font-semibold flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            প্রিসেট টেমপ্লেট
+          </Label>
+          <Badge variant="outline" className="text-[10px]">{PRESET_TEMPLATES.length}টি প্রিসেট</Badge>
+        </div>
+        <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
           {PRESET_TEMPLATES.map(t => (
             <button key={t.id} onClick={() => applyTemplate(t)}
-              className="flex flex-col items-center gap-1.5 p-3 border rounded-xl hover:bg-accent hover:border-primary/30 transition-all text-center group">
-              <span className="text-2xl group-hover:scale-110 transition-transform">{t.icon}</span>
-              <span className="text-xs font-medium leading-tight">{t.name}</span>
-              <span className="text-[10px] text-muted-foreground">{t.description}</span>
+              className="flex flex-col items-center gap-1 p-2.5 border rounded-xl hover:bg-accent hover:border-primary/30 transition-all text-center group relative overflow-hidden">
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity" style={{ background: t.color }} />
+              <span className="text-xl group-hover:scale-110 transition-transform">{t.icon}</span>
+              <span className="text-[10px] font-semibold leading-tight">{t.name}</span>
             </button>
           ))}
         </div>
@@ -498,45 +741,53 @@ export const EmailTemplateBuilder = ({
 
       <Separator />
 
-      {/* View Toggle */}
+      {/* View Toggle + Undo/Redo */}
       <div className="flex items-center justify-between">
         <div className="flex gap-1.5">
           {(["design", "preview", "code"] as const).map(mode => (
-            <Button key={mode} size="sm" variant={viewMode === mode ? "default" : "outline"} onClick={() => setViewMode(mode)} className="gap-1 text-xs">
-              {mode === "design" && <><LayoutGrid className="h-3.5 w-3.5" /> ডিজাইন</>}
+            <Button key={mode} size="sm" variant={viewMode === mode ? "default" : "outline"} onClick={() => setViewMode(mode)} className="gap-1.5 text-xs">
+              {mode === "design" && <><Palette className="h-3.5 w-3.5" /> ডিজাইন</>}
               {mode === "preview" && <><Eye className="h-3.5 w-3.5" /> প্রিভিউ</>}
               {mode === "code" && <><Code className="h-3.5 w-3.5" /> কোড</>}
             </Button>
           ))}
         </div>
-        {viewMode === "preview" && (
-          <div className="flex gap-1">
-            <Button size="sm" variant={devicePreview === "desktop" ? "default" : "ghost"} onClick={() => setDevicePreview("desktop")}><Monitor className="h-3.5 w-3.5" /></Button>
-            <Button size="sm" variant={devicePreview === "mobile" ? "default" : "ghost"} onClick={() => setDevicePreview("mobile")}><Smartphone className="h-3.5 w-3.5" /></Button>
-          </div>
-        )}
+        <div className="flex items-center gap-1.5">
+          {viewMode === "design" && (
+            <>
+              <Button size="sm" variant="ghost" onClick={undo} disabled={historyIdx <= 0} className="h-7 w-7 p-0"><Undo2 className="h-3.5 w-3.5" /></Button>
+              <Button size="sm" variant="ghost" onClick={redo} disabled={historyIdx >= history.length - 1} className="h-7 w-7 p-0"><Redo2 className="h-3.5 w-3.5" /></Button>
+            </>
+          )}
+          {viewMode === "preview" && (
+            <div className="flex gap-1 bg-muted rounded-lg p-0.5">
+              <Button size="sm" variant={devicePreview === "desktop" ? "default" : "ghost"} onClick={() => setDevicePreview("desktop")} className="h-7 px-2"><Monitor className="h-3.5 w-3.5" /></Button>
+              <Button size="sm" variant={devicePreview === "mobile" ? "default" : "ghost"} onClick={() => setDevicePreview("mobile")} className="h-7 px-2"><Smartphone className="h-3.5 w-3.5" /></Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Design Mode */}
       {viewMode === "design" && (
-        <div className="flex gap-4 min-h-[500px]">
+        <div className="flex gap-4 min-h-[550px]">
           {/* Block Library */}
-          <div className="w-52 shrink-0">
+          <div className="w-48 shrink-0">
             <Card className="sticky top-0">
-              <CardHeader className="py-3 px-3"><CardTitle className="text-xs font-semibold">ব্লক লাইব্রেরি</CardTitle></CardHeader>
+              <CardHeader className="py-2.5 px-3"><CardTitle className="text-xs font-semibold flex items-center gap-1.5"><Layers className="h-3.5 w-3.5" /> ব্লক লাইব্রেরি</CardTitle></CardHeader>
               <CardContent className="p-2 pt-0">
-                <ScrollArea className="h-[450px]">
+                <ScrollArea className="h-[480px]">
                   {["basic", "layout", "products", "dynamic"].map(cat => (
-                    <div key={cat} className="mb-3">
-                      <p className="text-[10px] font-bold uppercase text-muted-foreground px-2 mb-1.5">
-                        {cat === "basic" ? "বেসিক" : cat === "layout" ? "লেআউট" : cat === "products" ? "📦 প্রোডাক্ট" : "ডায়নামিক"}
+                    <div key={cat} className="mb-2.5">
+                      <p className="text-[10px] font-bold uppercase text-muted-foreground px-2 mb-1.5 tracking-wider">
+                        {cat === "basic" ? "বেসিক" : cat === "layout" ? "লেআউট" : cat === "products" ? "📦 প্রোডাক্ট" : "⚡ ডায়নামিক"}
                       </p>
-                      <div className="space-y-1">
+                      <div className="space-y-0.5">
                         {BLOCK_LIBRARY.filter(b => b.category === cat).map(b => (
                           <div key={b.type} draggable onDragStart={(e) => handleSidebarDragStart(e, b.type)} onClick={() => addBlock(b.type)}
-                            className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-transparent hover:border-primary/20 hover:bg-accent cursor-grab active:cursor-grabbing transition-all text-xs font-medium group">
-                            <span className="text-muted-foreground group-hover:text-primary transition-colors">{b.icon}</span>
-                            {b.label}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-transparent hover:border-primary/20 hover:bg-accent cursor-grab active:cursor-grabbing transition-all text-xs font-medium group">
+                            <span className="text-muted-foreground group-hover:text-primary transition-colors shrink-0">{b.icon}</span>
+                            <span className="truncate">{b.label}</span>
                           </div>
                         ))}
                       </div>
@@ -549,28 +800,28 @@ export const EmailTemplateBuilder = ({
 
           {/* Canvas */}
           <div className="flex-1 min-w-0">
-            <Card className="min-h-[500px] bg-muted/30">
+            <Card className="min-h-[550px] bg-muted/20">
               <div className="bg-muted/50 px-4 py-2 border-b flex items-center gap-2">
                 <div className="flex gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-destructive/60" />
                   <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/60" />
                   <div className="w-2.5 h-2.5 rounded-full bg-green-400/60" />
                 </div>
-                <span className="text-[11px] text-muted-foreground ml-2">ক্যানভাস — ব্লক ড্র্যাগ করে সাজান</span>
+                <span className="text-[11px] text-muted-foreground ml-2">ইমেইল ক্যানভাস</span>
                 <Badge variant="secondary" className="ml-auto text-[10px]">{blocks.length} ব্লক</Badge>
               </div>
               <div className="p-4 space-y-0" onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleCanvasDrop(e)}>
                 {blocks.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-20 text-muted-foreground border-2 border-dashed rounded-xl">
-                    <LayoutGrid className="h-10 w-10 mb-3 opacity-40" />
-                    <p className="font-medium">ব্লক ড্র্যাগ করুন অথবা ক্লিক করুন</p>
-                    <p className="text-xs mt-1">বামের লাইব্রেরি থেকে ব্লক যোগ করুন</p>
+                  <div className="flex flex-col items-center justify-center py-24 text-muted-foreground border-2 border-dashed rounded-xl bg-muted/10">
+                    <LayoutGrid className="h-12 w-12 mb-4 opacity-30" />
+                    <p className="font-semibold text-sm">ব্লক ড্র্যাগ করুন অথবা ক্লিক করুন</p>
+                    <p className="text-xs mt-1.5 opacity-70">অথবা উপরে থেকে একটি প্রিসেট বেছে নিন</p>
                   </div>
                 )}
                 {blocks.map((block, idx) => (
                   <div key={block.id} draggable onDragStart={() => handleDragStart(idx)} onDragOver={(e) => handleDragOver(e, idx)} onDrop={() => handleDrop(idx)} onDragEnd={handleDragEnd} onClick={() => setSelectedBlockId(block.id)}
-                    className={cn("group relative border-2 rounded-lg transition-all cursor-pointer", selectedBlockId === block.id ? "border-primary shadow-md" : "border-transparent hover:border-primary/30", dragOverIdx === idx && "border-primary/50 bg-primary/5", draggedIdx === idx && "opacity-40")}>
-                    <div className={cn("absolute -top-3 left-2 z-10 flex items-center gap-0.5 bg-primary text-primary-foreground rounded-md px-1.5 py-0.5 text-[10px] font-medium shadow-sm transition-opacity", selectedBlockId === block.id ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                    className={cn("group relative border-2 rounded-lg transition-all cursor-pointer", selectedBlockId === block.id ? "border-primary shadow-lg ring-2 ring-primary/10" : "border-transparent hover:border-primary/20", dragOverIdx === idx && "border-primary/50 bg-primary/5", draggedIdx === idx && "opacity-40")}>
+                    <div className={cn("absolute -top-3 left-2 z-10 flex items-center gap-0.5 bg-primary text-primary-foreground rounded-md px-1.5 py-0.5 text-[10px] font-semibold shadow-sm transition-opacity", selectedBlockId === block.id ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
                       <GripVertical className="h-3 w-3 cursor-grab" /><span>{blockLabel(block.type)}</span>
                     </div>
                     <div className={cn("absolute -top-3 right-2 z-10 flex items-center gap-0.5 transition-opacity", selectedBlockId === block.id ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
@@ -589,7 +840,7 @@ export const EmailTemplateBuilder = ({
           {/* Settings Panel */}
           <div className="w-72 shrink-0">
             <Card className="sticky top-0">
-              <CardHeader className="py-3 px-3">
+              <CardHeader className="py-2.5 px-3">
                 <CardTitle className="text-xs font-semibold flex items-center gap-1.5">
                   <Settings className="h-3.5 w-3.5" />
                   {selectedBlock ? blockLabel(selectedBlock.type) + " সেটিংস" : "ব্লক সিলেক্ট করুন"}
@@ -597,9 +848,12 @@ export const EmailTemplateBuilder = ({
               </CardHeader>
               <CardContent className="p-3 pt-0">
                 {!selectedBlock ? (
-                  <p className="text-xs text-muted-foreground py-8 text-center">একটি ব্লকে ক্লিক করে সেটিংস দেখুন</p>
+                  <div className="text-center py-12">
+                    <Settings className="h-8 w-8 mx-auto mb-3 text-muted-foreground/30" />
+                    <p className="text-xs text-muted-foreground">একটি ব্লকে ক্লিক করে সেটিংস দেখুন</p>
+                  </div>
                 ) : (
-                  <ScrollArea className="h-[450px]">
+                  <ScrollArea className="h-[480px]">
                     <BlockSettings
                       block={selectedBlock}
                       onContentChange={(key, val) => updateBlockContent(selectedBlock.id, key, val)}
@@ -621,11 +875,11 @@ export const EmailTemplateBuilder = ({
         <Card className="overflow-hidden">
           <div className="bg-muted/50 px-4 py-2 border-b flex items-center gap-2">
             <div className="flex gap-1.5"><div className="w-3 h-3 rounded-full bg-destructive/60" /><div className="w-3 h-3 rounded-full bg-yellow-400/60" /><div className="w-3 h-3 rounded-full bg-green-400/60" /></div>
-            <span className="text-xs text-muted-foreground ml-2">ইমেইল প্রিভিউ — {devicePreview === "desktop" ? "ডেস্কটপ" : "মোবাইল"}</span>
+            <span className="text-xs text-muted-foreground ml-2">{devicePreview === "desktop" ? "ডেস্কটপ প্রিভিউ" : "মোবাইল প্রিভিউ"}</span>
           </div>
-          <div className="p-6 bg-[#e8e8e8] flex justify-center">
+          <div className="p-8 bg-[#e8e8e8] flex justify-center min-h-[600px]">
             <div className="bg-white shadow-2xl rounded-lg overflow-hidden transition-all" style={{ maxWidth: devicePreview === "desktop" ? 620 : 375, width: "100%" }}
-              dangerouslySetInnerHTML={{ __html: blocksToHtml(blocks) || '<p style="text-align:center;color:#999;padding:40px;">কোনো ব্লক নেই।</p>' }} />
+              dangerouslySetInnerHTML={{ __html: blocksToHtml(blocks) || '<div style="text-align:center;color:#999;padding:60px 20px;"><p style="font-size:48px;margin-bottom:16px;">📧</p><p>কোনো ব্লক নেই। ডিজাইন ট্যাবে যান।</p></div>' }} />
           </div>
         </Card>
       )}
@@ -633,19 +887,20 @@ export const EmailTemplateBuilder = ({
       {/* Code */}
       {viewMode === "code" && (
         <div className="space-y-2">
-          <div className="flex justify-end">
-            <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => { navigator.clipboard.writeText(blocksToHtml(blocks)); toast.success("HTML কপি হয়েছে"); }}>
+          <div className="flex justify-between items-center">
+            <p className="text-xs text-muted-foreground">জেনারেটেড HTML কোড</p>
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => { navigator.clipboard.writeText(blocksToHtml(blocks)); toast.success("HTML কপি হয়েছে"); }}>
               <Copy className="h-3 w-3" /> কপি
             </Button>
           </div>
-          <Textarea value={blocksToHtml(blocks)} readOnly rows={18} className="font-mono text-xs" />
+          <Textarea value={blocksToHtml(blocks)} readOnly rows={20} className="font-mono text-xs bg-muted/30" />
         </div>
       )}
     </div>
   );
 };
 
-// --- Block Settings Panel ---
+// ── Block Settings Panel ──
 interface BlockSettingsProps {
   block: EmailBlock;
   onContentChange: (key: string, value: any) => void;
@@ -665,7 +920,7 @@ const BlockSettings = ({
 
   const renderCommonSettings = () => (
     <div className="space-y-3 mt-4 pt-3 border-t">
-      <p className="text-[10px] font-bold uppercase text-muted-foreground">স্টাইল</p>
+      <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">স্টাইল</p>
       <div><Label className="text-xs">প্যাডিং</Label><Input value={s.padding || ''} onChange={e => onSettingChange("padding", e.target.value)} placeholder="10px 30px" className="h-8 text-xs" /></div>
       <div>
         <Label className="text-xs">ব্যাকগ্রাউন্ড</Label>
@@ -704,11 +959,11 @@ const BlockSettings = ({
           const selected = ids.includes(item.id);
           const img = item[imgKey];
           return (
-            <label key={item.id} className={cn("flex items-center gap-2 p-1.5 rounded cursor-pointer text-xs", selected ? "bg-primary/10" : "hover:bg-accent")}>
+            <label key={item.id} className={cn("flex items-center gap-2 p-1.5 rounded cursor-pointer text-xs transition-colors", selected ? "bg-primary/10 border border-primary/20" : "hover:bg-accent")}>
               <input type="checkbox" checked={selected} onChange={e => {
                 onContentChange(key, e.target.checked ? [...ids, item.id] : ids.filter((i: string) => i !== item.id));
               }} className="rounded" />
-              {img && <img src={img} className="w-8 h-8 rounded object-cover" />}
+              {img && <img src={img} className="w-8 h-8 rounded object-cover shrink-0" />}
               <span className="truncate flex-1">{item[labelKey]}</span>
               <span className="text-muted-foreground shrink-0">৳{item[priceField]}</span>
             </label>
@@ -720,30 +975,27 @@ const BlockSettings = ({
     </div>
   );
 
+  const renderGradientPicker = (currentValue: string, onChange: (v: string) => void) => (
+    <div>
+      <Label className="text-xs mb-1.5 block">গ্র্যাডিয়েন্ট</Label>
+      <Input value={currentValue || ''} onChange={e => onChange(e.target.value)} className="h-8 text-xs font-mono mb-2" />
+      <div className="flex flex-wrap gap-1.5">
+        {GRADIENT_PRESETS.map(g => (
+          <button key={g.value} onClick={() => onChange(g.value)}
+            className={cn("w-7 h-7 rounded-lg border-2 transition-all hover:scale-110", currentValue === g.value ? "border-primary ring-1 ring-primary/30" : "border-transparent")}
+            style={{ background: g.value }} title={g.name} />
+        ))}
+      </div>
+    </div>
+  );
+
   switch (type) {
     case "hero_banner":
       return (
         <div className="space-y-3">
           <div><Label className="text-xs">শিরোনাম</Label><Input value={c.title || ''} onChange={e => onContentChange("title", e.target.value)} className="h-8 text-xs" /></div>
           <div><Label className="text-xs">সাবটাইটেল</Label><Input value={c.subtitle || ''} onChange={e => onContentChange("subtitle", e.target.value)} className="h-8 text-xs" /></div>
-          <div><Label className="text-xs">গ্র্যাডিয়েন্ট</Label><Input value={c.bgGradient || ''} onChange={e => onContentChange("bgGradient", e.target.value)} className="h-8 text-xs font-mono" /></div>
-          <div>
-            <Label className="text-xs mb-1 block">প্রিসেট গ্র্যাডিয়েন্ট</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                "linear-gradient(135deg,#667eea 0%,#764ba2 100%)",
-                "linear-gradient(135deg,#ff4757 0%,#ff6b81 100%)",
-                "linear-gradient(135deg,#11998e 0%,#38ef7d 100%)",
-                "linear-gradient(135deg,#2193b0 0%,#6dd5ed 100%)",
-                "linear-gradient(135deg,#1a1a2e 0%,#0f3460 100%)",
-                "linear-gradient(135deg,#f093fb 0%,#f5576c 100%)",
-                "linear-gradient(135deg,#4facfe 0%,#00f2fe 100%)",
-                "linear-gradient(135deg,#232526 0%,#414345 100%)",
-              ].map(g => (
-                <button key={g} onClick={() => onContentChange("bgGradient", g)} className="w-8 h-8 rounded-lg border-2 border-transparent hover:border-primary transition-all" style={{ background: g }} />
-              ))}
-            </div>
-          </div>
+          {renderGradientPicker(c.bgGradient || '', v => onContentChange("bgGradient", v))}
           {renderCommonSettings()}
         </div>
       );
@@ -771,8 +1023,8 @@ const BlockSettings = ({
           <div><Label className="text-xs">টেক্সট</Label><Textarea value={c.text || ''} onChange={e => onContentChange("text", e.target.value)} rows={4} className="text-xs" /></div>
           <div className="flex flex-wrap gap-1">
             <p className="text-[10px] w-full text-muted-foreground mb-1">ভেরিয়েবল:</p>
-            {["{{name}}", "{{shop_name}}", "{{discount}}", "{{order_number}}"].map(tag => (
-              <button key={tag} onClick={() => onContentChange("text", (c.text || '') + ' ' + tag)} className="text-[10px] px-2 py-0.5 bg-muted rounded-full hover:bg-primary/10">{tag}</button>
+            {["{{name}}", "{{shop_name}}", "{{discount}}", "{{order_number}}", "{{total}}"].map(tag => (
+              <button key={tag} onClick={() => onContentChange("text", (c.text || '') + ' ' + tag)} className="text-[10px] px-2 py-0.5 bg-muted rounded-full hover:bg-primary/10 transition-colors">{tag}</button>
             ))}
           </div>
           {renderCommonSettings()}
@@ -807,6 +1059,16 @@ const BlockSettings = ({
         <div className="space-y-3">
           <div><Label className="text-xs">কালার</Label><div className="flex gap-2"><input type="color" value={c.color || '#eeeeee'} onChange={e => onContentChange("color", e.target.value)} className="w-8 h-8 rounded cursor-pointer border" /><Input value={c.color || ''} onChange={e => onContentChange("color", e.target.value)} className="h-8 text-xs flex-1" /></div></div>
           <div><Label className="text-xs">পুরুত্ব (px)</Label><Input type="number" value={c.thickness || '1'} onChange={e => onContentChange("thickness", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">স্টাইল</Label>
+            <Select value={c.style || 'solid'} onValueChange={v => onContentChange("style", v)}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="solid">সলিড</SelectItem>
+                <SelectItem value="dashed">ড্যাশড</SelectItem>
+                <SelectItem value="dotted">ডটেড</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           {renderCommonSettings()}
         </div>
       );
@@ -881,6 +1143,88 @@ const BlockSettings = ({
           <div><Label className="text-xs">কুপন কোড</Label><Input value={c.code || ''} onChange={e => onContentChange("code", e.target.value)} className="h-8 text-xs font-mono" /></div>
           <div><Label className="text-xs">ডিসকাউন্ট</Label><Input value={c.discount || ''} onChange={e => onContentChange("discount", e.target.value)} placeholder="20%" className="h-8 text-xs" /></div>
           <div><Label className="text-xs">বিবরণ</Label><Input value={c.description || ''} onChange={e => onContentChange("description", e.target.value)} className="h-8 text-xs" /></div>
+          {renderGradientPicker(c.bgGradient || '', v => onContentChange("bgGradient", v))}
+          {renderCommonSettings()}
+        </div>
+      );
+
+    case "countdown":
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">শিরোনাম</Label><Input value={c.title || ''} onChange={e => onContentChange("title", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">শেষ তারিখ</Label><Input type="date" value={c.endDate || ''} onChange={e => onContentChange("endDate", e.target.value)} className="h-8 text-xs" /></div>
+          {renderCommonSettings()}
+        </div>
+      );
+
+    case "video_embed":
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">থাম্বনেইল URL</Label><Input value={c.thumbnailUrl || ''} onChange={e => onContentChange("thumbnailUrl", e.target.value)} placeholder="https://..." className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">ভিডিও URL</Label><Input value={c.videoUrl || ''} onChange={e => onContentChange("videoUrl", e.target.value)} placeholder="https://youtube.com/..." className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">শিরোনাম</Label><Input value={c.title || ''} onChange={e => onContentChange("title", e.target.value)} className="h-8 text-xs" /></div>
+          {renderCommonSettings()}
+        </div>
+      );
+
+    case "banner_strip":
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">টেক্সট</Label><Input value={c.text || ''} onChange={e => onContentChange("text", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">ব্যাকগ্রাউন্ড কালার</Label>
+            <div className="flex gap-2"><input type="color" value={c.bgColor || '#ff4757'} onChange={e => onContentChange("bgColor", e.target.value)} className="w-8 h-8 rounded cursor-pointer border" /><Input value={c.bgColor || ''} onChange={e => onContentChange("bgColor", e.target.value)} className="h-8 text-xs flex-1" /></div>
+          </div>
+          {renderCommonSettings()}
+        </div>
+      );
+
+    case "rating_block":
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">রেটিং (1-5)</Label><Input type="number" min="1" max="5" step="0.1" value={c.rating || '4.8'} onChange={e => onContentChange("rating", parseFloat(e.target.value))} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">মোট রিভিউ</Label><Input value={c.totalReviews || ''} onChange={e => onContentChange("totalReviews", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">বিবরণ</Label><Input value={c.text || ''} onChange={e => onContentChange("text", e.target.value)} className="h-8 text-xs" /></div>
+          {renderCommonSettings()}
+        </div>
+      );
+
+    case "stats_row": {
+      const items = c.items || [];
+      return (
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold">পরিসংখ্যান আইটেম</Label>
+          {items.map((item: any, i: number) => (
+            <div key={i} className="flex gap-1.5 items-center">
+              <Input value={item.value} onChange={e => { const n = [...items]; n[i] = { ...n[i], value: e.target.value }; onContentChange("items", n); }} placeholder="মান" className="h-7 text-xs flex-1" />
+              <Input value={item.label} onChange={e => { const n = [...items]; n[i] = { ...n[i], label: e.target.value }; onContentChange("items", n); }} placeholder="লেবেল" className="h-7 text-xs flex-1" />
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0" onClick={() => onContentChange("items", items.filter((_: any, j: number) => j !== i))}><X className="h-3 w-3" /></Button>
+            </div>
+          ))}
+          <Button size="sm" variant="outline" className="text-xs w-full" onClick={() => onContentChange("items", [...items, { value: "0", label: "লেবেল" }])}><Plus className="h-3 w-3 mr-1" /> যোগ করুন</Button>
+          {renderCommonSettings()}
+        </div>
+      );
+    }
+
+    case "cta_section":
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">শিরোনাম</Label><Input value={c.title || ''} onChange={e => onContentChange("title", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">সাবটাইটেল</Label><Input value={c.subtitle || ''} onChange={e => onContentChange("subtitle", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">বাটন টেক্সট</Label><Input value={c.buttonText || ''} onChange={e => onContentChange("buttonText", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">বাটন URL</Label><Input value={c.buttonUrl || ''} onChange={e => onContentChange("buttonUrl", e.target.value)} className="h-8 text-xs" /></div>
+          {renderGradientPicker(c.bgGradient || '', v => onContentChange("bgGradient", v))}
+        </div>
+      );
+
+    case "image_text":
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">ইমেজ URL</Label><Input value={c.imageUrl || ''} onChange={e => onContentChange("imageUrl", e.target.value)} placeholder="https://..." className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">শিরোনাম</Label><Input value={c.title || ''} onChange={e => onContentChange("title", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">বিবরণ</Label><Textarea value={c.text || ''} onChange={e => onContentChange("text", e.target.value)} rows={3} className="text-xs" /></div>
+          <div><Label className="text-xs">বাটন টেক্সট</Label><Input value={c.buttonText || ''} onChange={e => onContentChange("buttonText", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">বাটন URL</Label><Input value={c.buttonUrl || ''} onChange={e => onContentChange("buttonUrl", e.target.value)} className="h-8 text-xs" /></div>
           {renderCommonSettings()}
         </div>
       );
@@ -890,6 +1234,7 @@ const BlockSettings = ({
         <div className="space-y-3">
           <div><Label className="text-xs">গ্রাহকের নাম</Label><Input value={c.name || ''} onChange={e => onContentChange("name", e.target.value)} className="h-8 text-xs" /></div>
           <div><Label className="text-xs">মন্তব্য</Label><Textarea value={c.text || ''} onChange={e => onContentChange("text", e.target.value)} rows={3} className="text-xs" /></div>
+          <div><Label className="text-xs">রেটিং (1-5)</Label><Input type="number" min="1" max="5" value={c.rating || '5'} onChange={e => onContentChange("rating", parseInt(e.target.value))} className="h-8 text-xs" /></div>
           {renderCommonSettings()}
         </div>
       );
@@ -898,7 +1243,7 @@ const BlockSettings = ({
       const items: string[] = c.items || [];
       return (
         <div className="space-y-3">
-          <Label className="text-xs">ফিচার আইটেম</Label>
+          <Label className="text-xs font-semibold">ফিচার আইটেম</Label>
           {items.map((item, i) => (
             <div key={i} className="flex gap-1">
               <Input value={item} onChange={e => { const n = [...items]; n[i] = e.target.value; onContentChange("items", n); }} className="h-8 text-xs" />
@@ -906,6 +1251,78 @@ const BlockSettings = ({
             </div>
           ))}
           <Button size="sm" variant="outline" className="text-xs w-full" onClick={() => onContentChange("items", [...items, "নতুন ফিচার"])}><Plus className="h-3 w-3 mr-1" /> যোগ করুন</Button>
+          <div>
+            <Label className="text-xs">আইকন স্টাইল</Label>
+            <Select value={c.iconStyle || 'check'} onValueChange={v => onContentChange("iconStyle", v)}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="check">✓ চেকমার্ক</SelectItem>
+                <SelectItem value="emoji">ইমোজি</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {renderCommonSettings()}
+        </div>
+      );
+    }
+
+    case "price_table": {
+      const plans = c.plans || [];
+      return (
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold">প্ল্যান সমূহ</Label>
+          {plans.map((plan: any, i: number) => (
+            <div key={i} className="border rounded-lg p-2 space-y-2">
+              <div className="flex gap-1.5">
+                <Input value={plan.name} onChange={e => { const n = [...plans]; n[i] = { ...n[i], name: e.target.value }; onContentChange("plans", n); }} placeholder="নাম" className="h-7 text-xs" />
+                <Input value={plan.price} onChange={e => { const n = [...plans]; n[i] = { ...n[i], price: e.target.value }; onContentChange("plans", n); }} placeholder="মূল্য" className="h-7 text-xs w-20" />
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" checked={plan.highlighted || false} onChange={e => { const n = [...plans]; n[i] = { ...n[i], highlighted: e.target.checked }; onContentChange("plans", n); }} />
+                <Label className="text-[10px]">হাইলাইটেড</Label>
+                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 ml-auto" onClick={() => onContentChange("plans", plans.filter((_: any, j: number) => j !== i))}><X className="h-3 w-3" /></Button>
+              </div>
+            </div>
+          ))}
+          <Button size="sm" variant="outline" className="text-xs w-full" onClick={() => onContentChange("plans", [...plans, { name: "নতুন", price: "৳0", features: ["ফিচার ১"] }])}><Plus className="h-3 w-3 mr-1" /> প্ল্যান যোগ</Button>
+          {renderCommonSettings()}
+        </div>
+      );
+    }
+
+    case "faq_block": {
+      const items = c.items || [];
+      return (
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold">FAQ আইটেম</Label>
+          {items.map((item: any, i: number) => (
+            <div key={i} className="border rounded-lg p-2 space-y-1.5">
+              <Input value={item.q} onChange={e => { const n = [...items]; n[i] = { ...n[i], q: e.target.value }; onContentChange("items", n); }} placeholder="প্রশ্ন" className="h-7 text-xs" />
+              <div className="flex gap-1">
+                <Input value={item.a} onChange={e => { const n = [...items]; n[i] = { ...n[i], a: e.target.value }; onContentChange("items", n); }} placeholder="উত্তর" className="h-7 text-xs flex-1" />
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0" onClick={() => onContentChange("items", items.filter((_: any, j: number) => j !== i))}><X className="h-3 w-3" /></Button>
+              </div>
+            </div>
+          ))}
+          <Button size="sm" variant="outline" className="text-xs w-full" onClick={() => onContentChange("items", [...items, { q: "প্রশ্ন?", a: "উত্তর" }])}><Plus className="h-3 w-3 mr-1" /> FAQ যোগ</Button>
+          {renderCommonSettings()}
+        </div>
+      );
+    }
+
+    case "brand_showcase": {
+      const brands = c.brands || [];
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">শিরোনাম</Label><Input value={c.title || ''} onChange={e => onContentChange("title", e.target.value)} className="h-8 text-xs" /></div>
+          <Label className="text-xs font-semibold">ব্র্যান্ড</Label>
+          {brands.map((b: string, i: number) => (
+            <div key={i} className="flex gap-1">
+              <Input value={b} onChange={e => { const n = [...brands]; n[i] = e.target.value; onContentChange("brands", n); }} className="h-7 text-xs" />
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0" onClick={() => onContentChange("brands", brands.filter((_: string, j: number) => j !== i))}><X className="h-3 w-3" /></Button>
+            </div>
+          ))}
+          <Button size="sm" variant="outline" className="text-xs w-full" onClick={() => onContentChange("brands", [...brands, "নতুন ব্র্যান্ড"])}><Plus className="h-3 w-3 mr-1" /> যোগ করুন</Button>
           {renderCommonSettings()}
         </div>
       );
@@ -918,6 +1335,7 @@ const BlockSettings = ({
           <div><Label className="text-xs">Instagram</Label><Input value={c.instagram || ''} onChange={e => onContentChange("instagram", e.target.value)} className="h-8 text-xs" /></div>
           <div><Label className="text-xs">YouTube</Label><Input value={c.youtube || ''} onChange={e => onContentChange("youtube", e.target.value)} className="h-8 text-xs" /></div>
           <div><Label className="text-xs">Twitter/X</Label><Input value={c.twitter || ''} onChange={e => onContentChange("twitter", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">WhatsApp নম্বর</Label><Input value={c.whatsapp || ''} onChange={e => onContentChange("whatsapp", e.target.value)} placeholder="8801XXXXXXXXX" className="h-8 text-xs" /></div>
           {renderCommonSettings()}
         </div>
       );
@@ -925,7 +1343,9 @@ const BlockSettings = ({
     case "footer":
       return (
         <div className="space-y-3">
-          <div><Label className="text-xs">ফুটার টেক্সট</Label><Textarea value={c.text || ''} onChange={e => onContentChange("text", e.target.value)} rows={3} className="text-xs" /></div>
+          <div><Label className="text-xs">ফুটার টেক্সট</Label><Textarea value={c.text || ''} onChange={e => onContentChange("text", e.target.value)} rows={2} className="text-xs" /></div>
+          <div><Label className="text-xs">ঠিকানা</Label><Input value={c.address || ''} onChange={e => onContentChange("address", e.target.value)} placeholder="ঢাকা, বাংলাদেশ" className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">ফোন</Label><Input value={c.phone || ''} onChange={e => onContentChange("phone", e.target.value)} placeholder="01XXXXXXXXX" className="h-8 text-xs" /></div>
           <div className="flex items-center gap-2">
             <input type="checkbox" checked={c.unsubscribe || false} onChange={e => onContentChange("unsubscribe", e.target.checked)} />
             <Label className="text-xs">আনসাবস্ক্রাইব লিংক দেখান</Label>
