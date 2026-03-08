@@ -536,6 +536,32 @@ const AdminEmailMarketing = () => {
                     <DialogTitle>{editingCampaign ? "ক্যাম্পেইন এডিট করুন" : "নতুন ক্যাম্পেইন"}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
+                    {/* Load from saved template */}
+                    {templates.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>📋 সেভ করা টেমপ্লেট থেকে লোড করুন</Label>
+                        <Select onValueChange={(templateId) => {
+                          const t = templates.find(tpl => tpl.id === templateId);
+                          if (t) {
+                            setCampaignForm(f => ({
+                              ...f,
+                              subject: f.subject || t.subject,
+                              content: t.html_content
+                            }));
+                            toast.success(`"${t.name}" টেমপ্লেট লোড হয়েছে`);
+                          }
+                        }}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="টেমপ্লেট সিলেক্ট করুন (অপশনাল)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {templates.filter(t => t.is_active).map(t => (
+                              <SelectItem key={t.id} value={t.id}>{t.name} ({t.template_type})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>নাম</Label>
