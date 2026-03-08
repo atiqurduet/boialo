@@ -269,7 +269,6 @@ serve(async (req) => {
 
         const matches = nameBnMatch.matches || nameEnMatch.matches || brandMatch.matches;
         
-        // Normalize to common product shape
         return {
           id: product.id,
           title_bn: product.name_bn,
@@ -289,8 +288,45 @@ serve(async (req) => {
       })
       .filter(p => p.matches);
 
+    // Search digital products (ebooks, etc.) with multi-variant matching
+    const digitalResults = (digitalRes.data || [])
+      .map(product => {
+        const titleBnMatch = multiVariantMatch(query, product.title_bn || "");
+        const titleEnMatch = multiVariantMatch(query, product.title_en || "");
+        const categoryMatch = multiVariantMatch(query, product.category || "");
+        const typeMatch = multiVariantMatch(query, product.product_type || "");
+
+        const bestScore = Math.max(
+          titleBnMatch.score * 1.3,
+          titleEnMatch.score * 1.2,
+          categoryMatch.score,
+          typeMatch.score
+        );
+
+        const matches = titleBnMatch.matches || titleEnMatch.matches || categoryMatch.matches || typeMatch.matches;
+
+        return {
+          id: product.id,
+          title_bn: product.title_bn,
+          title_en: product.title_en,
+          slug: product.slug,
+          price: product.price,
+          original_price: product.original_price,
+          discount_percent: product.discount_percent,
+          author: product.category,
+          publisher: product.product_type,
+          images: product.cover_image ? [product.cover_image] : null,
+          score: bestScore,
+          matches,
+          source: 'digital' as const,
+          product_type: product.product_type,
+          is_free: product.is_free,
+        };
+      })
+      .filter(p => p.matches);
+
     // Merge and sort all results
-    const allResults = [...bookResults, ...universalResults]
+    const allResults = [...bookResults, ...universalResults, ...digitalResults]
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
 
