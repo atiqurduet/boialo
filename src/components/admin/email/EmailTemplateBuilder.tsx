@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { InlineImageUpload } from "./InlineImageUpload";
 
 interface TemplateBuilderProps {
   initialHtml?: string;
@@ -1245,7 +1246,7 @@ const BlockSettings = ({
     case "image":
       return (
         <div className="space-y-3">
-          <div><Label className="text-xs">ইমেজ URL</Label><Input value={c.url || ''} onChange={e => onContentChange("url", e.target.value)} placeholder="https://..." className="h-8 text-xs" /></div>
+          <InlineImageUpload value={c.url || ''} onChange={v => onContentChange("url", v)} label="ইমেজ" />
           <div><Label className="text-xs">Alt টেক্সট</Label><Input value={c.alt || ''} onChange={e => onContentChange("alt", e.target.value)} className="h-8 text-xs" /></div>
           <div><Label className="text-xs">সর্বোচ্চ প্রস্থ</Label><Input value={c.width || '100%'} onChange={e => onContentChange("width", e.target.value)} className="h-8 text-xs" /></div>
           {renderCommonSettings()}
@@ -1432,7 +1433,7 @@ const BlockSettings = ({
     case "image_text":
       return (
         <div className="space-y-3">
-          <div><Label className="text-xs">ইমেজ URL</Label><Input value={c.imageUrl || ''} onChange={e => onContentChange("imageUrl", e.target.value)} placeholder="https://..." className="h-8 text-xs" /></div>
+          <InlineImageUpload value={c.imageUrl || ''} onChange={v => onContentChange("imageUrl", v)} label="ইমেজ" />
           <div><Label className="text-xs">শিরোনাম</Label><Input value={c.title || ''} onChange={e => onContentChange("title", e.target.value)} className="h-8 text-xs" /></div>
           <div><Label className="text-xs">বিবরণ</Label><Textarea value={c.text || ''} onChange={e => onContentChange("text", e.target.value)} rows={3} className="text-xs" /></div>
           <div><Label className="text-xs">বাটন টেক্সট</Label><Input value={c.buttonText || ''} onChange={e => onContentChange("buttonText", e.target.value)} className="h-8 text-xs" /></div>
