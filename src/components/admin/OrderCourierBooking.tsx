@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Truck, Loader2, ExternalLink, Package } from "lucide-react";
+import { Truck, Loader2, ExternalLink, Package, RefreshCw } from "lucide-react";
 import { invokeCourierBooking } from "@/lib/courierBooking";
 
 interface CourierProvider {
@@ -47,6 +47,17 @@ const courierTrackingUrls: Record<string, string> = {
   redx: "https://redx.com.bd/track/",
   ecourier: "https://ecourier.com.bd/tracking/",
   paperfly: "https://go.paperfly.com.bd/tracking/",
+};
+
+const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  booked: { label: "বুক করা হয়েছে", variant: "default" },
+  pending: { label: "পেন্ডিং", variant: "secondary" },
+  picked: { label: "পিকড", variant: "default" },
+  in_transit: { label: "ট্রানজিটে", variant: "default" },
+  delivered: { label: "ডেলিভারি সম্পন্ন", variant: "default" },
+  cancelled: { label: "বাতিল", variant: "destructive" },
+  returned: { label: "রিটার্ন", variant: "destructive" },
+  on_hold: { label: "হোল্ড", variant: "outline" },
 };
 
 export const OrderCourierBooking = ({
