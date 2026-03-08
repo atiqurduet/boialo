@@ -123,6 +123,7 @@ serve(async (req) => {
     // --- END AUTH CHECK ---
 
     const { order_id, courier_provider } = await req.json();
+    console.log("courier-booking: order_id=", order_id, "provider=", courier_provider);
 
     if (!order_id || !courier_provider) {
       return new Response(JSON.stringify({ error: "order_id and courier_provider are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -130,13 +131,17 @@ serve(async (req) => {
 
     const { data: order, error: orderError } = await supabase.from("orders").select("*").eq("id", order_id).single();
     if (orderError || !order) {
-      return new Response(JSON.stringify({ error: "Order not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      console.log("courier-booking: Order not found", orderError?.message);
+      return new Response(JSON.stringify({ error: "Order not found", details: orderError?.message }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    console.log("courier-booking: Order found", order.order_number);
 
     const { data: provider, error: providerError } = await supabase.from("courier_providers").select("*").eq("provider", courier_provider).eq("is_active", true).single();
     if (providerError || !provider) {
+      console.log("courier-booking: Provider not found", providerError?.message);
       return new Response(JSON.stringify({ error: "Courier provider not found or inactive" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    console.log("courier-booking: Provider found", provider.name_en, "config keys:", Object.keys(provider.config || {}));
 
     let bookingResult: BookingResult;
     switch (courier_provider) {
@@ -146,6 +151,7 @@ serve(async (req) => {
       case "manual": bookingResult = { success: true, message: "Manual tracking - no API booking needed" }; break;
       default: return new Response(JSON.stringify({ error: `Unsupported courier provider: ${courier_provider}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    console.log("courier-booking: Result", JSON.stringify(bookingResult));
 
     if (bookingResult.success) {
       await supabase.from("courier_bookings").upsert({ order_id: order.id, courier_provider, consignment_id: bookingResult.consignment_id, tracking_code: bookingResult.tracking_code, booking_status: "booked", api_response: bookingResult.raw_response || {}, cod_amount: order.payment_method === "cod" ? order.total : 0 }, { onConflict: "order_id" });
