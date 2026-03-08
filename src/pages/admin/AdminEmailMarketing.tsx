@@ -956,7 +956,26 @@ const AdminEmailMarketing = () => {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{template.subject}</p>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" onClick={() => {
+                        setEditingCampaign(null);
+                        setCampaignForm({
+                          name: template.name,
+                          subject: template.subject,
+                          content: template.html_content,
+                          campaign_type: template.template_type === 'abandoned_cart' ? 'abandoned_cart' 
+                            : template.template_type === 'new_offer' ? 'offer' 
+                            : template.template_type === 'custom' ? 'promotional' 
+                            : 'promotional',
+                          scheduled_at: ""
+                        });
+                        setCampaignDialogOpen(true);
+                        setActiveTab("campaigns");
+                        toast.success(`"${template.name}" টেমপ্লেট থেকে ক্যাম্পেইন তৈরি হচ্ছে`);
+                      }} className="gap-1">
+                        <Send className="h-4 w-4" />
+                        ক্যাম্পেইন তৈরি
+                      </Button>
                       <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)}>
                         <Edit className="h-4 w-4 mr-1" />
                         এডিট
