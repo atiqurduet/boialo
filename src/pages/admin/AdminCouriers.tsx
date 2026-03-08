@@ -50,6 +50,8 @@ const AdminCouriers = () => {
   const [editingCourier, setEditingCourier] = useState<CourierProvider | null>(null);
   const [config, setConfig] = useState<Record<string, string>>({});
   const [configStatus, setConfigStatus] = useState<Record<string, boolean>>({});
+  const [saveSuccessAt, setSaveSuccessAt] = useState<string | null>(null);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [activeTab, setActiveTab] = useState("bookings");
   const [providerFilter, setProviderFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -223,8 +225,11 @@ const AdminCouriers = () => {
   };
 
   const saveConfig = async () => {
-    if (!editingCourier) return;
+    if (!editingCourier || isSavingConfig) return;
     try {
+      setIsSavingConfig(true);
+      setSaveSuccessAt(null);
+
       await invokeProviderConfig({
         action: "update",
         provider_table: "courier_providers",
@@ -232,11 +237,22 @@ const AdminCouriers = () => {
         provider_type: editingCourier.provider,
         config,
       });
-      toast.success("কুরিয়ার প্রোভাইডার কনফিগার হয়েছে");
-      setEditingCourier(null);
-      setConfig({});
+
+      const latestStatus = await invokeProviderConfig({
+        action: "get_status",
+        provider_table: "courier_providers",
+        provider_id: editingCourier.id,
+      });
+
+      const sandboxValue = latestStatus?.sandbox_mode ? "true" : "false";
+      setConfigStatus(latestStatus?.config_status || {});
+      setConfig({ sandbox: sandboxValue });
+      setSaveSuccessAt(new Date().toLocaleTimeString("bn-BD"));
+      toast.success("কনফিগারেশন সফলভাবে সেভ হয়েছে");
     } catch (err: any) {
       toast.error("আপডেট ব্যর্থ: " + (err.message || "কনফিগারেশন সেভ ব্যর্থ"));
+    } finally {
+      setIsSavingConfig(false);
     }
   };
 
@@ -282,6 +298,7 @@ const AdminCouriers = () => {
     setEditingCourier(courier);
     setConfig({});
     setConfigStatus({});
+    setSaveSuccessAt(null);
     try {
       const data = await invokeProviderConfig({
         action: "get_status",
@@ -564,6 +581,10 @@ const AdminCouriers = () => {
                               <DialogTitle>Configure {courier.name_en}</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+                              <p className="text-xs text-muted-foreground">
+                                নিরাপত্তার জন্য আগের credential সরাসরি দেখানো হয় না; saved থাকলে "configured" দেখাবে।
+                              </p>
+
                               {/* Sandbox Toggle */}
                               {courier.provider !== "manual" && (
                                 <div className="space-y-2">
@@ -588,7 +609,10 @@ const AdminCouriers = () => {
                                   </div>
                                   {getProviderLiveFields(courier.provider).map((field) => (
                                     <div key={field.key} className="space-y-2">
-                                      <Label htmlFor={field.key} className="capitalize">{field.label}</Label>
+                                      <Label htmlFor={field.key} className="capitalize flex items-center gap-2">
+                                        <span>{field.label}</span>
+                                        {configStatus[field.key] && <Badge variant="secondary" className="text-[10px]">configured</Badge>}
+                                      </Label>
                                       <Input id={field.key} type={field.key.includes("secret") || field.key.includes("password") || field.key.includes("token") || field.key.includes("key") ? "password" : "text"} value={config[field.key] || ""} onChange={(e) => setConfig({ ...config, [field.key]: e.target.value })} placeholder={configStatus[field.key] ? "••••••• (configured)" : field.placeholder} />
                                     </div>
                                   ))}
@@ -605,14 +629,35 @@ const AdminCouriers = () => {
                                   </div>
                                   {getProviderSandboxFields(courier.provider).map((field) => (
                                     <div key={field.key} className="space-y-2">
-                                      <Label htmlFor={field.key} className="capitalize">{field.label}</Label>
+                                      <Label htmlFor={field.key} className="capitalize flex items-center gap-2">
+                                        <span>{field.label}</span>
+                                        {configStatus[field.key] && <Badge variant="secondary" className="text-[10px]">configured</Badge>}
+                                      </Label>
                                       <Input id={field.key} type={field.key.includes("secret") || field.key.includes("password") || field.key.includes("token") || field.key.includes("key") ? "password" : "text"} value={config[field.key] || ""} onChange={(e) => setConfig({ ...config, [field.key]: e.target.value })} placeholder={configStatus[field.key] ? "••••••• (configured)" : field.placeholder} />
                                     </div>
                                   ))}
                                 </div>
                               )}
 
-                              <Button onClick={saveConfig} className="w-full"><Save className="h-4 w-4 mr-2" /> Save Configuration</Button>
+                              <Button onClick={saveConfig} className="w-full" disabled={isSavingConfig}>
+                                {isSavingConfig ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Saving...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Save className="h-4 w-4 mr-2" />
+                                    Save Configuration
+                                  </>
+                                )}
+                              </Button>
+
+                              {saveSuccessAt && (
+                                <p className="text-xs text-muted-foreground text-center">
+                                  ✅ সর্বশেষ সফল সেভ: {saveSuccessAt}
+                                </p>
+                              )}
                             </div>
                           </DialogContent>
                         </Dialog>
@@ -714,3 +759,4 @@ const ShipmentTable = ({ orders, loading, formatDate }: ShipmentTableProps) => {
 };
 
 export default AdminCouriers;
+
