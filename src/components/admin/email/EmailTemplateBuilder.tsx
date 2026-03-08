@@ -214,10 +214,15 @@ export const EmailTemplateBuilder = ({
   const { data: products = [] } = useQuery({
     queryKey: ['email-builder-products', productSearch],
     queryFn: async () => {
-      let query = supabase.from('products').select('id, title_bn, slug, price, discount_percent, image_url').eq('is_active', true).limit(20);
+      let query = supabase.from('products').select('id, title_bn, slug, price, discount_percent, original_price, images').eq('is_active', true).limit(20);
       if (productSearch) query = query.ilike('title_bn', `%${productSearch}%`);
       const { data } = await query;
-      return data || [];
+      return (data || []).map(p => {
+        const imgs = Array.isArray(p.images) ? p.images : [];
+        const imageUrl = (imgs[0] as any)?.url || (typeof imgs[0] === 'string' ? imgs[0] : '');
+        const discountPrice = p.discount_percent ? Math.round(p.price * (1 - p.discount_percent / 100)) : null;
+        return { ...p, imageUrl, discountPrice };
+      });
     }
   });
 
@@ -251,35 +256,13 @@ export const EmailTemplateBuilder = ({
     if (selected.length === 0) { toast.error("প্রোডাক্ট সিলেক্ট করুন"); return; }
 
     const siteUrl = "https://boialo.lovable.app";
-    const productCards = selected.map(p => `
-    <td style="width:50%;padding:10px;vertical-align:top;">
-      <div style="border:1px solid #eee;border-radius:12px;overflow:hidden;background:#fff;">
-        ${p.image_url ? `<img src="${p.image_url}" alt="${p.title_bn}" style="width:100%;height:180px;object-fit:cover;" />` : `<div style="width:100%;height:180px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">📚</div>`}
-        <div style="padding:12px;">
-          <h3 style="font-size:14px;color:#333;margin:0 0 8px;line-height:1.4;">${p.title_bn}</h3>
-          <div style="display:flex;align-items:center;gap:8px;">
-            ${p.discount_price ? `<span style="color:#e53e3e;font-weight:bold;font-size:16px;">৳${p.discount_price}</span><span style="color:#999;text-decoration:line-through;font-size:13px;">৳${p.price}</span>` : `<span style="color:#333;font-weight:bold;font-size:16px;">৳${p.price}</span>`}
-          </div>
-          <a href="${siteUrl}/product/${p.slug}" style="display:inline-block;margin-top:10px;background:#667eea;color:#fff;padding:8px 20px;border-radius:20px;text-decoration:none;font-size:13px;">কিনুন</a>
-        </div>
-      </div>
-    </td>`).join("");
-
-    // Create rows of 2 products each
-    const rows: string[] = [];
-    for (let i = 0; i < selected.length; i += 2) {
-      const row = `<tr>${productCards.slice(i * 200, (i + 2) * 200)}</tr>`;
-      rows.push(row);
-    }
-
-    // Simpler approach - just use table rows
     const gridHtml = `<table style="width:100%;border-collapse:collapse;margin:20px 0;"><tr>${selected.map((p, idx) => {
       const card = `<td style="width:50%;padding:10px;vertical-align:top;">
       <div style="border:1px solid #eee;border-radius:12px;overflow:hidden;background:#fff;">
-        ${p.image_url ? `<img src="${p.image_url}" alt="${p.title_bn}" style="width:100%;height:180px;object-fit:cover;" />` : `<div style="width:100%;height:180px;background:#f0f0f0;text-align:center;line-height:180px;font-size:40px;">📚</div>`}
+        ${p.imageUrl ? `<img src="${p.imageUrl}" alt="${p.title_bn}" style="width:100%;height:180px;object-fit:cover;" />` : `<div style="width:100%;height:180px;background:#f0f0f0;text-align:center;line-height:180px;font-size:40px;">📚</div>`}
         <div style="padding:12px;">
           <h3 style="font-size:14px;color:#333;margin:0 0 8px;line-height:1.4;">${p.title_bn}</h3>
-          ${p.discount_price ? `<span style="color:#e53e3e;font-weight:bold;">৳${p.discount_price}</span> <span style="color:#999;text-decoration:line-through;font-size:13px;">৳${p.price}</span>` : `<span style="color:#333;font-weight:bold;">৳${p.price}</span>`}
+          ${p.discountPrice ? `<span style="color:#e53e3e;font-weight:bold;">৳${p.discountPrice}</span> <span style="color:#999;text-decoration:line-through;font-size:13px;">৳${p.price}</span>` : `<span style="color:#333;font-weight:bold;">৳${p.price}</span>`}
           <br/><a href="${siteUrl}/product/${p.slug}" style="display:inline-block;margin-top:10px;background:#667eea;color:#fff;padding:8px 20px;border-radius:20px;text-decoration:none;font-size:13px;">কিনুন</a>
         </div>
       </div>
@@ -287,7 +270,6 @@ export const EmailTemplateBuilder = ({
       return card + ((idx % 2 === 1 && idx < selected.length - 1) ? '</tr><tr>' : '');
     }).join("")}</tr></table>`;
 
-    // Replace {{product_grid}} or append
     if (html.includes("{{product_grid}}")) {
       handleHtmlChange(html.replace("{{product_grid}}", gridHtml));
     } else {
