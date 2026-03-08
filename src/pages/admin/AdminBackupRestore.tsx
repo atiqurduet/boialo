@@ -366,7 +366,7 @@ const AdminBackupRestore = () => {
                       <TableRow>
                         <TableHead>টেবিল</TableHead>
                         <TableHead className="text-right">রো</TableHead>
-                        <TableHead className="text-right">CSV</TableHead>
+                        <TableHead className="text-right">এক্সপোর্ট</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
