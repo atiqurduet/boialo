@@ -200,13 +200,30 @@ export const OrderCourierBooking = ({
       {/* Current Status */}
       {existingBooking || trackingNumber ? (
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Badge variant={existingBooking?.booking_status === "booked" ? "default" : "secondary"}>
-              {existingBooking?.booking_status === "booked" ? "বুক করা হয়েছে" : "পেন্ডিং"}
-            </Badge>
-            <span className="text-sm text-muted-foreground">
-              {couriers?.find((c) => c.provider === (existingBooking?.courier_provider || currentCourier))?.name_bn || currentCourier}
-            </span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge variant={statusLabels[existingBooking?.booking_status || "pending"]?.variant || "secondary"}>
+                {statusLabels[existingBooking?.booking_status || "pending"]?.label || existingBooking?.booking_status}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                {couriers?.find((c) => c.provider === (existingBooking?.courier_provider || currentCourier))?.name_bn || currentCourier}
+              </span>
+            </div>
+            {existingBooking?.courier_provider && existingBooking.courier_provider !== "manual" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => syncStatusMutation.mutate()}
+                disabled={syncStatusMutation.isPending}
+              >
+                {syncStatusMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                <span className="ml-1 text-xs">সিঙ্ক</span>
+              </Button>
+            )}
           </div>
           
           {(existingBooking?.tracking_code || trackingNumber) && (
