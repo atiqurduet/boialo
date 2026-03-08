@@ -87,6 +87,14 @@ const BLOCK_LIBRARY: { type: BlockType; label: string; icon: React.ReactNode; ca
   { type: "video_embed", label: "ভিডিও থাম্বনেইল", icon: <Play className="h-4 w-4" />, category: "dynamic" },
   { type: "faq_block", label: "FAQ", icon: <MessageSquare className="h-4 w-4" />, category: "dynamic" },
   { type: "price_table", label: "প্রাইস টেবিল", icon: <Tag className="h-4 w-4" />, category: "dynamic" },
+  // Alibaba/AliExpress Dynamic
+  { type: "trust_badges", label: "🛡️ ট্রাস্ট ব্যাজ", icon: <Award className="h-4 w-4" />, category: "dynamic" },
+  { type: "urgency_bar", label: "🔥 আর্জেন্সি বার", icon: <TrendingUp className="h-4 w-4" />, category: "dynamic" },
+  { type: "multi_banner", label: "🎯 মাল্টি ব্যানার", icon: <LayoutGrid className="h-4 w-4" />, category: "layout" },
+  { type: "progress_bar", label: "📊 প্রোগ্রেস বার", icon: <TrendingUp className="h-4 w-4" />, category: "dynamic" },
+  { type: "order_summary", label: "📦 অর্ডার সামারি", icon: <Package className="h-4 w-4" />, category: "dynamic" },
+  { type: "personalized_header", label: "👤 পার্সোনাল হেডার", icon: <Users className="h-4 w-4" />, category: "dynamic" },
+  { type: "deal_grid", label: "💰 ডিল গ্রিড", icon: <Percent className="h-4 w-4" />, category: "dynamic" },
 ];
 
 const GRADIENT_PRESETS = [
