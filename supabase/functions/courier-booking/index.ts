@@ -108,7 +108,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle();
-    if (!roleData || !["admin", "manager", "support"].includes(roleData.role)) {
+    if (!roleData || !["super_admin", "admin", "manager", "support"].includes(roleData.role)) {
       return new Response(JSON.stringify({ error: "Forbidden: Admin access required" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     // --- END AUTH CHECK ---
