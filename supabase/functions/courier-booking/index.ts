@@ -46,7 +46,31 @@ async function bookPathao(order: Order, config: Record<string, string>): Promise
     if (!tokenResponse.ok) { const error = await tokenResponse.text(); return { success: false, message: "Failed to authenticate with Pathao", raw_response: error }; }
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
-    const orderPayload = { store_id: config.store_id || 1, merchant_order_id: order.order_number, recipient_name: order.full_name, recipient_phone: order.phone.replace("+88", ""), recipient_address: order.address, recipient_city: 1, recipient_zone: 1, delivery_type: 48, item_type: 2, special_instruction: "", item_quantity: 1, item_weight: 0.5, amount_to_collect: order.payment_method === "cod" ? order.total : 0, item_description: `Order #${order.order_number}` };
+    const selectedStoreIdRaw = isSandbox
+      ? (config.sandbox_store_id || config.store_id)
+      : config.store_id;
+    const selectedStoreId = selectedStoreIdRaw ? Number(selectedStoreIdRaw) : null;
+
+    const orderPayload: Record<string, unknown> = {
+      merchant_order_id: order.order_number,
+      recipient_name: order.full_name,
+      recipient_phone: order.phone.replace("+88", ""),
+      recipient_address: order.address,
+      recipient_city: 1,
+      recipient_zone: 1,
+      delivery_type: 48,
+      item_type: 2,
+      special_instruction: "",
+      item_quantity: 1,
+      item_weight: 0.5,
+      amount_to_collect: order.payment_method === "cod" ? order.total : 0,
+      item_description: `Order #${order.order_number}`,
+    };
+
+    if (selectedStoreId && Number.isFinite(selectedStoreId)) {
+      orderPayload.store_id = selectedStoreId;
+    }
+
     const orderResponse = await fetch(`${baseUrl}/aladdin/api/v1/orders`, { method: "POST", headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(orderPayload) });
     const orderResult = await orderResponse.json();
     if (orderResponse.ok && orderResult.data) return { success: true, consignment_id: orderResult.data.consignment_id, tracking_code: orderResult.data.consignment_id, raw_response: orderResult };
