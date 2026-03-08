@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Truck, Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { invokeCourierBooking } from "@/lib/courierBooking";
 
 interface CourierProvider {
   id: string;
@@ -114,25 +115,14 @@ export const BulkCourierBooking = ({
       }
 
       try {
-        const { data, error } = await supabase.functions.invoke("courier-booking", {
-          body: { order_id: orderId, courier_provider: selectedCourier },
-        });
+        const data = await invokeCourierBooking(orderId, selectedCourier);
 
-        if (error || !data.success) {
-          bookingResults.push({
-            orderId,
-            orderNumber: order?.order_number || orderId,
-            success: false,
-            error: data?.error || error?.message || "বুকিং ব্যর্থ",
-          });
-        } else {
-          bookingResults.push({
-            orderId,
-            orderNumber: order?.order_number || orderId,
-            success: true,
-            trackingCode: data.tracking_code,
-          });
-        }
+        bookingResults.push({
+          orderId,
+          orderNumber: order?.order_number || orderId,
+          success: true,
+          trackingCode: data.tracking_code,
+        });
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : "অজানা ত্রুটি";
         bookingResults.push({

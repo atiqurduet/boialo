@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Truck, Loader2, ExternalLink, Package } from "lucide-react";
+import { invokeCourierBooking } from "@/lib/courierBooking";
 
 interface CourierProvider {
   id: string;
@@ -103,14 +104,7 @@ export const OrderCourierBooking = ({
         return { success: true, tracking_code: manualTracking };
       }
 
-      // Call edge function for API booking
-      const { data, error } = await supabase.functions.invoke("courier-booking", {
-        body: { order_id: orderId, courier_provider: courierProvider },
-      });
-
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
-      return data;
+      return invokeCourierBooking(orderId, courierProvider);
     },
     onSuccess: (data) => {
       toast.success(`কুরিয়ার বুক করা হয়েছে! ট্র্যাকিং: ${data.tracking_code || "N/A"}`);
