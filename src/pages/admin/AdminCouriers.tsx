@@ -263,16 +263,12 @@ const AdminCouriers = () => {
     setConfig({});
     setConfigStatus({});
     try {
-      const response = await supabase.functions.invoke("update-provider-config", {
-        body: {
-          action: "get_status",
-          provider_table: "courier_providers",
-          provider_id: courier.id,
-        },
+      const data = await invokeProviderConfig({
+        action: "get_status",
+        provider_table: "courier_providers",
+        provider_id: courier.id,
       });
-      if (response.data?.success) {
-        setConfigStatus(response.data.config_status || {});
-      }
+      setConfigStatus(data.config_status || {});
     } catch (err) {
       // Ignore
     }
