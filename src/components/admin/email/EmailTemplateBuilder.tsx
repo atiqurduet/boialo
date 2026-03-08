@@ -37,7 +37,9 @@ type BlockType =
   | "columns" | "hero_banner" | "social_links" | "footer" | "coupon_box"
   | "testimonial" | "feature_list" | "countdown" | "video_embed"
   | "banner_strip" | "rating_block" | "stats_row" | "cta_section"
-  | "image_text" | "price_table" | "faq_block" | "brand_showcase";
+  | "image_text" | "price_table" | "faq_block" | "brand_showcase"
+  | "trust_badges" | "urgency_bar" | "multi_banner" | "progress_bar"
+  | "order_summary" | "personalized_header" | "deal_grid";
 
 interface EmailBlock {
   id: string;
@@ -85,6 +87,14 @@ const BLOCK_LIBRARY: { type: BlockType; label: string; icon: React.ReactNode; ca
   { type: "video_embed", label: "ভিডিও থাম্বনেইল", icon: <Play className="h-4 w-4" />, category: "dynamic" },
   { type: "faq_block", label: "FAQ", icon: <MessageSquare className="h-4 w-4" />, category: "dynamic" },
   { type: "price_table", label: "প্রাইস টেবিল", icon: <Tag className="h-4 w-4" />, category: "dynamic" },
+  // Alibaba/AliExpress Dynamic
+  { type: "trust_badges", label: "🛡️ ট্রাস্ট ব্যাজ", icon: <Award className="h-4 w-4" />, category: "dynamic" },
+  { type: "urgency_bar", label: "🔥 আর্জেন্সি বার", icon: <TrendingUp className="h-4 w-4" />, category: "dynamic" },
+  { type: "multi_banner", label: "🎯 মাল্টি ব্যানার", icon: <LayoutGrid className="h-4 w-4" />, category: "layout" },
+  { type: "progress_bar", label: "📊 প্রোগ্রেস বার", icon: <TrendingUp className="h-4 w-4" />, category: "dynamic" },
+  { type: "order_summary", label: "📦 অর্ডার সামারি", icon: <Package className="h-4 w-4" />, category: "dynamic" },
+  { type: "personalized_header", label: "👤 পার্সোনাল হেডার", icon: <Users className="h-4 w-4" />, category: "dynamic" },
+  { type: "deal_grid", label: "💰 ডিল গ্রিড", icon: <Percent className="h-4 w-4" />, category: "dynamic" },
 ];
 
 const GRADIENT_PRESETS = [
@@ -215,6 +225,100 @@ const PRESET_TEMPLATES = [
       { id: "5", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#fff5f5" } },
     ]
   },
+  // ── Alibaba/AliExpress Inspired Professional Templates ──
+  {
+    id: "mega-sale-alibaba", name: "মেগা সেল", icon: "🔥", description: "Alibaba 11.11 স্টাইল", color: "#ff4500",
+    blocks: [
+      { id: "1", type: "urgency_bar" as BlockType, content: { text: "🔥 ২৪ ঘণ্টার মেগা সেল লাইভ!", subtext: "{{viewers}} জন এখন শপিং করছে", bgGradient: "linear-gradient(90deg,#ff4500,#ff6b35)", animated: true }, settings: { padding: "12px 20px" } },
+      { id: "2", type: "hero_banner" as BlockType, content: { title: "🛒 মেগা সেল ফেস্টিভ্যাল", subtitle: "৮০% পর্যন্ত ছাড় — সব ক্যাটাগরিতে!", bgGradient: "linear-gradient(135deg,#ff4500 0%,#cc0000 50%,#8b0000 100%)" }, settings: { padding: "50px 30px", textColor: "#ffffff" } },
+      { id: "3", type: "countdown" as BlockType, content: { endDate: "2026-04-01", title: "সেল শেষ হচ্ছে" }, settings: { padding: "20px 30px", backgroundColor: "#1a1a1a" } },
+      { id: "4", type: "multi_banner" as BlockType, content: { banners: [{ title: "📚 বই", subtitle: "৫০% ছাড়", bgGradient: "linear-gradient(135deg,#ff4500,#ff6b35)", url: "#" }, { title: "📱 ইবুক", subtitle: "BOGO ফ্রি", bgGradient: "linear-gradient(135deg,#e91e63,#f06292)", url: "#" }, { title: "🛍️ স্টেশনারি", subtitle: "৪০% ছাড়", bgGradient: "linear-gradient(135deg,#ff9800,#ffb74d)", url: "#" }, { title: "🎁 গিফট", subtitle: "ফ্রি শিপিং", bgGradient: "linear-gradient(135deg,#4caf50,#81c784)", url: "#" }] }, settings: { padding: "10px 20px" } },
+      { id: "5", type: "deal_grid" as BlockType, content: { deals: [{ title: "সুপার ডিল #1", discount: "70%", originalPrice: "৳500", salePrice: "৳150", timeLeft: "2h 30m", sold: 85, total: 100 }, { title: "হট ডিল #2", discount: "60%", originalPrice: "৳800", salePrice: "৳320", timeLeft: "5h 15m", sold: 62, total: 100 }], style: "aliexpress" }, settings: { padding: "15px 20px" } },
+      { id: "6", type: "header" as BlockType, content: { text: "⚡ ফ্ল্যাশ ডিলস — বই", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "7", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "sale" }, settings: { padding: "10px 30px" } },
+      { id: "8", type: "progress_bar" as BlockType, content: { title: "🎯 সেল গোল", current: 78, target: 100, unit: "%", subtitle: "গোল পূর্ণ হলে সবার জন্য এক্সট্রা ১০% ছাড়!", bgColor: "#ff4500" }, settings: { padding: "20px 30px", backgroundColor: "#fff3e0" } },
+      { id: "9", type: "trust_badges" as BlockType, content: { items: [{ icon: "🚚", title: "ফ্রি শিপিং", subtitle: "৳500+" }, { icon: "🔒", title: "সিকিউর", subtitle: "100%" }, { icon: "🔄", title: "ইজি রিটার্ন", subtitle: "7 দিন" }, { icon: "⭐", title: "রেটিং", subtitle: "4.9/5" }], style: "ali" }, settings: { padding: "16px 20px", backgroundColor: "#fff8f0" } },
+      { id: "10", type: "coupon_box" as BlockType, content: { code: "MEGA80", discount: "৳200", description: "৳1000+ অর্ডারে", bgGradient: "linear-gradient(135deg,#ff4500,#cc0000)" }, settings: { padding: "15px 30px" } },
+      { id: "11", type: "button" as BlockType, content: { text: "🛒 এখনই শপিং করুন →", url: "#", bgColor: "#ff4500" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "12", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}} | মেগা সেল ফেস্টিভ্যাল", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#1a1a1a", textColor: "#999" } },
+    ]
+  },
+  {
+    id: "daily-deals-ali", name: "ডেইলি ডিলস", icon: "💰", description: "AliExpress স্টাইল", color: "#e91e63",
+    blocks: [
+      { id: "1", type: "banner_strip" as BlockType, content: { text: "⏰ আজকের ডিল — মধ্যরাত পর্যন্ত!", bgColor: "#e91e63" }, settings: { padding: "12px 20px" } },
+      { id: "2", type: "personalized_header" as BlockType, content: { greeting: "হ্যালো {{name}}! 👋", subtitle: "আজকের সেরা ডিলগুলো শুধু আপনার জন্য", avatar: "", bgGradient: "linear-gradient(135deg,#e91e63 0%,#f06292 100%)", showMemberBadge: true, memberLevel: "Gold" }, settings: { padding: "30px", textColor: "#ffffff" } },
+      { id: "3", type: "deal_grid" as BlockType, content: { deals: [{ title: "ডিল অফ দ্য ডে", discount: "65%", originalPrice: "৳1200", salePrice: "৳420", timeLeft: "8h 45m", sold: 73, total: 100 }, { title: "লিমিটেড অফার", discount: "55%", originalPrice: "৳900", salePrice: "৳405", timeLeft: "4h 20m", sold: 55, total: 100 }], style: "aliexpress" }, settings: { padding: "15px 20px" } },
+      { id: "4", type: "header" as BlockType, content: { text: "📚 আজকের বেস্ট বই ডিল", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "5", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "sale" }, settings: { padding: "10px 30px" } },
+      { id: "6", type: "header" as BlockType, content: { text: "📱 ইবুক ডিলস", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "7", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "8", type: "urgency_bar" as BlockType, content: { text: "⚠️ স্টক সীমিত!", subtext: "দ্রুত অর্ডার করুন — প্রতিটি ডিলে সীমিত পরিমাণ", bgGradient: "linear-gradient(90deg,#ff6a00,#ee0979)", animated: true }, settings: { padding: "14px 20px" } },
+      { id: "9", type: "trust_badges" as BlockType, content: { items: [{ icon: "✅", title: "অথেনটিক", subtitle: "100% আসল" }, { icon: "🚀", title: "ফাস্ট শিপিং", subtitle: "1-3 দিন" }, { icon: "💳", title: "COD", subtitle: "ক্যাশ অন ডেলিভারি" }, { icon: "🎁", title: "ফ্রি গিফট", subtitle: "৳1000+ এ" }], style: "ali" }, settings: { padding: "16px 20px", backgroundColor: "#fce4ec" } },
+      { id: "10", type: "button" as BlockType, content: { text: "সব ডিল দেখুন →", url: "#", bgColor: "#e91e63" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "11", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#1a1a2e", textColor: "#999" } },
+    ]
+  },
+  {
+    id: "personalized-picks", name: "পার্সোনালাইজড", icon: "🎯", description: "AI রেকমেন্ডেশন", color: "#9c27b0",
+    blocks: [
+      { id: "1", type: "personalized_header" as BlockType, content: { greeting: "{{name}}, আপনার পছন্দের প্রোডাক্ট! 🎯", subtitle: "আপনার ব্রাউজিং হিস্ট্রি অনুযায়ী বাছাই করা", avatar: "", bgGradient: "linear-gradient(135deg,#9c27b0 0%,#e040fb 100%)", showMemberBadge: true, memberLevel: "Premium" }, settings: { padding: "30px", textColor: "#ffffff" } },
+      { id: "2", type: "header" as BlockType, content: { text: "📚 আপনার জন্য বাছাই করা বই", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "left" as const } },
+      { id: "3", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "modern" }, settings: { padding: "10px 30px" } },
+      { id: "4", type: "header" as BlockType, content: { text: "📱 আপনি এগুলো পছন্দ করবেন", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "left" as const } },
+      { id: "5", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "6", type: "header" as BlockType, content: { text: "🛍️ ট্রেন্ডিং প্রোডাক্ট", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "left" as const } },
+      { id: "7", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "8", type: "coupon_box" as BlockType, content: { code: "FORYOU25", discount: "25%", description: "শুধু আপনার জন্য — ৪৮ ঘণ্টা ভ্যালিড", bgGradient: "linear-gradient(135deg,#9c27b0,#e040fb)" }, settings: { padding: "15px 30px" } },
+      { id: "9", type: "stats_row" as BlockType, content: { items: [{ value: "25%", label: "ডিসকাউন্ট" }, { value: "48h", label: "ভ্যালিড" }, { value: "∞", label: "ব্যবহার" }] }, settings: { padding: "20px 30px", backgroundColor: "#f3e5f5" } },
+      { id: "10", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}} — AI-Powered রেকমেন্ডেশন", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#1a1a2e", textColor: "#999" } },
+    ]
+  },
+  {
+    id: "reengagement", name: "রি-এনগেজমেন্ট", icon: "💌", description: "Win-back ইমেইল", color: "#ff6f00",
+    blocks: [
+      { id: "1", type: "personalized_header" as BlockType, content: { greeting: "{{name}}, আমরা আপনাকে মিস করছি! 😢", subtitle: "অনেকদিন দেখা হয়নি — স্পেশাল অফার নিয়ে ফিরে আসুন", avatar: "", bgGradient: "linear-gradient(135deg,#ff6f00 0%,#ffab40 100%)", showMemberBadge: false, memberLevel: "" }, settings: { padding: "30px", textColor: "#ffffff" } },
+      { id: "2", type: "text" as BlockType, content: { text: "প্রিয় {{name}},\n\nআপনি শেষবার কেনাকাটা করেছিলেন অনেকদিন আগে। আপনার জন্য একটি স্পেশাল ডিসকাউন্ট কোড রাখা হয়েছে!" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "3", type: "coupon_box" as BlockType, content: { code: "MISSYOU30", discount: "30%", description: "আপনার পরবর্তী অর্ডারে — ৭২ ঘণ্টা ভ্যালিড", bgGradient: "linear-gradient(135deg,#ff6f00,#ffab40)" }, settings: { padding: "15px 30px" } },
+      { id: "4", type: "countdown" as BlockType, content: { endDate: "2026-03-12", title: "অফার এক্সপায়ার হচ্ছে" }, settings: { padding: "20px 30px", backgroundColor: "#fff8e1" } },
+      { id: "5", type: "header" as BlockType, content: { text: "🔥 আপনি যা মিস করেছেন", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "6", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "modern" }, settings: { padding: "10px 30px" } },
+      { id: "7", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "8", type: "trust_badges" as BlockType, content: { items: [{ icon: "🚚", title: "ফ্রি শিপিং", subtitle: "আপনার অর্ডারে" }, { icon: "🎁", title: "ফ্রি গিফট", subtitle: "৳500+ এ" }, { icon: "🔄", title: "ইজি রিটার্ন", subtitle: "7 দিন" }, { icon: "💯", title: "গ্যারান্টি", subtitle: "মানি ব্যাক" }], style: "ali" }, settings: { padding: "16px 20px", backgroundColor: "#fff8e1" } },
+      { id: "9", type: "button" as BlockType, content: { text: "এখনই ফিরে আসুন →", url: "#", bgColor: "#ff6f00" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "10", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}}", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#fff8e1" } },
+    ]
+  },
+  {
+    id: "new-arrivals-ali", name: "নতুন আগমন", icon: "✨", description: "New Arrivals শোকেস", color: "#00bcd4",
+    blocks: [
+      { id: "1", type: "banner_strip" as BlockType, content: { text: "✨ নতুন কালেকশন এসেছে — সবার আগে দেখুন!", bgColor: "#00bcd4" }, settings: { padding: "12px 20px" } },
+      { id: "2", type: "hero_banner" as BlockType, content: { title: "✨ নতুন আগমন", subtitle: "এই সপ্তাহের ফ্রেশ কালেকশন", bgGradient: "linear-gradient(135deg,#00bcd4 0%,#00838f 100%)" }, settings: { padding: "50px 30px", textColor: "#ffffff" } },
+      { id: "3", type: "multi_banner" as BlockType, content: { banners: [{ title: "📚 নতুন বই", subtitle: "এই সপ্তাহে", bgGradient: "linear-gradient(135deg,#00bcd4,#4dd0e1)", url: "#" }, { title: "📱 নতুন ইবুক", subtitle: "জাস্ট আপলোড", bgGradient: "linear-gradient(135deg,#009688,#4db6ac)", url: "#" }, { title: "🎨 স্টেশনারি", subtitle: "ফ্রেশ স্টক", bgGradient: "linear-gradient(135deg,#26c6da,#80deea)", url: "#" }, { title: "🎁 গিফট আইডিয়া", subtitle: "নতুন কালেকশন", bgGradient: "linear-gradient(135deg,#0097a7,#00bcd4)", url: "#" }] }, settings: { padding: "10px 20px" } },
+      { id: "4", type: "header" as BlockType, content: { text: "📚 সদ্য প্রকাশিত বই", level: "h2" }, settings: { padding: "20px 30px 5px", alignment: "center" as const } },
+      { id: "5", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "modern" }, settings: { padding: "10px 30px" } },
+      { id: "6", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "7", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "8", type: "cta_section" as BlockType, content: { title: "সবার আগে পেতে চান?", subtitle: "আমাদের নোটিফিকেশন অন করুন!", buttonText: "শপে যান →", buttonUrl: "#", bgGradient: "linear-gradient(135deg,#00bcd4,#00838f)" }, settings: { padding: "0" } },
+      { id: "9", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}} | নতুন আগমন", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#e0f7fa" } },
+    ]
+  },
+  {
+    id: "super-deal-ali", name: "সুপার ডিল", icon: "💎", description: "প্রিমিয়াম অফার", color: "#ffd700",
+    blocks: [
+      { id: "1", type: "urgency_bar" as BlockType, content: { text: "💎 VIP এক্সক্লুসিভ — শুধুমাত্র আজ!", subtext: "সীমিত সংখ্যক — দ্রুত গ্র্যাব করুন", bgGradient: "linear-gradient(90deg,#ffd700,#ff8c00)", animated: true }, settings: { padding: "14px 20px" } },
+      { id: "2", type: "hero_banner" as BlockType, content: { title: "💎 সুপার ডিল ফেস্ট", subtitle: "এক্সক্লুসিভ প্রাইস — শুধু আজকের জন্য", bgGradient: "linear-gradient(135deg,#1a1a2e 0%,#2d1b69 50%,#44337a 100%)" }, settings: { padding: "50px 30px", textColor: "#ffd700" } },
+      { id: "3", type: "deal_grid" as BlockType, content: { deals: [{ title: "💎 প্রিমিয়াম #1", discount: "75%", originalPrice: "৳2000", salePrice: "৳500", timeLeft: "3h 45m", sold: 92, total: 100 }, { title: "💎 প্রিমিয়াম #2", discount: "65%", originalPrice: "৳1500", salePrice: "৳525", timeLeft: "6h 10m", sold: 68, total: 100 }], style: "aliexpress" }, settings: { padding: "15px 20px" } },
+      { id: "4", type: "product_grid" as BlockType, content: { productIds: [], columns: 2, cardStyle: "sale" }, settings: { padding: "10px 30px" } },
+      { id: "5", type: "ebook_grid" as BlockType, content: { ebookIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "6", type: "universal_grid" as BlockType, content: { universalIds: [], columns: 2 }, settings: { padding: "10px 30px" } },
+      { id: "7", type: "progress_bar" as BlockType, content: { title: "⏰ ডিল স্টক", current: 92, target: 100, unit: "%", subtitle: "৯২% বিক্রি হয়ে গেছে!", bgColor: "#ffd700" }, settings: { padding: "20px 30px", backgroundColor: "#1a1a2e" } },
+      { id: "8", type: "coupon_box" as BlockType, content: { code: "SUPERDEAL", discount: "৳500", description: "৳2000+ অর্ডারে — VIP কাস্টমারদের জন্য", bgGradient: "linear-gradient(135deg,#ffd700,#ff8c00)" }, settings: { padding: "15px 30px" } },
+      { id: "9", type: "trust_badges" as BlockType, content: { items: [{ icon: "👑", title: "VIP", subtitle: "এক্সক্লুসিভ" }, { icon: "🏆", title: "বেস্ট প্রাইস", subtitle: "গ্যারান্টি" }, { icon: "🚀", title: "এক্সপ্রেস", subtitle: "ডেলিভারি" }, { icon: "💎", title: "প্রিমিয়াম", subtitle: "কোয়ালিটি" }], style: "ali" }, settings: { padding: "16px 20px", backgroundColor: "#fff8e1" } },
+      { id: "10", type: "button" as BlockType, content: { text: "💎 সুপার ডিল গ্র্যাব করুন →", url: "#", bgColor: "#ffd700", textColor: "#1a1a2e" }, settings: { padding: "20px 30px", alignment: "center" as const } },
+      { id: "11", type: "footer" as BlockType, content: { text: "© 2026 {{shop_name}} | VIP সুপার ডিল", unsubscribe: true }, settings: { padding: "20px 30px", backgroundColor: "#1a1a2e", textColor: "#666" } },
+    ]
+  },
 ];
 
 const genId = () => Math.random().toString(36).slice(2, 10);
@@ -248,6 +352,13 @@ const createDefaultBlock = (type: BlockType): EmailBlock => {
     price_table: { content: { plans: [{ name: "বেসিক", price: "৳199", features: ["5 বই", "1 মাস ভ্যালিড"] }, { name: "প্রিমিয়াম", price: "৳499", features: ["20 বই", "6 মাস ভ্যালিড"], highlighted: true }] }, settings: { padding: "20px 30px" } },
     faq_block: { content: { items: [{ q: "ডেলিভারি চার্জ কত?", a: "ঢাকায় ৳60, ঢাকার বাইরে ৳120" }, { q: "রিটার্ন পলিসি কী?", a: "7 দিনের মধ্যে রিটার্ন করতে পারবেন" }] }, settings: { padding: "20px 30px" } },
     brand_showcase: { content: { title: "বিশ্বস্ত ব্র্যান্ড", brands: ["ব্র্যান্ড ১", "ব্র্যান্ড ২", "ব্র্যান্ড ৩", "ব্র্যান্ড ৪"] }, settings: { padding: "20px 30px", backgroundColor: "#f8f9fa" } },
+    trust_badges: { content: { items: [{ icon: "🚚", title: "ফ্রি শিপিং", subtitle: "৳500+ অর্ডারে" }, { icon: "🔒", title: "সিকিউর পেমেন্ট", subtitle: "100% নিরাপদ" }, { icon: "🔄", title: "ইজি রিটার্ন", subtitle: "7 দিনের মধ্যে" }, { icon: "💬", title: "24/7 সাপোর্ট", subtitle: "লাইভ চ্যাট" }], style: "ali" }, settings: { padding: "16px 20px", backgroundColor: "#fff8f0" } },
+    urgency_bar: { content: { text: "🔥 {{viewers}} জন এখন দেখছে!", subtext: "শুধুমাত্র {{stock}} টি বাকি আছে — দ্রুত অর্ডার করুন!", bgGradient: "linear-gradient(90deg,#ff6a00,#ee0979)", animated: true }, settings: { padding: "14px 20px" } },
+    multi_banner: { content: { banners: [{ title: "📚 বই ফেস্ট", subtitle: "৫০% পর্যন্ত ছাড়", bgGradient: "linear-gradient(135deg,#667eea,#764ba2)", url: "#" }, { title: "📱 ইবুক ডিল", subtitle: "২টি কিনলে ১টি ফ্রি", bgGradient: "linear-gradient(135deg,#ff4757,#c44569)", url: "#" }, { title: "🛍️ স্টেশনারি", subtitle: "নতুন কালেকশন", bgGradient: "linear-gradient(135deg,#11998e,#38ef7d)", url: "#" }, { title: "🎁 গিফট সেট", subtitle: "স্পেশাল প্যাকেজ", bgGradient: "linear-gradient(135deg,#f7971e,#ffd200)", url: "#" }] }, settings: { padding: "10px 20px" } },
+    progress_bar: { content: { title: "🎯 সেল গোল প্রোগ্রেস", current: 78, target: 100, unit: "%", subtitle: "আর মাত্র ২২% বাকি! গোল পূর্ণ হলে এক্সট্রা ১০% ছাড়!", bgColor: "#ff4757" }, settings: { padding: "20px 30px", backgroundColor: "#fff5f5" } },
+    order_summary: { content: { items: [{ name: "প্রোডাক্ট ১", qty: 1, price: "৳350" }, { name: "প্রোডাক্ট ২", qty: 2, price: "৳600" }], subtotal: "৳950", shipping: "৳60", total: "৳1010", orderNumber: "#ORD-2026-001" }, settings: { padding: "20px 30px" } },
+    personalized_header: { content: { greeting: "হ্যালো {{name}}! 👋", subtitle: "আপনার জন্য বিশেষভাবে বাছাই করা অফার", avatar: "", bgGradient: "linear-gradient(135deg,#667eea 0%,#764ba2 100%)", showMemberBadge: true, memberLevel: "Gold" }, settings: { padding: "30px", textColor: "#ffffff" } },
+    deal_grid: { content: { deals: [{ title: "সুপার ডিল", discount: "70%", originalPrice: "৳500", salePrice: "৳150", timeLeft: "2h 30m", sold: 85, total: 100 }, { title: "হট ডিল", discount: "50%", originalPrice: "৳800", salePrice: "৳400", timeLeft: "5h 15m", sold: 42, total: 100 }], style: "aliexpress" }, settings: { padding: "15px 20px" } },
   };
   const d = defaults[type] || {};
   return { id: genId(), type, content: d.content || {}, settings: d.settings || {} };
@@ -703,6 +814,107 @@ export const EmailTemplateBuilder = ({
 
       case "columns":
         return `<div style="padding:${pad};"><table style="width:100%;border-collapse:collapse;"><tr><td style="width:50%;padding:10px;vertical-align:top;">${c.left || ''}</td><td style="width:50%;padding:10px;vertical-align:top;">${c.right || ''}</td></tr></table></div>`;
+
+      // ── Alibaba/AliExpress Dynamic Blocks ──
+      case "trust_badges": {
+        const items = c.items || [];
+        return `<div style="padding:${pad};background:${bgCol};">
+  <table style="width:100%;border-collapse:collapse;"><tr>${items.map((it: any) =>
+    `<td style="text-align:center;padding:12px 6px;width:${100/items.length}%;vertical-align:top;">
+      <div style="font-size:28px;margin-bottom:6px;">${it.icon}</div>
+      <p style="font-size:12px;font-weight:800;color:#333;margin:0;line-height:1.3;">${it.title}</p>
+      <p style="font-size:10px;color:#999;margin:3px 0 0;">${it.subtitle}</p>
+    </td>`
+  ).join('')}</tr></table>
+</div>`;
+      }
+
+      case "urgency_bar":
+        return `<div style="background:${c.bgGradient || 'linear-gradient(90deg,#ff6a00,#ee0979)'};padding:${pad};text-align:center;position:relative;overflow:hidden;">
+  <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(255,255,255,0.05) 10px,rgba(255,255,255,0.05) 20px);"></div>
+  <p style="color:#fff;font-size:16px;margin:0;font-weight:900;letter-spacing:0.5px;position:relative;">${c.text || ''}</p>
+  ${c.subtext ? `<p style="color:rgba(255,255,255,0.9);font-size:12px;margin:6px 0 0;position:relative;">${c.subtext}</p>` : ''}
+</div>`;
+
+      case "multi_banner": {
+        const banners = c.banners || [];
+        return `<div style="padding:${pad};"><table style="width:100%;border-collapse:collapse;"><tr>${banners.slice(0,2).map((b: any) =>
+          `<td style="width:50%;padding:5px;"><a href="${b.url || '#'}" style="text-decoration:none;display:block;background:${b.bgGradient || '#667eea'};border-radius:14px;padding:22px 16px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+            <p style="color:#fff;font-size:16px;font-weight:900;margin:0 0 4px;">${b.title}</p>
+            <p style="color:rgba(255,255,255,0.85);font-size:12px;margin:0;">${b.subtitle}</p>
+          </a></td>`
+        ).join('')}</tr>${banners.length > 2 ? `<tr>${banners.slice(2,4).map((b: any) =>
+          `<td style="width:50%;padding:5px;"><a href="${b.url || '#'}" style="text-decoration:none;display:block;background:${b.bgGradient || '#667eea'};border-radius:14px;padding:22px 16px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+            <p style="color:#fff;font-size:16px;font-weight:900;margin:0 0 4px;">${b.title}</p>
+            <p style="color:rgba(255,255,255,0.85);font-size:12px;margin:0;">${b.subtitle}</p>
+          </a></td>`
+        ).join('')}</tr>` : ''}</table></div>`;
+      }
+
+      case "progress_bar": {
+        const pct = Math.min(100, Math.max(0, c.current || 0));
+        const barColor = c.bgColor || '#ff4757';
+        return `<div style="padding:${pad};background:${bgCol};text-align:center;">
+  ${c.title ? `<p style="font-size:14px;font-weight:800;color:#333;margin:0 0 12px;">${c.title}</p>` : ''}
+  <div style="background:#e0e0e0;border-radius:30px;height:22px;overflow:hidden;position:relative;box-shadow:inset 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="background:${barColor};height:100%;width:${pct}%;border-radius:30px;position:relative;transition:width 0.5s;">
+      <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:#fff;font-size:11px;font-weight:800;">${pct}${c.unit || '%'}</span>
+    </div>
+  </div>
+  ${c.subtitle ? `<p style="font-size:12px;color:#666;margin:10px 0 0;">${c.subtitle}</p>` : ''}
+</div>`;
+      }
+
+      case "order_summary": {
+        const items = c.items || [];
+        return `<div style="padding:${pad};background:${bgCol};">
+  ${c.orderNumber ? `<div style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:14px 20px;border-radius:12px 12px 0 0;"><p style="margin:0;font-size:13px;font-weight:700;">অর্ডার নম্বর: ${c.orderNumber}</p></div>` : ''}
+  <div style="border:1px solid #f0f0f0;border-radius:${c.orderNumber ? '0 0 12px 12px' : '12px'};overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;">${items.map((it: any) =>
+      `<tr style="border-bottom:1px solid #f5f5f5;"><td style="padding:12px 16px;font-size:13px;color:#333;">${it.name}</td><td style="padding:12px 16px;text-align:center;font-size:12px;color:#999;">x${it.qty}</td><td style="padding:12px 16px;text-align:right;font-size:13px;font-weight:700;color:#333;">${it.price}</td></tr>`
+    ).join('')}
+    ${c.subtotal ? `<tr style="border-top:2px solid #f0f0f0;"><td colspan="2" style="padding:8px 16px;font-size:12px;color:#999;">সাবটোটাল</td><td style="padding:8px 16px;text-align:right;font-size:13px;color:#333;">${c.subtotal}</td></tr>` : ''}
+    ${c.shipping ? `<tr><td colspan="2" style="padding:4px 16px;font-size:12px;color:#999;">শিপিং</td><td style="padding:4px 16px;text-align:right;font-size:13px;color:#333;">${c.shipping}</td></tr>` : ''}
+    ${c.total ? `<tr style="background:#f8f9ff;"><td colspan="2" style="padding:12px 16px;font-size:14px;font-weight:800;color:#333;">মোট</td><td style="padding:12px 16px;text-align:right;font-size:18px;font-weight:900;color:#667eea;">${c.total}</td></tr>` : ''}
+    </table>
+  </div>
+</div>`;
+      }
+
+      case "personalized_header":
+        return `<div style="background:${c.bgGradient || 'linear-gradient(135deg,#667eea,#764ba2)'};padding:${pad};text-align:center;position:relative;">
+  <div style="position:absolute;top:0;right:0;width:150px;height:150px;background:rgba(255,255,255,0.05);border-radius:50%;transform:translate(30%,-30%);"></div>
+  <div style="position:absolute;bottom:0;left:0;width:100px;height:100px;background:rgba(255,255,255,0.03);border-radius:50%;transform:translate(-30%,30%);"></div>
+  ${c.showMemberBadge && c.memberLevel ? `<div style="display:inline-block;background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);padding:5px 16px;border-radius:20px;font-size:11px;color:#fff;font-weight:700;margin-bottom:14px;border:1px solid rgba(255,255,255,0.2);">👑 ${c.memberLevel} মেম্বার</div>` : ''}
+  <h1 style="color:${s.textColor || '#fff'};font-size:26px;font-weight:900;margin:0 0 8px;line-height:1.3;position:relative;">${c.greeting || ''}</h1>
+  <p style="color:${s.textColor || '#fff'};opacity:0.85;font-size:14px;margin:0;position:relative;">${c.subtitle || ''}</p>
+</div>`;
+
+      case "deal_grid": {
+        const deals = c.deals || [];
+        return `<div style="padding:${pad};"><table style="width:100%;border-collapse:collapse;"><tr>${deals.map((d: any) =>
+          `<td style="width:${100/deals.length}%;padding:6px;vertical-align:top;">
+            <div style="border:1px solid #f0f0f0;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+              <div style="background:linear-gradient(135deg,#ff4757,#c44569);padding:14px 12px;text-align:center;position:relative;">
+                <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:9px;padding:3px 8px;border-radius:10px;">⏰ ${d.timeLeft || ''}</div>
+                <p style="color:#fff;font-size:36px;font-weight:900;margin:0;line-height:1;">${d.discount || ''}%</p>
+                <p style="color:rgba(255,255,255,0.8);font-size:10px;margin:4px 0 0;text-transform:uppercase;letter-spacing:1px;">ছাড়</p>
+              </div>
+              <div style="padding:14px 12px;text-align:center;">
+                <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 8px;">${d.title || ''}</p>
+                <div style="margin-bottom:10px;">
+                  <span style="font-size:22px;font-weight:900;color:#ff4757;">${d.salePrice || ''}</span>
+                  <span style="font-size:12px;color:#bbb;text-decoration:line-through;margin-left:6px;">${d.originalPrice || ''}</span>
+                </div>
+                <div style="background:#f0f0f0;border-radius:10px;height:8px;overflow:hidden;margin-bottom:6px;">
+                  <div style="background:linear-gradient(90deg,#ff4757,#ff6b81);height:100%;width:${d.sold && d.total ? Math.round(d.sold/d.total*100) : 50}%;border-radius:10px;"></div>
+                </div>
+                <p style="font-size:10px;color:#999;margin:0;">${d.sold || 0}/${d.total || 100} বিক্রি হয়েছে</p>
+              </div>
+            </div>
+          </td>`
+        ).join('')}</tr></table></div>`;
+      }
 
       default:
         return '';
@@ -1362,6 +1574,157 @@ const BlockSettings = ({
           {renderCommonSettings()}
         </div>
       );
+
+    // ── Alibaba/AliExpress Dynamic Block Settings ──
+    case "trust_badges": {
+      const items = c.items || [];
+      return (
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold">🛡️ ট্রাস্ট ব্যাজ আইটেম</Label>
+          {items.map((item: any, i: number) => (
+            <div key={i} className="border rounded-lg p-2 space-y-1.5">
+              <div className="flex gap-1.5">
+                <Input value={item.icon} onChange={e => { const n = [...items]; n[i] = { ...n[i], icon: e.target.value }; onContentChange("items", n); }} placeholder="🚚" className="h-7 text-xs w-12" />
+                <Input value={item.title} onChange={e => { const n = [...items]; n[i] = { ...n[i], title: e.target.value }; onContentChange("items", n); }} placeholder="টাইটেল" className="h-7 text-xs flex-1" />
+              </div>
+              <div className="flex gap-1.5">
+                <Input value={item.subtitle} onChange={e => { const n = [...items]; n[i] = { ...n[i], subtitle: e.target.value }; onContentChange("items", n); }} placeholder="সাবটাইটেল" className="h-7 text-xs flex-1" />
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0" onClick={() => onContentChange("items", items.filter((_: any, j: number) => j !== i))}><X className="h-3 w-3" /></Button>
+              </div>
+            </div>
+          ))}
+          <Button size="sm" variant="outline" className="text-xs w-full" onClick={() => onContentChange("items", [...items, { icon: "✅", title: "ব্যাজ", subtitle: "বিবরণ" }])}><Plus className="h-3 w-3 mr-1" /> যোগ করুন</Button>
+          {renderCommonSettings()}
+        </div>
+      );
+    }
+
+    case "urgency_bar":
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">প্রধান টেক্সট</Label><Input value={c.text || ''} onChange={e => onContentChange("text", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">সাব টেক্সট</Label><Input value={c.subtext || ''} onChange={e => onContentChange("subtext", e.target.value)} className="h-8 text-xs" /></div>
+          {renderGradientPicker(c.bgGradient || '', v => onContentChange("bgGradient", v))}
+          <div className="flex flex-wrap gap-1">
+            <p className="text-[10px] w-full text-muted-foreground mb-1">ভেরিয়েবল:</p>
+            {["{{viewers}}", "{{stock}}", "{{sold}}"].map(tag => (
+              <button key={tag} onClick={() => onContentChange("text", (c.text || '') + ' ' + tag)} className="text-[10px] px-2 py-0.5 bg-muted rounded-full hover:bg-primary/10 transition-colors">{tag}</button>
+            ))}
+          </div>
+          {renderCommonSettings()}
+        </div>
+      );
+
+    case "multi_banner": {
+      const banners = c.banners || [];
+      return (
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold">🎯 ব্যানার আইটেম (সর্বোচ্চ ৪টি)</Label>
+          {banners.map((b: any, i: number) => (
+            <div key={i} className="border rounded-lg p-2 space-y-1.5">
+              <div className="flex gap-1.5">
+                <Input value={b.title} onChange={e => { const n = [...banners]; n[i] = { ...n[i], title: e.target.value }; onContentChange("banners", n); }} placeholder="শিরোনাম" className="h-7 text-xs flex-1" />
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0" onClick={() => onContentChange("banners", banners.filter((_: any, j: number) => j !== i))}><X className="h-3 w-3" /></Button>
+              </div>
+              <Input value={b.subtitle} onChange={e => { const n = [...banners]; n[i] = { ...n[i], subtitle: e.target.value }; onContentChange("banners", n); }} placeholder="সাবটাইটেল" className="h-7 text-xs" />
+              <Input value={b.url || ''} onChange={e => { const n = [...banners]; n[i] = { ...n[i], url: e.target.value }; onContentChange("banners", n); }} placeholder="লিংক URL" className="h-7 text-xs" />
+            </div>
+          ))}
+          {banners.length < 4 && (
+            <Button size="sm" variant="outline" className="text-xs w-full" onClick={() => onContentChange("banners", [...banners, { title: "ব্যানার", subtitle: "সাবটাইটেল", bgGradient: "linear-gradient(135deg,#667eea,#764ba2)", url: "#" }])}><Plus className="h-3 w-3 mr-1" /> ব্যানার যোগ</Button>
+          )}
+          {renderCommonSettings()}
+        </div>
+      );
+    }
+
+    case "progress_bar":
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">শিরোনাম</Label><Input value={c.title || ''} onChange={e => onContentChange("title", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">বর্তমান মান</Label><Input type="number" value={c.current || 0} onChange={e => onContentChange("current", parseInt(e.target.value))} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">টার্গেট</Label><Input type="number" value={c.target || 100} onChange={e => onContentChange("target", parseInt(e.target.value))} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">ইউনিট</Label><Input value={c.unit || '%'} onChange={e => onContentChange("unit", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">সাবটাইটেল</Label><Input value={c.subtitle || ''} onChange={e => onContentChange("subtitle", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">বার কালার</Label>
+            <div className="flex gap-2"><input type="color" value={c.bgColor || '#ff4757'} onChange={e => onContentChange("bgColor", e.target.value)} className="w-8 h-8 rounded cursor-pointer border" /><Input value={c.bgColor || ''} onChange={e => onContentChange("bgColor", e.target.value)} className="h-8 text-xs flex-1" /></div>
+          </div>
+          {renderCommonSettings()}
+        </div>
+      );
+
+    case "order_summary": {
+      const items = c.items || [];
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">অর্ডার নম্বর</Label><Input value={c.orderNumber || ''} onChange={e => onContentChange("orderNumber", e.target.value)} className="h-8 text-xs" /></div>
+          <Label className="text-xs font-semibold">আইটেম</Label>
+          {items.map((item: any, i: number) => (
+            <div key={i} className="flex gap-1.5 items-center">
+              <Input value={item.name} onChange={e => { const n = [...items]; n[i] = { ...n[i], name: e.target.value }; onContentChange("items", n); }} placeholder="নাম" className="h-7 text-xs flex-1" />
+              <Input type="number" value={item.qty} onChange={e => { const n = [...items]; n[i] = { ...n[i], qty: parseInt(e.target.value) }; onContentChange("items", n); }} className="h-7 text-xs w-12" />
+              <Input value={item.price} onChange={e => { const n = [...items]; n[i] = { ...n[i], price: e.target.value }; onContentChange("items", n); }} placeholder="৳0" className="h-7 text-xs w-16" />
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0" onClick={() => onContentChange("items", items.filter((_: any, j: number) => j !== i))}><X className="h-3 w-3" /></Button>
+            </div>
+          ))}
+          <Button size="sm" variant="outline" className="text-xs w-full" onClick={() => onContentChange("items", [...items, { name: "প্রোডাক্ট", qty: 1, price: "৳0" }])}><Plus className="h-3 w-3 mr-1" /> আইটেম যোগ</Button>
+          <div><Label className="text-xs">সাবটোটাল</Label><Input value={c.subtotal || ''} onChange={e => onContentChange("subtotal", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">শিপিং</Label><Input value={c.shipping || ''} onChange={e => onContentChange("shipping", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">মোট</Label><Input value={c.total || ''} onChange={e => onContentChange("total", e.target.value)} className="h-8 text-xs" /></div>
+          {renderCommonSettings()}
+        </div>
+      );
+    }
+
+    case "personalized_header":
+      return (
+        <div className="space-y-3">
+          <div><Label className="text-xs">অভিবাদন</Label><Input value={c.greeting || ''} onChange={e => onContentChange("greeting", e.target.value)} className="h-8 text-xs" /></div>
+          <div><Label className="text-xs">সাবটাইটেল</Label><Input value={c.subtitle || ''} onChange={e => onContentChange("subtitle", e.target.value)} className="h-8 text-xs" /></div>
+          <div className="flex items-center gap-2">
+            <input type="checkbox" checked={c.showMemberBadge || false} onChange={e => onContentChange("showMemberBadge", e.target.checked)} />
+            <Label className="text-xs">মেম্বার ব্যাজ দেখান</Label>
+          </div>
+          {c.showMemberBadge && <div><Label className="text-xs">মেম্বার লেভেল</Label><Input value={c.memberLevel || ''} onChange={e => onContentChange("memberLevel", e.target.value)} placeholder="Gold, Premium, VIP" className="h-8 text-xs" /></div>}
+          {renderGradientPicker(c.bgGradient || '', v => onContentChange("bgGradient", v))}
+          <div className="flex flex-wrap gap-1">
+            <p className="text-[10px] w-full text-muted-foreground mb-1">ভেরিয়েবল:</p>
+            {["{{name}}", "{{shop_name}}", "{{member_level}}"].map(tag => (
+              <button key={tag} onClick={() => onContentChange("greeting", (c.greeting || '') + ' ' + tag)} className="text-[10px] px-2 py-0.5 bg-muted rounded-full hover:bg-primary/10 transition-colors">{tag}</button>
+            ))}
+          </div>
+          {renderCommonSettings()}
+        </div>
+      );
+
+    case "deal_grid": {
+      const deals = c.deals || [];
+      return (
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold">💰 ডিল আইটেম</Label>
+          {deals.map((deal: any, i: number) => (
+            <div key={i} className="border rounded-lg p-2 space-y-1.5">
+              <div className="flex gap-1.5">
+                <Input value={deal.title} onChange={e => { const n = [...deals]; n[i] = { ...n[i], title: e.target.value }; onContentChange("deals", n); }} placeholder="শিরোনাম" className="h-7 text-xs flex-1" />
+                <Input value={deal.discount} onChange={e => { const n = [...deals]; n[i] = { ...n[i], discount: e.target.value }; onContentChange("deals", n); }} placeholder="70%" className="h-7 text-xs w-16" />
+              </div>
+              <div className="flex gap-1.5">
+                <Input value={deal.originalPrice} onChange={e => { const n = [...deals]; n[i] = { ...n[i], originalPrice: e.target.value }; onContentChange("deals", n); }} placeholder="আসল মূল্য" className="h-7 text-xs flex-1" />
+                <Input value={deal.salePrice} onChange={e => { const n = [...deals]; n[i] = { ...n[i], salePrice: e.target.value }; onContentChange("deals", n); }} placeholder="সেল মূল্য" className="h-7 text-xs flex-1" />
+              </div>
+              <div className="flex gap-1.5">
+                <Input value={deal.timeLeft} onChange={e => { const n = [...deals]; n[i] = { ...n[i], timeLeft: e.target.value }; onContentChange("deals", n); }} placeholder="2h 30m" className="h-7 text-xs flex-1" />
+                <Input type="number" value={deal.sold} onChange={e => { const n = [...deals]; n[i] = { ...n[i], sold: parseInt(e.target.value) }; onContentChange("deals", n); }} placeholder="বিক্রি" className="h-7 text-xs w-14" />
+                <Input type="number" value={deal.total} onChange={e => { const n = [...deals]; n[i] = { ...n[i], total: parseInt(e.target.value) }; onContentChange("deals", n); }} placeholder="মোট" className="h-7 text-xs w-14" />
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0" onClick={() => onContentChange("deals", deals.filter((_: any, j: number) => j !== i))}><X className="h-3 w-3" /></Button>
+              </div>
+            </div>
+          ))}
+          <Button size="sm" variant="outline" className="text-xs w-full" onClick={() => onContentChange("deals", [...deals, { title: "নতুন ডিল", discount: "50%", originalPrice: "৳500", salePrice: "৳250", timeLeft: "3h", sold: 50, total: 100 }])}><Plus className="h-3 w-3 mr-1" /> ডিল যোগ</Button>
+          {renderCommonSettings()}
+        </div>
+      );
+    }
 
     default:
       return <p className="text-xs text-muted-foreground">কোনো সেটিংস নেই</p>;
