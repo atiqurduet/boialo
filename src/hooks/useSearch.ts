@@ -136,8 +136,24 @@ export const useSearch = () => {
         product_type: p.product_type,
       }));
 
+      const normalizedDigital = (digitalRes.data || []).map((p: any) => ({
+        id: p.id,
+        title_bn: p.title_bn,
+        title_en: p.title_en,
+        slug: p.slug,
+        price: p.price,
+        original_price: p.original_price,
+        discount_percent: p.discount_percent,
+        author: p.category,
+        publisher: p.product_type,
+        images: p.cover_image ? [p.cover_image] : null,
+        source: 'digital' as const,
+        product_type: p.product_type,
+        is_free: p.is_free,
+      }));
+
       const bookProducts = (productsRes.data || []).map(p => ({ ...p, source: 'book' as const }));
-      const allProducts = [...bookProducts, ...normalizedUniversal].slice(0, limit);
+      const allProducts = [...bookProducts, ...normalizedUniversal, ...normalizedDigital].slice(0, limit);
 
       setResults({
         products: allProducts,
