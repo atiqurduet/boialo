@@ -108,7 +108,7 @@ serve(async (req) => {
         configStatus[key] = !!value && value.length > 0;
       }
 
-      return new Response(JSON.stringify({ success: true, config_status: configStatus }), {
+      return new Response(JSON.stringify({ success: true, config_status: configStatus, sandbox_mode: existingConfig.sandbox === "true" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
