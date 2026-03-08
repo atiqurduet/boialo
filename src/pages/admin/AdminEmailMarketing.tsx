@@ -29,7 +29,10 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  Download,
+  Loader2
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -628,6 +631,110 @@ const AdminEmailMarketing = () => {
 
           {/* Subscribers Tab */}
           <TabsContent value="subscribers" className="space-y-4">
+            <div className="flex flex-wrap gap-2 justify-end">
+              {/* CSV Import */}
+              <Button variant="outline" className="gap-2" onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.csv,.txt';
+                input.onchange = async (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (!file) return;
+                  const text = await file.text();
+                  const lines = text.split(/\r?\n/).filter(l => l.trim());
+                  if (lines.length < 2) { toast.error("CSV ফাইলে কোনো ডাটা নেই"); return; }
+                  
+                  const header = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
+                  const emailIdx = header.findIndex(h => h === 'email' || h === 'ইমেইল');
+                  const nameIdx = header.findIndex(h => h === 'name' || h === 'full_name' || h === 'নাম');
+                  const phoneIdx = header.findIndex(h => h === 'phone' || h === 'ফোন');
+                  
+                  if (emailIdx === -1) { toast.error("CSV এ 'email' কলাম পাওয়া যায়নি"); return; }
+                  
+                  const rows: { email: string; full_name?: string; phone?: string; source: string; status: string }[] = [];
+                  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                  let skipped = 0;
+                  
+                  for (let i = 1; i < lines.length; i++) {
+                    const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+                    const email = cols[emailIdx]?.toLowerCase().trim();
+                    if (!email || !emailRegex.test(email)) { skipped++; continue; }
+                    rows.push({
+                      email,
+                      full_name: nameIdx >= 0 ? cols[nameIdx] || undefined : undefined,
+                      phone: phoneIdx >= 0 ? cols[phoneIdx] || undefined : undefined,
+                      source: 'csv_import',
+                      status: 'active'
+                    });
+                  }
+                  
+                  if (rows.length === 0) { toast.error("কোনো ভ্যালিড ইমেইল পাওয়া যায়নি"); return; }
+                  
+                  // Batch insert in chunks of 500
+                  const chunkSize = 500;
+                  let imported = 0;
+                  let duplicates = 0;
+                  
+                  for (let i = 0; i < rows.length; i += chunkSize) {
+                    const chunk = rows.slice(i, i + chunkSize);
+                    const { error, count } = await supabase
+                      .from('email_subscribers')
+                      .upsert(chunk, { onConflict: 'email', ignoreDuplicates: true, count: 'exact' });
+                    if (error) { console.error('Import chunk error:', error); }
+                    else { imported += count || chunk.length; }
+                  }
+                  
+                  duplicates = rows.length - imported;
+                  queryClient.invalidateQueries({ queryKey: ['email-subscribers'] });
+                  toast.success(`${imported} সাবস্ক্রাইবার ইম্পোর্ট হয়েছে${skipped > 0 ? `, ${skipped}টি বাদ দেওয়া হয়েছে` : ''}${duplicates > 0 ? `, ${duplicates}টি ডুপ্লিকেট` : ''}`);
+                };
+                input.click();
+              }}>
+                <Upload className="h-4 w-4" />
+                CSV ইম্পোর্ট
+              </Button>
+
+              {/* CSV Export */}
+              <Button variant="outline" className="gap-2" onClick={async () => {
+                // Paginated fetch to get ALL subscribers
+                const allSubs: EmailSubscriber[] = [];
+                const pageSize = 1000;
+                let from = 0;
+                let hasMore = true;
+                
+                while (hasMore) {
+                  const { data, error } = await supabase
+                    .from('email_subscribers')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .range(from, from + pageSize - 1);
+                  if (error) { toast.error("এক্সপোর্ট করতে সমস্যা হয়েছে"); return; }
+                  if (data) allSubs.push(...(data as EmailSubscriber[]));
+                  hasMore = (data?.length || 0) === pageSize;
+                  from += pageSize;
+                }
+                
+                if (allSubs.length === 0) { toast.error("কোনো সাবস্ক্রাইবার নেই"); return; }
+                
+                const csvHeader = 'email,full_name,phone,status,source,subscribed_at';
+                const csvRows = allSubs.map(s => 
+                  `"${s.email}","${s.full_name || ''}","${s.phone || ''}","${s.status}","${s.source}","${s.subscribed_at}"`
+                );
+                const csv = [csvHeader, ...csvRows].join('\n');
+                const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `subscribers_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast.success(`${allSubs.length}টি সাবস্ক্রাইবার এক্সপোর্ট হয়েছে`);
+              }}>
+                <Download className="h-4 w-4" />
+                CSV এক্সপোর্ট
+              </Button>
+            </div>
+
             <Card>
               <Table>
                 <TableHeader>
