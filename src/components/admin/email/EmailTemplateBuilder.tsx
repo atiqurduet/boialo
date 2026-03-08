@@ -390,10 +390,10 @@ export const EmailTemplateBuilder = ({
                       }}
                       className="rounded"
                     />
-                    {p.image_url && <img src={p.image_url} className="w-10 h-10 rounded object-cover" />}
+                    {p.imageUrl && <img src={p.imageUrl} className="w-10 h-10 rounded object-cover" />}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{p.title_bn}</p>
-                      <p className="text-xs text-muted-foreground">৳{p.discount_price || p.price}</p>
+                      <p className="text-xs text-muted-foreground">৳{p.discountPrice || p.price}</p>
                     </div>
                   </label>
                 ))}
