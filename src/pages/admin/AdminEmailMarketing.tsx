@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import * as XLSX from "xlsx";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { EmailTemplateBuilder } from "@/components/admin/email/EmailTemplateBuilder";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -530,11 +531,37 @@ const AdminEmailMarketing = () => {
                     নতুন ক্যাম্পেইন
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>{editingCampaign ? "ক্যাম্পেইন এডিট করুন" : "নতুন ক্যাম্পেইন"}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
+                    {/* Load from saved template */}
+                    {templates.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>📋 সেভ করা টেমপ্লেট থেকে লোড করুন</Label>
+                        <Select onValueChange={(templateId) => {
+                          const t = templates.find(tpl => tpl.id === templateId);
+                          if (t) {
+                            setCampaignForm(f => ({
+                              ...f,
+                              subject: f.subject || t.subject,
+                              content: t.html_content
+                            }));
+                            toast.success(`"${t.name}" টেমপ্লেট লোড হয়েছে`);
+                          }
+                        }}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="টেমপ্লেট সিলেক্ট করুন (অপশনাল)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {templates.filter(t => t.is_active).map(t => (
+                              <SelectItem key={t.id} value={t.id}>{t.name} ({t.template_type})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>নাম</Label>
@@ -572,12 +599,10 @@ const AdminEmailMarketing = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>কনটেন্ট (HTML)</Label>
-                      <Textarea 
-                        value={campaignForm.content}
-                        onChange={e => setCampaignForm(f => ({ ...f, content: e.target.value }))}
-                        placeholder="ইমেইল কনটেন্ট..."
-                        rows={8}
+                      <Label>কনটেন্ট</Label>
+                      <EmailTemplateBuilder
+                        initialHtml={campaignForm.content}
+                        onHtmlChange={(html) => setCampaignForm(f => ({ ...f, content: html }))}
                       />
                     </div>
                     <div className="space-y-2">
@@ -850,7 +875,7 @@ const AdminEmailMarketing = () => {
                     নতুন টেমপ্লেট
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>{editingTemplate ? "টেমপ্লেট এডিট করুন" : "নতুন টেমপ্লেট"}</DialogTitle>
                   </DialogHeader>
@@ -894,11 +919,9 @@ const AdminEmailMarketing = () => {
                     </div>
                     <div className="space-y-2">
                       <Label>HTML কনটেন্ট</Label>
-                      <Textarea 
-                        value={templateForm.html_content}
-                        onChange={e => setTemplateForm(f => ({ ...f, html_content: e.target.value }))}
-                        placeholder="HTML কনটেন্ট... {{variable_name}} ব্যবহার করুন"
-                        rows={10}
+                      <EmailTemplateBuilder
+                        initialHtml={templateForm.html_content}
+                        onHtmlChange={(html) => setTemplateForm(f => ({ ...f, html_content: html }))}
                       />
                     </div>
                     <div className="flex items-center space-x-2">
