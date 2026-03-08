@@ -588,7 +588,18 @@ const AdminEmailMarketing = () => {
                       <TableCell>{campaign.open_count}/{campaign.click_count}</TableCell>
                       <TableCell>{format(new Date(campaign.created_at), 'dd/MM/yyyy')}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-2">
+                          {campaign.status === 'draft' && (
+                            <Button 
+                              size="sm" 
+                              onClick={() => sendCampaignMutation.mutate(campaign)}
+                              disabled={sendCampaignMutation.isPending}
+                              className="gap-1"
+                            >
+                              <Send className="h-4 w-4" />
+                              পাঠান
+                            </Button>
+                          )}
                           <Button size="sm" variant="outline" onClick={() => handleEditCampaign(campaign)}>
                             <Edit className="h-4 w-4" />
                           </Button>
