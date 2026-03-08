@@ -167,16 +167,20 @@ const AdminEmailMarketing = () => {
   // Save campaign mutation
   const saveCampaignMutation = useMutation({
     mutationFn: async (campaign: typeof campaignForm & { id?: string }) => {
+      const payload = {
+        ...campaign,
+        scheduled_at: campaign.scheduled_at || null,
+      };
       if (campaign.id) {
         const { error } = await supabase
           .from('email_campaigns')
-          .update(campaign)
+          .update(payload)
           .eq('id', campaign.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('email_campaigns')
-          .insert(campaign);
+          .insert(payload);
         if (error) throw error;
       }
     },
