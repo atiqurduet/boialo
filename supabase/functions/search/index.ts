@@ -92,6 +92,28 @@ function fuzzyMatch(query: string, text: string, threshold = 0.45): { matches: b
   const nq = normalizeBangla(query);
   const nt = normalizeBangla(text);
 
+  // For single character queries, use simple contains/startsWith matching
+  if (nq.length === 1) {
+    // Exact substring match
+    if (nt.includes(nq)) return { matches: true, score: 1 };
+    // Check if any word starts with the character
+    const words = nt.split(' ').filter(w => w.length > 0);
+    for (const w of words) {
+      if (w.startsWith(nq)) return { matches: true, score: 0.95 };
+    }
+    // For single Bangla characters, also check Unicode character class proximity
+    const charCode = nq.charCodeAt(0);
+    // Bangla range: 0x0980-0x09FF
+    if (charCode >= 0x0980 && charCode <= 0x09FF) {
+      for (const w of words) {
+        if (w.charCodeAt(0) >= 0x0980 && w.charCodeAt(0) <= 0x09FF && w.charAt(0) === nq) {
+          return { matches: true, score: 0.9 };
+        }
+      }
+    }
+    return { matches: false, score: 0 };
+  }
+
   // Exact substring match - highest score
   if (nt.includes(nq)) return { matches: true, score: 1 };
 
@@ -183,17 +205,26 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Fetch products and universal products in parallel
+    // For single char queries, use server-side filtering to reduce data transfer
+    const isSingleChar = query.length === 1;
+    const productQuery = supabase
+      .from("products")
+      .select("id, title_bn, title_en, slug, price, original_price, discount_percent, author, publisher, images, is_active")
+      .eq("is_active", true);
+    const universalQuery = supabase
+      .from("universal_products")
+      .select("id, name_bn, name_en, slug, price, original_price, discount_percent, brand, images, is_active, product_type")
+      .eq("is_active", true);
+
+    // For single characters, apply server-side ilike filter to reduce dataset
+    if (isSingleChar) {
+      productQuery.or(`title_bn.ilike.${query}%,title_en.ilike.${query}%,author.ilike.${query}%`);
+      universalQuery.or(`name_bn.ilike.${query}%,name_en.ilike.${query}%,brand.ilike.${query}%`);
+    }
+
     const [productsRes, universalRes] = await Promise.all([
-      supabase
-        .from("products")
-        .select("id, title_bn, title_en, slug, price, original_price, discount_percent, author, publisher, images, is_active")
-        .eq("is_active", true)
-        .limit(200),
-      supabase
-        .from("universal_products")
-        .select("id, name_bn, name_en, slug, price, original_price, discount_percent, brand, images, is_active, product_type")
-        .eq("is_active", true)
-        .limit(200),
+      productQuery.limit(200),
+      universalQuery.limit(200),
     ]);
 
     if (productsRes.error) throw productsRes.error;
