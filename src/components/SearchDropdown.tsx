@@ -721,9 +721,12 @@ export const SearchDropdown = ({
                         </div>
                         {results.products.map((product: any, idx: number) => {
                           const isUniversal = product.source === 'universal';
-                          const productLink = isUniversal 
-                            ? `/${product.publisher || 'lifestyle'}/${product.slug}` 
-                            : `/product/${product.slug}`;
+                          const isDigital = product.source === 'digital';
+                          const productLink = isDigital
+                            ? `/ebooks/${product.slug}`
+                            : isUniversal 
+                              ? `/${product.publisher || 'lifestyle'}/${product.slug}` 
+                              : `/product/${product.slug}`;
                           const itemIdx = (results.autocomplete?.length || 0) + idx;
                           return (
                             <Link
@@ -753,6 +756,11 @@ export const SearchDropdown = ({
                                   {isUniversal && (
                                     <span className="ml-1.5 px-1.5 py-0.5 bg-accent/10 text-accent rounded text-[10px]">
                                       {product.publisher}
+                                    </span>
+                                  )}
+                                  {isDigital && (
+                                    <span className="ml-1.5 px-1.5 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded text-[10px]">
+                                      ই-বুক
                                     </span>
                                   )}
                                 </p>
