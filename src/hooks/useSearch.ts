@@ -13,8 +13,9 @@ interface Product {
   author: string | null;
   publisher: string | null;
   images: any;
-  source?: 'book' | 'universal';
+  source?: 'book' | 'universal' | 'digital';
   product_type?: string;
+  is_free?: boolean;
 }
 
 interface Category {
