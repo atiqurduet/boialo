@@ -145,7 +145,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true, message: `Successfully booked with ${provider.name_en}`, tracking_code: bookingResult.tracking_code || bookingResult.consignment_id, consignment_id: bookingResult.consignment_id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ success: false, error: bookingResult.message, details: bookingResult.raw_response }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ success: false, error: bookingResult.message, details: bookingResult.raw_response }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error: unknown) {
     console.error("Courier booking error:", error);
