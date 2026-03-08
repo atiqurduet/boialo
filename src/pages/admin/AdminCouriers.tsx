@@ -522,11 +522,16 @@ const AdminCouriers = () => {
                             <div className="space-y-4">
                               {getProviderConfig(courier.provider).map((field) => (
                                 <div key={field} className="space-y-2">
-                                  <Label htmlFor={field} className="capitalize">{field.replace(/_/g, " ")}</Label>
+                                  <Label htmlFor={field} className="capitalize">
+                                    {field.startsWith("sandbox_") ? `🧪 Sandbox ${field.replace("sandbox_", "").replace(/_/g, " ")}` : field.replace(/_/g, " ")}
+                                  </Label>
                                   {field === "sandbox" ? (
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
                                       <Switch id={field} checked={config[field] === "true"} onCheckedChange={(checked) => setConfig({ ...config, [field]: checked.toString() })} />
-                                      <span className="text-sm text-muted-foreground">{config[field] === "true" ? "Test Mode" : "Live Mode"}</span>
+                                      <div>
+                                        <span className="text-sm font-medium">{config[field] === "true" ? "🧪 Sandbox/Test Mode" : "🟢 Live/Production Mode"}</span>
+                                        <p className="text-xs text-muted-foreground">{config[field] === "true" ? "টেস্ট API ব্যবহার হবে" : "লাইভ API ব্যবহার হবে"}</p>
+                                      </div>
                                     </div>
                                   ) : (
                                     <Input id={field} type={field.includes("secret") || field.includes("password") || field.includes("token") || field.includes("key") ? "password" : "text"} value={config[field] || ""} onChange={(e) => setConfig({ ...config, [field]: e.target.value })} placeholder={configStatus[field] ? "••••••• (configured - enter new value to change)" : `Enter ${field.replace(/_/g, " ")}`} />
