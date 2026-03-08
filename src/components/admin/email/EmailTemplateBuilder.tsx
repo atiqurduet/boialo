@@ -815,6 +815,107 @@ export const EmailTemplateBuilder = ({
       case "columns":
         return `<div style="padding:${pad};"><table style="width:100%;border-collapse:collapse;"><tr><td style="width:50%;padding:10px;vertical-align:top;">${c.left || ''}</td><td style="width:50%;padding:10px;vertical-align:top;">${c.right || ''}</td></tr></table></div>`;
 
+      // ── Alibaba/AliExpress Dynamic Blocks ──
+      case "trust_badges": {
+        const items = c.items || [];
+        return `<div style="padding:${pad};background:${bgCol};">
+  <table style="width:100%;border-collapse:collapse;"><tr>${items.map((it: any) =>
+    `<td style="text-align:center;padding:12px 6px;width:${100/items.length}%;vertical-align:top;">
+      <div style="font-size:28px;margin-bottom:6px;">${it.icon}</div>
+      <p style="font-size:12px;font-weight:800;color:#333;margin:0;line-height:1.3;">${it.title}</p>
+      <p style="font-size:10px;color:#999;margin:3px 0 0;">${it.subtitle}</p>
+    </td>`
+  ).join('')}</tr></table>
+</div>`;
+      }
+
+      case "urgency_bar":
+        return `<div style="background:${c.bgGradient || 'linear-gradient(90deg,#ff6a00,#ee0979)'};padding:${pad};text-align:center;position:relative;overflow:hidden;">
+  <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(255,255,255,0.05) 10px,rgba(255,255,255,0.05) 20px);"></div>
+  <p style="color:#fff;font-size:16px;margin:0;font-weight:900;letter-spacing:0.5px;position:relative;">${c.text || ''}</p>
+  ${c.subtext ? `<p style="color:rgba(255,255,255,0.9);font-size:12px;margin:6px 0 0;position:relative;">${c.subtext}</p>` : ''}
+</div>`;
+
+      case "multi_banner": {
+        const banners = c.banners || [];
+        return `<div style="padding:${pad};"><table style="width:100%;border-collapse:collapse;"><tr>${banners.slice(0,2).map((b: any) =>
+          `<td style="width:50%;padding:5px;"><a href="${b.url || '#'}" style="text-decoration:none;display:block;background:${b.bgGradient || '#667eea'};border-radius:14px;padding:22px 16px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+            <p style="color:#fff;font-size:16px;font-weight:900;margin:0 0 4px;">${b.title}</p>
+            <p style="color:rgba(255,255,255,0.85);font-size:12px;margin:0;">${b.subtitle}</p>
+          </a></td>`
+        ).join('')}</tr>${banners.length > 2 ? `<tr>${banners.slice(2,4).map((b: any) =>
+          `<td style="width:50%;padding:5px;"><a href="${b.url || '#'}" style="text-decoration:none;display:block;background:${b.bgGradient || '#667eea'};border-radius:14px;padding:22px 16px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+            <p style="color:#fff;font-size:16px;font-weight:900;margin:0 0 4px;">${b.title}</p>
+            <p style="color:rgba(255,255,255,0.85);font-size:12px;margin:0;">${b.subtitle}</p>
+          </a></td>`
+        ).join('')}</tr>` : ''}</table></div>`;
+      }
+
+      case "progress_bar": {
+        const pct = Math.min(100, Math.max(0, c.current || 0));
+        const barColor = c.bgColor || '#ff4757';
+        return `<div style="padding:${pad};background:${bgCol};text-align:center;">
+  ${c.title ? `<p style="font-size:14px;font-weight:800;color:#333;margin:0 0 12px;">${c.title}</p>` : ''}
+  <div style="background:#e0e0e0;border-radius:30px;height:22px;overflow:hidden;position:relative;box-shadow:inset 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="background:${barColor};height:100%;width:${pct}%;border-radius:30px;position:relative;transition:width 0.5s;">
+      <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:#fff;font-size:11px;font-weight:800;">${pct}${c.unit || '%'}</span>
+    </div>
+  </div>
+  ${c.subtitle ? `<p style="font-size:12px;color:#666;margin:10px 0 0;">${c.subtitle}</p>` : ''}
+</div>`;
+      }
+
+      case "order_summary": {
+        const items = c.items || [];
+        return `<div style="padding:${pad};background:${bgCol};">
+  ${c.orderNumber ? `<div style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:14px 20px;border-radius:12px 12px 0 0;"><p style="margin:0;font-size:13px;font-weight:700;">অর্ডার নম্বর: ${c.orderNumber}</p></div>` : ''}
+  <div style="border:1px solid #f0f0f0;border-radius:${c.orderNumber ? '0 0 12px 12px' : '12px'};overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;">${items.map((it: any) =>
+      `<tr style="border-bottom:1px solid #f5f5f5;"><td style="padding:12px 16px;font-size:13px;color:#333;">${it.name}</td><td style="padding:12px 16px;text-align:center;font-size:12px;color:#999;">x${it.qty}</td><td style="padding:12px 16px;text-align:right;font-size:13px;font-weight:700;color:#333;">${it.price}</td></tr>`
+    ).join('')}
+    ${c.subtotal ? `<tr style="border-top:2px solid #f0f0f0;"><td colspan="2" style="padding:8px 16px;font-size:12px;color:#999;">সাবটোটাল</td><td style="padding:8px 16px;text-align:right;font-size:13px;color:#333;">${c.subtotal}</td></tr>` : ''}
+    ${c.shipping ? `<tr><td colspan="2" style="padding:4px 16px;font-size:12px;color:#999;">শিপিং</td><td style="padding:4px 16px;text-align:right;font-size:13px;color:#333;">${c.shipping}</td></tr>` : ''}
+    ${c.total ? `<tr style="background:#f8f9ff;"><td colspan="2" style="padding:12px 16px;font-size:14px;font-weight:800;color:#333;">মোট</td><td style="padding:12px 16px;text-align:right;font-size:18px;font-weight:900;color:#667eea;">${c.total}</td></tr>` : ''}
+    </table>
+  </div>
+</div>`;
+      }
+
+      case "personalized_header":
+        return `<div style="background:${c.bgGradient || 'linear-gradient(135deg,#667eea,#764ba2)'};padding:${pad};text-align:center;position:relative;">
+  <div style="position:absolute;top:0;right:0;width:150px;height:150px;background:rgba(255,255,255,0.05);border-radius:50%;transform:translate(30%,-30%);"></div>
+  <div style="position:absolute;bottom:0;left:0;width:100px;height:100px;background:rgba(255,255,255,0.03);border-radius:50%;transform:translate(-30%,30%);"></div>
+  ${c.showMemberBadge && c.memberLevel ? `<div style="display:inline-block;background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);padding:5px 16px;border-radius:20px;font-size:11px;color:#fff;font-weight:700;margin-bottom:14px;border:1px solid rgba(255,255,255,0.2);">👑 ${c.memberLevel} মেম্বার</div>` : ''}
+  <h1 style="color:${s.textColor || '#fff'};font-size:26px;font-weight:900;margin:0 0 8px;line-height:1.3;position:relative;">${c.greeting || ''}</h1>
+  <p style="color:${s.textColor || '#fff'};opacity:0.85;font-size:14px;margin:0;position:relative;">${c.subtitle || ''}</p>
+</div>`;
+
+      case "deal_grid": {
+        const deals = c.deals || [];
+        return `<div style="padding:${pad};"><table style="width:100%;border-collapse:collapse;"><tr>${deals.map((d: any) =>
+          `<td style="width:${100/deals.length}%;padding:6px;vertical-align:top;">
+            <div style="border:1px solid #f0f0f0;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+              <div style="background:linear-gradient(135deg,#ff4757,#c44569);padding:14px 12px;text-align:center;position:relative;">
+                <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:9px;padding:3px 8px;border-radius:10px;">⏰ ${d.timeLeft || ''}</div>
+                <p style="color:#fff;font-size:36px;font-weight:900;margin:0;line-height:1;">${d.discount || ''}%</p>
+                <p style="color:rgba(255,255,255,0.8);font-size:10px;margin:4px 0 0;text-transform:uppercase;letter-spacing:1px;">ছাড়</p>
+              </div>
+              <div style="padding:14px 12px;text-align:center;">
+                <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 8px;">${d.title || ''}</p>
+                <div style="margin-bottom:10px;">
+                  <span style="font-size:22px;font-weight:900;color:#ff4757;">${d.salePrice || ''}</span>
+                  <span style="font-size:12px;color:#bbb;text-decoration:line-through;margin-left:6px;">${d.originalPrice || ''}</span>
+                </div>
+                <div style="background:#f0f0f0;border-radius:10px;height:8px;overflow:hidden;margin-bottom:6px;">
+                  <div style="background:linear-gradient(90deg,#ff4757,#ff6b81);height:100%;width:${d.sold && d.total ? Math.round(d.sold/d.total*100) : 50}%;border-radius:10px;"></div>
+                </div>
+                <p style="font-size:10px;color:#999;margin:0;">${d.sold || 0}/${d.total || 100} বিক্রি হয়েছে</p>
+              </div>
+            </div>
+          </td>`
+        ).join('')}</tr></table></div>`;
+      }
+
       default:
         return '';
     }
