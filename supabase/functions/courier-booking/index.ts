@@ -39,19 +39,66 @@ async function bookPathao(order: Order, config: Record<string, string>): Promise
   const client_secret = isSandbox ? (config.sandbox_client_secret || config.client_secret) : config.client_secret;
   const username = isSandbox ? (config.sandbox_username || config.username) : config.username;
   const password = isSandbox ? (config.sandbox_password || config.password) : config.password;
-  if (!client_id || !client_secret || !username || !password) return { success: false, message: "Pathao credentials not configured" };
+
+  if (!client_id || !client_secret || !username || !password) {
+    return { success: false, message: "Pathao credentials not configured" };
+  }
+
   const baseUrl = isSandbox ? "https://courier-api-sandbox.pathao.com" : "https://api-hermes.pathao.com";
+
   try {
-    const tokenResponse = await fetch(`${baseUrl}/aladdin/api/v1/issue-token`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ client_id, client_secret, username, password, grant_type: "password" }) });
-    if (!tokenResponse.ok) { const error = await tokenResponse.text(); return { success: false, message: "Failed to authenticate with Pathao", raw_response: error }; }
+    const tokenResponse = await fetch(`${baseUrl}/aladdin/api/v1/issue-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ client_id, client_secret, username, password, grant_type: "password" }),
+    });
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.text();
+      return { success: false, message: "Failed to authenticate with Pathao", raw_response: error };
+    }
+
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
-    const selectedStoreIdRaw = isSandbox
+
+    let selectedStoreIdRaw = isSandbox
       ? (config.sandbox_store_id || config.store_id)
       : config.store_id;
+
+    if (!selectedStoreIdRaw) {
+      const storesResponse = await fetch(`${baseUrl}/aladdin/api/v1/stores`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (storesResponse.ok) {
+        const storesJson = await storesResponse.json();
+        const stores = Array.isArray(storesJson?.data)
+          ? storesJson.data
+          : Array.isArray(storesJson?.data?.data)
+            ? storesJson.data.data
+            : Array.isArray(storesJson?.stores)
+              ? storesJson.stores
+              : [];
+
+        const firstStore = stores[0];
+        selectedStoreIdRaw = firstStore?.store_id ?? firstStore?.id ?? null;
+      }
+    }
+
     const selectedStoreId = selectedStoreIdRaw ? Number(selectedStoreIdRaw) : null;
+    if (!selectedStoreId || !Number.isFinite(selectedStoreId)) {
+      return {
+        success: false,
+        message: "Pathao store_id missing বা invalid। Courier settings এ store_id দিন।",
+      };
+    }
 
     const orderPayload: Record<string, unknown> = {
+      store_id: selectedStoreId,
       merchant_order_id: order.order_number,
       recipient_name: order.full_name,
       recipient_phone: order.phone.replace("+88", ""),
@@ -67,15 +114,38 @@ async function bookPathao(order: Order, config: Record<string, string>): Promise
       item_description: `Order #${order.order_number}`,
     };
 
-    if (selectedStoreId && Number.isFinite(selectedStoreId)) {
-      orderPayload.store_id = selectedStoreId;
+    const orderResponse = await fetch(`${baseUrl}/aladdin/api/v1/orders`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(orderPayload),
+    });
+
+    const orderResult = await orderResponse.json();
+    if (orderResponse.ok && orderResult.data) {
+      return {
+        success: true,
+        consignment_id: orderResult.data.consignment_id,
+        tracking_code: orderResult.data.consignment_id,
+        raw_response: orderResult,
+      };
     }
 
-    const orderResponse = await fetch(`${baseUrl}/aladdin/api/v1/orders`, { method: "POST", headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(orderPayload) });
-    const orderResult = await orderResponse.json();
-    if (orderResponse.ok && orderResult.data) return { success: true, consignment_id: orderResult.data.consignment_id, tracking_code: orderResult.data.consignment_id, raw_response: orderResult };
-    return { success: false, message: orderResult.message || "Pathao booking failed", raw_response: orderResult };
-  } catch (error: unknown) { const errorMessage = error instanceof Error ? error.message : "Unknown error"; return { success: false, message: `Pathao API error: ${errorMessage}` }; }
+    const firstPathaoError = orderResult?.errors
+      ? Object.values(orderResult.errors)?.flat()?.[0]
+      : null;
+
+    return {
+      success: false,
+      message: firstPathaoError || orderResult.message || "Pathao booking failed",
+      raw_response: orderResult,
+    };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, message: `Pathao API error: ${errorMessage}` };
+  }
 }
 
 async function bookSteadfast(order: Order, config: Record<string, string>): Promise<BookingResult> {
