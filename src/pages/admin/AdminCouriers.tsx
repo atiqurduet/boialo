@@ -224,12 +224,20 @@ const AdminCouriers = () => {
     }
   };
 
-  const getProviderConfig = (provider: string) => {
+  const getProviderLiveFields = (provider: string): string[] => {
     switch (provider) {
-      case "pathao": return ["sandbox", "client_id", "client_secret", "username", "password", "sandbox_client_id", "sandbox_client_secret", "sandbox_username", "sandbox_password"];
-      case "steadfast": return ["sandbox", "api_key", "secret_key"];
-      case "redx": return ["sandbox", "api_token"];
-      case "manual": return [];
+      case "pathao": return ["client_id", "client_secret", "username", "password"];
+      case "steadfast": return ["api_key", "secret_key"];
+      case "redx": return ["api_token"];
+      default: return [];
+    }
+  };
+
+  const getProviderSandboxFields = (provider: string): string[] => {
+    switch (provider) {
+      case "pathao": return ["sandbox_client_id", "sandbox_client_secret", "sandbox_username", "sandbox_password"];
+      case "steadfast": return ["sandbox_api_key", "sandbox_secret_key"];
+      case "redx": return ["sandbox_api_token"];
       default: return [];
     }
   };
