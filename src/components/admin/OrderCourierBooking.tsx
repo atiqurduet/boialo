@@ -71,8 +71,13 @@ export const OrderCourierBooking = ({
   const [selectedCourier, setSelectedCourier] = useState<string>(currentCourier || "");
   const [manualTracking, setManualTracking] = useState<string>("");
 
-  // Realtime subscription for courier booking updates
+  // Realtime subscription + auto-polling for courier status updates
   useEffect(() => {
+    let isActive = true;
+    let pollInterval = 30000; // Start at 30s
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    // Realtime subscription
     const channel = supabase
       .channel(`courier-booking-${orderId}`)
       .on(
@@ -86,11 +91,35 @@ export const OrderCourierBooking = ({
         () => {
           queryClient.invalidateQueries({ queryKey: ["courier-booking", orderId] });
           queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+          pollInterval = 30000; // Reset on realtime event
         }
       )
       .subscribe();
 
+    // Auto-poll courier provider API for live status
+    const pollStatus = async () => {
+      if (!isActive) return;
+      try {
+        await supabase.functions.invoke("courier-status-sync", {
+          body: { order_id: orderId },
+        });
+        queryClient.invalidateQueries({ queryKey: ["courier-booking", orderId] });
+        queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      } catch (e) {
+        // Silent fail, increase interval
+        pollInterval = Math.min(pollInterval * 1.5, 120000);
+      }
+      if (isActive) {
+        timeoutId = setTimeout(pollStatus, pollInterval);
+      }
+    };
+
+    // Start polling after initial delay
+    timeoutId = setTimeout(pollStatus, 5000);
+
     return () => {
+      isActive = false;
+      clearTimeout(timeoutId);
       supabase.removeChannel(channel);
     };
   }, [orderId, queryClient]);
