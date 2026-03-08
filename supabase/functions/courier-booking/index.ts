@@ -86,10 +86,13 @@ serve(async (req) => {
   }
 
   try {
+    console.log("courier-booking: Request received");
+    
     // --- AUTH CHECK: Require admin/manager role ---
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      console.log("courier-booking: No auth header");
+      return new Response(JSON.stringify({ error: "Unauthorized - no auth header" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -100,15 +103,21 @@ serve(async (req) => {
 
     const { data: userData, error: userError } = await supabaseAuth.auth.getUser();
     if (userError || !userData.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      console.log("courier-booking: Auth failed", userError?.message);
+      return new Response(JSON.stringify({ error: "Unauthorized - invalid session", details: userError?.message }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const userId = userData.user.id;
+    console.log("courier-booking: Authenticated user", userId);
+    
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle();
+    console.log("courier-booking: User role", roleData?.role);
+    
     if (!roleData || !["super_admin", "admin", "manager", "support"].includes(roleData.role)) {
+      console.log("courier-booking: Forbidden - role:", roleData?.role);
       return new Response(JSON.stringify({ error: "Forbidden: Admin access required" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     // --- END AUTH CHECK ---
