@@ -94,7 +94,7 @@ export const useSearch = () => {
     try {
       const sanitizedQuery = query.replace(/[%_\\]/g, '\\$&').slice(0, 200);
       
-      const [productsRes, universalRes, categoriesRes] = await Promise.all([
+      const [productsRes, universalRes, digitalRes, categoriesRes] = await Promise.all([
         supabase
           .from('products')
           .select('id, title_bn, title_en, slug, price, original_price, discount_percent, author, publisher, images')
@@ -106,6 +106,12 @@ export const useSearch = () => {
           .select('id, name_bn, name_en, slug, price, original_price, discount_percent, brand, images, product_type')
           .eq('is_active', true)
           .or(`name_bn.ilike.%${sanitizedQuery}%,name_en.ilike.%${sanitizedQuery}%,brand.ilike.%${sanitizedQuery}%`)
+          .limit(limit),
+        supabase
+          .from('digital_products')
+          .select('id, title_bn, title_en, slug, price, original_price, discount_percent, cover_image, product_type, is_free, category')
+          .eq('is_active', true)
+          .or(`title_bn.ilike.%${sanitizedQuery}%,title_en.ilike.%${sanitizedQuery}%,category.ilike.%${sanitizedQuery}%`)
           .limit(limit),
         supabase
           .from('categories')
