@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import * as XLSX from "xlsx";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -406,6 +407,36 @@ const AdminEmailMarketing = () => {
     }
   };
 
+  // Helper: fetch all subscribers with pagination
+  const fetchAllSubscribers = async (): Promise<EmailSubscriber[] | null> => {
+    const allSubs: EmailSubscriber[] = [];
+    const pageSize = 1000;
+    let from = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('email_subscribers')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, from + pageSize - 1);
+      if (error) { toast.error("এক্সপোর্ট করতে সমস্যা হয়েছে"); return null; }
+      if (data) allSubs.push(...(data as EmailSubscriber[]));
+      hasMore = (data?.length || 0) === pageSize;
+      from += pageSize;
+    }
+    if (allSubs.length === 0) { toast.error("কোনো সাবস্ক্রাইবার নেই"); return null; }
+    return allSubs;
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Stats
   const activeSubscribers = subscribers.filter(s => s.status === 'active').length;
   const sentCampaigns = campaigns.filter(c => c.status === 'sent').length;
@@ -632,48 +663,73 @@ const AdminEmailMarketing = () => {
           {/* Subscribers Tab */}
           <TabsContent value="subscribers" className="space-y-4">
             <div className="flex flex-wrap gap-2 justify-end">
-              {/* CSV Import */}
+              {/* File Import (CSV/Excel) */}
               <Button variant="outline" className="gap-2" onClick={() => {
                 const input = document.createElement('input');
                 input.type = 'file';
-                input.accept = '.csv,.txt';
+                input.accept = '.csv,.txt,.xlsx,.xls';
                 input.onchange = async (e) => {
                   const file = (e.target as HTMLInputElement).files?.[0];
                   if (!file) return;
-                  const text = await file.text();
-                  const lines = text.split(/\r?\n/).filter(l => l.trim());
-                  if (lines.length < 2) { toast.error("CSV ফাইলে কোনো ডাটা নেই"); return; }
                   
-                  const header = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
-                  const emailIdx = header.findIndex(h => h === 'email' || h === 'ইমেইল');
-                  const nameIdx = header.findIndex(h => h === 'name' || h === 'full_name' || h === 'নাম');
-                  const phoneIdx = header.findIndex(h => h === 'phone' || h === 'ফোন');
+                  const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
                   
-                  if (emailIdx === -1) { toast.error("CSV এ 'email' কলাম পাওয়া যায়নি"); return; }
+                  let parsedRows: { email: string; full_name?: string; phone?: string }[] = [];
                   
-                  const rows: { email: string; full_name?: string; phone?: string; source: string; status: string }[] = [];
+                  if (isExcel) {
+                    const buffer = await file.arrayBuffer();
+                    const wb = XLSX.read(buffer, { type: 'array' });
+                    const ws = wb.Sheets[wb.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(ws);
+                    
+                    if (jsonData.length === 0) { toast.error("Excel ফাইলে কোনো ডাটা নেই"); return; }
+                    
+                    const firstRow = jsonData[0];
+                    const keys = Object.keys(firstRow).map(k => k.toLowerCase().trim());
+                    const emailKey = Object.keys(firstRow).find(k => ['email', 'ইমেইল'].includes(k.toLowerCase().trim()));
+                    const nameKey = Object.keys(firstRow).find(k => ['name', 'full_name', 'নাম'].includes(k.toLowerCase().trim()));
+                    const phoneKey = Object.keys(firstRow).find(k => ['phone', 'ফোন'].includes(k.toLowerCase().trim()));
+                    
+                    if (!emailKey) { toast.error("Excel এ 'email' কলাম পাওয়া যায়নি"); return; }
+                    
+                    parsedRows = jsonData.map(row => ({
+                      email: String(row[emailKey] || '').toLowerCase().trim(),
+                      full_name: nameKey ? String(row[nameKey] || '') : undefined,
+                      phone: phoneKey ? String(row[phoneKey] || '') : undefined,
+                    }));
+                  } else {
+                    const text = await file.text();
+                    const lines = text.split(/\r?\n/).filter(l => l.trim());
+                    if (lines.length < 2) { toast.error("CSV ফাইলে কোনো ডাটা নেই"); return; }
+                    
+                    const header = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
+                    const emailIdx = header.findIndex(h => h === 'email' || h === 'ইমেইল');
+                    const nameIdx = header.findIndex(h => h === 'name' || h === 'full_name' || h === 'নাম');
+                    const phoneIdx = header.findIndex(h => h === 'phone' || h === 'ফোন');
+                    
+                    if (emailIdx === -1) { toast.error("CSV এ 'email' কলাম পাওয়া যায়নি"); return; }
+                    
+                    for (let i = 1; i < lines.length; i++) {
+                      const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+                      parsedRows.push({
+                        email: cols[emailIdx]?.toLowerCase().trim() || '',
+                        full_name: nameIdx >= 0 ? cols[nameIdx] || undefined : undefined,
+                        phone: phoneIdx >= 0 ? cols[phoneIdx] || undefined : undefined,
+                      });
+                    }
+                  }
+                  
                   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                   let skipped = 0;
-                  
-                  for (let i = 1; i < lines.length; i++) {
-                    const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-                    const email = cols[emailIdx]?.toLowerCase().trim();
-                    if (!email || !emailRegex.test(email)) { skipped++; continue; }
-                    rows.push({
-                      email,
-                      full_name: nameIdx >= 0 ? cols[nameIdx] || undefined : undefined,
-                      phone: phoneIdx >= 0 ? cols[phoneIdx] || undefined : undefined,
-                      source: 'csv_import',
-                      status: 'active'
-                    });
-                  }
+                  const rows = parsedRows.filter(r => {
+                    if (!r.email || !emailRegex.test(r.email)) { skipped++; return false; }
+                    return true;
+                  }).map(r => ({ ...r, source: isExcel ? 'excel_import' : 'csv_import', status: 'active' }));
                   
                   if (rows.length === 0) { toast.error("কোনো ভ্যালিড ইমেইল পাওয়া যায়নি"); return; }
                   
-                  // Batch insert in chunks of 500
                   const chunkSize = 500;
                   let imported = 0;
-                  let duplicates = 0;
                   
                   for (let i = 0; i < rows.length; i += chunkSize) {
                     const chunk = rows.slice(i, i + chunkSize);
@@ -684,37 +740,20 @@ const AdminEmailMarketing = () => {
                     else { imported += count || chunk.length; }
                   }
                   
-                  duplicates = rows.length - imported;
+                  const duplicates = rows.length - imported;
                   queryClient.invalidateQueries({ queryKey: ['email-subscribers'] });
-                  toast.success(`${imported} সাবস্ক্রাইবার ইম্পোর্ট হয়েছে${skipped > 0 ? `, ${skipped}টি বাদ দেওয়া হয়েছে` : ''}${duplicates > 0 ? `, ${duplicates}টি ডুপ্লিকেট` : ''}`);
+                  toast.success(`${imported} সাবস্ক্রাইবার ইম্পোর্ট হয়েছে${skipped > 0 ? `, ${skipped}টি বাদ` : ''}${duplicates > 0 ? `, ${duplicates}টি ডুপ্লিকেট` : ''}`);
                 };
                 input.click();
               }}>
                 <Upload className="h-4 w-4" />
-                CSV ইম্পোর্ট
+                ইম্পোর্ট (CSV/Excel)
               </Button>
 
               {/* CSV Export */}
               <Button variant="outline" className="gap-2" onClick={async () => {
-                // Paginated fetch to get ALL subscribers
-                const allSubs: EmailSubscriber[] = [];
-                const pageSize = 1000;
-                let from = 0;
-                let hasMore = true;
-                
-                while (hasMore) {
-                  const { data, error } = await supabase
-                    .from('email_subscribers')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .range(from, from + pageSize - 1);
-                  if (error) { toast.error("এক্সপোর্ট করতে সমস্যা হয়েছে"); return; }
-                  if (data) allSubs.push(...(data as EmailSubscriber[]));
-                  hasMore = (data?.length || 0) === pageSize;
-                  from += pageSize;
-                }
-                
-                if (allSubs.length === 0) { toast.error("কোনো সাবস্ক্রাইবার নেই"); return; }
+                const allSubs = await fetchAllSubscribers();
+                if (!allSubs) return;
                 
                 const csvHeader = 'email,full_name,phone,status,source,subscribed_at';
                 const csvRows = allSubs.map(s => 
@@ -722,16 +761,34 @@ const AdminEmailMarketing = () => {
                 );
                 const csv = [csvHeader, ...csvRows].join('\n');
                 const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `subscribers_${format(new Date(), 'yyyy-MM-dd')}.csv`;
-                a.click();
-                URL.revokeObjectURL(url);
-                toast.success(`${allSubs.length}টি সাবস্ক্রাইবার এক্সপোর্ট হয়েছে`);
+                downloadBlob(blob, `subscribers_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+                toast.success(`${allSubs.length}টি সাবস্ক্রাইবার CSV এক্সপোর্ট হয়েছে`);
               }}>
                 <Download className="h-4 w-4" />
                 CSV এক্সপোর্ট
+              </Button>
+
+              {/* Excel Export */}
+              <Button variant="outline" className="gap-2" onClick={async () => {
+                const allSubs = await fetchAllSubscribers();
+                if (!allSubs) return;
+                
+                const wsData = allSubs.map(s => ({
+                  email: s.email,
+                  full_name: s.full_name || '',
+                  phone: s.phone || '',
+                  status: s.status,
+                  source: s.source,
+                  subscribed_at: s.subscribed_at
+                }));
+                const ws = XLSX.utils.json_to_sheet(wsData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Subscribers');
+                XLSX.writeFile(wb, `subscribers_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+                toast.success(`${allSubs.length}টি সাবস্ক্রাইবার Excel এক্সপোর্ট হয়েছে`);
+              }}>
+                <Download className="h-4 w-4" />
+                Excel এক্সপোর্ট
               </Button>
             </div>
 
