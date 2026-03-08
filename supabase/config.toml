@@ -51,3 +51,6 @@ verify_jwt = false
 [functions.image-search]
 verify_jwt = false
 
+[functions.admin-backup]
+verify_jwt = false
+
