@@ -240,20 +240,40 @@ const AdminCouriers = () => {
     }
   };
 
-  const getProviderLiveFields = (provider: string): string[] => {
+  const getProviderLiveFields = (provider: string): { key: string; label: string; placeholder: string }[] => {
     switch (provider) {
-      case "pathao": return ["client_id", "client_secret", "username", "password"];
-      case "steadfast": return ["api_key", "secret_key"];
-      case "redx": return ["api_token"];
+      case "pathao": return [
+        { key: "client_id", label: "Client ID", placeholder: "Merchant API থেকে client_id দিন" },
+        { key: "client_secret", label: "Client Secret", placeholder: "Merchant API থেকে client_secret দিন" },
+        { key: "username", label: "Username (Email)", placeholder: "আপনার Pathao মার্চেন্ট ইমেইল" },
+        { key: "password", label: "Password", placeholder: "আপনার Pathao মার্চেন্ট পাসওয়ার্ড" },
+      ];
+      case "steadfast": return [
+        { key: "api_key", label: "API Key", placeholder: "Live API Key দিন" },
+        { key: "secret_key", label: "Secret Key", placeholder: "Live Secret Key দিন" },
+      ];
+      case "redx": return [
+        { key: "api_token", label: "API Token", placeholder: "Live API Token দিন" },
+      ];
       default: return [];
     }
   };
 
-  const getProviderSandboxFields = (provider: string): string[] => {
+  const getProviderSandboxFields = (provider: string): { key: string; label: string; placeholder: string }[] => {
     switch (provider) {
-      case "pathao": return ["sandbox_client_id", "sandbox_client_secret", "sandbox_username", "sandbox_password"];
-      case "steadfast": return ["sandbox_api_key", "sandbox_secret_key"];
-      case "redx": return ["sandbox_api_token"];
+      case "pathao": return [
+        { key: "sandbox_client_id", label: "Client ID", placeholder: "e.g. 7N1aMJQbWm" },
+        { key: "sandbox_client_secret", label: "Client Secret", placeholder: "e.g. wRcaibZk..." },
+        { key: "sandbox_username", label: "Username", placeholder: "e.g. test@pathao.com" },
+        { key: "sandbox_password", label: "Password", placeholder: "e.g. lovePathao" },
+      ];
+      case "steadfast": return [
+        { key: "sandbox_api_key", label: "API Key", placeholder: "Sandbox API Key দিন" },
+        { key: "sandbox_secret_key", label: "Secret Key", placeholder: "Sandbox Secret Key দিন" },
+      ];
+      case "redx": return [
+        { key: "sandbox_api_token", label: "API Token", placeholder: "Sandbox API Token দিন" },
+      ];
       default: return [];
     }
   };
@@ -563,9 +583,9 @@ const AdminCouriers = () => {
                                     <div className="h-px flex-1 bg-border" />
                                   </div>
                                   {getProviderLiveFields(courier.provider).map((field) => (
-                                    <div key={field} className="space-y-2">
-                                      <Label htmlFor={field} className="capitalize">{field.replace(/_/g, " ")}</Label>
-                                      <Input id={field} type={field.includes("secret") || field.includes("password") || field.includes("token") || field.includes("key") ? "password" : "text"} value={config[field] || ""} onChange={(e) => setConfig({ ...config, [field]: e.target.value })} placeholder={configStatus[field] ? "••••••• (configured)" : `Enter ${field.replace(/_/g, " ")}`} />
+                                    <div key={field.key} className="space-y-2">
+                                      <Label htmlFor={field.key} className="capitalize">{field.label}</Label>
+                                      <Input id={field.key} type={field.key.includes("secret") || field.key.includes("password") || field.key.includes("token") || field.key.includes("key") ? "password" : "text"} value={config[field.key] || ""} onChange={(e) => setConfig({ ...config, [field.key]: e.target.value })} placeholder={configStatus[field.key] ? "••••••• (configured)" : field.placeholder} />
                                     </div>
                                   ))}
                                 </div>
@@ -580,9 +600,9 @@ const AdminCouriers = () => {
                                     <div className="h-px flex-1 bg-border" />
                                   </div>
                                   {getProviderSandboxFields(courier.provider).map((field) => (
-                                    <div key={field} className="space-y-2">
-                                      <Label htmlFor={field} className="capitalize">{field.replace("sandbox_", "").replace(/_/g, " ")}</Label>
-                                      <Input id={field} type={field.includes("secret") || field.includes("password") || field.includes("token") || field.includes("key") ? "password" : "text"} value={config[field] || ""} onChange={(e) => setConfig({ ...config, [field]: e.target.value })} placeholder={configStatus[field] ? "••••••• (configured)" : `Enter ${field.replace("sandbox_", "").replace(/_/g, " ")}`} />
+                                    <div key={field.key} className="space-y-2">
+                                      <Label htmlFor={field.key} className="capitalize">{field.label}</Label>
+                                      <Input id={field.key} type={field.key.includes("secret") || field.key.includes("password") || field.key.includes("token") || field.key.includes("key") ? "password" : "text"} value={config[field.key] || ""} onChange={(e) => setConfig({ ...config, [field.key]: e.target.value })} placeholder={configStatus[field.key] ? "••••••• (configured)" : field.placeholder} />
                                     </div>
                                   ))}
                                 </div>
