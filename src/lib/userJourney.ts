@@ -191,7 +191,7 @@ export const getTopPages = async (type: 'entry' | 'exit', days: number = 7) => {
   const since = new Date(Date.now() - days * 24 * 60 * 60_000).toISOString();
   const column = type === 'entry' ? 'entry_page' : 'exit_page';
   try {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('user_journeys')
       .select(column)
       .gte('created_at', since);

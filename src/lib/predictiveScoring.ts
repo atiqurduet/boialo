@@ -229,14 +229,14 @@ export const getPredictiveAnalytics = async () => {
 export const getSegmentDistribution = async (days: number = 7) => {
   const since = new Date(Date.now() - days * 24 * 60 * 60_000).toISOString();
   try {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('predictive_scores')
       .select('segment')
       .gte('updated_at', since);
 
     if (!data) return [];
     const counts = new Map<string, number>();
-    data.forEach(row => counts.set(row.segment, (counts.get(row.segment) || 0) + 1));
+    (data as any[]).forEach((row: any) => counts.set(row.segment, (counts.get(row.segment) || 0) + 1));
     return Array.from(counts.entries())
       .map(([segment, count]) => ({ segment, count }))
       .sort((a, b) => b.count - a.count);

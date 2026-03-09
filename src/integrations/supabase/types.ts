@@ -3600,6 +3600,48 @@ export type Database = {
         }
         Relationships: []
       }
+      predictive_scores: {
+        Row: {
+          churn_risk: number | null
+          created_at: string | null
+          id: string
+          ltv_tier: string | null
+          next_action: string | null
+          purchase_probability: number | null
+          recommended_action: string | null
+          segment: string | null
+          session_id: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          churn_risk?: number | null
+          created_at?: string | null
+          id?: string
+          ltv_tier?: string | null
+          next_action?: string | null
+          purchase_probability?: number | null
+          recommended_action?: string | null
+          segment?: string | null
+          session_id: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          churn_risk?: number | null
+          created_at?: string | null
+          id?: string
+          ltv_tier?: string | null
+          next_action?: string | null
+          purchase_probability?: number | null
+          recommended_action?: string | null
+          segment?: string | null
+          session_id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       price_drop_alerts: {
         Row: {
           created_at: string
@@ -6104,6 +6146,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_journeys: {
+        Row: {
+          conversion_type: string | null
+          conversion_value: number | null
+          created_at: string | null
+          device_type: string | null
+          entry_page: string | null
+          exit_page: string | null
+          id: string
+          journey_data: Json | null
+          patterns: string[] | null
+          session_id: string
+          total_duration_ms: number | null
+          total_steps: number | null
+          unique_pages: number | null
+          user_id: string | null
+        }
+        Insert: {
+          conversion_type?: string | null
+          conversion_value?: number | null
+          created_at?: string | null
+          device_type?: string | null
+          entry_page?: string | null
+          exit_page?: string | null
+          id?: string
+          journey_data?: Json | null
+          patterns?: string[] | null
+          session_id: string
+          total_duration_ms?: number | null
+          total_steps?: number | null
+          unique_pages?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          conversion_type?: string | null
+          conversion_value?: number | null
+          created_at?: string | null
+          device_type?: string | null
+          entry_page?: string | null
+          exit_page?: string | null
+          id?: string
+          journey_data?: Json | null
+          patterns?: string[] | null
+          session_id?: string
+          total_duration_ms?: number | null
+          total_steps?: number | null
+          unique_pages?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       user_notifications: {
         Row: {
