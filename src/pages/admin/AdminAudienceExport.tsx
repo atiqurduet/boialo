@@ -588,109 +588,17 @@ const AdminAudienceExport = () => {
             </CardContent>
           </Card>
         </div>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm">Facebook Ads</h3>
-                    <p className="text-xs text-muted-foreground">CAPI + Custom Audience</p>
-                  </div>
-                </div>
-                {platformStatus?.facebook.pixel && platformStatus?.facebook.capi ? (
-                  <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                    <CheckCircle2 className="w-3 h-3 mr-1" /> কানেক্টেড
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-muted-foreground">
-                    <AlertCircle className="w-3 h-3 mr-1" /> সেটআপ করুন
-                  </Badge>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <div className={`flex-1 text-xs p-2 rounded-lg ${platformStatus?.facebook.pixel ? 'bg-emerald-100/50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
-                  <span className="font-medium">Pixel:</span> {platformStatus?.facebook.pixel ? '✓' : '✗'}
-                </div>
-                <div className={`flex-1 text-xs p-2 rounded-lg ${platformStatus?.facebook.capi ? 'bg-emerald-100/50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
-                  <span className="font-medium">CAPI:</span> {platformStatus?.facebook.capi ? '✓' : '✗'}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className={`border-2 transition-all ${platformStatus?.tiktok.pixel && platformStatus?.tiktok.token ? 'border-pink-500/40 bg-pink-50/30 dark:bg-pink-950/20' : 'border-dashed border-muted-foreground/30'}`}>
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
-                    <Zap className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm">TikTok Ads</h3>
-                    <p className="text-xs text-muted-foreground">Events API + Audience</p>
-                  </div>
-                </div>
-                {platformStatus?.tiktok.pixel && platformStatus?.tiktok.token ? (
-                  <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                    <CheckCircle2 className="w-3 h-3 mr-1" /> কানেক্টেড
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-muted-foreground">
-                    <AlertCircle className="w-3 h-3 mr-1" /> সেটআপ করুন
-                  </Badge>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <div className={`flex-1 text-xs p-2 rounded-lg ${platformStatus?.tiktok.pixel ? 'bg-emerald-100/50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
-                  <span className="font-medium">Pixel:</span> {platformStatus?.tiktok.pixel ? '✓' : '✗'}
-                </div>
-                <div className={`flex-1 text-xs p-2 rounded-lg ${platformStatus?.tiktok.token ? 'bg-emerald-100/50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
-                  <span className="font-medium">Token:</span> {platformStatus?.tiktok.token ? '✓' : '✗'}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className={`border-2 transition-all ${platformStatus?.google.measurement && platformStatus?.google.secret ? 'border-green-500/40 bg-green-50/30 dark:bg-green-950/20' : 'border-dashed border-muted-foreground/30'}`}>
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center">
-                    <BarChart3 className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm">Google Ads</h3>
-                    <p className="text-xs text-muted-foreground">GA4 MP + Customer Match</p>
-                  </div>
-                </div>
-                {platformStatus?.google.measurement && platformStatus?.google.secret ? (
-                  <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                    <CheckCircle2 className="w-3 h-3 mr-1" /> কানেক্টেড
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-muted-foreground">
-                    <AlertCircle className="w-3 h-3 mr-1" /> সেটআপ করুন
-                  </Badge>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <div className={`flex-1 text-xs p-2 rounded-lg ${platformStatus?.google.measurement ? 'bg-emerald-100/50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
-                  <span className="font-medium">GA4:</span> {platformStatus?.google.measurement ? '✓' : '✗'}
-                </div>
-                <div className={`flex-1 text-xs p-2 rounded-lg ${platformStatus?.google.secret ? 'bg-emerald-100/50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
-                  <span className="font-medium">Secret:</span> {platformStatus?.google.secret ? '✓' : '✗'}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* ── Main Tabs ──────────────────────────────────── */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="flex flex-wrap w-full max-w-3xl gap-1">
+          <TabsList className="flex flex-wrap w-full max-w-4xl gap-1">
             <TabsTrigger value="audiences" className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> অডিয়েন্স</TabsTrigger>
+            <TabsTrigger value="credentials" className="flex items-center gap-1.5"><Key className="w-3.5 h-3.5" /> API কী</TabsTrigger>
+            <TabsTrigger value="sync" className="flex items-center gap-1.5"><Send className="w-3.5 h-3.5" /> অটো সিংক</TabsTrigger>
             <TabsTrigger value="ai" className="flex items-center gap-1.5"><Brain className="w-3.5 h-3.5" /> AI প্রেডিকশন</TabsTrigger>
             <TabsTrigger value="overlap" className="flex items-center gap-1.5"><GitMerge className="w-3.5 h-3.5" /> ওভারল্যাপ</TabsTrigger>
             <TabsTrigger value="insights" className="flex items-center gap-1.5"><PieChart className="w-3.5 h-3.5" /> ইনসাইট</TabsTrigger>
             <TabsTrigger value="builder" className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> বিল্ডার</TabsTrigger>
-            <TabsTrigger value="sync" className="flex items-center gap-1.5"><Send className="w-3.5 h-3.5" /> অটো সিংক</TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> হিস্টোরি</TabsTrigger>
           </TabsList>
 
