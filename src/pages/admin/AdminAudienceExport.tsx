@@ -208,25 +208,101 @@ const AdminAudienceExport = () => {
     },
   });
 
-  // ── Platform connection status ─────────────────────────
-  const { data: platformStatus } = useQuery({
-    queryKey: ['ad-platform-status'],
+  // ── Platform connection status (from ad_platform_credentials) ─
+  const { data: platformStatus, refetch: refetchPlatformStatus } = useQuery({
+    queryKey: ['ad-platform-credentials-status'],
     queryFn: async () => {
-      const { data } = await supabase.from('site_settings').select('setting_key, setting_value')
-        .in('setting_key', ['fb_pixel_id', 'fb_capi_token', 'tiktok_pixel_id', 'tiktok_access_token', 'ga_measurement_id', 'ga_api_secret']);
-      const get = (key: string) => {
-        let val = data?.find((s: any) => s.setting_key === key)?.setting_value;
-        try { if (typeof val === 'string') val = JSON.parse(val); } catch {}
-        return typeof val === 'string' && val.length > 3;
-      };
+      const { data } = await supabase.from('ad_platform_credentials' as any).select('platform, credential_key').eq('is_active', true);
+      const has = (p: string, k: string) => (data || []).some((r: any) => r.platform === p && r.credential_key === k);
       return {
-        facebook: { pixel: get('fb_pixel_id'), capi: get('fb_capi_token') },
-        tiktok: { pixel: get('tiktok_pixel_id'), token: get('tiktok_access_token') },
-        google: { measurement: get('ga_measurement_id'), secret: get('ga_api_secret') },
+        facebook: { pixel: has('facebook', 'pixel_id'), capi: has('facebook', 'access_token'), adAccount: has('facebook', 'ad_account_id') },
+        tiktok: { pixel: has('tiktok', 'pixel_id'), token: has('tiktok', 'access_token'), advertiser: has('tiktok', 'advertiser_id') },
+        google: { measurement: has('google', 'measurement_id'), secret: has('google', 'api_secret'), developer: has('google', 'developer_token'), customer: has('google', 'customer_id') },
       };
     },
-    staleTime: 60_000,
+    staleTime: 30_000,
   });
+
+  // ── All credentials for management ────────────────────
+  const { data: allCredentials, refetch: refetchCredentials } = useQuery({
+    queryKey: ['ad-platform-all-credentials'],
+    queryFn: async () => {
+      const { data } = await supabase.from('ad_platform_credentials' as any).select('*').order('platform').order('credential_key');
+      return data || [];
+    },
+    staleTime: 30_000,
+  });
+
+  // ── Sync jobs history ─────────────────────────────────
+  const { data: syncJobs, refetch: refetchSyncJobs } = useQuery({
+    queryKey: ['audience-sync-jobs'],
+    queryFn: async () => {
+      const { data } = await supabase.from('audience_sync_jobs' as any).select('*').order('created_at', { ascending: false }).limit(20);
+      return data || [];
+    },
+    staleTime: 30_000,
+  });
+
+  // ── Recent events log ─────────────────────────────────
+  const { data: recentEvents } = useQuery({
+    queryKey: ['ad-platform-recent-events'],
+    queryFn: async () => {
+      const { data } = await supabase.from('ad_platform_events' as any).select('*').order('created_at', { ascending: false }).limit(20);
+      return data || [];
+    },
+    staleTime: 30_000,
+  });
+
+  const [credentialSaving, setCredentialSaving] = useState(false);
+  const [newCredPlatform, setNewCredPlatform] = useState('facebook');
+  const [newCredKey, setNewCredKey] = useState('');
+  const [newCredValue, setNewCredValue] = useState('');
+  const [syncingPlatform, setSyncingPlatform] = useState<string | null>(null);
+
+  const saveCredential = async () => {
+    if (!newCredKey || !newCredValue) { toast.error('সব ফিল্ড পূরণ করুন'); return; }
+    setCredentialSaving(true);
+    try {
+      const { error } = await supabase.from('ad_platform_credentials' as any).upsert(
+        { platform: newCredPlatform, credential_key: newCredKey, credential_value: newCredValue, is_active: true, updated_at: new Date().toISOString() },
+        { onConflict: 'platform,credential_key' }
+      );
+      if (error) throw error;
+      toast.success('ক্রেডেনশিয়াল সেভ হয়েছে');
+      setNewCredKey(''); setNewCredValue('');
+      refetchCredentials(); refetchPlatformStatus();
+    } catch (e: any) {
+      toast.error(e.message || 'সেভ ব্যর্থ');
+    } finally { setCredentialSaving(false); }
+  };
+
+  const deleteCredential = async (id: string) => {
+    await supabase.from('ad_platform_credentials' as any).delete().eq('id', id);
+    toast.success('ক্রেডেনশিয়াল মুছে ফেলা হয়েছে');
+    refetchCredentials(); refetchPlatformStatus();
+  };
+
+  const directSyncAudience = async (platform: string) => {
+    setSyncingPlatform(platform);
+    try {
+      // Create sync job
+      const { data: job, error: jobErr } = await supabase.from('audience_sync_jobs' as any).insert({
+        platform, audience_type: selectedAudience,
+        audience_name: `Boialo - ${audienceTypes.find(a => a.value === selectedAudience)?.label} - ${new Date().toLocaleDateString('bn-BD')}`,
+        status: 'pending',
+      }).select().single();
+      if (jobErr) throw jobErr;
+
+      const { error } = await supabase.functions.invoke('ad-audience-sync', {
+        body: { platform, audience_type: selectedAudience, job_id: job.id },
+      });
+      if (error) throw error;
+      toast.success(`${platform} এ অডিয়েন্স সিংক শুরু হয়েছে`);
+      refetchSyncJobs();
+    } catch (e: any) {
+      toast.error(e.message || 'সিংক ব্যর্থ');
+    } finally { setSyncingPlatform(null); }
+  };
 
   // ── Overview stats ─────────────────────────────────────
   const { data: overviewStats } = useQuery({
