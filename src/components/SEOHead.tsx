@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { getLocalBusinessSchema, getSiteNavigationSchema } from '@/lib/seoUtils';
 
 interface BreadcrumbItem {
   name: string;
@@ -14,7 +15,6 @@ interface SEOHeadProps {
   ogImage?: string;
   ogImageAlt?: string;
   noindex?: boolean;
-  // Product-specific
   product?: {
     price: number;
     currency?: string;
@@ -29,7 +29,6 @@ interface SEOHeadProps {
     author?: string;
     publisher?: string;
   };
-  // Article-specific
   article?: {
     publishedTime?: string;
     modifiedTime?: string;
@@ -37,10 +36,12 @@ interface SEOHeadProps {
     section?: string;
     tags?: string[];
   };
-  // Breadcrumbs
   breadcrumbs?: BreadcrumbItem[];
-  // Organization override
   organizationName?: string;
+  // New: FAQ schema
+  faqs?: { question: string; answer: string }[];
+  // New: Additional JSON-LD
+  additionalJsonLd?: object[];
 }
 
 const BASE_URL = 'https://boialo.com';
@@ -59,13 +60,13 @@ export const SEOHead = ({
   product,
   article,
   breadcrumbs,
+  faqs,
+  additionalJsonLd,
 }: SEOHeadProps) => {
   useEffect(() => {
-    // Set document title
     const fullTitle = title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`;
     document.title = fullTitle;
 
-    // Helper to set meta tags
     const setMeta = (attr: string, key: string, content: string) => {
       let el = document.querySelector(`meta[${attr}="${key}"]`) as HTMLMetaElement;
       if (!el) {
@@ -76,11 +77,15 @@ export const SEOHead = ({
       el.setAttribute('content', content);
     };
 
-    const setLink = (rel: string, href: string) => {
-      let el = document.querySelector(`link[rel="${rel}"]`) as HTMLLinkElement;
+    const setLink = (rel: string, href: string, attrs?: Record<string, string>) => {
+      const selector = attrs 
+        ? `link[rel="${rel}"][hreflang="${attrs.hreflang || ''}"]`
+        : `link[rel="${rel}"]:not([hreflang])`;
+      let el = document.querySelector(selector) as HTMLLinkElement;
       if (!el) {
         el = document.createElement('link');
         el.setAttribute('rel', rel);
+        if (attrs) Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
         document.head.appendChild(el);
       }
       el.setAttribute('href', href);
@@ -90,10 +95,16 @@ export const SEOHead = ({
     setMeta('name', 'description', description.substring(0, 160));
     if (keywords) setMeta('name', 'keywords', keywords);
     setMeta('name', 'robots', noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
+    setMeta('name', 'googlebot', noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
+    setMeta('name', 'bingbot', noindex ? 'noindex, nofollow' : 'index, follow');
 
     // Canonical
-    const canonical = canonicalUrl || window.location.href.split('?')[0];
+    const canonical = canonicalUrl || `${BASE_URL}${window.location.pathname}`;
     setLink('canonical', canonical);
+
+    // Hreflang tags for multi-language support
+    setLink('alternate', canonical, { hreflang: 'bn' });
+    setLink('alternate', canonical, { hreflang: 'x-default' });
 
     // Open Graph
     setMeta('property', 'og:title', fullTitle);
@@ -118,6 +129,8 @@ export const SEOHead = ({
       setMeta('property', 'product:price:amount', String(product.price));
       setMeta('property', 'product:price:currency', product.currency || 'BDT');
       if (product.availability === 'InStock') setMeta('property', 'product:availability', 'in stock');
+      if (product.availability === 'OutOfStock') setMeta('property', 'product:availability', 'out of stock');
+      if (product.availability === 'PreOrder') setMeta('property', 'product:availability', 'preorder');
       if (product.brand) setMeta('property', 'product:brand', product.brand);
       if (product.category) setMeta('property', 'product:category', product.category);
     }
@@ -147,27 +160,20 @@ export const SEOHead = ({
       document.head.appendChild(script);
     };
 
-    // Organization schema (always)
-    addJsonLd({
-      '@context': 'https://schema.org',
-      '@type': 'Organization',
-      name: SITE_NAME,
-      url: BASE_URL,
-      logo: `${BASE_URL}/favicon.ico`,
-      sameAs: [],
-      contactPoint: {
-        '@type': 'ContactPoint',
-        contactType: 'customer service',
-        availableLanguage: ['Bengali', 'English'],
-      },
-    });
+    // Organization schema
+    addJsonLd(getLocalBusinessSchema());
+
+    // Site Navigation schema
+    addJsonLd(getSiteNavigationSchema());
 
     // WebSite schema with SearchAction
     addJsonLd({
       '@context': 'https://schema.org',
       '@type': 'WebSite',
       name: SITE_NAME,
+      alternateName: 'Boialo',
       url: BASE_URL,
+      inLanguage: 'bn',
       potentialAction: {
         '@type': 'SearchAction',
         target: {
@@ -208,6 +214,7 @@ export const SEOHead = ({
           availability: `https://schema.org/${product.availability || 'InStock'}`,
           url: canonical,
           seller: { '@type': 'Organization', name: SITE_NAME },
+          priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         },
       };
       if (product.brand) productSchema.brand = { '@type': 'Brand', name: product.brand };
@@ -238,6 +245,7 @@ export const SEOHead = ({
         description: description,
         image: ogImage || DEFAULT_IMAGE,
         url: canonical,
+        inLanguage: 'bn',
         datePublished: article.publishedTime,
         dateModified: article.modifiedTime || article.publishedTime,
         author: { '@type': 'Person', name: article.author || SITE_NAME },
@@ -250,10 +258,29 @@ export const SEOHead = ({
       });
     }
 
+    // FAQ schema
+    if (faqs && faqs.length > 0) {
+      addJsonLd({
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqs.map(faq => ({
+          '@type': 'Question',
+          name: faq.question,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: faq.answer,
+          },
+        })),
+      });
+    }
+
+    // Additional JSON-LD
+    additionalJsonLd?.forEach(ld => addJsonLd(ld));
+
     return () => {
       removeJsonLd();
     };
-  }, [title, description, keywords, canonicalUrl, ogType, ogImage, ogImageAlt, noindex, product, article, breadcrumbs]);
+  }, [title, description, keywords, canonicalUrl, ogType, ogImage, ogImageAlt, noindex, product, article, breadcrumbs, faqs, additionalJsonLd]);
 
   return null;
 };

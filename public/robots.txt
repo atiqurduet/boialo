@@ -1,3 +1,6 @@
+# Boialo.com - বইআলো Robots.txt
+# Optimized for Google, Bing, Yandex, Baidu, DuckDuckGo
+
 User-agent: Googlebot
 Allow: /
 Disallow: /admin/
@@ -7,6 +10,16 @@ Disallow: /checkout
 Disallow: /order-confirmation
 Disallow: /reset-password
 Disallow: /forgot-password
+Disallow: /order-tracking
+Disallow: /order-history
+Disallow: /refund-requests
+Disallow: /rewards
+Disallow: /digital-library
+Crawl-delay: 1
+
+User-agent: Googlebot-Image
+Allow: /
+Disallow: /admin/
 
 User-agent: Bingbot
 Allow: /
@@ -14,12 +27,79 @@ Disallow: /admin/
 Disallow: /signin
 Disallow: /profile
 Disallow: /checkout
+Disallow: /order-confirmation
+Disallow: /reset-password
+Disallow: /forgot-password
+Crawl-delay: 2
+
+User-agent: Slurp
+Allow: /
+Disallow: /admin/
+Disallow: /signin
+Disallow: /profile
+Disallow: /checkout
+Crawl-delay: 2
+
+User-agent: DuckDuckBot
+Allow: /
+Disallow: /admin/
+Disallow: /signin
+Disallow: /profile
+Disallow: /checkout
+
+User-agent: Baiduspider
+Allow: /
+Disallow: /admin/
+Disallow: /signin
+Disallow: /profile
+Disallow: /checkout
+Crawl-delay: 3
+
+User-agent: YandexBot
+Allow: /
+Disallow: /admin/
+Disallow: /signin
+Disallow: /profile
+Disallow: /checkout
+Crawl-delay: 2
 
 User-agent: Twitterbot
 Allow: /
 
 User-agent: facebookexternalhit
 Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+User-agent: Pinterestbot
+Allow: /
+
+User-agent: AhrefsBot
+Allow: /product/
+Allow: /categories/
+Allow: /authors/
+Allow: /publishers/
+Allow: /blog/
+Disallow: /admin/
+Disallow: /signin
+Crawl-delay: 5
+
+User-agent: SemrushBot
+Allow: /product/
+Allow: /categories/
+Allow: /authors/
+Allow: /publishers/
+Allow: /blog/
+Disallow: /admin/
+Disallow: /signin
+Crawl-delay: 5
 
 User-agent: *
 Allow: /
@@ -30,6 +110,14 @@ Disallow: /checkout
 Disallow: /order-confirmation
 Disallow: /reset-password
 Disallow: /forgot-password
+Disallow: /order-tracking
+Disallow: /order-history
+Disallow: /refund-requests
+Disallow: /rewards
+Disallow: /digital-library
 
 # Sitemaps
 Sitemap: https://boialo.com/sitemap.xml
+
+# Host
+Host: https://boialo.com
