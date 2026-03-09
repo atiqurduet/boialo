@@ -170,6 +170,7 @@ const Checkout = () => {
         cartItems.map(item => ({ id: item.product.id, name: item.product.title, price: item.product.price, category: item.product.category, quantity: item.quantity })),
         subtotal
       );
+      serverTrackInitiateCheckout(subtotal, cartItems.length, user?.id);
     }
   }, [cartLoading]);
 
