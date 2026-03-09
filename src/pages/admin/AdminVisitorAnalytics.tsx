@@ -46,6 +46,114 @@ const AdminVisitorAnalytics = () => {
     }
   });
 
+  // Engagement scores
+  const { data: engagementData = [] } = useQuery({
+    queryKey: ['engagement-scores', days],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('engagement_scores')
+        .select('*')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(2000);
+      return (data || []) as any[];
+    }
+  });
+
+  // User journeys
+  const { data: journeyData = [] } = useQuery({
+    queryKey: ['user-journeys', days],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('user_journeys')
+        .select('*')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(2000);
+      return (data || []) as any[];
+    }
+  });
+
+  // Predictive scores
+  const { data: predictiveData = [] } = useQuery({
+    queryKey: ['predictive-scores', days],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('predictive_scores')
+        .select('*')
+        .gte('updated_at', since)
+        .order('updated_at', { ascending: false })
+        .limit(1000);
+      return (data || []) as any[];
+    }
+  });
+
+  // Session recordings
+  const { data: recordingsData = [] } = useQuery({
+    queryKey: ['session-recordings', days],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('session_recordings')
+        .select('id, session_id, user_id, page_count, duration_seconds, has_rage_clicks, has_errors, device_type, created_at')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(500);
+      return (data || []) as any[];
+    }
+  });
+
+  // Retention cohorts
+  const { data: retentionData = [] } = useQuery({
+    queryKey: ['retention-cohorts', days],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('retention_cohorts')
+        .select('*')
+        .order('cohort_week', { ascending: false })
+        .limit(20);
+      return (data || []) as any[];
+    }
+  });
+
+  // A/B tests
+  const { data: abTests = [] } = useQuery({
+    queryKey: ['ab-tests'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('ab_tests')
+        .select('*')
+        .order('created_at', { ascending: false });
+      return (data || []) as any[];
+    }
+  });
+
+  // A/B test assignments
+  const { data: abAssignments = [] } = useQuery({
+    queryKey: ['ab-assignments', days],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('ab_test_assignments')
+        .select('*')
+        .gte('created_at', since)
+        .limit(2000);
+      return (data || []) as any[];
+    }
+  });
+
+  // User attributions
+  const { data: attributionData = [] } = useQuery({
+    queryKey: ['user-attributions', days],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('user_attributions')
+        .select('*')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(1000);
+      return (data || []) as any[];
+    }
+  });
+
   const totalVisits = analytics.length;
   const uniqueSessions = new Set(analytics.map(a => a.session_id)).size;
   const searchQueries = analytics.filter(a => a.search_query);
