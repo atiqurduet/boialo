@@ -72,7 +72,7 @@ export const useAnalytics = () => {
   }, [user]);
 };
 
-// Export all tracking functions for use in components
+// Export all client-side tracking functions
 export {
   trackViewContent,
   trackAddToCart,
@@ -122,3 +122,18 @@ export {
   resetEngagement,
   getEngagementScore,
 } from '@/lib/serverTracking';
+
+// Re-export session recording
+export { startSessionRecording, stopSessionRecording } from '@/lib/sessionRecording';
+
+// Re-export A/B testing
+export { getVariant, trackABConversion, useABTest } from '@/lib/abTesting';
+
+// Re-export funnel tracking
+export { trackFunnelStep, autoTrackFunnel, getFunnelAnalytics } from '@/lib/funnelTracking';
+
+// Re-export retention tracking
+export { trackRetention, trackRetentionConversion, getRetentionData } from '@/lib/retentionTracking';
+
+// Re-export real-time presence
+export { startPresenceTracking, getLiveVisitorCount, getLiveVisitors, updatePresencePage } from '@/lib/realtimePresence';
