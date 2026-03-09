@@ -32,10 +32,10 @@ interface PaymentMethod {
   provider: string;
   is_active: boolean;
   sort_order: number;
-  manual_number?: string;
-  manual_type?: string;
-  manual_instructions?: string;
-  payment_mode?: string;
+  manual_number: string | null;
+  manual_type: string | null;
+  manual_instructions: string | null;
+  payment_mode: string | null;
 }
 
 const paymentStatusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
