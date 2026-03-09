@@ -3501,8 +3501,12 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          manual_instructions: string | null
+          manual_number: string | null
+          manual_type: string | null
           name_bn: string
           name_en: string
+          payment_mode: string | null
           provider: string
           sort_order: number | null
           updated_at: string | null
@@ -3512,8 +3516,12 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          manual_instructions?: string | null
+          manual_number?: string | null
+          manual_type?: string | null
           name_bn: string
           name_en: string
+          payment_mode?: string | null
           provider: string
           sort_order?: number | null
           updated_at?: string | null
@@ -3523,8 +3531,12 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          manual_instructions?: string | null
+          manual_number?: string | null
+          manual_type?: string | null
           name_bn?: string
           name_en?: string
+          payment_mode?: string | null
           provider?: string
           sort_order?: number | null
           updated_at?: string | null

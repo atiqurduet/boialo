@@ -424,10 +424,10 @@ const Checkout = () => {
   const iconMap: Record<string, any> = { cod: Truck, bkash: Smartphone, nagad: Smartphone, sslcommerz: CreditCard, card: CreditCard };
   const paymentMethods = dbPaymentMethods.map((m: any) => ({
     id: m.provider, name: m.name_bn,
-    description: m.provider === 'cod' ? 'পণ্য হাতে পেয়ে টাকা প্রদান করুন' : (m as any).manual_number ? `${m.name_bn} মোবাইল ব্যাংকিং` : m.name_bn,
+    description: m.provider === 'cod' ? 'পণ্য হাতে পেয়ে টাকা প্রদান করুন' : m.manual_number ? `${m.name_bn} মোবাইল ব্যাংকিং` : m.name_bn,
     icon: iconMap[m.provider] || CreditCard,
-    manual_number: (m as any).manual_number, manual_type: (m as any).manual_type,
-    manual_instructions: (m as any).manual_instructions, payment_mode: (m as any).payment_mode || 'manual',
+    manual_number: m.manual_number, manual_type: m.manual_type,
+    manual_instructions: m.manual_instructions, payment_mode: m.payment_mode || 'manual',
   }));
 
   if (authLoading || cartLoading) {
@@ -611,9 +611,19 @@ const Checkout = () => {
                   {paymentMethod !== "cod" && (() => {
                     const sel = paymentMethods.find(m => m.id === paymentMethod);
                     if (!sel) return null;
-                    if (paymentMethod === "bkash" && sel.payment_mode === "api") {
-                      return <div className="mt-4 p-4 bg-accent/10 rounded-lg border border-border"><p className="text-sm">অর্ডার সম্পন্ন করতে বিকাশ পেমেন্ট পেজে নিয়ে যাওয়া হবে।</p></div>;
+                    // API mode messages
+                    if (sel.payment_mode === "api") {
+                      if (paymentMethod === "bkash") {
+                        return <div className="mt-4 p-4 bg-accent/10 rounded-lg border border-border"><p className="text-sm">✅ অর্ডার সম্পন্ন করতে <strong>বিকাশ</strong> পেমেন্ট পেজে নিয়ে যাওয়া হবে।</p></div>;
+                      }
+                      if (paymentMethod === "nagad") {
+                        return <div className="mt-4 p-4 bg-accent/10 rounded-lg border border-border"><p className="text-sm">✅ অর্ডার সম্পন্ন করতে <strong>নগদ</strong> পেমেন্ট পেজে নিয়ে যাওয়া হবে।</p></div>;
+                      }
+                      if (paymentMethod === "sslcommerz") {
+                        return <div className="mt-4 p-4 bg-accent/10 rounded-lg border border-border"><p className="text-sm">✅ অর্ডার সম্পন্ন করতে <strong>SSLCommerz</strong> পেমেন্ট গেটওয়েতে নিয়ে যাওয়া হবে।</p></div>;
+                      }
                     }
+                    // Manual mode - show account number & transaction ID input
                     if (sel.manual_number) {
                       return (
                         <div className="mt-4 p-4 bg-accent/10 rounded-lg border border-border">
