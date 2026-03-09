@@ -526,7 +526,7 @@ const AdminAudienceExport = () => {
                     <CheckCircle2 className="w-3 h-3 mr-1" /> কানেক্টেড
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-muted-foreground">
+                  <Badge variant="outline" className="text-muted-foreground cursor-pointer hover:bg-pink-50 hover:text-pink-600 hover:border-pink-300 dark:hover:bg-pink-950/30 transition-colors" onClick={() => setActiveTab('credentials')}>
                     <AlertCircle className="w-3 h-3 mr-1" /> সেটআপ করুন
                   </Badge>
                 )}
