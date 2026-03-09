@@ -176,7 +176,7 @@ export const initJourneyTracking = () => {
 export const getJourneyAnalytics = async (days: number = 7) => {
   const since = new Date(Date.now() - days * 24 * 60 * 60_000).toISOString();
   try {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('user_journeys')
       .select('*')
       .gte('created_at', since)
