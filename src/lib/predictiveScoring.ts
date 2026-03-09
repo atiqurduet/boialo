@@ -196,7 +196,7 @@ export const savePredictiveScore = async (userId?: string) => {
   const score = calculatePredictiveScore();
 
   try {
-    await supabase.from('predictive_scores').upsert({
+    await (supabase as any).from('predictive_scores').upsert({
       session_id: getSessionId(),
       user_id: userId || null,
       purchase_probability: score.purchaseProbability,
