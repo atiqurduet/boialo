@@ -249,7 +249,7 @@ const AdminSettings = () => {
   const activeOTPCount = otpSettings?.filter(s => s.setting_value).length ?? 0;
 
   const isSensitiveField = (key: string) => {
-    return key.includes('api_key') || key.includes('secret') || key.includes('pixel_id') || key.includes('analytics_id');
+    return key.includes('api_key') || key.includes('secret') || key.includes('pixel_id') || key.includes('analytics_id') || key.includes('access_token') || key.includes('capi_token');
   };
 
   const renderSettingInput = (setting: Setting) => {
