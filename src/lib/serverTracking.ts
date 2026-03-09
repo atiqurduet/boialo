@@ -147,7 +147,7 @@ const detectBot = (): boolean => {
   ];
   if (botPatterns.some(p => ua.includes(p))) return true;
   if ((navigator as any).webdriver) return true;
-  if (!window.chrome && ua.includes('chrome')) return true;
+  if (!(window as any).chrome && ua.includes('chrome')) return true;
   if (navigator.languages && navigator.languages.length === 0) return true;
   return false;
 };
