@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CreditCard, Smartphone, Truck, ChevronLeft, Loader2, Shield, Phone, Ticket, Zap, Star, Package, Lock, Check } from "lucide-react";
+import { CreditCard, Smartphone, Truck, ChevronLeft, Loader2, Shield, Phone, Ticket, Zap, Star, Package, Lock, Check, AlertCircle } from "lucide-react";
 import { useCartContext } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -206,11 +206,25 @@ const Checkout = () => {
   const total = Math.max(0, subtotal - couponDiscount - dynamicDiscount + deliveryCharge);
   const deliveryAreaLabel = deliveryZones.length > 0 ? (selectedZone?.zone_name_bn || "default") : (deliveryArea === "outside" ? "ঢাকার বাইরে" : "ঢাকার ভিতরে");
 
-  const iconMap: Record<string, any> = { cod: Truck, bkash: Smartphone, nagad: Smartphone, sslcommerz: CreditCard, card: CreditCard };
+  const paymentLogoMap: Record<string, string> = {
+    bkash: "https://freelogopng.com/images/all_img/1656234841bkash-icon-png.png",
+    nagad: "https://download.logo.wine/logo/Nagad/Nagad-Logo.wine.png",
+    sslcommerz: "https://sslcommerz.com/wp-content/uploads/2021/11/logo.png",
+  };
+  const paymentColorMap: Record<string, string> = {
+    cod: "from-emerald-500/10 to-emerald-600/5 border-emerald-200 dark:border-emerald-800",
+    bkash: "from-pink-500/10 to-pink-600/5 border-pink-200 dark:border-pink-800",
+    nagad: "from-orange-500/10 to-orange-600/5 border-orange-200 dark:border-orange-800",
+    sslcommerz: "from-blue-500/10 to-blue-600/5 border-blue-200 dark:border-blue-800",
+    card: "from-indigo-500/10 to-indigo-600/5 border-indigo-200 dark:border-indigo-800",
+  };
+  const paymentIconMap: Record<string, any> = { cod: Truck, bkash: Smartphone, nagad: Smartphone, sslcommerz: CreditCard, card: CreditCard };
   const paymentMethods = dbPaymentMethods.map((m: any) => ({
     id: m.provider, name: m.name_bn,
-    description: m.provider === 'cod' ? 'পণ্য হাতে পেয়ে টাকা দিন' : m.manual_number ? `${m.manual_type || 'Send Money'}` : m.name_bn,
-    icon: iconMap[m.provider] || CreditCard,
+    description: m.provider === 'cod' ? 'পণ্য হাতে পেয়ে টাকা দিন' : m.payment_mode === 'api' ? 'নিরাপদ অনলাইন পেমেন্ট' : m.manual_number ? `${m.manual_type || 'Send Money'}: ${m.manual_number}` : m.name_bn,
+    icon: paymentIconMap[m.provider] || CreditCard,
+    logo: paymentLogoMap[m.provider] || null,
+    colorClass: paymentColorMap[m.provider] || "from-muted/50 to-muted/30 border-border",
     manual_number: m.manual_number, manual_type: m.manual_type,
     manual_instructions: m.manual_instructions, payment_mode: m.payment_mode || 'manual',
   }));
@@ -557,28 +571,60 @@ const Checkout = () => {
 
             {/* ===== Payment Methods ===== */}
             {paymentMethods.length > 0 && (
-              <div className="space-y-3">
-                <h2 className="text-lg font-bold">পেমেন্ট পদ্ধতি</h2>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-primary" />
+                  <h2 className="text-lg font-bold">পেমেন্ট পদ্ধতি</h2>
+                  <div className="flex-1 h-px bg-border ml-2" />
+                </div>
                 <RadioGroup value={paymentMethod} onValueChange={(val) => { setPaymentMethod(val); setFormData(prev => ({ ...prev, transactionId: "" })); setErrors(prev => ({ ...prev, transactionId: "" })); }}>
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {paymentMethods.map(method => {
                       const Icon = method.icon;
+                      const isSelected = paymentMethod === method.id;
                       return (
                         <label
                           key={method.id}
                           className={cn(
-                            "flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all",
-                            paymentMethod === method.id
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:border-primary/40"
+                            "relative flex flex-col items-center gap-2.5 p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 bg-gradient-to-br",
+                            isSelected
+                              ? "border-primary ring-2 ring-primary/20 shadow-lg shadow-primary/10 scale-[1.02]"
+                              : cn("hover:shadow-md hover:scale-[1.01]", method.colorClass)
                           )}
                         >
-                          <RadioGroupItem value={method.id} className="shrink-0" />
-                          <Icon className="w-5 h-5 text-muted-foreground shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold">{method.name}</p>
-                            <p className="text-xs text-muted-foreground">{method.description}</p>
+                          {isSelected && (
+                            <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                              <Check className="w-3 h-3 text-primary-foreground" />
+                            </div>
+                          )}
+                          <RadioGroupItem value={method.id} className="sr-only" />
+                          
+                          {method.logo ? (
+                            <img 
+                              src={method.logo} 
+                              alt={method.name} 
+                              className="h-10 w-auto object-contain max-w-[100px]"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className={cn(
+                              "w-12 h-12 rounded-xl flex items-center justify-center",
+                              isSelected ? "bg-primary/10" : "bg-muted"
+                            )}>
+                              <Icon className={cn("w-6 h-6", isSelected ? "text-primary" : "text-muted-foreground")} />
+                            </div>
+                          )}
+                          
+                          <div className="text-center">
+                            <p className="text-sm font-bold">{method.name}</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{method.description}</p>
                           </div>
+                          
+                          {method.payment_mode === 'api' && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                              <Shield className="w-2.5 h-2.5" /> নিরাপদ
+                            </span>
+                          )}
                         </label>
                       );
                     })}
@@ -591,28 +637,43 @@ const Checkout = () => {
                   if (!sel) return null;
                   if (sel.payment_mode === "api") {
                     return (
-                      <div className="p-4 bg-primary/5 rounded-xl border border-primary/20 text-sm flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-primary shrink-0" />
-                        <span>অর্ডার কনফার্ম করলে <strong>{sel.name}</strong> পেমেন্ট পেজে যাবেন</span>
+                      <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20 text-sm flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <Shield className="w-4.5 h-4.5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">নিরাপদ পেমেন্ট গেটওয়ে</p>
+                          <p className="text-xs text-muted-foreground">অর্ডার কনফার্ম করলে <strong>{sel.name}</strong> পেমেন্ট পেজে রিডাইরেক্ট হবেন</p>
+                        </div>
                       </div>
                     );
                   }
                   if (sel.manual_number) {
                     return (
                       <div className="space-y-3">
-                        <div className="p-4 bg-muted/50 rounded-xl border border-border">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs text-muted-foreground font-medium">{sel.name} নম্বর</span>
-                            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{sel.manual_type || 'Send Money'}</span>
+                        <div className="p-4 bg-gradient-to-br from-muted/60 to-muted/30 rounded-xl border border-border">
+                          <div className="flex items-center gap-3 mb-3">
+                            {sel.logo && <img src={sel.logo} alt="" className="h-6 w-auto object-contain" />}
+                            <div className="flex-1">
+                              <span className="text-xs text-muted-foreground font-medium">{sel.name} নম্বর</span>
+                            </div>
+                            <span className="text-[10px] font-semibold text-foreground bg-background px-2.5 py-1 rounded-full border border-border shadow-sm">{sel.manual_type || 'Send Money'}</span>
                           </div>
-                          <p className="text-lg font-bold font-mono tracking-wider">{sel.manual_number}</p>
-                          {sel.manual_instructions && <p className="text-xs text-muted-foreground mt-1">{sel.manual_instructions}</p>}
+                          <div className="bg-background rounded-lg p-3 border border-border/50">
+                            <p className="text-xl font-bold font-mono tracking-[0.15em] text-center">{sel.manual_number}</p>
+                          </div>
+                          {sel.manual_instructions && (
+                            <p className="text-xs text-muted-foreground mt-2.5 flex items-start gap-1.5">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                              {sel.manual_instructions}
+                            </p>
+                          )}
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-sm font-medium">ট্রান্জেকশন আইডি *</Label>
                           <Input
-                            placeholder="Transaction ID লিখুন"
-                            className={cn("h-11 rounded-xl border-border", errors.transactionId && "border-destructive ring-1 ring-destructive/30")}
+                            placeholder="যেমন: 8N4KD7F2M1"
+                            className={cn("h-11 rounded-xl border-border font-mono tracking-wider", errors.transactionId && "border-destructive ring-1 ring-destructive/30")}
                             value={formData.transactionId}
                             onChange={e => handleInputChange("transactionId", e.target.value)}
                           />
