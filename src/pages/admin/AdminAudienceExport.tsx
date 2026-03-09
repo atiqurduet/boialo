@@ -17,7 +17,8 @@ import {
   Download, Users, Target, TrendingUp, Facebook, BarChart3, Loader2, Filter,
   CheckCircle2, AlertCircle, Zap, PieChart, ArrowUpRight, ArrowDownRight,
   Globe, Eye, ShoppingCart, UserCheck, Clock, Activity, Layers, RefreshCw,
-  Shield, Star, Hash, Calendar, ChevronRight, Sparkles, FileText
+  Shield, Star, Hash, Calendar, ChevronRight, Sparkles, FileText, Brain,
+  GitMerge, Send, Timer, AlertTriangle
 } from 'lucide-react';
 import { AreaChart, Area, PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
@@ -47,6 +48,67 @@ const audienceTypes: AudienceConfig[] = [
 
 const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#6b7280'];
 
+// ── Overlap Row Component ────────────────────────────────
+const OverlapRow = ({ a, b, aLabel, bLabel, since }: { a: AudienceType; b: AudienceType; aLabel: string; bLabel: string; since: string }) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['overlap', a, b, since],
+    queryFn: async () => {
+      const fetchIds = async (type: AudienceType) => {
+        let ids: string[] = [];
+        if (type === 'purchasers' || type === 'high_value' || type === 'repeat_buyers' || type === 'new_customers') {
+          const q = supabase.from('orders').select('user_id, customer_email').gte('created_at', since).in('status', ['delivered', 'confirmed']);
+          if (type === 'high_value') q.gte('total_amount', 5000);
+          const { data } = await q;
+          ids = (data || []).map((o: any) => o.user_id || o.customer_email).filter(Boolean);
+        } else if (type === 'cart_abandoners') {
+          const { data } = await supabase.from('abandoned_checkouts').select('user_id, email').gte('created_at', since).eq('recovered', false);
+          ids = (data || []).map((o: any) => o.user_id || o.email).filter(Boolean);
+        } else if (type === 'engaged') {
+          const { data } = await supabase.from('engagement_scores' as any).select('user_id, fingerprint_id').gte('created_at', since).gte('engagement_score', 60);
+          ids = (data || []).map((o: any) => o.user_id || o.fingerprint_id).filter(Boolean);
+        } else if (type === 'wishlist_users') {
+          const { data } = await supabase.from('wishlist_items').select('user_id').gte('created_at', since);
+          ids = (data || []).map((o: any) => o.user_id).filter(Boolean);
+        } else {
+          const { data } = await supabase.from('visitor_analytics').select('user_id, session_id').gte('created_at', since).limit(500);
+          ids = (data || []).map((o: any) => o.user_id || o.session_id).filter(Boolean);
+        }
+        return [...new Set(ids)];
+      };
+      const [idsA, idsB] = await Promise.all([fetchIds(a), fetchIds(b)]);
+      const setB = new Set(idsB);
+      const overlap = idsA.filter(id => setB.has(id));
+      return { sizeA: idsA.length, sizeB: idsB.length, overlap: overlap.length };
+    },
+    staleTime: 120_000,
+  });
+
+  const overlapPct = data && data.sizeA > 0 ? Math.round((data.overlap / data.sizeA) * 100) : 0;
+
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-xl border bg-muted/20">
+      <div className="flex-1 text-right">
+        <p className="text-sm font-medium">{aLabel}</p>
+        <p className="text-xs text-muted-foreground">{isLoading ? '...' : `${data?.sizeA || 0} জন`}</p>
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <div className="relative w-16 h-16">
+          <div className="absolute left-0 top-1 w-12 h-12 rounded-full border-2 border-blue-400 bg-blue-100/30 dark:bg-blue-900/20" />
+          <div className="absolute right-0 top-1 w-12 h-12 rounded-full border-2 border-pink-400 bg-pink-100/30 dark:bg-pink-900/20" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-xs font-bold bg-background px-1 rounded">{isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : `${overlapPct}%`}</span>
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground">{isLoading ? '' : `${data?.overlap || 0} কমন`}</p>
+      </div>
+      <div className="flex-1">
+        <p className="text-sm font-medium">{bLabel}</p>
+        <p className="text-xs text-muted-foreground">{isLoading ? '...' : `${data?.sizeB || 0} জন`}</p>
+      </div>
+    </div>
+  );
+};
+
 const AdminAudienceExport = () => {
   const [selectedAudience, setSelectedAudience] = useState<AudienceType>('purchasers');
   const [days, setDays] = useState('30');
@@ -56,6 +118,14 @@ const AdminAudienceExport = () => {
   const [includeEmail, setIncludeEmail] = useState(true);
   const [includePhone, setIncludePhone] = useState(true);
   const [excludeExisting, setExcludeExisting] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiPredictions, setAiPredictions] = useState<any>(null);
+  const [aiOptimizations, setAiOptimizations] = useState<any>(null);
+  const [overlapPairs, setOverlapPairs] = useState<{ a: AudienceType; b: AudienceType }[]>([
+    { a: 'purchasers', b: 'cart_abandoners' },
+    { a: 'high_value', b: 'repeat_buyers' },
+    { a: 'engaged', b: 'purchasers' },
+  ]);
 
   const since = useMemo(() => new Date(Date.now() - parseInt(days) * 86400000).toISOString(), [days]);
 
@@ -421,11 +491,14 @@ const AdminAudienceExport = () => {
 
         {/* ── Main Tabs ──────────────────────────────────── */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-4 w-full max-w-xl">
-            <TabsTrigger value="audiences" className="flex items-center gap-1.5"><Users className="w-4 h-4" /> অডিয়েন্স</TabsTrigger>
-            <TabsTrigger value="insights" className="flex items-center gap-1.5"><PieChart className="w-4 h-4" /> ইনসাইট</TabsTrigger>
-            <TabsTrigger value="builder" className="flex items-center gap-1.5"><Layers className="w-4 h-4" /> বিল্ডার</TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-1.5"><FileText className="w-4 h-4" /> হিস্টোরি</TabsTrigger>
+          <TabsList className="flex flex-wrap w-full max-w-3xl gap-1">
+            <TabsTrigger value="audiences" className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> অডিয়েন্স</TabsTrigger>
+            <TabsTrigger value="ai" className="flex items-center gap-1.5"><Brain className="w-3.5 h-3.5" /> AI প্রেডিকশন</TabsTrigger>
+            <TabsTrigger value="overlap" className="flex items-center gap-1.5"><GitMerge className="w-3.5 h-3.5" /> ওভারল্যাপ</TabsTrigger>
+            <TabsTrigger value="insights" className="flex items-center gap-1.5"><PieChart className="w-3.5 h-3.5" /> ইনসাইট</TabsTrigger>
+            <TabsTrigger value="builder" className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> বিল্ডার</TabsTrigger>
+            <TabsTrigger value="sync" className="flex items-center gap-1.5"><Send className="w-3.5 h-3.5" /> অটো সিংক</TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> হিস্টোরি</TabsTrigger>
           </TabsList>
 
           {/* ── Tab: Audiences ────────────────────────────── */}
@@ -874,6 +947,320 @@ const AdminAudienceExport = () => {
                     </table>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Tab: AI Prediction ────────────────────────── */}
+          <TabsContent value="ai" className="space-y-5 mt-5">
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Brain className="w-5 h-5 text-primary" /> AI অডিয়েন্স প্রেডিকশন</CardTitle>
+                  <CardDescription>AI দিয়ে কোন অডিয়েন্সে বেশি কনভার্শন হবে তা প্রেডিক্ট করুন</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    onClick={async () => {
+                      setAiLoading(true);
+                      try {
+                        const { data, error } = await supabase.functions.invoke('audience-ai', { body: { action: 'predict' } });
+                        if (error) throw error;
+                        setAiPredictions(data);
+                        toast.success('AI প্রেডিকশন তৈরি হয়েছে');
+                      } catch (e: any) {
+                        toast.error(e.message || 'AI প্রেডিকশন ব্যর্থ');
+                      } finally { setAiLoading(false); }
+                    }}
+                    disabled={aiLoading}
+                    className="w-full"
+                  >
+                    {aiLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Brain className="w-4 h-4 mr-2" />}
+                    {aiLoading ? 'বিশ্লেষণ চলছে...' : 'AI প্রেডিকশন চালান'}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Sparkles className="w-5 h-5 text-amber-500" /> AI অপ্টিমাইজেশন</CardTitle>
+                  <CardDescription>ক্যাম্পেইন অপ্টিমাইজেশনের জন্য AI সাজেশন পান</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      setAiLoading(true);
+                      try {
+                        const { data, error } = await supabase.functions.invoke('audience-ai', { body: { action: 'optimize' } });
+                        if (error) throw error;
+                        setAiOptimizations(data);
+                        toast.success('অপ্টিমাইজেশন সাজেশন তৈরি হয়েছে');
+                      } catch (e: any) {
+                        toast.error(e.message || 'অপ্টিমাইজেশন ব্যর্থ');
+                      } finally { setAiLoading(false); }
+                    }}
+                    disabled={aiLoading}
+                    className="w-full"
+                  >
+                    {aiLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                    {aiLoading ? 'বিশ্লেষণ চলছে...' : 'অপ্টিমাইজেশন সাজেশন পান'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* AI Predictions Results */}
+            {aiPredictions?.predictions && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">প্রেডিকশন রেজাল্ট</CardTitle>
+                  {aiPredictions.overall_strategy && (
+                    <CardDescription>{aiPredictions.overall_strategy}</CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {aiPredictions.predictions.map((p: any, i: number) => (
+                    <div key={i} className="p-4 rounded-xl border bg-muted/20 hover:bg-muted/40 transition-colors">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h4 className="font-semibold text-sm">{p.audience}</h4>
+                          <Badge variant="outline" className="text-xs mt-1">{p.platform}</Badge>
+                        </div>
+                        <div className="text-right">
+                          <Badge className={`${p.priority === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : p.priority === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>
+                            {p.priority}
+                          </Badge>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">{p.recommendation}</p>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div className="p-2 rounded-lg bg-background border text-center">
+                          <p className="font-bold text-emerald-600">{p.confidence}%</p>
+                          <p className="text-muted-foreground">কনফিডেন্স</p>
+                        </div>
+                        <div className="p-2 rounded-lg bg-background border text-center">
+                          <p className="font-bold text-blue-600">{p.expected_roas}x</p>
+                          <p className="text-muted-foreground">ROAS</p>
+                        </div>
+                        <div className="p-2 rounded-lg bg-background border text-center">
+                          <p className="font-bold">{(p.estimated_size || 0).toLocaleString()}</p>
+                          <p className="text-muted-foreground">সাইজ</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Budget Allocation */}
+                  {aiPredictions.budget_allocation && (
+                    <div className="p-4 rounded-xl border bg-primary/5">
+                      <h4 className="font-semibold text-sm mb-3">বাজেট বিভাজন সাজেশন</h4>
+                      <div className="grid grid-cols-3 gap-3">
+                        {Object.entries(aiPredictions.budget_allocation).map(([platform, pct]: any) => (
+                          <div key={platform} className="text-center">
+                            <p className="text-2xl font-bold">{pct}%</p>
+                            <p className="text-xs text-muted-foreground capitalize">{platform}</p>
+                            <Progress value={pct} className="h-1.5 mt-1" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* AI Optimizations Results */}
+            {aiOptimizations?.optimizations && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">অপ্টিমাইজেশন সাজেশন</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {aiOptimizations.optimizations.map((o: any, i: number) => (
+                    <div key={i} className="flex items-start gap-3 p-3 rounded-lg border bg-muted/20">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold ${
+                        o.effort === 'low' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                        o.effort === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                      }`}>
+                        {o.priority || i + 1}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm">{o.area}</h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">{o.current_issue}</p>
+                        <p className="text-xs mt-1">💡 {o.suggestion}</p>
+                        <Badge variant="outline" className="text-xs mt-1">{o.expected_improvement}</Badge>
+                      </div>
+                    </div>
+                  ))}
+
+                  {aiOptimizations.quick_wins && (
+                    <div className="p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+                      <h4 className="font-semibold text-sm text-emerald-700 dark:text-emerald-400 mb-2">⚡ কুইক উইন</h4>
+                      <ul className="space-y-1">
+                        {aiOptimizations.quick_wins.map((w: string, i: number) => (
+                          <li key={i} className="text-xs flex items-start gap-1.5">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600 mt-0.5 shrink-0" /> {w}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* ── Tab: Overlap Analysis ─────────────────────── */}
+          <TabsContent value="overlap" className="space-y-5 mt-5">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><GitMerge className="w-5 h-5" /> অডিয়েন্স ওভারল্যাপ বিশ্লেষণ</CardTitle>
+                <CardDescription>বিভিন্ন অডিয়েন্সের মধ্যে কত জন কমন তা দেখুন</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {overlapPairs.map((pair, idx) => {
+                  const aLabel = audienceTypes.find(a => a.value === pair.a)?.label || pair.a;
+                  const bLabel = audienceTypes.find(a => a.value === pair.b)?.label || pair.b;
+                  return (
+                    <OverlapRow key={idx} a={pair.a} b={pair.b} aLabel={aLabel} bLabel={bLabel} since={since} />
+                  );
+                })}
+
+                {/* Add custom pair */}
+                <div className="flex gap-3 items-end p-4 rounded-xl bg-muted/30">
+                  <div className="flex-1">
+                    <Label className="text-xs mb-1 block">অডিয়েন্স A</Label>
+                    <Select onValueChange={(v) => setOverlapPairs(p => [...p, { a: v as AudienceType, b: p[0]?.b || 'purchasers' }])}>
+                      <SelectTrigger><SelectValue placeholder="সিলেক্ট করুন" /></SelectTrigger>
+                      <SelectContent>
+                        {audienceTypes.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <GitMerge className="w-5 h-5 text-muted-foreground mb-2" />
+                  <div className="flex-1">
+                    <Label className="text-xs mb-1 block">অডিয়েন্স B</Label>
+                    <Select onValueChange={(v) => setOverlapPairs(p => { const last = p[p.length - 1]; if (last) last.b = v as AudienceType; return [...p]; })}>
+                      <SelectTrigger><SelectValue placeholder="সিলেক্ট করুন" /></SelectTrigger>
+                      <SelectContent>
+                        {audienceTypes.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Overlap Insights */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> ওভারল্যাপ ইনসাইট</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30">
+                    <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                    <p className="text-xs"><strong>ডুপ্লিকেট স্পেন্ড:</strong> ওভারল্যাপিং অডিয়েন্সে একই ব্যক্তিকে একাধিক প্ল্যাটফর্মে টার্গেট করলে বাজেট নষ্ট হয়। Exclude list ব্যবহার করুন।</p>
+                  </div>
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                    <p className="text-xs"><strong>ক্রস-সেল:</strong> যারা ক্রেতা এবং উইশলিস্ট ইউজার দুটোতেই আছে, তাদের জন্য ক্রস-সেল ক্যাম্পেইন চালান।</p>
+                  </div>
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30">
+                    <Target className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                    <p className="text-xs"><strong>Exclusion Strategy:</strong> Facebook ক্যাম্পেইনে "ক্রেতা" অডিয়েন্সকে exclude করলে শুধু নতুন কাস্টমারকে টার্গেট করা যায়।</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Tab: Auto Sync ────────────────────────────── */}
+          <TabsContent value="sync" className="space-y-5 mt-5">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Send className="w-5 h-5" /> অটো সিংক সেটআপ</CardTitle>
+                <CardDescription>সার্ভার-সাইড ইভেন্ট অটোমেটিক্যালি Ad Platforms এ পাঠানো হচ্ছে</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Real-time sync status */}
+                <div className="grid md:grid-cols-3 gap-4">
+                  {[
+                    {
+                      name: 'Facebook CAPI',
+                      active: platformStatus?.facebook.pixel && platformStatus?.facebook.capi,
+                      events: ['Purchase', 'AddToCart', 'ViewContent', 'InitiateCheckout', 'Lead', 'Search', 'AddToWishlist', 'CompleteRegistration'],
+                      color: 'blue',
+                    },
+                    {
+                      name: 'TikTok Events API',
+                      active: platformStatus?.tiktok.pixel && platformStatus?.tiktok.token,
+                      events: ['CompletePayment', 'AddToCart', 'ViewContent', 'InitiateCheckout', 'SubmitForm', 'Search', 'AddToWishlist'],
+                      color: 'pink',
+                    },
+                    {
+                      name: 'GA4 Measurement Protocol',
+                      active: platformStatus?.google.measurement && platformStatus?.google.secret,
+                      events: ['purchase', 'add_to_cart', 'view_item', 'begin_checkout', 'generate_lead', 'search', 'sign_up'],
+                      color: 'green',
+                    },
+                  ].map((platform, i) => (
+                    <div key={i} className="p-4 rounded-xl border space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-sm">{platform.name}</h4>
+                        <div className={`w-3 h-3 rounded-full ${platform.active ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'}`} />
+                      </div>
+                      <Badge variant={platform.active ? 'default' : 'outline'} className="text-xs">
+                        {platform.active ? '✓ লাইভ সিংক চালু' : '✗ সেটআপ করুন'}
+                      </Badge>
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">সিংকড ইভেন্ট:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {platform.events.map((e, j) => (
+                            <Badge key={j} variant="outline" className="text-[10px] px-1.5 py-0">{e}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* How it works */}
+                <div className="p-4 rounded-xl bg-muted/30 border">
+                  <h4 className="font-semibold text-sm mb-3">কিভাবে কাজ করে?</h4>
+                  <div className="grid md:grid-cols-4 gap-3">
+                    {[
+                      { step: '১', title: 'ইউজার অ্যাকশন', desc: 'AddToCart, Purchase ইত্যাদি' },
+                      { step: '২', title: 'Server-Side Track', desc: 'Edge Function ডেটা ক্যাপচার করে' },
+                      { step: '৩', title: 'API Forward', desc: 'FB CAPI, TikTok, GA4 তে পাঠায়' },
+                      { step: '৪', title: 'Ad Optimization', desc: 'প্ল্যাটফর্ম অ্যাড অপ্টিমাইজ করে' },
+                    ].map((s, i) => (
+                      <div key={i} className="text-center p-3 rounded-lg bg-background border">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center mx-auto mb-2">{s.step}</div>
+                        <p className="text-xs font-medium">{s.title}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{s.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Benefits */}
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg border bg-emerald-50/30 dark:bg-emerald-950/10">
+                    <h4 className="font-semibold text-xs text-emerald-700 dark:text-emerald-400 mb-2">✓ অ্যাড ব্লকার বাইপাস</h4>
+                    <p className="text-xs text-muted-foreground">সার্ভার-সাইড ট্র্যাকিং ক্লায়েন্ট-সাইড ব্লকার এড়িয়ে যায়, ফলে ৩০-৪০% বেশি ডেটা ক্যাপচার হয়।</p>
+                  </div>
+                  <div className="p-3 rounded-lg border bg-blue-50/30 dark:bg-blue-950/10">
+                    <h4 className="font-semibold text-xs text-blue-700 dark:text-blue-400 mb-2">✓ বেটার ম্যাচিং</h4>
+                    <p className="text-xs text-muted-foreground">IP, User Agent সহ সার্ভার ডেটা পাঠানোর ফলে Facebook/TikTok এ ইভেন্ট ম্যাচ রেট বাড়ে।</p>
+                  </div>
+                </div>
+
+                <Button variant="outline" onClick={() => window.open('/admin/settings', '_self')} className="w-full">
+                  <Shield className="w-4 h-4 mr-2" /> সেটিংসে API কী কনফিগার করুন
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
