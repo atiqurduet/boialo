@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CreditCard, Smartphone, Truck, ChevronLeft, Loader2, Shield, Phone, Ticket, Zap, Star, Package, Lock, Check } from "lucide-react";
+import { CreditCard, Smartphone, Truck, ChevronLeft, Loader2, Shield, Phone, Ticket, Zap, Star, Package, Lock, Check, AlertCircle } from "lucide-react";
 import { useCartContext } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
