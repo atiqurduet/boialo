@@ -34,32 +34,17 @@ const updatePresence = async (pagePath: string, userId?: string | null, cartValu
   const loc = getLocation();
 
   try {
-    const { data: existing } = await supabase
-      .from('realtime_presence')
-      .select('id')
-      .eq('session_id', sessionId)
-      .maybeSingle();
-
-    if (existing) {
-      await supabase.from('realtime_presence').update({
-        page_path: pagePath,
-        user_id: userId || null,
-        last_seen_at: new Date().toISOString(),
-        is_online: true,
-        cart_value: cartValue || 0,
-      }).eq('session_id', sessionId);
-    } else {
-      await supabase.from('realtime_presence').insert({
-        session_id: sessionId,
-        page_path: pagePath,
-        user_id: userId || null,
-        device_type: getDeviceType(),
-        country: loc.country,
-        city: loc.city,
-        is_online: true,
-        cart_value: cartValue || 0,
-      });
-    }
+    await supabase.from('realtime_presence').upsert({
+      session_id: sessionId,
+      page_path: pagePath,
+      user_id: userId || null,
+      device_type: getDeviceType(),
+      country: loc.country,
+      city: loc.city,
+      is_online: true,
+      cart_value: cartValue || 0,
+      last_seen_at: new Date().toISOString(),
+    }, { onConflict: 'session_id' });
   } catch (e) {
     console.debug('Presence update failed:', e);
   }
