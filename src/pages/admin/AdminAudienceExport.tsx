@@ -188,7 +188,7 @@ const AdminAudienceExport = () => {
         supabase.from('orders').select('id', { count: 'exact' }).gte('created_at', since).in('status', ['delivered', 'confirmed']),
         supabase.from('abandoned_checkouts').select('id', { count: 'exact' }).gte('created_at', since).eq('recovered', false),
         supabase.from('orders').select('id', { count: 'exact' }).gte('created_at', since).gte('total_amount', 5000),
-        supabase.from('wishlists').select('id', { count: 'exact' }).gte('created_at', since),
+        supabase.from('wishlist_items').select('id', { count: 'exact' }).gte('created_at', since),
       ]);
       return [
         { name: 'ক্রেতা', value: purchasers.count || 0 },
