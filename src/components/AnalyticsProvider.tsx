@@ -19,6 +19,11 @@ import { startPresenceTracking, updatePresencePage } from '@/lib/realtimePresenc
 import { autoTrackFunnel } from '@/lib/funnelTracking';
 import { trackRetention } from '@/lib/retentionTracking';
 import { autoAssignTests } from '@/lib/abTesting';
+import { trackJourneyStep, initJourneyTracking } from '@/lib/userJourney';
+import { savePredictiveScore } from '@/lib/predictiveScoring';
+import { startNetworkMonitoring } from '@/lib/networkMonitoring';
+import { initOfflineQueue } from '@/lib/offlineQueue';
+import { hasConsent } from '@/lib/privacyConsent';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVisitorTracking } from '@/hooks/useVisitorTracking';
 
@@ -85,8 +90,24 @@ export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => {
     startSessionRecording();
     startPresenceTracking(user?.id);
     
+    // New: User Journey tracking
+    initJourneyTracking();
+    
+    // New: Network/API monitoring
+    if (hasConsent('analytics')) {
+      startNetworkMonitoring();
+    }
+    
+    // New: Offline event queue
+    initOfflineQueue();
+    
     // Retention tracking
     trackRetention(user?.id);
+
+    // New: Predictive scoring (periodic)
+    const predictiveTimer = setInterval(() => {
+      savePredictiveScore(user?.id).catch(() => {});
+    }, 3 * 60_000); // Every 3 minutes
 
     // Global error tracking
     window.addEventListener('error', (e) => {
@@ -96,6 +117,8 @@ export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => {
     window.addEventListener('unhandledrejection', (e) => {
       serverTrackError('unhandled_promise', String(e.reason));
     });
+
+    return () => clearInterval(predictiveTimer);
   }, []);
 
   // Track page views on route change
@@ -114,6 +137,9 @@ export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => {
       
       // Funnel tracking
       autoTrackFunnel('PageView');
+      
+      // Journey tracking
+      trackJourneyStep(location.pathname, document.title);
       
       // Update presence with current page
       updatePresencePage(location.pathname, user?.id);

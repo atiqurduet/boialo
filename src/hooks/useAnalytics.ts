@@ -137,3 +137,21 @@ export { trackRetention, trackRetentionConversion, getRetentionData } from '@/li
 
 // Re-export real-time presence
 export { startPresenceTracking, getLiveVisitorCount, getLiveVisitors, updatePresencePage } from '@/lib/realtimePresence';
+
+// Re-export form analytics
+export { trackForm, trackFormSubmit } from '@/lib/formAnalytics';
+
+// Re-export user journey
+export { trackJourneyStep, trackJourneyConversion, trackJourneyAction, getJourneyAnalytics, getTopPages } from '@/lib/userJourney';
+
+// Re-export predictive scoring
+export { calculatePredictiveScore, savePredictiveScore, getPredictiveAnalytics, getSegmentDistribution } from '@/lib/predictiveScoring';
+
+// Re-export network monitoring
+export { startNetworkMonitoring, getNetworkStats } from '@/lib/networkMonitoring';
+
+// Re-export privacy consent
+export { getConsent, setConsent, hasConsent, acceptAllConsent, rejectAllConsent, hasConsentChoice, getConsentSummary, deleteTrackingData } from '@/lib/privacyConsent';
+
+// Re-export offline queue
+export { initOfflineQueue, queueEvent, getQueueStatus } from '@/lib/offlineQueue';
