@@ -377,7 +377,12 @@ const Checkout = () => {
         await supabase.from("abandoned_checkouts").update({ recovered: true, recovered_order_id: order.id }).eq("id", abandonedCheckoutId);
       }
 
-      if (paymentMethod === "bkash") { await initBkashPayment(order.id, orderNumber, orderTotal); return; }
+      const selectedMethodObj = paymentMethods.find((m: any) => m.id === paymentMethod);
+      const isApiMode = selectedMethodObj?.payment_mode === "api";
+
+      if (paymentMethod === "bkash" && isApiMode) { await initBkashPayment(order.id, orderNumber, orderTotal); return; }
+      if (paymentMethod === "nagad" && isApiMode) { await initNagadPayment(order.id, orderNumber, orderTotal); return; }
+      if (paymentMethod === "sslcommerz" && isApiMode) { await initSSLCommerzPayment(order.id, orderNumber, orderTotal); return; }
 
       await clearCart();
       trackPurchase({
@@ -386,7 +391,10 @@ const Checkout = () => {
       });
       toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
       navigate("/order-confirmation", { state: { orderNumber } });
-    } catch (e) { console.error(e); toast.error("অর্ডার করতে সমস্যা হয়েছে"); } finally { if (paymentMethod !== "bkash") setIsSubmitting(false); }
+    } catch (e) { console.error(e); toast.error("অর্ডার করতে সমস্যা হয়েছে"); } finally {
+      const apiMethods = ["bkash", "nagad", "sslcommerz"];
+      if (!apiMethods.includes(paymentMethod)) setIsSubmitting(false);
+    }
   };
 
   const isOtpRequired = () => {
