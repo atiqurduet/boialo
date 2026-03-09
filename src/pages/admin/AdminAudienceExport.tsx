@@ -1279,162 +1279,289 @@ const AdminAudienceExport = () => {
           </TabsContent>
 
           {/* ── Tab: API Credentials ─────────────────────── */}
-          <TabsContent value="credentials" className="space-y-5 mt-5">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Key className="w-5 h-5" /> API ক্রেডেনশিয়াল ম্যানেজমেন্ট</CardTitle>
-                <CardDescription>Facebook, TikTok, Google Ads এর API কী সিকিউরলি সেভ করুন</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Add new credential */}
-                <div className="p-4 rounded-xl border bg-muted/20 space-y-4">
-                  <h4 className="font-semibold text-sm flex items-center gap-2"><Settings className="w-4 h-4" /> নতুন ক্রেডেনশিয়াল যোগ করুন</h4>
-                  <div className="grid md:grid-cols-4 gap-3">
-                    <div>
-                      <Label className="text-xs mb-1 block">প্ল্যাটফর্ম</Label>
-                      <Select value={newCredPlatform} onValueChange={setNewCredPlatform}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="facebook">Facebook</SelectItem>
-                          <SelectItem value="tiktok">TikTok</SelectItem>
-                          <SelectItem value="google">Google</SelectItem>
-                        </SelectContent>
-                      </Select>
+          <TabsContent value="credentials" className="space-y-6 mt-5">
+            {/* Hero Header */}
+            <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/5 via-background to-accent/5 p-6 md:p-8">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                      <Shield className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <Label className="text-xs mb-1 block">Credential Key</Label>
-                      <Select value={newCredKey} onValueChange={setNewCredKey}>
-                        <SelectTrigger><SelectValue placeholder="সিলেক্ট করুন" /></SelectTrigger>
-                        <SelectContent>
-                          {newCredPlatform === 'facebook' && (
-                            <>
-                              <SelectItem value="pixel_id">Pixel ID</SelectItem>
-                              <SelectItem value="access_token">Access Token</SelectItem>
-                              <SelectItem value="ad_account_id">Ad Account ID</SelectItem>
-                              <SelectItem value="test_event_code">Test Event Code</SelectItem>
-                            </>
-                          )}
-                          {newCredPlatform === 'tiktok' && (
-                            <>
-                              <SelectItem value="pixel_id">Pixel ID</SelectItem>
-                              <SelectItem value="access_token">Access Token</SelectItem>
-                              <SelectItem value="advertiser_id">Advertiser ID</SelectItem>
-                            </>
-                          )}
-                          {newCredPlatform === 'google' && (
-                            <>
-                              <SelectItem value="measurement_id">Measurement ID</SelectItem>
-                              <SelectItem value="api_secret">API Secret</SelectItem>
-                              <SelectItem value="developer_token">Developer Token</SelectItem>
-                              <SelectItem value="customer_id">Customer ID</SelectItem>
-                              <SelectItem value="client_id">Client ID</SelectItem>
-                              <SelectItem value="client_secret">Client Secret</SelectItem>
-                              <SelectItem value="refresh_token">Refresh Token</SelectItem>
-                            </>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs mb-1 block">Value</Label>
-                      <Input type="password" value={newCredValue} onChange={e => setNewCredValue(e.target.value)} placeholder="ক্রেডেনশিয়াল ভ্যালু..." />
-                    </div>
-                    <div className="flex items-end">
-                      <Button onClick={saveCredential} disabled={credentialSaving} className="w-full">
-                        {credentialSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
-                        সেভ করুন
-                      </Button>
+                      <h2 className="text-xl font-bold tracking-tight">API ক্রেডেনশিয়াল ভল্ট</h2>
+                      <p className="text-sm text-muted-foreground">সিকিউরলি আপনার Ad Platform API কী ম্যানেজ করুন</p>
                     </div>
                   </div>
                 </div>
-
-                {/* Credential guide per platform */}
-                <div className="grid md:grid-cols-3 gap-4">
-                  {[
-                    { platform: 'Facebook', icon: Facebook, color: 'blue', keys: [
-                      { key: 'pixel_id', label: 'Pixel ID', source: 'Events Manager → Pixel' },
-                      { key: 'access_token', label: 'Access Token', source: 'Business Settings → System Users' },
-                      { key: 'ad_account_id', label: 'Ad Account ID', source: 'act_XXXXXXXXX ফরম্যাটে' },
-                    ]},
-                    { platform: 'TikTok', icon: Zap, color: 'pink', keys: [
-                      { key: 'pixel_id', label: 'Pixel Code', source: 'Ads Manager → Events' },
-                      { key: 'access_token', label: 'Access Token', source: 'Marketing API → Token' },
-                      { key: 'advertiser_id', label: 'Advertiser ID', source: 'TikTok Ads Dashboard' },
-                    ]},
-                    { platform: 'Google', icon: BarChart3, color: 'green', keys: [
-                      { key: 'measurement_id', label: 'Measurement ID', source: 'GA4 Property → G-XXXXXXX' },
-                      { key: 'api_secret', label: 'API Secret', source: 'GA4 → Admin → Data Streams' },
-                      { key: 'developer_token', label: 'Dev Token', source: 'Google Ads API Center' },
-                      { key: 'customer_id', label: 'Customer ID', source: 'XXX-XXX-XXXX ফরম্যাটে' },
-                    ]},
-                  ].map((p, i) => (
-                    <div key={i} className="p-4 rounded-xl border space-y-3">
-                      <div className="flex items-center gap-2">
-                        <p.icon className="w-5 h-5" />
-                        <h4 className="font-semibold text-sm">{p.platform}</h4>
+                <div className="flex items-center gap-3">
+                  {(() => {
+                    const total = (allCredentials || []).length;
+                    const active = (allCredentials as any[] || []).filter((c: any) => c.is_active).length;
+                    return (
+                      <div className="flex items-center gap-4 px-4 py-2.5 rounded-xl bg-background/80 backdrop-blur border">
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-primary">{total}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">মোট কী</p>
+                        </div>
+                        <div className="w-px h-8 bg-border" />
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-emerald-600">{active}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">সক্রিয়</p>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        {p.keys.map((k, j) => {
-                          const exists = (allCredentials || []).some((c: any) => c.platform === p.platform.toLowerCase() && c.credential_key === k.key);
-                          return (
-                            <div key={j} className="flex items-center justify-between text-xs">
-                              <div>
-                                <span className="font-medium">{k.label}</span>
-                                <p className="text-[10px] text-muted-foreground">{k.source}</p>
-                              </div>
-                              {exists ? (
-                                <Badge variant="default" className="text-[10px]"><CheckCircle2 className="w-2.5 h-2.5 mr-0.5" /> সেট</Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-[10px]">অনুপস্থিত</Badge>
-                              )}
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Platform Connection Cards */}
+            <div className="grid md:grid-cols-3 gap-5">
+              {[
+                { platform: 'Facebook', icon: Facebook, gradient: 'from-blue-500/10 to-blue-600/5', iconBg: 'bg-blue-500/10', iconColor: 'text-blue-600', borderActive: 'border-blue-500/30', keys: [
+                  { key: 'pixel_id', label: 'Pixel ID', desc: 'Events Manager → Data Sources → Pixel', icon: Hash },
+                  { key: 'access_token', label: 'System Access Token', desc: 'Business Settings → System Users → Generate Token', icon: Key },
+                  { key: 'ad_account_id', label: 'Ad Account ID', desc: 'act_XXXXXXXXX ফরম্যাটে পেস্ট করুন', icon: Users },
+                  { key: 'test_event_code', label: 'Test Event Code', desc: 'টেস্টিং মোডের জন্য (ঐচ্ছিক)', icon: Settings },
+                ]},
+                { platform: 'TikTok', icon: Zap, gradient: 'from-pink-500/10 to-fuchsia-600/5', iconBg: 'bg-pink-500/10', iconColor: 'text-pink-600', borderActive: 'border-pink-500/30', keys: [
+                  { key: 'pixel_id', label: 'Pixel Code', desc: 'TikTok Ads Manager → Assets → Events', icon: Hash },
+                  { key: 'access_token', label: 'Access Token', desc: 'TikTok Marketing API → App Management', icon: Key },
+                  { key: 'advertiser_id', label: 'Advertiser ID', desc: 'TikTok Ads Dashboard থেকে কপি করুন', icon: Users },
+                ]},
+                { platform: 'Google', icon: BarChart3, gradient: 'from-emerald-500/10 to-green-600/5', iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-600', borderActive: 'border-emerald-500/30', keys: [
+                  { key: 'measurement_id', label: 'Measurement ID', desc: 'GA4 Property → G-XXXXXXX', icon: Hash },
+                  { key: 'api_secret', label: 'API Secret', desc: 'GA4 → Admin → Data Streams → API Secrets', icon: Key },
+                  { key: 'developer_token', label: 'Developer Token', desc: 'Google Ads → Tools → API Center', icon: Settings },
+                  { key: 'customer_id', label: 'Customer ID', desc: 'XXX-XXX-XXXX ফরম্যাটে', icon: Users },
+                  { key: 'client_id', label: 'OAuth Client ID', desc: 'Google Cloud Console → Credentials', icon: Shield },
+                  { key: 'client_secret', label: 'Client Secret', desc: 'OAuth 2.0 Client Secret', icon: Shield },
+                  { key: 'refresh_token', label: 'Refresh Token', desc: 'OAuth Playground থেকে জেনারেট', icon: RefreshCw },
+                ]},
+              ].map((p, i) => {
+                const configuredKeys = p.keys.filter(k => (allCredentials as any[] || []).some((c: any) => c.platform === p.platform.toLowerCase() && c.credential_key === k.key));
+                const isFullyConnected = configuredKeys.length >= 2;
+                const progress = Math.round((configuredKeys.length / Math.min(p.keys.length, 3)) * 100);
+
+                return (
+                  <Card key={i} className={`relative overflow-hidden transition-all hover:shadow-lg ${isFullyConnected ? p.borderActive : ''}`}>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${p.gradient} pointer-events-none`} />
+                    <CardHeader className="relative pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl ${p.iconBg} flex items-center justify-center`}>
+                            <p.icon className={`w-5 h-5 ${p.iconColor}`} />
+                          </div>
+                          <div>
+                            <CardTitle className="text-base">{p.platform}</CardTitle>
+                            <p className="text-xs text-muted-foreground">{configuredKeys.length}/{p.keys.length} কী সেট</p>
+                          </div>
+                        </div>
+                        {isFullyConnected ? (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">Connected</span>
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-600 bg-amber-500/5">
+                            <AlertCircle className="w-2.5 h-2.5 mr-0.5" /> Incomplete
+                          </Badge>
+                        )}
+                      </div>
+                      <Progress value={progress} className="h-1 mt-3" />
+                    </CardHeader>
+                    <CardContent className="relative space-y-2 pt-0">
+                      {p.keys.map((k, j) => {
+                        const exists = configuredKeys.some(ck => ck.key === k.key);
+                        return (
+                          <div key={j} className={`flex items-start gap-3 p-2.5 rounded-lg transition-colors ${exists ? 'bg-emerald-500/5 border border-emerald-500/10' : 'bg-muted/30 border border-transparent hover:border-border'}`}>
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${exists ? 'bg-emerald-500/10' : 'bg-muted'}`}>
+                              {exists ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <k.icon className="w-3.5 h-3.5 text-muted-foreground" />}
                             </div>
-                          );
-                        })}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs font-semibold">{k.label}</p>
+                                {exists && (
+                                  <span className="text-[9px] font-mono text-muted-foreground">{'•'.repeat(6)}...{(allCredentials as any[] || []).find((c: any) => c.platform === p.platform.toLowerCase() && c.credential_key === k.key)?.credential_value?.slice(-4)}</span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-muted-foreground leading-relaxed">{k.desc}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Add Credential Form */}
+            <Card className="border-dashed border-2 border-primary/20 bg-primary/[0.02]">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Settings className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">নতুন ক্রেডেনশিয়াল যোগ করুন</CardTitle>
+                    <CardDescription className="text-xs">প্ল্যাটফর্ম সিলেক্ট করে API কী সেভ করুন</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">প্ল্যাটফর্ম</Label>
+                    <Select value={newCredPlatform} onValueChange={v => { setNewCredPlatform(v); setNewCredKey(''); }}>
+                      <SelectTrigger className="h-11 bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="facebook"><span className="flex items-center gap-2"><Facebook className="w-3.5 h-3.5 text-blue-600" /> Facebook</span></SelectItem>
+                        <SelectItem value="tiktok"><span className="flex items-center gap-2"><Zap className="w-3.5 h-3.5 text-pink-600" /> TikTok</span></SelectItem>
+                        <SelectItem value="google"><span className="flex items-center gap-2"><BarChart3 className="w-3.5 h-3.5 text-emerald-600" /> Google</span></SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Credential Key</Label>
+                    <Select value={newCredKey} onValueChange={setNewCredKey}>
+                      <SelectTrigger className="h-11 bg-background"><SelectValue placeholder="সিলেক্ট করুন" /></SelectTrigger>
+                      <SelectContent>
+                        {newCredPlatform === 'facebook' && (
+                          <>
+                            <SelectItem value="pixel_id">Pixel ID</SelectItem>
+                            <SelectItem value="access_token">Access Token</SelectItem>
+                            <SelectItem value="ad_account_id">Ad Account ID</SelectItem>
+                            <SelectItem value="test_event_code">Test Event Code</SelectItem>
+                          </>
+                        )}
+                        {newCredPlatform === 'tiktok' && (
+                          <>
+                            <SelectItem value="pixel_id">Pixel ID</SelectItem>
+                            <SelectItem value="access_token">Access Token</SelectItem>
+                            <SelectItem value="advertiser_id">Advertiser ID</SelectItem>
+                          </>
+                        )}
+                        {newCredPlatform === 'google' && (
+                          <>
+                            <SelectItem value="measurement_id">Measurement ID</SelectItem>
+                            <SelectItem value="api_secret">API Secret</SelectItem>
+                            <SelectItem value="developer_token">Developer Token</SelectItem>
+                            <SelectItem value="customer_id">Customer ID</SelectItem>
+                            <SelectItem value="client_id">Client ID</SelectItem>
+                            <SelectItem value="client_secret">Client Secret</SelectItem>
+                            <SelectItem value="refresh_token">Refresh Token</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Value</Label>
+                    <Input type="password" className="h-11 bg-background font-mono" value={newCredValue} onChange={e => setNewCredValue(e.target.value)} placeholder="পেস্ট করুন..." />
+                  </div>
+                  <div className="flex items-end">
+                    <Button onClick={saveCredential} disabled={credentialSaving || !newCredKey || !newCredValue} className="w-full h-11 gap-2 font-semibold">
+                      {credentialSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+                      সিকিউরলি সেভ করুন
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Saved Credentials Table */}
+            {(allCredentials || []).length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                        <Key className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">সেভ করা ক্রেডেনশিয়াল</CardTitle>
+                        <CardDescription className="text-xs">{(allCredentials as any[]).length}টি কী সংরক্ষিত আছে</CardDescription>
                       </div>
                     </div>
-                  ))}
-                </div>
-
-                {/* Saved credentials table */}
-                {(allCredentials || []).length > 0 && (
-                  <div>
-                    <h4 className="font-semibold text-sm mb-3">সেভ করা ক্রেডেনশিয়াল</h4>
-                    <div className="overflow-x-auto rounded-lg border">
-                      <table className="w-full text-sm">
-                        <thead className="bg-muted/50">
-                          <tr>
-                            <th className="text-left p-2.5 text-xs font-medium uppercase text-muted-foreground">প্ল্যাটফর্ম</th>
-                            <th className="text-left p-2.5 text-xs font-medium uppercase text-muted-foreground">কী</th>
-                            <th className="text-left p-2.5 text-xs font-medium uppercase text-muted-foreground">ভ্যালু</th>
-                            <th className="text-left p-2.5 text-xs font-medium uppercase text-muted-foreground">স্ট্যাটাস</th>
-                            <th className="text-left p-2.5 text-xs font-medium uppercase text-muted-foreground">অ্যাকশন</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(allCredentials as any[]).map((c: any) => (
-                            <tr key={c.id} className="border-t hover:bg-muted/30">
-                              <td className="p-2.5 text-xs font-medium capitalize">{c.platform}</td>
-                              <td className="p-2.5 text-xs">{c.credential_key}</td>
-                              <td className="p-2.5 text-xs font-mono">{'•'.repeat(8)}...{c.credential_value?.slice(-4)}</td>
-                              <td className="p-2.5">
-                                <Badge variant={c.is_active ? 'default' : 'outline'} className="text-xs">
-                                  {c.is_active ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
-                                </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-t border-b bg-muted/40">
+                          <th className="text-left px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">প্ল্যাটফর্ম</th>
+                          <th className="text-left px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">ক্রেডেনশিয়াল কী</th>
+                          <th className="text-left px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">ভ্যালু</th>
+                          <th className="text-left px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">স্ট্যাটাস</th>
+                          <th className="text-left px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">আপডেট</th>
+                          <th className="text-right px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">অ্যাকশন</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {(allCredentials as any[]).map((c: any) => {
+                          const platformIcons: Record<string, any> = { facebook: Facebook, tiktok: Zap, google: BarChart3 };
+                          const platformColors: Record<string, string> = { facebook: 'text-blue-600 bg-blue-500/10', tiktok: 'text-pink-600 bg-pink-500/10', google: 'text-emerald-600 bg-emerald-500/10' };
+                          const PIcon = platformIcons[c.platform] || Key;
+                          const pColor = platformColors[c.platform] || 'text-muted-foreground bg-muted';
+                          return (
+                            <tr key={c.id} className="group hover:bg-muted/20 transition-colors">
+                              <td className="px-6 py-3.5">
+                                <div className="flex items-center gap-2.5">
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${pColor}`}>
+                                    <PIcon className="w-4 h-4" />
+                                  </div>
+                                  <span className="text-sm font-semibold capitalize">{c.platform}</span>
+                                </div>
                               </td>
-                              <td className="p-2.5">
-                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => deleteCredential(c.id)}>
-                                  <Trash2 className="w-3.5 h-3.5" />
+                              <td className="px-6 py-3.5">
+                                <code className="text-xs px-2 py-1 rounded-md bg-muted font-mono">{c.credential_key}</code>
+                              </td>
+                              <td className="px-6 py-3.5">
+                                <span className="text-xs font-mono text-muted-foreground tracking-wider">{'•'.repeat(12)}...{c.credential_value?.slice(-4)}</span>
+                              </td>
+                              <td className="px-6 py-3.5">
+                                {c.is_active ? (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> সক্রিয়
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground border">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" /> নিষ্ক্রিয়
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-6 py-3.5">
+                                <span className="text-xs text-muted-foreground">{c.updated_at ? new Date(c.updated_at).toLocaleDateString('bn-BD') : '—'}</span>
+                              </td>
+                              <td className="px-6 py-3.5 text-right">
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteCredential(c.id)}>
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
                               </td>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Security Note */}
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/5 border border-amber-500/15">
+              <Shield className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">নিরাপত্তা তথ্য</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">সকল API কী এনক্রিপ্টেড ডাটাবেসে সংরক্ষিত থাকে এবং শুধুমাত্র সার্ভার-সাইড ব্যাকএন্ড ফাংশন থেকে অ্যাক্সেস করা হয়। ক্লায়েন্ট-সাইডে কোনো কী এক্সপোজ হয় না।</p>
+              </div>
+            </div>
           </TabsContent>
 
           {/* ── Tab: Auto Sync ────────────────────────────── */}
