@@ -3,8 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+// Bot UA patterns
+const BOT_PATTERNS = /bot|crawl|spider|slurp|mediapartners|headless|phantom|selenium|puppeteer|playwright|lighthouse|pagespeed|gtmetrix|pingdom|wget|curl/i;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -20,10 +23,10 @@ serve(async (req) => {
     const body = await req.json();
     const events: any[] = Array.isArray(body) ? body : [body];
 
-    // Get IP & user agent from request
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
                req.headers.get("cf-connecting-ip") || null;
     const userAgent = req.headers.get("user-agent") || null;
+    const serverDetectedBot = userAgent ? BOT_PATTERNS.test(userAgent) : false;
 
     const rows = events.map((evt: any) => ({
       event_name: evt.event_name || "unknown",
@@ -33,63 +36,184 @@ serve(async (req) => {
       referrer: evt.referrer || null,
       user_id: evt.user_id || null,
       session_id: evt.session_id || null,
+      fingerprint_id: evt.fingerprint_id || null,
       device_type: evt.device_type || null,
       browser: evt.browser || null,
       os: evt.os || null,
       screen_resolution: evt.screen_resolution || null,
+      viewport_width: evt.viewport_width || null,
+      viewport_height: evt.viewport_height || null,
       language: evt.language || null,
       country: evt.country || null,
       city: evt.city || null,
       ip_address: ip,
       user_agent: userAgent,
+      connection_type: evt.connection_type || null,
       utm_source: evt.utm_source || null,
       utm_medium: evt.utm_medium || null,
       utm_campaign: evt.utm_campaign || null,
+      is_bot: evt.is_bot || serverDetectedBot,
+      dedup_key: evt.dedup_key || null,
+      attribution_source: evt.attribution_source || null,
+      attribution_medium: evt.attribution_medium || null,
+      attribution_campaign: evt.attribution_campaign || null,
+      attribution_type: evt.attribution_type || 'last_touch',
+      scroll_depth: evt.event_data?.depth || evt.event_data?.scroll_depth || null,
+      time_on_page: evt.event_data?.time_on_page || null,
+      engagement_score: evt.event_data?.engagement_score || null,
+      interaction_count: evt.event_data?.clicks || null,
+      rage_click: evt.event_data?.rage_clicks > 0 || false,
+      dead_click: evt.event_data?.dead_clicks > 0 || false,
+      exit_intent: evt.event_name === 'ExitIntent' || false,
+      core_web_vitals: evt.event_name === 'WebVitals' ? evt.event_data : null,
+      click_x: evt.event_data?.x || null,
+      click_y: evt.event_data?.y || null,
+      click_element: evt.event_data?.el || evt.event_data?.element || null,
+      page_load_time: evt.event_data?.load_complete || null,
     }));
 
+    // Filter duplicates by dedup_key (insert with ON CONFLICT DO NOTHING via unique index)
     const { error } = await supabase.from("server_side_events").insert(rows);
-    if (error) throw error;
+    if (error && !error.message?.includes('duplicate key')) throw error;
 
-    // Forward conversion events to Facebook CAPI if configured
-    if (["Purchase", "AddToCart", "InitiateCheckout", "ViewContent", "Lead"].includes(rows[0]?.event_name)) {
+    // ─── Update Engagement Scores ─────────────────────────
+    const engagementEvents = rows.filter(r => r.event_name === 'EngagementReport');
+    for (const evt of engagementEvents) {
+      if (!evt.session_id || !evt.page_path) continue;
+      
+      const engData = {
+        session_id: evt.session_id,
+        fingerprint_id: evt.fingerprint_id,
+        user_id: evt.user_id,
+        page_path: evt.page_path,
+        scroll_depth: evt.event_data?.scroll_depth || 0,
+        time_on_page: evt.event_data?.time_on_page || 0,
+        click_count: evt.event_data?.clicks || 0,
+        rage_clicks: evt.event_data?.rage_clicks || 0,
+        dead_clicks: evt.event_data?.dead_clicks || 0,
+        interaction_count: evt.event_data?.scroll_events || 0,
+        engagement_score: evt.engagement_score || 0,
+        core_web_vitals: evt.core_web_vitals,
+      };
+
+      await supabase.from("engagement_scores").insert(engData);
+    }
+
+    // ─── Update Attribution ───────────────────────────────
+    const pageViews = rows.filter(r => r.event_name === 'PageView' && !r.is_bot);
+    for (const pv of pageViews) {
+      if (!pv.session_id) continue;
+
+      const { data: existing } = await supabase
+        .from("user_attributions")
+        .select("id, total_visits")
+        .eq("session_id", pv.session_id)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from("user_attributions").update({
+          last_touch_source: pv.attribution_source,
+          last_touch_medium: pv.attribution_medium,
+          last_touch_campaign: pv.attribution_campaign,
+          last_touch_at: new Date().toISOString(),
+          total_visits: (existing.total_visits || 0) + 1,
+          updated_at: new Date().toISOString(),
+        }).eq("id", existing.id);
+      } else {
+        await supabase.from("user_attributions").insert({
+          user_id: pv.user_id,
+          session_id: pv.session_id,
+          fingerprint_id: pv.fingerprint_id,
+          first_touch_source: pv.attribution_source,
+          first_touch_medium: pv.attribution_medium,
+          first_touch_campaign: pv.attribution_campaign,
+          last_touch_source: pv.attribution_source,
+          last_touch_medium: pv.attribution_medium,
+          last_touch_campaign: pv.attribution_campaign,
+        });
+      }
+    }
+
+    // ─── Update Attribution on Purchase ───────────────────
+    const purchases = rows.filter(r => r.event_name === 'Purchase');
+    for (const p of purchases) {
+      if (!p.session_id) continue;
+      const revenue = p.event_data?.value || 0;
+
+      await supabase.from("user_attributions").update({
+        total_conversions: supabase.rpc ? 1 : 1, // increment handled below
+        total_revenue: revenue,
+        updated_at: new Date().toISOString(),
+      }).eq("session_id", p.session_id);
+
+      // Use raw SQL for increment
+      await supabase.rpc('increment_attribution_conversions' as any, {
+        p_session_id: p.session_id,
+        p_revenue: revenue,
+      }).catch(() => {}); // Gracefully fail if RPC doesn't exist yet
+    }
+
+    // ─── Forward to Facebook CAPI ─────────────────────────
+    const conversionEvents = ["Purchase", "AddToCart", "InitiateCheckout", "ViewContent", "Lead", "CompleteRegistration", "AddToWishlist", "Search"];
+    const conversions = rows.filter(r => conversionEvents.includes(r.event_name) && !r.is_bot);
+
+    if (conversions.length > 0) {
       try {
         const { data: settings } = await supabase
           .from("site_settings")
           .select("setting_key, setting_value")
           .in("setting_key", ["fb_pixel_id", "fb_capi_token"]);
 
-        const pixelId = settings?.find((s: any) => s.setting_key === "fb_pixel_id")?.setting_value;
-        const accessToken = settings?.find((s: any) => s.setting_key === "fb_capi_token")?.setting_value;
+        let pixelId = settings?.find((s: any) => s.setting_key === "fb_pixel_id")?.setting_value;
+        let accessToken = settings?.find((s: any) => s.setting_key === "fb_capi_token")?.setting_value;
 
-        if (pixelId && accessToken) {
-          const fbEvents = rows.map((r) => ({
+        // Parse if JSON-wrapped
+        try { if (typeof pixelId === 'string') pixelId = JSON.parse(pixelId); } catch {}
+        try { if (typeof accessToken === 'string') accessToken = JSON.parse(accessToken); } catch {}
+
+        if (pixelId && accessToken && String(pixelId).length > 3 && String(accessToken).length > 3) {
+          const fbEvents = conversions.map((r) => ({
             event_name: r.event_name,
             event_time: Math.floor(Date.now() / 1000),
+            event_id: r.dedup_key || crypto.randomUUID(),
             action_source: "website",
-            event_source_url: r.page_path || undefined,
+            event_source_url: r.page_path ? `https://boialo.lovable.app${r.page_path}` : undefined,
             user_data: {
               client_ip_address: r.ip_address,
               client_user_agent: r.user_agent,
-              external_id: r.user_id || r.session_id,
+              external_id: r.user_id || r.fingerprint_id || r.session_id,
+              fbc: r.event_data?.fbc || undefined,
+              fbp: r.event_data?.fbp || undefined,
             },
-            custom_data: r.event_data,
+            custom_data: {
+              ...r.event_data,
+              currency: r.event_data?.currency || 'BDT',
+              value: r.event_data?.value || 0,
+            },
           }));
 
-          await fetch(
-            `https://graph.facebook.com/v18.0/${pixelId}/events?access_token=${accessToken}`,
+          const fbRes = await fetch(
+            `https://graph.facebook.com/v21.0/${pixelId}/events?access_token=${accessToken}`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ data: fbEvents }),
+              body: JSON.stringify({ data: fbEvents, test_event_code: undefined }),
             }
           );
+          const fbResult = await fbRes.json();
+          console.log("FB CAPI result:", JSON.stringify(fbResult));
         }
       } catch (e) {
         console.error("FB CAPI forward error:", e);
       }
     }
 
-    return new Response(JSON.stringify({ ok: true, count: rows.length }), {
+    return new Response(JSON.stringify({ 
+      ok: true, 
+      count: rows.length,
+      bots_filtered: rows.filter(r => r.is_bot).length,
+      conversions_forwarded: conversions.length,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {
