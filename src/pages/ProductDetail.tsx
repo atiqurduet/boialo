@@ -466,15 +466,15 @@ const ProductDetail = () => {
                   </>
                 )}
               </div>
+
               <Button 
-                  className="flex-1 bg-accent hover:bg-accent/90"
-                  onClick={() => setPreviewOpen(true)}
-                  disabled={!previewUrl}
-                >
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  একটু পড়ুন
-                </Button>
-              </div>
+                className="w-full bg-accent hover:bg-accent/90"
+                onClick={() => setPreviewOpen(true)}
+                disabled={!previewUrl}
+              >
+                <BookOpen className="w-4 h-4 mr-2" />
+                একটু পড়ুন
+              </Button>
 
               {!previewUrl && (
                 <p className="text-xs text-muted-foreground text-center">
