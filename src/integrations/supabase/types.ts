@@ -244,6 +244,72 @@ export type Database = {
         }
         Relationships: []
       }
+      ad_platform_credentials: {
+        Row: {
+          created_at: string | null
+          credential_key: string
+          credential_value: string
+          id: string
+          is_active: boolean | null
+          platform: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          credential_key: string
+          credential_value: string
+          id?: string
+          is_active?: boolean | null
+          platform: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          credential_key?: string
+          credential_value?: string
+          id?: string
+          is_active?: boolean | null
+          platform?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      ad_platform_events: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          event_data: Json | null
+          event_name: string
+          id: string
+          platform: string
+          response: Json | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          event_data?: Json | null
+          event_name: string
+          id?: string
+          platform: string
+          response?: Json | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          event_data?: Json | null
+          event_name?: string
+          id?: string
+          platform?: string
+          response?: Json | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       address_book: {
         Row: {
           address: string
@@ -328,6 +394,54 @@ export type Database = {
           record_id?: string | null
           table_name?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      audience_sync_jobs: {
+        Row: {
+          audience_name: string | null
+          audience_type: string
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          error_message: string | null
+          external_audience_id: string | null
+          id: string
+          platform: string
+          started_at: string | null
+          status: string | null
+          synced_users: number | null
+          total_users: number | null
+        }
+        Insert: {
+          audience_name?: string | null
+          audience_type: string
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          external_audience_id?: string | null
+          id?: string
+          platform: string
+          started_at?: string | null
+          status?: string | null
+          synced_users?: number | null
+          total_users?: number | null
+        }
+        Update: {
+          audience_name?: string | null
+          audience_type?: string
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          external_audience_id?: string | null
+          id?: string
+          platform?: string
+          started_at?: string | null
+          status?: string | null
+          synced_users?: number | null
+          total_users?: number | null
         }
         Relationships: []
       }
