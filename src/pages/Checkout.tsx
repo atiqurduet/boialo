@@ -317,6 +317,36 @@ const Checkout = () => {
     } catch (e: any) { toast.error(e.message); setIsSubmitting(false); }
   };
 
+  const initNagadPayment = async (orderId: string, orderNumber: string, totalAmount: number) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("nagad-payment", {
+        body: { action: "create", orderId, amount: totalAmount, callbackUrl: `${window.location.origin}/nagad/callback` },
+      });
+      if (error) throw error;
+      if (data.success && data.nagadURL) {
+        localStorage.setItem("pending_nagad_order", JSON.stringify({ orderId, orderNumber, paymentRefId: data.paymentRefId }));
+        window.location.href = data.nagadURL;
+      } else throw new Error(data.error || "নগদ পেমেন্ট শুরু করতে সমস্যা");
+    } catch (e: any) { toast.error(e.message); setIsSubmitting(false); }
+  };
+
+  const initSSLCommerzPayment = async (orderId: string, orderNumber: string, totalAmount: number) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("sslcommerz-payment", {
+        body: {
+          action: "create", orderId, amount: totalAmount,
+          customerName: formData.fullName, customerEmail: formData.email, customerPhone: formData.phone, customerAddress: formData.address,
+          callbackUrl: `${window.location.origin}/payment/callback`,
+        },
+      });
+      if (error) throw error;
+      if (data.success && data.gatewayUrl) {
+        localStorage.setItem("pending_ssl_order", JSON.stringify({ orderId, orderNumber, sessionKey: data.sessionKey }));
+        window.location.href = data.gatewayUrl;
+      } else throw new Error(data.error || "SSLCommerz পেমেন্ট শুরু করতে সমস্যা");
+    } catch (e: any) { toast.error(e.message); setIsSubmitting(false); }
+  };
+
   const placeOrder = async () => {
     if (!user) return;
     setIsSubmitting(true);
