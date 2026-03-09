@@ -1834,6 +1834,60 @@ export type Database = {
         }
         Relationships: []
       }
+      engagement_scores: {
+        Row: {
+          click_count: number | null
+          core_web_vitals: Json | null
+          created_at: string | null
+          dead_clicks: number | null
+          engagement_score: number | null
+          fingerprint_id: string | null
+          id: string
+          interaction_count: number | null
+          page_path: string
+          rage_clicks: number | null
+          scroll_depth: number | null
+          session_id: string
+          time_on_page: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          click_count?: number | null
+          core_web_vitals?: Json | null
+          created_at?: string | null
+          dead_clicks?: number | null
+          engagement_score?: number | null
+          fingerprint_id?: string | null
+          id?: string
+          interaction_count?: number | null
+          page_path: string
+          rage_clicks?: number | null
+          scroll_depth?: number | null
+          session_id: string
+          time_on_page?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          click_count?: number | null
+          core_web_vitals?: Json | null
+          created_at?: string | null
+          dead_clicks?: number | null
+          engagement_score?: number | null
+          fingerprint_id?: string | null
+          id?: string
+          interaction_count?: number | null
+          page_path?: string
+          rage_clicks?: number | null
+          scroll_depth?: number | null
+          session_id?: string
+          time_on_page?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       footer_links: {
         Row: {
           created_at: string
@@ -4317,73 +4371,139 @@ export type Database = {
       }
       server_side_events: {
         Row: {
+          attribution_campaign: string | null
+          attribution_medium: string | null
+          attribution_source: string | null
+          attribution_type: string | null
           browser: string | null
           city: string | null
+          click_element: string | null
+          click_x: number | null
+          click_y: number | null
+          connection_type: string | null
+          core_web_vitals: Json | null
           country: string | null
           created_at: string
+          dead_click: boolean | null
+          dedup_key: string | null
           device_type: string | null
+          engagement_score: number | null
           event_data: Json | null
           event_name: string
+          exit_intent: boolean | null
+          fingerprint_id: string | null
           id: string
+          interaction_count: number | null
           ip_address: string | null
+          is_bot: boolean | null
           language: string | null
           os: string | null
+          page_load_time: number | null
           page_path: string | null
           page_title: string | null
+          rage_click: boolean | null
           referrer: string | null
           screen_resolution: string | null
+          scroll_depth: number | null
           session_id: string | null
+          time_on_page: number | null
           user_agent: string | null
           user_id: string | null
           utm_campaign: string | null
           utm_medium: string | null
           utm_source: string | null
+          viewport_height: number | null
+          viewport_width: number | null
         }
         Insert: {
+          attribution_campaign?: string | null
+          attribution_medium?: string | null
+          attribution_source?: string | null
+          attribution_type?: string | null
           browser?: string | null
           city?: string | null
+          click_element?: string | null
+          click_x?: number | null
+          click_y?: number | null
+          connection_type?: string | null
+          core_web_vitals?: Json | null
           country?: string | null
           created_at?: string
+          dead_click?: boolean | null
+          dedup_key?: string | null
           device_type?: string | null
+          engagement_score?: number | null
           event_data?: Json | null
           event_name: string
+          exit_intent?: boolean | null
+          fingerprint_id?: string | null
           id?: string
+          interaction_count?: number | null
           ip_address?: string | null
+          is_bot?: boolean | null
           language?: string | null
           os?: string | null
+          page_load_time?: number | null
           page_path?: string | null
           page_title?: string | null
+          rage_click?: boolean | null
           referrer?: string | null
           screen_resolution?: string | null
+          scroll_depth?: number | null
           session_id?: string | null
+          time_on_page?: number | null
           user_agent?: string | null
           user_id?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          viewport_height?: number | null
+          viewport_width?: number | null
         }
         Update: {
+          attribution_campaign?: string | null
+          attribution_medium?: string | null
+          attribution_source?: string | null
+          attribution_type?: string | null
           browser?: string | null
           city?: string | null
+          click_element?: string | null
+          click_x?: number | null
+          click_y?: number | null
+          connection_type?: string | null
+          core_web_vitals?: Json | null
           country?: string | null
           created_at?: string
+          dead_click?: boolean | null
+          dedup_key?: string | null
           device_type?: string | null
+          engagement_score?: number | null
           event_data?: Json | null
           event_name?: string
+          exit_intent?: boolean | null
+          fingerprint_id?: string | null
           id?: string
+          interaction_count?: number | null
           ip_address?: string | null
+          is_bot?: boolean | null
           language?: string | null
           os?: string | null
+          page_load_time?: number | null
           page_path?: string | null
           page_title?: string | null
+          rage_click?: boolean | null
           referrer?: string | null
           screen_resolution?: string | null
+          scroll_depth?: number | null
           session_id?: string | null
+          time_on_page?: number | null
           user_agent?: string | null
           user_id?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          viewport_height?: number | null
+          viewport_width?: number | null
         }
         Relationships: []
       }
@@ -5513,6 +5633,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_attributions: {
+        Row: {
+          created_at: string | null
+          fingerprint_id: string | null
+          first_touch_at: string | null
+          first_touch_campaign: string | null
+          first_touch_medium: string | null
+          first_touch_source: string | null
+          id: string
+          last_touch_at: string | null
+          last_touch_campaign: string | null
+          last_touch_medium: string | null
+          last_touch_source: string | null
+          session_id: string
+          total_conversions: number | null
+          total_revenue: number | null
+          total_visits: number | null
+          touchpoints: Json | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          fingerprint_id?: string | null
+          first_touch_at?: string | null
+          first_touch_campaign?: string | null
+          first_touch_medium?: string | null
+          first_touch_source?: string | null
+          id?: string
+          last_touch_at?: string | null
+          last_touch_campaign?: string | null
+          last_touch_medium?: string | null
+          last_touch_source?: string | null
+          session_id: string
+          total_conversions?: number | null
+          total_revenue?: number | null
+          total_visits?: number | null
+          touchpoints?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          fingerprint_id?: string | null
+          first_touch_at?: string | null
+          first_touch_campaign?: string | null
+          first_touch_medium?: string | null
+          first_touch_source?: string | null
+          id?: string
+          last_touch_at?: string | null
+          last_touch_campaign?: string | null
+          last_touch_medium?: string | null
+          last_touch_source?: string | null
+          session_id?: string
+          total_conversions?: number | null
+          total_revenue?: number | null
+          total_visits?: number | null
+          touchpoints?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       user_badges: {
         Row: {
