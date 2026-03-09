@@ -430,11 +430,14 @@ const AdminAudienceExport = () => {
 
         {/* ── Main Tabs ──────────────────────────────────── */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-4 w-full max-w-xl">
-            <TabsTrigger value="audiences" className="flex items-center gap-1.5"><Users className="w-4 h-4" /> অডিয়েন্স</TabsTrigger>
-            <TabsTrigger value="insights" className="flex items-center gap-1.5"><PieChart className="w-4 h-4" /> ইনসাইট</TabsTrigger>
-            <TabsTrigger value="builder" className="flex items-center gap-1.5"><Layers className="w-4 h-4" /> বিল্ডার</TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-1.5"><FileText className="w-4 h-4" /> হিস্টোরি</TabsTrigger>
+          <TabsList className="flex flex-wrap w-full max-w-3xl gap-1">
+            <TabsTrigger value="audiences" className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> অডিয়েন্স</TabsTrigger>
+            <TabsTrigger value="ai" className="flex items-center gap-1.5"><Brain className="w-3.5 h-3.5" /> AI প্রেডিকশন</TabsTrigger>
+            <TabsTrigger value="overlap" className="flex items-center gap-1.5"><GitMerge className="w-3.5 h-3.5" /> ওভারল্যাপ</TabsTrigger>
+            <TabsTrigger value="insights" className="flex items-center gap-1.5"><PieChart className="w-3.5 h-3.5" /> ইনসাইট</TabsTrigger>
+            <TabsTrigger value="builder" className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> বিল্ডার</TabsTrigger>
+            <TabsTrigger value="sync" className="flex items-center gap-1.5"><Send className="w-3.5 h-3.5" /> অটো সিংক</TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> হিস্টোরি</TabsTrigger>
           </TabsList>
 
           {/* ── Tab: Audiences ────────────────────────────── */}
