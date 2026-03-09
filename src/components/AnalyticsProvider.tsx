@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { initializePixels, trackPageView, setUserData } from '@/lib/analytics';
+import { serverTrackPageView } from '@/lib/serverTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVisitorTracking } from '@/hooks/useVisitorTracking';
 
@@ -58,14 +59,16 @@ export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => {
     loadPixelConfig();
   }, []);
 
-  // Track page views on route change
+  // Track page views on route change (client + server-side)
   useEffect(() => {
     const timer = setTimeout(() => {
       trackPageView(location.pathname, document.title);
+      // Server-side tracking (ad-blocker proof)
+      serverTrackPageView(user?.id);
     }, 100);
     
     return () => clearTimeout(timer);
-  }, [location.pathname]);
+  }, [location.pathname, user?.id]);
 
   // Set user data when logged in
   useEffect(() => {

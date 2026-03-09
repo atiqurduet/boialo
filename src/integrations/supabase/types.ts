@@ -4315,6 +4315,78 @@ export type Database = {
         }
         Relationships: []
       }
+      server_side_events: {
+        Row: {
+          browser: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          device_type: string | null
+          event_data: Json | null
+          event_name: string
+          id: string
+          ip_address: string | null
+          language: string | null
+          os: string | null
+          page_path: string | null
+          page_title: string | null
+          referrer: string | null
+          screen_resolution: string | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          event_data?: Json | null
+          event_name: string
+          id?: string
+          ip_address?: string | null
+          language?: string | null
+          os?: string | null
+          page_path?: string | null
+          page_title?: string | null
+          referrer?: string | null
+          screen_resolution?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          event_data?: Json | null
+          event_name?: string
+          id?: string
+          ip_address?: string | null
+          language?: string | null
+          os?: string | null
+          page_path?: string | null
+          page_title?: string | null
+          referrer?: string | null
+          screen_resolution?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
       shared_wishlists: {
         Row: {
           created_at: string
