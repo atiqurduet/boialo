@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CreditCard, Smartphone, Truck, MapPin, ChevronLeft, Loader2, Shield, Phone, Ticket, Zap, Star, Package, Lock, Check } from "lucide-react";
+import { CreditCard, Smartphone, Truck, ChevronLeft, Loader2, Shield, Phone, Ticket, Zap, Star, Package, Lock, Check } from "lucide-react";
 import { useCartContext } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,6 +52,7 @@ const Checkout = () => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [deliveryArea, setDeliveryArea] = useState("inside");
   const [selectedZoneId, setSelectedZoneId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [abandonedCheckoutId, setAbandonedCheckoutId] = useState<string | null>(null);
@@ -95,7 +96,10 @@ const Checkout = () => {
         setOtpSettings(prev => ({ ...prev, ...settings }));
       }
       if (payRes.data) setDbPaymentMethods(payRes.data);
-      if (zoneRes.data) setDeliveryZones(zoneRes.data);
+      if (zoneRes.data) {
+        setDeliveryZones(zoneRes.data);
+        if (zoneRes.data.length > 0) setSelectedZoneId(zoneRes.data[0].id);
+      }
       if (fieldsRes.data) setDynamicFields(fieldsRes.data);
       if (rulesRes.data) setPricingRules(rulesRes.data);
     };
@@ -174,8 +178,6 @@ const Checkout = () => {
     fetchProfile();
   }, [user]);
 
-  useEffect(() => { if (deliveryZones.length > 0 && !selectedZoneId) setSelectedZoneId(deliveryZones[0].id); }, [deliveryZones]);
-
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: "" }));
@@ -189,10 +191,33 @@ const Checkout = () => {
     return `ORD${code}`;
   };
 
+  // Compute delivery charge
+  const getDeliveryCharge = (): number => {
+    if (deliveryZones.length > 0) {
+      const zone = deliveryZones.find(z => z.id === selectedZoneId);
+      return zone?.delivery_charge ?? deliveryZones[0]?.delivery_charge ?? 60;
+    }
+    return deliveryArea === "outside" ? 120 : 60;
+  };
+
+  const deliveryCharge = getDeliveryCharge();
+  const selectedZone = deliveryZones.find(z => z.id === selectedZoneId);
+  const couponDiscount = appliedCoupon?.discount_amount || 0;
+  const total = Math.max(0, subtotal - couponDiscount - dynamicDiscount + deliveryCharge);
+  const deliveryAreaLabel = deliveryZones.length > 0 ? (selectedZone?.zone_name_bn || "default") : (deliveryArea === "outside" ? "ঢাকার বাইরে" : "ঢাকার ভিতরে");
+
+  const iconMap: Record<string, any> = { cod: Truck, bkash: Smartphone, nagad: Smartphone, sslcommerz: CreditCard, card: CreditCard };
+  const paymentMethods = dbPaymentMethods.map((m: any) => ({
+    id: m.provider, name: m.name_bn,
+    description: m.provider === 'cod' ? 'পণ্য হাতে পেয়ে টাকা দিন' : m.manual_number ? `${m.manual_type || 'Send Money'}` : m.name_bn,
+    icon: iconMap[m.provider] || CreditCard,
+    manual_number: m.manual_number, manual_type: m.manual_type,
+    manual_instructions: m.manual_instructions, payment_mode: m.payment_mode || 'manual',
+  }));
+
   const validateForm = () => {
     try {
       checkoutSchema.pick({ fullName: true, phone: true, email: true, address: true }).parse(formData);
-      if (!selectedZoneId && deliveryZones.length > 0) { toast.error("ডেলিভারি এরিয়া নির্বাচন করুন"); return false; }
       const selectedMethod = paymentMethods.find((m: any) => m.id === paymentMethod);
       if (paymentMethod !== "cod" && selectedMethod?.manual_number && selectedMethod?.payment_mode !== "api" && !formData.transactionId?.trim()) {
         setErrors({ transactionId: "ট্রান্জেকশন আইডি দিন" });
@@ -205,7 +230,6 @@ const Checkout = () => {
         const newErrors: Record<string, string> = {};
         error.errors.forEach(err => { if (err.path[0]) newErrors[err.path[0] as string] = err.message; });
         setErrors(newErrors);
-        // Scroll to first error
         const firstErrorKey = error.errors[0]?.path[0] as string;
         if (firstErrorKey) {
           document.getElementById(`field-${firstErrorKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -283,7 +307,7 @@ const Checkout = () => {
         user_id: user.id, order_number: orderNumber, status: isApiPayment ? "payment_pending" : "pending",
         subtotal, delivery_charge: deliveryCharge, total: orderTotal, payment_method: paymentMethod,
         transaction_id: isApiPayment ? null : (formData.transactionId || null),
-        delivery_area: selectedZone?.zone_name_bn || "default",
+        delivery_area: deliveryAreaLabel,
         full_name: formData.fullName.trim(), phone: formData.phone.trim(), email: formData.email?.trim() || null,
         address: formData.address.trim(), notes: formData.notes?.trim() || null,
         phone_verified: phoneVerified || !isOtpRequired(),
@@ -314,7 +338,7 @@ const Checkout = () => {
         items: cartItems.map(item => ({ id: item.product.id, name: item.product.title, price: item.product.price, category: item.product.category, quantity: item.quantity })),
       });
       serverTrackPurchase({ transaction_id: orderNumber, value: orderTotal, items: cartItems.map(i => ({ id: i.product.id, name: i.product.title, price: i.product.price })) }, user?.id);
-      trackAddShippingInfo(selectedZone?.zone_name_bn || 'default', orderTotal);
+      trackAddShippingInfo(deliveryAreaLabel, orderTotal);
       trackAddPaymentInfo(paymentMethod, orderTotal);
       toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
       navigate("/order-confirmation", { state: { orderNumber } });
@@ -339,20 +363,6 @@ const Checkout = () => {
     } else { await placeOrder(); }
   };
 
-  const selectedZone = deliveryZones.find(z => z.id === selectedZoneId);
-  const deliveryCharge = selectedZone?.delivery_charge ?? (selectedZoneId === "outside" ? 120 : 60);
-  const couponDiscount = appliedCoupon?.discount_amount || 0;
-  const total = Math.max(0, subtotal - couponDiscount - dynamicDiscount + deliveryCharge);
-
-  const iconMap: Record<string, any> = { cod: Truck, bkash: Smartphone, nagad: Smartphone, sslcommerz: CreditCard, card: CreditCard };
-  const paymentMethods = dbPaymentMethods.map((m: any) => ({
-    id: m.provider, name: m.name_bn,
-    description: m.provider === 'cod' ? 'পণ্য হাতে পেয়ে টাকা দিন' : m.manual_number ? `${m.manual_type || 'Send Money'}` : m.name_bn,
-    icon: iconMap[m.provider] || CreditCard,
-    manual_number: m.manual_number, manual_type: m.manual_type,
-    manual_instructions: m.manual_instructions, payment_mode: m.payment_mode || 'manual',
-  }));
-
   if (authLoading || cartLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -365,14 +375,14 @@ const Checkout = () => {
   const additionalFields = dynamicFields.filter(f => f.field_group === 'additional');
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-background">
       <AnnouncementBar />
       <Header />
 
-      <main className="container max-w-4xl py-4 md:py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <Link to="/cart" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+      <main className="container max-w-5xl py-6 md:py-10">
+        {/* Breadcrumb */}
+        <div className="flex items-center justify-between mb-8">
+          <Link to="/cart" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors">
             <ChevronLeft className="w-4 h-4" /> কার্টে ফিরুন
           </Link>
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -381,173 +391,193 @@ const Checkout = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left: Form */}
-          <div className="lg:col-span-7 space-y-5">
-            
-            {/* ===== Section 1: Delivery Info ===== */}
-            <section className="bg-card rounded-2xl border border-border/50 overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-border/40 bg-muted/20">
-                <h2 className="font-bold text-sm flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">1</div>
-                  ডেলিভারি তথ্য
-                </h2>
-              </div>
-              <div className="p-5">
-                <AddressBookSelector onSelect={(addr) => {
-                  setFormData(prev => ({ ...prev, fullName: addr.fullName, phone: addr.phone, address: addr.address }));
-                }} />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
-                  <div id="field-fullName" className="space-y-1.5">
-                    <Label className="text-xs font-medium text-muted-foreground">পূর্ণ নাম *</Label>
-                    <Input
-                      className={cn("h-10 rounded-lg bg-muted/30 border-border/50", errors.fullName && "border-destructive")}
-                      value={formData.fullName}
-                      onChange={e => handleInputChange("fullName", e.target.value)}
-                      placeholder="আপনার নাম"
-                    />
-                    {errors.fullName && <p className="text-destructive text-[11px]">{errors.fullName}</p>}
-                  </div>
-                  <div id="field-phone" className="space-y-1.5">
-                    <Label className="text-xs font-medium text-muted-foreground">মোবাইল *</Label>
-                    <Input
-                      className={cn("h-10 rounded-lg bg-muted/30 border-border/50", errors.phone && "border-destructive")}
-                      value={formData.phone}
-                      onChange={e => handleInputChange("phone", e.target.value)}
-                      placeholder="01XXXXXXXXX"
-                    />
-                    {errors.phone && <p className="text-destructive text-[11px]">{errors.phone}</p>}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-muted-foreground">ইমেইল (ঐচ্ছিক)</Label>
-                    <Input
-                      type="email"
-                      className="h-10 rounded-lg bg-muted/30 border-border/50"
-                      value={formData.email}
-                      onChange={e => handleInputChange("email", e.target.value)}
-                      placeholder="email@example.com"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-muted-foreground">ডেলিভারি এরিয়া *</Label>
-                    {deliveryZones.length > 0 ? (
-                      <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
-                        <SelectTrigger className="h-10 rounded-lg bg-muted/30 border-border/50"><SelectValue placeholder="এরিয়া নির্বাচন" /></SelectTrigger>
-                        <SelectContent>
-                          {deliveryZones.map(zone => (
-                            <SelectItem key={zone.id} value={zone.id}>
-                              {zone.zone_name_bn} — ৳{zone.delivery_charge}
-                              {zone.estimated_days_min && ` (${zone.estimated_days_min}-${zone.estimated_days_max} দিন)`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <RadioGroup value={selectedZoneId || "inside"} onValueChange={setSelectedZoneId} className="flex gap-2">
-                        <label className={cn("flex-1 flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer text-sm", (selectedZoneId || "inside") === "inside" ? "border-primary bg-primary/5" : "border-border/50")}>
-                          <RadioGroupItem value="inside" /> ঢাকার ভিতরে (৳60)
-                        </label>
-                        <label className={cn("flex-1 flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer text-sm", selectedZoneId === "outside" ? "border-primary bg-primary/5" : "border-border/50")}>
-                          <RadioGroupItem value="outside" /> ঢাকার বাইরে (৳120)
-                        </label>
-                      </RadioGroup>
-                    )}
-                  </div>
-                  <div id="field-address" className="sm:col-span-2 space-y-1.5">
-                    <Label className="text-xs font-medium text-muted-foreground">সম্পূর্ণ ঠিকানা *</Label>
-                    <Textarea
-                      className={cn("rounded-lg bg-muted/30 border-border/50 resize-none", errors.address && "border-destructive")}
-                      rows={2}
-                      value={formData.address}
-                      onChange={e => handleInputChange("address", e.target.value)}
-                      placeholder="বাড়ি নং, রাস্তা, এলাকা, থানা, জেলা"
-                    />
-                    {errors.address && <p className="text-destructive text-[11px]">{errors.address}</p>}
-                  </div>
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <Label className="text-xs font-medium text-muted-foreground">অর্ডার নোট (ঐচ্ছিক)</Label>
-                    <Input
-                      className="h-10 rounded-lg bg-muted/30 border-border/50"
-                      value={formData.notes}
-                      onChange={e => handleInputChange("notes", e.target.value)}
-                      placeholder="বিশেষ কোনো নির্দেশনা..."
-                    />
-                  </div>
+        <h1 className="text-2xl font-bold mb-6">চেকআউট</h1>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* ===== LEFT: Form ===== */}
+          <div className="lg:col-span-7 space-y-6">
+
+            {/* Saved Addresses */}
+            <AddressBookSelector onSelect={(addr) => {
+              setFormData(prev => ({ ...prev, fullName: addr.fullName, phone: addr.phone, address: addr.address }));
+            }} />
+
+            {/* Delivery Info */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div id="field-fullName" className="space-y-1.5">
+                  <Label className="text-sm font-medium">পূর্ণ নাম *</Label>
+                  <Input
+                    className={cn("h-11 rounded-xl border-border", errors.fullName && "border-destructive ring-1 ring-destructive/30")}
+                    value={formData.fullName}
+                    onChange={e => handleInputChange("fullName", e.target.value)}
+                    placeholder="আপনার নাম"
+                  />
+                  {errors.fullName && <p className="text-destructive text-xs">{errors.fullName}</p>}
                 </div>
-
-                {/* Dynamic Additional Fields inline */}
-                {additionalFields.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-border/30 space-y-3">
-                    {additionalFields.map(field => (
-                      <div key={field.id}>
-                        {field.field_type === 'checkbox' && (
-                          <label className="flex items-center gap-2.5 cursor-pointer">
-                            <Checkbox checked={!!dynamicFieldValues[field.field_name]} onCheckedChange={checked => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: checked }))} />
-                            <span className="text-sm">{field.field_label_bn}</span>
-                          </label>
-                        )}
-                        {field.field_type === 'textarea' && dynamicFieldValues['gift_wrap'] && field.field_name === 'gift_message' && (
-                          <div className="space-y-1 pl-7">
-                            <Label className="text-xs text-muted-foreground">{field.field_label_bn}</Label>
-                            <Textarea className="rounded-lg bg-muted/30 border-border/50 resize-none" rows={2} placeholder={field.placeholder || ''} value={dynamicFieldValues[field.field_name] || ''} onChange={e => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: e.target.value }))} />
-                          </div>
-                        )}
-                        {field.field_type === 'select' && (
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">{field.field_label_bn}</Label>
-                            <Select value={dynamicFieldValues[field.field_name] || 'none'} onValueChange={val => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: val === 'none' ? '' : val }))}>
-                              <SelectTrigger className="h-10 rounded-lg bg-muted/30 border-border/50"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">নির্বাচন করুন</SelectItem>
-                                <SelectItem value="morning">সকাল (৯-১২)</SelectItem>
-                                <SelectItem value="afternoon">দুপুর (১২-৫)</SelectItem>
-                                <SelectItem value="evening">সন্ধ্যা (৫-৯)</SelectItem>
-                                <SelectItem value="anytime">যেকোনো সময়</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                        {field.field_type === 'text' && (
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">{field.field_label_bn} {field.is_required && '*'}</Label>
-                            <Input className="h-10 rounded-lg bg-muted/30 border-border/50" placeholder={field.placeholder || ''} value={dynamicFieldValues[field.field_name] || ''} onChange={e => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: e.target.value }))} />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div id="field-phone" className="space-y-1.5">
+                  <Label className="text-sm font-medium">মোবাইল নম্বর *</Label>
+                  <Input
+                    className={cn("h-11 rounded-xl border-border", errors.phone && "border-destructive ring-1 ring-destructive/30")}
+                    value={formData.phone}
+                    onChange={e => handleInputChange("phone", e.target.value)}
+                    placeholder="01XXXXXXXXX"
+                  />
+                  {errors.phone && <p className="text-destructive text-xs">{errors.phone}</p>}
+                </div>
               </div>
-            </section>
 
-            {/* ===== Section 2: Payment ===== */}
-            <section className="bg-card rounded-2xl border border-border/50 overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-border/40 bg-muted/20">
-                <h2 className="font-bold text-sm flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">2</div>
-                  পেমেন্ট পদ্ধতি
-                </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">ইমেইল (ঐচ্ছিক)</Label>
+                  <Input
+                    type="email"
+                    className="h-11 rounded-xl border-border"
+                    value={formData.email}
+                    onChange={e => handleInputChange("email", e.target.value)}
+                    placeholder="email@example.com"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">ডেলিভারি এরিয়া *</Label>
+                  {deliveryZones.length > 0 ? (
+                    <RadioGroup value={selectedZoneId} onValueChange={setSelectedZoneId} className="flex gap-3">
+                      {deliveryZones.map(zone => (
+                        <label
+                          key={zone.id}
+                          className={cn(
+                            "flex-1 flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all text-center",
+                            selectedZoneId === zone.id
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/40"
+                          )}
+                        >
+                          <RadioGroupItem value={zone.id} className="mb-1" />
+                          <span className="text-sm font-medium leading-tight">{zone.zone_name_bn}</span>
+                          <span className="text-sm font-bold text-primary">(৳{zone.delivery_charge})</span>
+                        </label>
+                      ))}
+                    </RadioGroup>
+                  ) : (
+                    <RadioGroup value={deliveryArea} onValueChange={setDeliveryArea} className="flex gap-3">
+                      <label
+                        className={cn(
+                          "flex-1 flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all text-center",
+                          deliveryArea === "inside"
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/40"
+                        )}
+                      >
+                        <RadioGroupItem value="inside" className="mb-1" />
+                        <span className="text-sm font-medium">ঢাকার ভিতরে</span>
+                        <span className="text-sm font-bold text-primary">(৳60)</span>
+                      </label>
+                      <label
+                        className={cn(
+                          "flex-1 flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all text-center",
+                          deliveryArea === "outside"
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/40"
+                        )}
+                      >
+                        <RadioGroupItem value="outside" className="mb-1" />
+                        <span className="text-sm font-medium">ঢাকার বাইরে</span>
+                        <span className="text-sm font-bold text-primary">(৳120)</span>
+                      </label>
+                    </RadioGroup>
+                  )}
+                </div>
               </div>
-              <div className="p-5">
+
+              <div id="field-address" className="space-y-1.5">
+                <Label className="text-sm font-medium">সম্পূর্ণ ঠিকানা *</Label>
+                <Textarea
+                  className={cn("rounded-xl border-border resize-none", errors.address && "border-destructive ring-1 ring-destructive/30")}
+                  rows={3}
+                  value={formData.address}
+                  onChange={e => handleInputChange("address", e.target.value)}
+                  placeholder="বাড়ি নং, রাস্তা, এলাকা, থানা, জেলা"
+                />
+                {errors.address && <p className="text-destructive text-xs">{errors.address}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">অর্ডার নোট (ঐচ্ছিক)</Label>
+                <Input
+                  className="h-11 rounded-xl border-border"
+                  value={formData.notes}
+                  onChange={e => handleInputChange("notes", e.target.value)}
+                  placeholder="বিশেষ কোনো নির্দেশনা..."
+                />
+              </div>
+
+              {/* Dynamic Additional Fields */}
+              {additionalFields.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  {additionalFields.map(field => (
+                    <div key={field.id}>
+                      {field.field_type === 'checkbox' && (
+                        <label className="flex items-center gap-2.5 cursor-pointer">
+                          <Checkbox checked={!!dynamicFieldValues[field.field_name]} onCheckedChange={checked => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: checked }))} />
+                          <span className="text-sm">{field.field_label_bn}</span>
+                        </label>
+                      )}
+                      {field.field_type === 'textarea' && dynamicFieldValues['gift_wrap'] && field.field_name === 'gift_message' && (
+                        <div className="space-y-1 pl-7">
+                          <Label className="text-xs text-muted-foreground">{field.field_label_bn}</Label>
+                          <Textarea className="rounded-xl border-border resize-none" rows={2} placeholder={field.placeholder || ''} value={dynamicFieldValues[field.field_name] || ''} onChange={e => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: e.target.value }))} />
+                        </div>
+                      )}
+                      {field.field_type === 'select' && (
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">{field.field_label_bn}</Label>
+                          <Select value={dynamicFieldValues[field.field_name] || "none"} onValueChange={v => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: v === "none" ? "" : v }))}>
+                            <SelectTrigger className="h-10 rounded-xl border-border"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">নির্বাচন করুন</SelectItem>
+                              <SelectItem value="morning">সকাল (৯-১২)</SelectItem>
+                              <SelectItem value="afternoon">দুপুর (১২-৫)</SelectItem>
+                              <SelectItem value="evening">সন্ধ্যা (৫-৯)</SelectItem>
+                              <SelectItem value="anytime">যেকোনো সময়</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      {field.field_type === 'text' && (
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">{field.field_label_bn} {field.is_required && '*'}</Label>
+                          <Input className="h-10 rounded-xl border-border" placeholder={field.placeholder || ''} value={dynamicFieldValues[field.field_name] || ''} onChange={e => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: e.target.value }))} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ===== Payment Methods ===== */}
+            {paymentMethods.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="text-lg font-bold">পেমেন্ট পদ্ধতি</h2>
                 <RadioGroup value={paymentMethod} onValueChange={(val) => { setPaymentMethod(val); setFormData(prev => ({ ...prev, transactionId: "" })); setErrors(prev => ({ ...prev, transactionId: "" })); }}>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="space-y-2">
                     {paymentMethods.map(method => {
                       const Icon = method.icon;
                       return (
                         <label
                           key={method.id}
                           className={cn(
-                            "flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all",
+                            "flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all",
                             paymentMethod === method.id
                               ? "border-primary bg-primary/5"
-                              : "border-border/50 hover:border-border"
+                              : "border-border hover:border-primary/40"
                           )}
                         >
                           <RadioGroupItem value={method.id} className="shrink-0" />
                           <Icon className="w-5 h-5 text-muted-foreground shrink-0" />
                           <div className="min-w-0">
-                            <p className="text-sm font-medium leading-tight">{method.name}</p>
-                            <p className="text-[11px] text-muted-foreground">{method.description}</p>
+                            <p className="text-sm font-semibold">{method.name}</p>
+                            <p className="text-xs text-muted-foreground">{method.description}</p>
                           </div>
                         </label>
                       );
@@ -561,7 +591,7 @@ const Checkout = () => {
                   if (!sel) return null;
                   if (sel.payment_mode === "api") {
                     return (
-                      <div className="mt-3 p-3 bg-primary/5 rounded-lg border border-primary/20 text-sm flex items-center gap-2">
+                      <div className="p-4 bg-primary/5 rounded-xl border border-primary/20 text-sm flex items-center gap-2">
                         <Shield className="w-4 h-4 text-primary shrink-0" />
                         <span>অর্ডার কনফার্ম করলে <strong>{sel.name}</strong> পেমেন্ট পেজে যাবেন</span>
                       </div>
@@ -569,24 +599,24 @@ const Checkout = () => {
                   }
                   if (sel.manual_number) {
                     return (
-                      <div className="mt-3 space-y-3">
-                        <div className="p-3 bg-muted/50 rounded-lg border border-border/50">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-[11px] text-muted-foreground font-medium">{sel.name} নম্বর</span>
-                            <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{sel.manual_type || 'Send Money'}</span>
+                      <div className="space-y-3">
+                        <div className="p-4 bg-muted/50 rounded-xl border border-border">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-muted-foreground font-medium">{sel.name} নম্বর</span>
+                            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{sel.manual_type || 'Send Money'}</span>
                           </div>
-                          <p className="text-base font-bold font-mono tracking-wider">{sel.manual_number}</p>
-                          {sel.manual_instructions && <p className="text-[11px] text-muted-foreground mt-1">{sel.manual_instructions}</p>}
+                          <p className="text-lg font-bold font-mono tracking-wider">{sel.manual_number}</p>
+                          {sel.manual_instructions && <p className="text-xs text-muted-foreground mt-1">{sel.manual_instructions}</p>}
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-xs font-medium text-muted-foreground">ট্রান্জেকশন আইডি *</Label>
+                          <Label className="text-sm font-medium">ট্রান্জেকশন আইডি *</Label>
                           <Input
                             placeholder="Transaction ID লিখুন"
-                            className={cn("h-10 rounded-lg bg-muted/30 border-border/50", errors.transactionId && "border-destructive")}
+                            className={cn("h-11 rounded-xl border-border", errors.transactionId && "border-destructive ring-1 ring-destructive/30")}
                             value={formData.transactionId}
                             onChange={e => handleInputChange("transactionId", e.target.value)}
                           />
-                          {errors.transactionId && <p className="text-destructive text-[11px]">{errors.transactionId}</p>}
+                          {errors.transactionId && <p className="text-destructive text-xs">{errors.transactionId}</p>}
                         </div>
                       </div>
                     );
@@ -594,58 +624,58 @@ const Checkout = () => {
                   return null;
                 })()}
               </div>
-            </section>
+            )}
 
-            {/* ===== Place Order Button (Mobile) ===== */}
-            <div className="lg:hidden">
+            {/* Mobile Order Button */}
+            <div className="lg:hidden pt-2">
               <Button
                 onClick={handlePlaceOrder}
                 disabled={isSubmitting}
-                className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-primary/20"
+                size="lg"
+                className="w-full h-14 rounded-xl text-base font-bold shadow-lg shadow-primary/20"
               >
                 {isSubmitting ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />প্রসেসিং...</>
+                  <><Loader2 className="w-5 h-5 mr-2 animate-spin" />প্রসেসিং...</>
                 ) : (
-                  <><Lock className="w-4 h-4 mr-2" />৳{total} — অর্ডার কনফার্ম করুন</>
+                  <><Lock className="w-5 h-5 mr-2" />অর্ডার কনফার্ম করুন</>
                 )}
               </Button>
               {isOtpRequired() && (
-                <p className="text-[11px] text-muted-foreground text-center mt-2 flex items-center justify-center gap-1">
-                  <Shield className="w-3 h-3" /> OTP যাচাই হবে
+                <p className="text-xs text-muted-foreground text-center mt-2 flex items-center justify-center gap-1">
+                  <Shield className="w-3.5 h-3.5" /> মোবাইলে OTP যাচাই হবে
                 </p>
               )}
             </div>
           </div>
 
-          {/* Right: Sticky Sidebar */}
+          {/* ===== RIGHT: Sticky Summary ===== */}
           <div className="lg:col-span-5">
-            <div className="bg-card rounded-2xl border border-border/50 overflow-hidden sticky top-20">
-              {/* Items */}
-              <div className="px-5 py-3.5 border-b border-border/40 bg-muted/20">
-                <h2 className="font-bold text-sm flex items-center gap-2">
-                  <Package className="w-4 h-4 text-primary" />
+            <div className="bg-card rounded-2xl border border-border overflow-hidden sticky top-20">
+              {/* Items List */}
+              <div className="px-5 py-4 border-b border-border">
+                <h2 className="font-bold text-base flex items-center gap-2">
                   অর্ডার সারাংশ
-                  <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{totalItems}টি</span>
+                  <span className="ml-auto text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">{totalItems}টি পণ্য</span>
                 </h2>
               </div>
 
-              <div className="px-4 py-3 max-h-48 overflow-y-auto border-b border-border/30">
+              <div className="px-5 py-3 max-h-56 overflow-y-auto border-b border-border">
                 {cartItems.map(item => (
-                  <div key={item.id} className="flex gap-3 items-center py-1.5">
+                  <div key={item.id} className="flex gap-3 items-center py-2">
                     <div className="relative shrink-0">
-                      <img src={item.product.image} alt="" className="w-11 h-14 object-cover rounded-lg border border-border/30" />
-                      <span className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center min-w-[18px]">
+                      <img src={item.product.image} alt="" className="w-12 h-16 object-cover rounded-lg border border-border" />
+                      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
                         {item.quantity}
                       </span>
                     </div>
-                    <p className="text-xs font-medium line-clamp-2 flex-1 leading-snug">{item.product.title}</p>
-                    <p className="text-xs font-bold shrink-0">৳{item.product.price * item.quantity}</p>
+                    <p className="text-sm font-medium line-clamp-2 flex-1 leading-snug">{item.product.title}</p>
+                    <p className="text-sm font-bold shrink-0">৳{item.product.price * item.quantity}</p>
                   </div>
                 ))}
               </div>
 
               {/* Coupon */}
-              <div className="px-5 py-3 border-b border-border/30">
+              <div className="px-5 py-4 border-b border-border">
                 <CouponInput
                   subtotal={subtotal}
                   onCouponApplied={setAppliedCoupon}
@@ -655,69 +685,65 @@ const Checkout = () => {
                 />
               </div>
 
-              {/* Price */}
-              <div className="px-5 py-4 space-y-2 text-sm">
+              {/* Price Breakdown */}
+              <div className="px-5 py-5 space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">সাবটোটাল</span>
-                  <span>৳{subtotal}</span>
+                  <span className="font-medium">৳{subtotal}</span>
                 </div>
                 {couponDiscount > 0 && (
                   <div className="flex justify-between text-primary">
-                    <span className="flex items-center gap-1"><Ticket className="w-3 h-3" /> {appliedCoupon?.code}</span>
+                    <span className="flex items-center gap-1"><Ticket className="w-3.5 h-3.5" /> {appliedCoupon?.code}</span>
                     <span>-৳{couponDiscount}</span>
                   </div>
                 )}
                 {dynamicDiscount > 0 && (
                   <div className="flex justify-between text-primary">
-                    <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> {dynamicDiscountLabel || 'ছাড়'}</span>
+                    <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" /> {dynamicDiscountLabel || 'ছাড়'}</span>
                     <span>-৳{dynamicDiscount}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1"><Truck className="w-3 h-3" /> ডেলিভারি</span>
-                  <span>৳{deliveryCharge}</span>
+                  <span className="text-muted-foreground flex items-center gap-1"><Truck className="w-3.5 h-3.5" /> ডেলিভারি</span>
+                  <span className="font-medium">৳{deliveryCharge}</span>
                 </div>
-                {selectedZone?.estimated_days_min && (
-                  <p className="text-[11px] text-muted-foreground text-right">{selectedZone.estimated_days_min}-{selectedZone.estimated_days_max} দিনে ডেলিভারি</p>
-                )}
-                <div className="border-t border-border/50 pt-3">
+
+                <div className="border-t border-border pt-4 mt-1">
                   <div className="flex justify-between items-center">
-                    <span className="font-bold">সর্বমোট</span>
-                    <span className="font-bold text-xl text-primary">৳{total}</span>
+                    <span className="font-bold text-base">সর্বমোট</span>
+                    <span className="font-bold text-2xl text-primary">৳{total}</span>
                   </div>
                 </div>
               </div>
 
               {/* Place Order (Desktop) */}
-              <div className="px-5 pb-4 hidden lg:block">
+              <div className="px-5 pb-5 hidden lg:block">
                 <Button
                   onClick={handlePlaceOrder}
                   disabled={isSubmitting}
-                  className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-primary/20"
+                  size="lg"
+                  className="w-full h-14 rounded-xl text-base font-bold shadow-lg shadow-primary/20"
                 >
                   {isSubmitting ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />প্রসেসিং...</>
+                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" />প্রসেসিং...</>
                   ) : (
-                    <><Lock className="w-4 h-4 mr-2" />অর্ডার কনফার্ম করুন</>
+                    <><Lock className="w-5 h-5 mr-2" />অর্ডার কনফার্ম করুন</>
                   )}
                 </Button>
                 {isOtpRequired() && (
-                  <p className="text-[11px] text-muted-foreground text-center mt-2 flex items-center justify-center gap-1">
-                    <Shield className="w-3 h-3" /> মোবাইলে OTP যাচাই হবে
+                  <p className="text-xs text-muted-foreground text-center mt-2.5 flex items-center justify-center gap-1">
+                    <Shield className="w-3.5 h-3.5" /> মোবাইলে OTP যাচাই হবে
                   </p>
                 )}
               </div>
 
-              {/* Trust */}
-              <div className="px-5 py-3 border-t border-border/30 bg-muted/20">
-                <div className="flex items-center justify-center gap-4 text-[10px] text-muted-foreground">
+              {/* Trust Badges */}
+              <div className="px-5 py-3.5 border-t border-border bg-muted/30">
+                <div className="flex items-center justify-center gap-5 text-xs text-muted-foreground">
                   {[{ icon: Shield, text: 'নিরাপদ' }, { icon: Truck, text: 'দ্রুত ডেলিভারি' }, { icon: Star, text: 'গ্যারান্টি' }].map((b, i) => (
-                    <div key={i} className="flex items-center gap-1"><b.icon className="w-3 h-3 text-primary" /><span>{b.text}</span></div>
+                    <div key={i} className="flex items-center gap-1.5"><b.icon className="w-3.5 h-3.5 text-primary" /><span>{b.text}</span></div>
                   ))}
                 </div>
-                <p className="text-[10px] text-muted-foreground text-center mt-1.5">
-                  অর্ডার করে আপনি <Link to="/terms" className="text-primary hover:underline">শর্তাবলী</Link> মেনে নিচ্ছেন
-                </p>
               </div>
             </div>
           </div>
