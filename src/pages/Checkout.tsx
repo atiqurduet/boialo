@@ -353,10 +353,12 @@ const Checkout = () => {
     try {
       const orderNumber = generateOrderNumber();
       const orderTotal = total;
+      const apiPaymentMethods = ["bkash", "nagad", "sslcommerz"];
+      const isApiPayment = apiPaymentMethods.includes(paymentMethod) && paymentMethods.find((m: any) => m.id === paymentMethod)?.payment_mode === "api";
       const { data: order, error: orderError } = await supabase.from("orders").insert({
-        user_id: user.id, order_number: orderNumber, status: paymentMethod === "bkash" ? "payment_pending" : "pending",
+        user_id: user.id, order_number: orderNumber, status: isApiPayment ? "payment_pending" : "pending",
         subtotal, delivery_charge: deliveryCharge, total: orderTotal, payment_method: paymentMethod,
-        transaction_id: paymentMethod === "bkash" ? null : (formData.transactionId || null),
+        transaction_id: isApiPayment ? null : (formData.transactionId || null),
         delivery_area: selectedZone?.zone_name_bn || "default",
         full_name: formData.fullName.trim(), phone: formData.phone.trim(), email: formData.email?.trim() || null,
         address: formData.address.trim(), notes: formData.notes?.trim() || null,
