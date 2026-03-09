@@ -58,7 +58,7 @@ export const loadABTests = async (): Promise<ABTest[]> => {
       .from('ab_tests')
       .select('*')
       .eq('is_active', true);
-    return (data || []) as ABTest[];
+    return (data || []) as unknown as ABTest[];
   } catch { return []; }
 };
 
