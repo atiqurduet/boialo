@@ -54,3 +54,9 @@ verify_jwt = false
 [functions.admin-backup]
 verify_jwt = false
 
+[functions.ad-platform-events]
+verify_jwt = false
+
+[functions.ad-audience-sync]
+verify_jwt = false
+
