@@ -48,6 +48,67 @@ const audienceTypes: AudienceConfig[] = [
 
 const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#6b7280'];
 
+// ── Overlap Row Component ────────────────────────────────
+const OverlapRow = ({ a, b, aLabel, bLabel, since }: { a: AudienceType; b: AudienceType; aLabel: string; bLabel: string; since: string }) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['overlap', a, b, since],
+    queryFn: async () => {
+      const fetchIds = async (type: AudienceType) => {
+        let ids: string[] = [];
+        if (type === 'purchasers' || type === 'high_value' || type === 'repeat_buyers' || type === 'new_customers') {
+          const q = supabase.from('orders').select('user_id, customer_email').gte('created_at', since).in('status', ['delivered', 'confirmed']);
+          if (type === 'high_value') q.gte('total_amount', 5000);
+          const { data } = await q;
+          ids = (data || []).map((o: any) => o.user_id || o.customer_email).filter(Boolean);
+        } else if (type === 'cart_abandoners') {
+          const { data } = await supabase.from('abandoned_checkouts').select('user_id, email').gte('created_at', since).eq('recovered', false);
+          ids = (data || []).map((o: any) => o.user_id || o.email).filter(Boolean);
+        } else if (type === 'engaged') {
+          const { data } = await supabase.from('engagement_scores' as any).select('user_id, fingerprint_id').gte('created_at', since).gte('engagement_score', 60);
+          ids = (data || []).map((o: any) => o.user_id || o.fingerprint_id).filter(Boolean);
+        } else if (type === 'wishlist_users') {
+          const { data } = await supabase.from('wishlist_items').select('user_id').gte('created_at', since);
+          ids = (data || []).map((o: any) => o.user_id).filter(Boolean);
+        } else {
+          const { data } = await supabase.from('visitor_analytics').select('user_id, session_id').gte('created_at', since).limit(500);
+          ids = (data || []).map((o: any) => o.user_id || o.session_id).filter(Boolean);
+        }
+        return [...new Set(ids)];
+      };
+      const [idsA, idsB] = await Promise.all([fetchIds(a), fetchIds(b)]);
+      const setB = new Set(idsB);
+      const overlap = idsA.filter(id => setB.has(id));
+      return { sizeA: idsA.length, sizeB: idsB.length, overlap: overlap.length };
+    },
+    staleTime: 120_000,
+  });
+
+  const overlapPct = data && data.sizeA > 0 ? Math.round((data.overlap / data.sizeA) * 100) : 0;
+
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-xl border bg-muted/20">
+      <div className="flex-1 text-right">
+        <p className="text-sm font-medium">{aLabel}</p>
+        <p className="text-xs text-muted-foreground">{isLoading ? '...' : `${data?.sizeA || 0} জন`}</p>
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <div className="relative w-16 h-16">
+          <div className="absolute left-0 top-1 w-12 h-12 rounded-full border-2 border-blue-400 bg-blue-100/30 dark:bg-blue-900/20" />
+          <div className="absolute right-0 top-1 w-12 h-12 rounded-full border-2 border-pink-400 bg-pink-100/30 dark:bg-pink-900/20" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-xs font-bold bg-background px-1 rounded">{isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : `${overlapPct}%`}</span>
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground">{isLoading ? '' : `${data?.overlap || 0} কমন`}</p>
+      </div>
+      <div className="flex-1">
+        <p className="text-sm font-medium">{bLabel}</p>
+        <p className="text-xs text-muted-foreground">{isLoading ? '...' : `${data?.sizeB || 0} জন`}</p>
+      </div>
+    </div>
+  );
+};
+
 const AdminAudienceExport = () => {
   const [selectedAudience, setSelectedAudience] = useState<AudienceType>('purchasers');
   const [days, setDays] = useState('30');
