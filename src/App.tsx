@@ -193,6 +193,8 @@ const App = () => (
                 <Route path="/category/:productType/:categorySlug" element={<CategoryLanding />} />
                 <Route path="/universal-product/:slug" element={<UniversalProductDetail />} />
                 <Route path="/bkash/callback" element={<BkashCallback />} />
+                <Route path="/nagad/callback" element={<PaymentCallback />} />
+                <Route path="/payment/callback" element={<PaymentCallback />} />
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/digital-library" element={<DigitalLibrary />} />
