@@ -264,6 +264,7 @@ const App = () => (
                 <Route path="/admin/delivery-zones" element={<AdminDeliveryZones />} />
                 <Route path="/admin/referral" element={<AdminReferralProgram />} />
                 <Route path="/admin/visitor-analytics" element={<AdminVisitorAnalytics />} />
+                <Route path="/admin/audience-export" element={<AdminAudienceExport />} />
                 <Route path="/admin/social-media" element={<AdminSocialMedia />} />
                 <Route path="/admin/dynamic-pricing" element={<AdminDynamicPricing />} />
                 <Route path="/admin/seo-tools" element={<AdminSEOTools />} />
