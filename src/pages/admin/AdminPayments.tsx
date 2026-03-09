@@ -422,55 +422,91 @@ const AdminPayments = () => {
                       </div>
                     </div>
 
-                    {/* Manual Settings (for bkash, nagad) */}
+                    {/* Mode Toggle for bkash, nagad */}
                     {(method.provider === "bkash" || method.provider === "nagad") && (
-                      <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
-                        <h4 className="text-sm font-semibold">ম্যানুয়াল সেটিং</h4>
-                        <div className="space-y-2">
-                          <Label className="text-xs">অ্যাকাউন্ট নম্বর</Label>
-                          <Input
-                            placeholder="01XXXXXXXXX"
-                            defaultValue={method.manual_number || ''}
-                            onBlur={(e) => {
-                              updateMutation.mutate({ id: method.id, updates: { manual_number: e.target.value } as any });
-                            }}
-                          />
+                      <div className="space-y-4">
+                        {/* Primary Mode Toggle */}
+                        <div className="p-4 rounded-lg border-2 border-primary/20 bg-primary/5">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-sm font-bold">পেমেন্ট মোড</h4>
+                            <Badge variant={method.payment_mode === 'api' ? 'default' : 'secondary'}>
+                              {method.payment_mode === 'api' ? '🔗 API মোড' : '📱 ম্যানুয়াল মোড'}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => updateMutation.mutate({ id: method.id, updates: { payment_mode: 'manual' } as any })}
+                              className={cn(
+                                "p-3 rounded-lg border-2 text-center transition-all text-sm",
+                                (method.payment_mode || 'manual') === 'manual'
+                                  ? "border-primary bg-primary/10 font-semibold"
+                                  : "border-border hover:border-primary/50"
+                              )}
+                            >
+                              📱 ম্যানুয়াল
+                              <p className="text-xs text-muted-foreground mt-1">নম্বর দেখানো হবে</p>
+                            </button>
+                            <button
+                              onClick={() => updateMutation.mutate({ id: method.id, updates: { payment_mode: 'api' } as any })}
+                              className={cn(
+                                "p-3 rounded-lg border-2 text-center transition-all text-sm",
+                                method.payment_mode === 'api'
+                                  ? "border-primary bg-primary/10 font-semibold"
+                                  : "border-border hover:border-primary/50"
+                              )}
+                            >
+                              🔗 API
+                              <p className="text-xs text-muted-foreground mt-1">অটোমেটিক পেমেন্ট</p>
+                            </button>
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs">পেমেন্ট ধরণ</Label>
-                          <Select defaultValue={method.manual_type || 'send_money'} onValueChange={(val) => {
-                            updateMutation.mutate({ id: method.id, updates: { manual_type: val } as any });
-                          }}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="send_money">Send Money</SelectItem>
-                              <SelectItem value="payment">Payment</SelectItem>
-                              <SelectItem value="merchant">Merchant</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs">নির্দেশনা</Label>
-                          <Input
-                            placeholder="যেমন: পেমেন্ট করে ট্রানজেকশন আইডি দিন"
-                            defaultValue={method.manual_instructions || ''}
-                            onBlur={(e) => {
-                              updateMutation.mutate({ id: method.id, updates: { manual_instructions: e.target.value } as any });
-                            }}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs">পেমেন্ট মোড</Label>
-                          <Select defaultValue={method.payment_mode || 'manual'} onValueChange={(val) => {
-                            updateMutation.mutate({ id: method.id, updates: { payment_mode: val } as any });
-                          }}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="manual">ম্যানুয়াল (নম্বর দেখানো হবে)</SelectItem>
-                              <SelectItem value="api">API (অটোমেটিক পেমেন্ট)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+
+                        {/* Manual Settings - shown when manual mode */}
+                        {(method.payment_mode || 'manual') === 'manual' && (
+                          <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
+                            <h4 className="text-sm font-semibold">📱 ম্যানুয়াল সেটিং</h4>
+                            <div className="space-y-2">
+                              <Label className="text-xs">অ্যাকাউন্ট নম্বর</Label>
+                              <Input
+                                placeholder="01XXXXXXXXX"
+                                defaultValue={method.manual_number || ''}
+                                onBlur={(e) => {
+                                  updateMutation.mutate({ id: method.id, updates: { manual_number: e.target.value } as any });
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs">পেমেন্ট ধরণ</Label>
+                              <Select defaultValue={method.manual_type || 'send_money'} onValueChange={(val) => {
+                                updateMutation.mutate({ id: method.id, updates: { manual_type: val } as any });
+                              }}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="send_money">Send Money</SelectItem>
+                                  <SelectItem value="payment">Payment</SelectItem>
+                                  <SelectItem value="merchant">Merchant</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs">নির্দেশনা</Label>
+                              <Input
+                                placeholder="যেমন: পেমেন্ট করে ট্রানজেকশন আইডি দিন"
+                                defaultValue={method.manual_instructions || ''}
+                                onBlur={(e) => {
+                                  updateMutation.mutate({ id: method.id, updates: { manual_instructions: e.target.value } as any });
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* API hint when API mode */}
+                        {method.payment_mode === 'api' && (
+                          <div className="p-3 bg-muted/50 rounded-lg border text-sm text-muted-foreground">
+                            🔗 API মোড সক্রিয়। নিচে "API কনফিগারেশন" বাটনে ক্লিক করে API কী সেট করুন।
+                          </div>
+                        )}
                       </div>
                     )}
 
