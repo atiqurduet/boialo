@@ -340,7 +340,7 @@ const Checkout = () => {
   };
 
   const selectedZone = deliveryZones.find(z => z.id === selectedZoneId);
-  const deliveryCharge = selectedZone?.delivery_charge || (deliveryZones[0]?.delivery_charge || 60);
+  const deliveryCharge = selectedZone?.delivery_charge ?? (selectedZoneId === "outside" ? 120 : 60);
   const couponDiscount = appliedCoupon?.discount_amount || 0;
   const total = Math.max(0, subtotal - couponDiscount - dynamicDiscount + deliveryCharge);
 
