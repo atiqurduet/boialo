@@ -17,7 +17,8 @@ import {
   Download, Users, Target, TrendingUp, Facebook, BarChart3, Loader2, Filter,
   CheckCircle2, AlertCircle, Zap, PieChart, ArrowUpRight, ArrowDownRight,
   Globe, Eye, ShoppingCart, UserCheck, Clock, Activity, Layers, RefreshCw,
-  Shield, Star, Hash, Calendar, ChevronRight, Sparkles, FileText
+  Shield, Star, Hash, Calendar, ChevronRight, Sparkles, FileText, Brain,
+  GitMerge, Send, Timer, AlertTriangle
 } from 'lucide-react';
 import { AreaChart, Area, PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
