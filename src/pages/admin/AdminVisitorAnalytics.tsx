@@ -31,6 +31,20 @@ const AdminVisitorAnalytics = () => {
     }
   });
 
+  // Server-side events data
+  const { data: serverEvents = [] } = useQuery({
+    queryKey: ['server-side-events', days],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('server_side_events')
+        .select('*')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(5000);
+      return (data || []) as any[];
+    }
+  });
+
   const totalVisits = analytics.length;
   const uniqueSessions = new Set(analytics.map(a => a.session_id)).size;
   const searchQueries = analytics.filter(a => a.search_query);
