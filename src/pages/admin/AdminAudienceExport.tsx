@@ -122,7 +122,7 @@ const AdminAudienceExport = () => {
           return data || [];
         }
         case 'wishlist_users': {
-          const { data } = await supabase.from('wishlists').select('user_id, created_at').gte('created_at', since);
+          const { data } = await supabase.from('wishlist_items').select('user_id, created_at').gte('created_at', since);
           const uniqueUsers = [...new Set((data || []).map((w: any) => w.user_id))];
           if (uniqueUsers.length === 0) return [];
           const { data: profiles } = await supabase.from('profiles').select('id, full_name, email, phone').in('id', uniqueUsers.slice(0, 100));
