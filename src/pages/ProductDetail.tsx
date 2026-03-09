@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { ProductQA } from "@/components/ProductQA";
 import { StockAlertButton } from "@/components/StockAlertButton";
 import { PriceDropAlert } from "@/components/PriceDropAlert";
+import { QuickCheckoutModal } from "@/components/QuickCheckoutModal";
 import {
   Dialog,
   DialogContent,
