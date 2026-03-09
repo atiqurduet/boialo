@@ -267,7 +267,7 @@ const AdminVisitorAnalytics = () => {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="location" className="space-y-4">
+        <Tabs defaultValue="funnel" className="space-y-4">
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="funnel"><ShoppingCart className="w-4 h-4 mr-1" /> ফানেল</TabsTrigger>
             <TabsTrigger value="server"><Zap className="w-4 h-4 mr-1" /> সার্ভার ইভেন্ট</TabsTrigger>
