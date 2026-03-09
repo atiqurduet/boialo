@@ -424,10 +424,10 @@ const Checkout = () => {
   const iconMap: Record<string, any> = { cod: Truck, bkash: Smartphone, nagad: Smartphone, sslcommerz: CreditCard, card: CreditCard };
   const paymentMethods = dbPaymentMethods.map((m: any) => ({
     id: m.provider, name: m.name_bn,
-    description: m.provider === 'cod' ? 'পণ্য হাতে পেয়ে টাকা প্রদান করুন' : (m as any).manual_number ? `${m.name_bn} মোবাইল ব্যাংকিং` : m.name_bn,
+    description: m.provider === 'cod' ? 'পণ্য হাতে পেয়ে টাকা প্রদান করুন' : m.manual_number ? `${m.name_bn} মোবাইল ব্যাংকিং` : m.name_bn,
     icon: iconMap[m.provider] || CreditCard,
-    manual_number: (m as any).manual_number, manual_type: (m as any).manual_type,
-    manual_instructions: (m as any).manual_instructions, payment_mode: (m as any).payment_mode || 'manual',
+    manual_number: m.manual_number, manual_type: m.manual_type,
+    manual_instructions: m.manual_instructions, payment_mode: m.payment_mode || 'manual',
   }));
 
   if (authLoading || cartLoading) {
