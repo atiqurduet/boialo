@@ -668,7 +668,7 @@ const Checkout = () => {
                   </div>
                 )}
                 {dynamicDiscount > 0 && (
-                  <div className="flex justify-between text-green-600">
+                  <div className="flex justify-between text-primary">
                     <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> {dynamicDiscountLabel || 'ছাড়'}</span>
                     <span>-৳{dynamicDiscount}</span>
                   </div>
