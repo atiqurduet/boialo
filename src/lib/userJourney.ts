@@ -137,9 +137,9 @@ const saveJourneyToServer = async (conversionType?: string, value?: number) => {
   if (journey.filter(s => s.title === 'Search').length > 2) patterns.push('heavy_searcher');
 
   try {
-    await supabase.from('user_journeys').insert({
+    await (supabase as any).from('user_journeys').insert({
       session_id: getSessionId(),
-      journey_data: journey as any,
+      journey_data: journey,
       total_steps: journey.length,
       total_duration_ms: totalDuration,
       unique_pages: uniquePages,
