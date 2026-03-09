@@ -41,6 +41,7 @@ import {
 const ProductDetail = () => {
   const { slug } = useParams();
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [quickCheckoutOpen, setQuickCheckoutOpen] = useState(false);
   const [preorderMessage, setPreorderMessage] = useState<string>("");
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const { isInWishlist, toggleWishlist } = useWishlistContext();
