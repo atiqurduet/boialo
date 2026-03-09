@@ -66,7 +66,7 @@ serve(async (req) => {
             event_name: r.event_name,
             event_time: Math.floor(Date.now() / 1000),
             action_source: "website",
-            event_source_url: r.page_path ? `${Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", "")}${r.page_path}` : undefined,
+            event_source_url: r.page_path || undefined,
             user_data: {
               client_ip_address: r.ip_address,
               client_user_agent: r.user_agent,
