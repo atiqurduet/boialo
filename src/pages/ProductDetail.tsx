@@ -19,7 +19,7 @@ import { useProductBundles } from "@/hooks/useProductBundles";
 import { useCartContext } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, ChevronRight, BookOpen, ShoppingCart, Package, Clock, ArrowRight } from "lucide-react";
+import { Heart, ChevronRight, BookOpen, ShoppingCart, Package, Clock, ArrowRight, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWishlistContext } from "@/contexts/WishlistContext";
 import { format } from "date-fns";
