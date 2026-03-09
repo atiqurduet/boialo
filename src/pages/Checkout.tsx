@@ -206,11 +206,25 @@ const Checkout = () => {
   const total = Math.max(0, subtotal - couponDiscount - dynamicDiscount + deliveryCharge);
   const deliveryAreaLabel = deliveryZones.length > 0 ? (selectedZone?.zone_name_bn || "default") : (deliveryArea === "outside" ? "ঢাকার বাইরে" : "ঢাকার ভিতরে");
 
-  const iconMap: Record<string, any> = { cod: Truck, bkash: Smartphone, nagad: Smartphone, sslcommerz: CreditCard, card: CreditCard };
+  const paymentLogoMap: Record<string, string> = {
+    bkash: "https://freelogopng.com/images/all_img/1656234841bkash-icon-png.png",
+    nagad: "https://download.logo.wine/logo/Nagad/Nagad-Logo.wine.png",
+    sslcommerz: "https://sslcommerz.com/wp-content/uploads/2021/11/logo.png",
+  };
+  const paymentColorMap: Record<string, string> = {
+    cod: "from-emerald-500/10 to-emerald-600/5 border-emerald-200 dark:border-emerald-800",
+    bkash: "from-pink-500/10 to-pink-600/5 border-pink-200 dark:border-pink-800",
+    nagad: "from-orange-500/10 to-orange-600/5 border-orange-200 dark:border-orange-800",
+    sslcommerz: "from-blue-500/10 to-blue-600/5 border-blue-200 dark:border-blue-800",
+    card: "from-indigo-500/10 to-indigo-600/5 border-indigo-200 dark:border-indigo-800",
+  };
+  const paymentIconMap: Record<string, any> = { cod: Truck, bkash: Smartphone, nagad: Smartphone, sslcommerz: CreditCard, card: CreditCard };
   const paymentMethods = dbPaymentMethods.map((m: any) => ({
     id: m.provider, name: m.name_bn,
-    description: m.provider === 'cod' ? 'পণ্য হাতে পেয়ে টাকা দিন' : m.manual_number ? `${m.manual_type || 'Send Money'}` : m.name_bn,
-    icon: iconMap[m.provider] || CreditCard,
+    description: m.provider === 'cod' ? 'পণ্য হাতে পেয়ে টাকা দিন' : m.payment_mode === 'api' ? 'নিরাপদ অনলাইন পেমেন্ট' : m.manual_number ? `${m.manual_type || 'Send Money'}: ${m.manual_number}` : m.name_bn,
+    icon: paymentIconMap[m.provider] || CreditCard,
+    logo: paymentLogoMap[m.provider] || null,
+    colorClass: paymentColorMap[m.provider] || "from-muted/50 to-muted/30 border-border",
     manual_number: m.manual_number, manual_type: m.manual_type,
     manual_instructions: m.manual_instructions, payment_mode: m.payment_mode || 'manual',
   }));
