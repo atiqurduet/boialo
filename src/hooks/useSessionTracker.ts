@@ -20,48 +20,16 @@ export const useSessionTracker = (userId: string | null, signOut: () => Promise<
   const lastActivityRef = useRef<number>(Date.now());
   const timeoutRef = useRef<number>(30); // default 30 min
   const checkIntervalRef = useRef<ReturnType<typeof setInterval>>();
+  const signOutRef = useRef(signOut);
+
+  // Keep signOut ref current without triggering effect re-runs
+  useEffect(() => {
+    signOutRef.current = signOut;
+  }, [signOut]);
 
   // Record activity
   const recordActivity = useCallback(() => {
     lastActivityRef.current = Date.now();
-  }, []);
-
-  // Start session
-  const startSession = useCallback(async (uid: string) => {
-    const ip = await getIp();
-    const token = crypto.randomUUID();
-
-    // Mark old sessions inactive
-    await supabase
-      .from('active_sessions')
-      .update({ is_active: false, logged_out_at: new Date().toISOString() })
-      .eq('user_id', uid)
-      .eq('is_active', true);
-
-    const { data } = await supabase
-      .from('active_sessions')
-      .insert({
-        user_id: uid,
-        session_token: token,
-        ip_address: ip,
-        user_agent: navigator.userAgent,
-        is_active: true,
-      })
-      .select('id')
-      .single();
-
-    if (data) sessionIdRef.current = data.id;
-
-    // Fetch user timeout setting
-    const { data: setting } = await supabase
-      .from('auto_logout_settings')
-      .select('timeout_minutes, is_enabled')
-      .eq('user_id', uid)
-      .maybeSingle();
-
-    if (setting?.is_enabled) {
-      timeoutRef.current = setting.timeout_minutes;
-    }
   }, []);
 
   // End session
@@ -75,11 +43,50 @@ export const useSessionTracker = (userId: string | null, signOut: () => Promise<
     }
   }, []);
 
-  // Heartbeat & inactivity check
+  // Heartbeat & inactivity check — only depends on userId
   useEffect(() => {
     if (!userId) return;
 
-    startSession(userId);
+    // Start session
+    const start = async () => {
+      const ip = await getIp();
+      const token = crypto.randomUUID();
+
+      // Mark old sessions inactive
+      await supabase
+        .from('active_sessions')
+        .update({ is_active: false, logged_out_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .eq('is_active', true);
+
+      const { data } = await supabase
+        .from('active_sessions')
+        .insert({
+          user_id: userId,
+          session_token: token,
+          ip_address: ip,
+          user_agent: navigator.userAgent,
+          is_active: true,
+        })
+        .select('id')
+        .single();
+
+      if (data) sessionIdRef.current = data.id;
+
+      // Fetch user timeout setting
+      const { data: setting } = await supabase
+        .from('auto_logout_settings')
+        .select('timeout_minutes, is_enabled')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (setting?.is_enabled) {
+        timeoutRef.current = setting.timeout_minutes;
+      }
+    };
+
+    start();
+    lastActivityRef.current = Date.now();
 
     // Listen for user activity
     ACTIVITY_EVENTS.forEach(e => window.addEventListener(e, recordActivity, { passive: true }));
@@ -91,8 +98,14 @@ export const useSessionTracker = (userId: string | null, signOut: () => Promise<
 
       if (inactiveMinutes >= timeoutRef.current) {
         // Auto logout
-        await endSession();
-        await signOut();
+        if (sessionIdRef.current) {
+          await supabase
+            .from('active_sessions')
+            .update({ is_active: false, logged_out_at: new Date().toISOString() })
+            .eq('id', sessionIdRef.current);
+          sessionIdRef.current = null;
+        }
+        await signOutRef.current();
         return;
       }
 
@@ -108,10 +121,8 @@ export const useSessionTracker = (userId: string | null, signOut: () => Promise<
     return () => {
       ACTIVITY_EVENTS.forEach(e => window.removeEventListener(e, recordActivity));
       if (checkIntervalRef.current) clearInterval(checkIntervalRef.current);
-      // Don't await here - fire and forget
-      endSession();
     };
-  }, [userId, startSession, endSession, recordActivity, signOut]);
+  }, [userId, recordActivity]);
 
   return { endSession };
 };
