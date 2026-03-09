@@ -18,7 +18,7 @@ import {
   CheckCircle2, AlertCircle, Zap, PieChart, ArrowUpRight, ArrowDownRight,
   Globe, Eye, ShoppingCart, UserCheck, Clock, Activity, Layers, RefreshCw,
   Shield, Star, Hash, Calendar, ChevronRight, Sparkles, FileText, Brain,
-  GitMerge, Send, Timer, AlertTriangle
+  GitMerge, Send, Timer, AlertTriangle, Settings, Upload, Trash2, Key, Wifi
 } from 'lucide-react';
 import { AreaChart, Area, PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
