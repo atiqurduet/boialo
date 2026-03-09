@@ -100,3 +100,15 @@ export {
   trackCustomEvent,
   setUserData,
 };
+
+// Re-export server-side tracking for ad-blocker proof tracking
+export {
+  serverTrack,
+  serverTrackPageView,
+  serverTrackAddToCart,
+  serverTrackPurchase,
+  serverTrackViewContent,
+  serverTrackSearch,
+  serverTrackInitiateCheckout,
+  serverTrackLead,
+} from '@/lib/serverTracking';
