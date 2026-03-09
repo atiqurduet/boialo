@@ -577,6 +577,24 @@ const ProductDetail = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Quick Checkout Modal */}
+      <QuickCheckoutModal
+        product={{
+          id: product.id,
+          title: product.title,
+          slug: dbProduct.slug,
+          price: product.price,
+          originalPrice: product.originalPrice,
+          discount: product.discount,
+          image: product.image,
+          writer: product.author,
+        }}
+        open={quickCheckoutOpen}
+        onOpenChange={setQuickCheckoutOpen}
+        variantId={selectedVariant?.id}
+        variantPrice={selectedVariant?.price}
+      />
     </div>
   );
 };
