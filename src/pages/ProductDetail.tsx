@@ -19,7 +19,7 @@ import { useProductBundles } from "@/hooks/useProductBundles";
 import { useCartContext } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, ChevronRight, BookOpen, ShoppingCart, Package, Clock, ArrowRight } from "lucide-react";
+import { Heart, ChevronRight, BookOpen, ShoppingCart, Package, Clock, ArrowRight, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWishlistContext } from "@/contexts/WishlistContext";
 import { format } from "date-fns";
@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { ProductQA } from "@/components/ProductQA";
 import { StockAlertButton } from "@/components/StockAlertButton";
 import { PriceDropAlert } from "@/components/PriceDropAlert";
+import { QuickCheckoutModal } from "@/components/QuickCheckoutModal";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +41,7 @@ import {
 const ProductDetail = () => {
   const { slug } = useParams();
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [quickCheckoutOpen, setQuickCheckoutOpen] = useState(false);
   const [preorderMessage, setPreorderMessage] = useState<string>("");
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const { isInWishlist, toggleWishlist } = useWishlistContext();
@@ -445,23 +447,34 @@ const ProductDetail = () => {
                     প্রি-অর্ডার করুন
                   </Button>
                 ) : (
-                  <Button 
-                    className="flex-1 bg-primary hover:bg-primary/90"
-                    onClick={handleAddToCart}
-                  >
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    কার্টে যোগ করুন
-                  </Button>
+                  <>
+                    <Button 
+                      className="flex-1 bg-primary hover:bg-primary/90"
+                      onClick={handleAddToCart}
+                    >
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      কার্টে যোগ করুন
+                    </Button>
+                    <Button 
+                      className="flex-1"
+                      variant="secondary"
+                      onClick={() => setQuickCheckoutOpen(true)}
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      দ্রুত অর্ডার
+                    </Button>
+                  </>
                 )}
-                <Button 
-                  className="flex-1 bg-accent hover:bg-accent/90"
-                  onClick={() => setPreviewOpen(true)}
-                  disabled={!previewUrl}
-                >
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  একটু পড়ুন
-                </Button>
               </div>
+
+              <Button 
+                className="w-full bg-accent hover:bg-accent/90"
+                onClick={() => setPreviewOpen(true)}
+                disabled={!previewUrl}
+              >
+                <BookOpen className="w-4 h-4 mr-2" />
+                একটু পড়ুন
+              </Button>
 
               {!previewUrl && (
                 <p className="text-xs text-muted-foreground text-center">
@@ -564,6 +577,24 @@ const ProductDetail = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Quick Checkout Modal */}
+      <QuickCheckoutModal
+        product={{
+          id: product.id,
+          title: product.title,
+          slug: dbProduct.slug,
+          price: product.price,
+          originalPrice: product.originalPrice,
+          discount: product.discount,
+          image: product.image,
+          writer: product.author,
+        }}
+        open={quickCheckoutOpen}
+        onOpenChange={setQuickCheckoutOpen}
+        variantId={selectedVariant?.id}
+        variantPrice={selectedVariant?.price}
+      />
     </div>
   );
 };
