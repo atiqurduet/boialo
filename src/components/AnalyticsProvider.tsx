@@ -1,8 +1,19 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { initializePixels, trackPageView, setUserData } from '@/lib/analytics';
-import { serverTrackPageView } from '@/lib/serverTracking';
+import { 
+  serverTrackPageView, 
+  startScrollTracking, 
+  startEngagementTracking, 
+  startExitIntentTracking, 
+  startHeatmapTracking,
+  trackCoreWebVitals, 
+  trackPagePerformance,
+  reportEngagement, 
+  resetEngagement,
+  serverTrackError,
+} from '@/lib/serverTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVisitorTracking } from '@/hooks/useVisitorTracking';
 
@@ -13,12 +24,18 @@ interface AnalyticsProviderProps {
 export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => {
   const location = useLocation();
   const { user } = useAuth();
+  const initializedRef = useRef(false);
+  const prevPathRef = useRef('');
 
   // Visitor tracking
   useVisitorTracking();
 
-  // Initialize pixels on mount
+  // Initialize pixels + advanced tracking on mount (once)
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    // Load pixel config
     const loadPixelConfig = async () => {
       try {
         const { data } = await supabase
@@ -33,14 +50,10 @@ export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => {
           if (typeof value === 'string') {
             try {
               const parsed = JSON.parse(value);
-              if (typeof parsed === 'string') {
-                value = parsed;
-              }
+              if (typeof parsed === 'string') value = parsed;
             } catch {}
           }
-          
           const strValue = typeof value === 'string' ? value : '';
-          
           if (strValue && strValue !== '') {
             if (setting.setting_key === 'fb_pixel_id') config.fbPixelId = strValue;
             if (setting.setting_key === 'ga_measurement_id') config.gaMeasurementId = strValue;
@@ -57,14 +70,37 @@ export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => {
     };
 
     loadPixelConfig();
+
+    // Start advanced tracking systems
+    startEngagementTracking();
+    startHeatmapTracking();
+    trackCoreWebVitals();
+    trackPagePerformance();
+    startExitIntentTracking();
+
+    // Global error tracking
+    window.addEventListener('error', (e) => {
+      serverTrackError('js_error', `${e.message} at ${e.filename}:${e.lineno}`);
+    });
+
+    window.addEventListener('unhandledrejection', (e) => {
+      serverTrackError('unhandled_promise', String(e.reason));
+    });
   }, []);
 
-  // Track page views on route change (client + server-side)
+  // Track page views on route change
   useEffect(() => {
+    // Report engagement for previous page
+    if (prevPathRef.current && prevPathRef.current !== location.pathname) {
+      reportEngagement(user?.id);
+      resetEngagement();
+    }
+    prevPathRef.current = location.pathname;
+
     const timer = setTimeout(() => {
       trackPageView(location.pathname, document.title);
-      // Server-side tracking (ad-blocker proof)
       serverTrackPageView(user?.id);
+      startScrollTracking();
     }, 100);
     
     return () => clearTimeout(timer);
@@ -73,9 +109,7 @@ export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => {
   // Set user data when logged in
   useEffect(() => {
     if (user?.email) {
-      setUserData({
-        email: user.email,
-      });
+      setUserData({ email: user.email });
     }
   }, [user]);
 

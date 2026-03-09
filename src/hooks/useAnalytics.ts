@@ -32,7 +32,6 @@ export const useAnalytics = () => {
   const location = useLocation();
   const { user } = useAuth();
 
-  // Initialize pixels on mount
   useEffect(() => {
     const loadPixelConfig = async () => {
       try {
@@ -62,17 +61,13 @@ export const useAnalytics = () => {
     loadPixelConfig();
   }, []);
 
-  // Track page views on route change
   useEffect(() => {
     trackPageView(location.pathname, document.title);
   }, [location.pathname]);
 
-  // Set user data when logged in
   useEffect(() => {
     if (user?.email) {
-      setUserData({
-        email: user.email,
-      });
+      setUserData({ email: user.email });
     }
   }, [user]);
 };
@@ -101,7 +96,7 @@ export {
   setUserData,
 };
 
-// Re-export server-side tracking for ad-blocker proof tracking
+// Re-export all server-side tracking
 export {
   serverTrack,
   serverTrackPageView,
@@ -111,4 +106,19 @@ export {
   serverTrackSearch,
   serverTrackInitiateCheckout,
   serverTrackLead,
+  serverTrackSignUp,
+  serverTrackAddToWishlist,
+  serverTrackShare,
+  serverTrackFormSubmit,
+  serverTrackError,
+  serverTrackTiming,
+  startScrollTracking,
+  startEngagementTracking,
+  startExitIntentTracking,
+  startHeatmapTracking,
+  trackCoreWebVitals,
+  trackPagePerformance,
+  reportEngagement,
+  resetEngagement,
+  getEngagementScore,
 } from '@/lib/serverTracking';
