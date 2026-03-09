@@ -14,6 +14,98 @@ export type Database = {
   }
   public: {
     Tables: {
+      ab_test_assignments: {
+        Row: {
+          conversion_value: number | null
+          converted: boolean | null
+          converted_at: string | null
+          created_at: string | null
+          fingerprint_id: string | null
+          id: string
+          metadata: Json | null
+          session_id: string
+          test_id: string | null
+          user_id: string | null
+          variant_name: string
+        }
+        Insert: {
+          conversion_value?: number | null
+          converted?: boolean | null
+          converted_at?: string | null
+          created_at?: string | null
+          fingerprint_id?: string | null
+          id?: string
+          metadata?: Json | null
+          session_id: string
+          test_id?: string | null
+          user_id?: string | null
+          variant_name: string
+        }
+        Update: {
+          conversion_value?: number | null
+          converted?: boolean | null
+          converted_at?: string | null
+          created_at?: string | null
+          fingerprint_id?: string | null
+          id?: string
+          metadata?: Json | null
+          session_id?: string
+          test_id?: string | null
+          user_id?: string | null
+          variant_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_test_assignments_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "ab_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ab_tests: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          start_date: string | null
+          target_metric: string | null
+          target_page: string | null
+          updated_at: string | null
+          variants: Json
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          start_date?: string | null
+          target_metric?: string | null
+          target_page?: string | null
+          updated_at?: string | null
+          variants?: Json
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          start_date?: string | null
+          target_metric?: string | null
+          target_page?: string | null
+          updated_at?: string | null
+          variants?: Json
+        }
+        Relationships: []
+      }
       abandoned_checkouts: {
         Row: {
           address: string | null
@@ -967,6 +1059,33 @@ export type Database = {
           subject?: string
           updated_at?: string
           user_agent?: string | null
+        }
+        Relationships: []
+      }
+      conversion_funnels: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          steps: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          steps?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          steps?: Json
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1968,6 +2087,53 @@ export type Database = {
         }
         Relationships: []
       }
+      funnel_events: {
+        Row: {
+          completed: boolean | null
+          created_at: string | null
+          fingerprint_id: string | null
+          funnel_id: string | null
+          id: string
+          metadata: Json | null
+          session_id: string
+          step_index: number
+          step_name: string
+          user_id: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string | null
+          fingerprint_id?: string | null
+          funnel_id?: string | null
+          id?: string
+          metadata?: Json | null
+          session_id: string
+          step_index: number
+          step_name: string
+          user_id?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string | null
+          fingerprint_id?: string | null
+          funnel_id?: string | null
+          id?: string
+          metadata?: Json | null
+          session_id?: string
+          step_index?: number
+          step_name?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_events_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "conversion_funnels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gift_card_transactions: {
         Row: {
           amount: number
@@ -2961,6 +3127,57 @@ export type Database = {
         }
         Relationships: []
       }
+      page_analytics: {
+        Row: {
+          avg_engagement_score: number | null
+          avg_scroll_depth: number | null
+          avg_time_on_page: number | null
+          bounce_rate: number | null
+          created_at: string | null
+          date: string
+          dead_clicks: number | null
+          errors: number | null
+          exit_rate: number | null
+          id: string
+          page_path: string
+          rage_clicks: number | null
+          unique_visitors: number | null
+          views: number | null
+        }
+        Insert: {
+          avg_engagement_score?: number | null
+          avg_scroll_depth?: number | null
+          avg_time_on_page?: number | null
+          bounce_rate?: number | null
+          created_at?: string | null
+          date?: string
+          dead_clicks?: number | null
+          errors?: number | null
+          exit_rate?: number | null
+          id?: string
+          page_path: string
+          rage_clicks?: number | null
+          unique_visitors?: number | null
+          views?: number | null
+        }
+        Update: {
+          avg_engagement_score?: number | null
+          avg_scroll_depth?: number | null
+          avg_time_on_page?: number | null
+          bounce_rate?: number | null
+          created_at?: string | null
+          date?: string
+          dead_clicks?: number | null
+          errors?: number | null
+          exit_rate?: number | null
+          id?: string
+          page_path?: string
+          rage_clicks?: number | null
+          unique_visitors?: number | null
+          views?: number | null
+        }
+        Relationships: []
+      }
       page_sections: {
         Row: {
           content: Json | null
@@ -3947,6 +4164,51 @@ export type Database = {
         }
         Relationships: []
       }
+      realtime_presence: {
+        Row: {
+          cart_value: number | null
+          city: string | null
+          country: string | null
+          created_at: string | null
+          device_type: string | null
+          fingerprint_id: string | null
+          id: string
+          is_online: boolean | null
+          last_seen_at: string | null
+          page_path: string | null
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          cart_value?: number | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          fingerprint_id?: string | null
+          id?: string
+          is_online?: boolean | null
+          last_seen_at?: string | null
+          page_path?: string | null
+          session_id: string
+          user_id?: string | null
+        }
+        Update: {
+          cart_value?: number | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          fingerprint_id?: string | null
+          id?: string
+          is_online?: boolean | null
+          last_seen_at?: string | null
+          page_path?: string | null
+          session_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       referral_codes: {
         Row: {
           code: string
@@ -4130,6 +4392,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      retention_cohorts: {
+        Row: {
+          cohort_date: string
+          cohort_type: string | null
+          created_at: string | null
+          days_since_first_visit: number | null
+          fingerprint_id: string | null
+          first_visit_at: string
+          id: string
+          is_retained: boolean | null
+          last_visit_at: string
+          total_conversions: number | null
+          total_page_views: number | null
+          total_revenue: number | null
+          total_sessions: number | null
+          updated_at: string | null
+          user_id: string | null
+          visit_count: number | null
+        }
+        Insert: {
+          cohort_date: string
+          cohort_type?: string | null
+          created_at?: string | null
+          days_since_first_visit?: number | null
+          fingerprint_id?: string | null
+          first_visit_at: string
+          id?: string
+          is_retained?: boolean | null
+          last_visit_at: string
+          total_conversions?: number | null
+          total_page_views?: number | null
+          total_revenue?: number | null
+          total_sessions?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          visit_count?: number | null
+        }
+        Update: {
+          cohort_date?: string
+          cohort_type?: string | null
+          created_at?: string | null
+          days_since_first_visit?: number | null
+          fingerprint_id?: string | null
+          first_visit_at?: string
+          id?: string
+          is_retained?: boolean | null
+          last_visit_at?: string
+          total_conversions?: number | null
+          total_page_views?: number | null
+          total_revenue?: number | null
+          total_sessions?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          visit_count?: number | null
+        }
+        Relationships: []
       }
       reviews: {
         Row: {
@@ -4504,6 +4823,66 @@ export type Database = {
           utm_source?: string | null
           viewport_height?: number | null
           viewport_width?: number | null
+        }
+        Relationships: []
+      }
+      session_recordings: {
+        Row: {
+          browser: string | null
+          created_at: string | null
+          device_type: string | null
+          duration_seconds: number | null
+          engagement_score: number | null
+          events_count: number | null
+          fingerprint_id: string | null
+          has_dead_clicks: boolean | null
+          has_errors: boolean | null
+          has_rage_clicks: boolean | null
+          id: string
+          os: string | null
+          page_path: string
+          recording_data: Json | null
+          screen_resolution: string | null
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          browser?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          duration_seconds?: number | null
+          engagement_score?: number | null
+          events_count?: number | null
+          fingerprint_id?: string | null
+          has_dead_clicks?: boolean | null
+          has_errors?: boolean | null
+          has_rage_clicks?: boolean | null
+          id?: string
+          os?: string | null
+          page_path: string
+          recording_data?: Json | null
+          screen_resolution?: string | null
+          session_id: string
+          user_id?: string | null
+        }
+        Update: {
+          browser?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          duration_seconds?: number | null
+          engagement_score?: number | null
+          events_count?: number | null
+          fingerprint_id?: string | null
+          has_dead_clicks?: boolean | null
+          has_errors?: boolean | null
+          has_rage_clicks?: boolean | null
+          id?: string
+          os?: string | null
+          page_path?: string
+          recording_data?: Json | null
+          screen_resolution?: string | null
+          session_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -6027,6 +6406,10 @@ export type Database = {
             Returns: boolean
           }
         | { Args: { _role: string; _user_id: string }; Returns: boolean }
+      increment_attribution_conversions: {
+        Args: { p_revenue: number; p_session_id: string }
+        Returns: undefined
+      }
       insert_visitor_chat_message: {
         Args: {
           p_attachment_name?: string
