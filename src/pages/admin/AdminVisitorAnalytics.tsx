@@ -739,6 +739,12 @@ const AdminVisitorAnalytics = () => {
               </Card>
             </div>
           </TabsContent>
+
+          {/* Conversion Funnel */}
+          <TabsContent value="funnel">
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader><CardTitle className="text-base">🔄 কনভার্শন ফানেল</CardTitle></CardHeader>
                 <CardContent>
                   {(() => {
                     const funnelSteps = [
