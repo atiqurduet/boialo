@@ -112,7 +112,8 @@ async function processInBackground(rows: any[]) {
         interaction_count: typeof evt.event_data?.scroll_events === 'number' ? evt.event_data.scroll_events : 0,
         engagement_score: typeof evt.engagement_score === 'number' ? evt.engagement_score : 0,
         core_web_vitals: evt.core_web_vitals,
-      }).catch(e => console.error("Engagement insert error:", e));
+      });
+      // ignore engagement insert errors
     }
 
     // Attribution
