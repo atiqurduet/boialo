@@ -99,20 +99,24 @@ async function processInBackground(rows: any[]) {
     const engagementEvents = rows.filter(r => r.event_name === 'EngagementReport');
     for (const evt of engagementEvents) {
       if (!evt.session_id || !evt.page_path) continue;
-      await supabase.from("engagement_scores").insert({
-        session_id: evt.session_id,
-        fingerprint_id: evt.fingerprint_id,
-        user_id: evt.user_id,
-        page_path: evt.page_path,
-        scroll_depth: typeof evt.event_data?.scroll_depth === 'number' ? evt.event_data.scroll_depth : 0,
-        time_on_page: typeof evt.event_data?.time_on_page === 'number' ? evt.event_data.time_on_page : 0,
-        click_count: typeof evt.event_data?.clicks === 'number' ? evt.event_data.clicks : 0,
-        rage_clicks: typeof evt.event_data?.rage_clicks === 'number' ? evt.event_data.rage_clicks : 0,
-        dead_clicks: typeof evt.event_data?.dead_clicks === 'number' ? evt.event_data.dead_clicks : 0,
-        interaction_count: typeof evt.event_data?.scroll_events === 'number' ? evt.event_data.scroll_events : 0,
-        engagement_score: typeof evt.engagement_score === 'number' ? evt.engagement_score : 0,
-        core_web_vitals: evt.core_web_vitals,
-      }).catch(e => console.error("Engagement insert error:", e));
+      try {
+        await supabase.from("engagement_scores").insert({
+          session_id: evt.session_id,
+          fingerprint_id: evt.fingerprint_id,
+          user_id: evt.user_id,
+          page_path: evt.page_path,
+          scroll_depth: typeof evt.event_data?.scroll_depth === 'number' ? evt.event_data.scroll_depth : 0,
+          time_on_page: typeof evt.event_data?.time_on_page === 'number' ? evt.event_data.time_on_page : 0,
+          click_count: typeof evt.event_data?.clicks === 'number' ? evt.event_data.clicks : 0,
+          rage_clicks: typeof evt.event_data?.rage_clicks === 'number' ? evt.event_data.rage_clicks : 0,
+          dead_clicks: typeof evt.event_data?.dead_clicks === 'number' ? evt.event_data.dead_clicks : 0,
+          interaction_count: typeof evt.event_data?.scroll_events === 'number' ? evt.event_data.scroll_events : 0,
+          engagement_score: typeof evt.engagement_score === 'number' ? evt.engagement_score : 0,
+          core_web_vitals: evt.core_web_vitals,
+        });
+      } catch (e) {
+        console.error("Engagement insert error:", e);
+      }
     }
 
     // Attribution
