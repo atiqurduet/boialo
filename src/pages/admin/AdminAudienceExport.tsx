@@ -488,6 +488,123 @@ const AdminAudienceExport = () => {
                 )}
               </div>
               <div className="flex gap-2">
+                {['pixel_id', 'access_token', 'ad_account_id'].map(k => {
+                  const active = k === 'pixel_id' ? platformStatus?.facebook.pixel : k === 'access_token' ? platformStatus?.facebook.capi : platformStatus?.facebook.adAccount;
+                  return (
+                    <div key={k} className={`flex-1 text-xs p-2 rounded-lg ${active ? 'bg-emerald-100/50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
+                      <span className="font-medium">{k.split('_')[0]}:</span> {active ? '✓' : '✗'}
+                    </div>
+                  );
+                })}
+              </div>
+              {platformStatus?.facebook.pixel && platformStatus?.facebook.capi && (
+                <Button size="sm" variant="outline" className="w-full mt-3 h-8 text-xs" onClick={() => directSyncAudience('facebook')} disabled={!!syncingPlatform}>
+                  {syncingPlatform === 'facebook' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+                  সরাসরি সিংক করুন
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className={`border-2 transition-all ${platformStatus?.tiktok.pixel && platformStatus?.tiktok.token ? 'border-pink-500/40 bg-pink-50/30 dark:bg-pink-950/20' : 'border-dashed border-muted-foreground/30'}`}>
+            <CardContent className="pt-5 pb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+                    <Zap className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm">TikTok Ads</h3>
+                    <p className="text-xs text-muted-foreground">Events API + Audience</p>
+                  </div>
+                </div>
+                {platformStatus?.tiktok.pixel && platformStatus?.tiktok.token ? (
+                  <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                    <CheckCircle2 className="w-3 h-3 mr-1" /> কানেক্টেড
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    <AlertCircle className="w-3 h-3 mr-1" /> সেটআপ করুন
+                  </Badge>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {['pixel_id', 'access_token', 'advertiser_id'].map(k => {
+                  const active = k === 'pixel_id' ? platformStatus?.tiktok.pixel : k === 'access_token' ? platformStatus?.tiktok.token : platformStatus?.tiktok.advertiser;
+                  return (
+                    <div key={k} className={`flex-1 text-xs p-2 rounded-lg ${active ? 'bg-emerald-100/50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
+                      <span className="font-medium">{k.split('_')[0]}:</span> {active ? '✓' : '✗'}
+                    </div>
+                  );
+                })}
+              </div>
+              {platformStatus?.tiktok.pixel && platformStatus?.tiktok.token && (
+                <Button size="sm" variant="outline" className="w-full mt-3 h-8 text-xs" onClick={() => directSyncAudience('tiktok')} disabled={!!syncingPlatform}>
+                  {syncingPlatform === 'tiktok' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+                  সরাসরি সিংক করুন
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className={`border-2 transition-all ${platformStatus?.google.measurement && platformStatus?.google.secret ? 'border-green-500/40 bg-green-50/30 dark:bg-green-950/20' : 'border-dashed border-muted-foreground/30'}`}>
+            <CardContent className="pt-5 pb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center">
+                    <BarChart3 className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm">Google Ads</h3>
+                    <p className="text-xs text-muted-foreground">GA4 MP + Customer Match</p>
+                  </div>
+                </div>
+                {platformStatus?.google.measurement && platformStatus?.google.secret ? (
+                  <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                    <CheckCircle2 className="w-3 h-3 mr-1" /> কানেক্টেড
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    <AlertCircle className="w-3 h-3 mr-1" /> সেটআপ করুন
+                  </Badge>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {['measurement_id', 'api_secret', 'developer_token', 'customer_id'].map(k => {
+                  const active = k === 'measurement_id' ? platformStatus?.google.measurement : k === 'api_secret' ? platformStatus?.google.secret : k === 'developer_token' ? platformStatus?.google.developer : platformStatus?.google.customer;
+                  return (
+                    <div key={k} className={`flex-1 text-xs p-1.5 rounded-lg ${active ? 'bg-emerald-100/50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
+                      <span className="font-medium text-[10px]">{k.split('_')[0]}:</span> {active ? '✓' : '✗'}
+                    </div>
+                  );
+                })}
+              </div>
+              {platformStatus?.google.measurement && platformStatus?.google.secret && (
+                <Button size="sm" variant="outline" className="w-full mt-3 h-8 text-xs" onClick={() => directSyncAudience('google')} disabled={!!syncingPlatform}>
+                  {syncingPlatform === 'google' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+                  সরাসরি সিংক করুন
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm">Facebook Ads</h3>
+                    <p className="text-xs text-muted-foreground">CAPI + Custom Audience</p>
+                  </div>
+                </div>
+                {platformStatus?.facebook.pixel && platformStatus?.facebook.capi ? (
+                  <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                    <CheckCircle2 className="w-3 h-3 mr-1" /> কানেক্টেড
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    <AlertCircle className="w-3 h-3 mr-1" /> সেটআপ করুন
+                  </Badge>
+                )}
+              </div>
+              <div className="flex gap-2">
                 <div className={`flex-1 text-xs p-2 rounded-lg ${platformStatus?.facebook.pixel ? 'bg-emerald-100/50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
                   <span className="font-medium">Pixel:</span> {platformStatus?.facebook.pixel ? '✓' : '✗'}
                 </div>
