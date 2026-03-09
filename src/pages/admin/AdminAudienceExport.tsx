@@ -311,15 +311,16 @@ const AdminAudienceExport = () => {
   const { data: overviewStats } = useQuery({
     queryKey: ['audience-overview', days],
     queryFn: async () => {
-      const [orders, abandoned, visitors] = await Promise.all([
+      const [orders, abandoned, visitors, customers] = await Promise.all([
         supabase.from('orders').select('id, total_amount, status', { count: 'exact' }).gte('created_at', since),
         supabase.from('abandoned_checkouts').select('id', { count: 'exact' }).gte('created_at', since).eq('recovered', false),
         supabase.from('visitor_analytics').select('session_id', { count: 'exact' }).gte('created_at', since),
+        supabase.from('profiles').select('id', { count: 'exact' }),
       ]);
       const totalOrders = orders.count || 0;
       const totalRevenue = (orders.data || []).reduce((s: number, o: any) => s + (o.total_amount || 0), 0);
       return {
-        totalCustomers: totalOrders,
+        totalCustomers: customers.count || 0,
         totalRevenue,
         abandonedCarts: abandoned.count || 0,
         totalVisitors: visitors.count || 0,
