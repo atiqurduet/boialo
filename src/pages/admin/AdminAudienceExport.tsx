@@ -286,15 +286,15 @@ const AdminAudienceExport = () => {
     setSyncingPlatform(platform);
     try {
       // Create sync job
-      const { data: job, error: jobErr } = await supabase.from('audience_sync_jobs' as any).insert({
+      const { data: job, error: jobErr } = await (supabase.from('audience_sync_jobs' as any).insert({
         platform, audience_type: selectedAudience,
         audience_name: `Boialo - ${audienceTypes.find(a => a.value === selectedAudience)?.label} - ${new Date().toLocaleDateString('bn-BD')}`,
         status: 'pending',
-      }).select().single();
+      }).select().single() as any);
       if (jobErr) throw jobErr;
 
       const { error } = await supabase.functions.invoke('ad-audience-sync', {
-        body: { platform, audience_type: selectedAudience, job_id: job.id },
+        body: { platform, audience_type: selectedAudience, job_id: (job as any).id },
       });
       if (error) throw error;
       toast.success(`${platform} এ অডিয়েন্স সিংক শুরু হয়েছে`);
