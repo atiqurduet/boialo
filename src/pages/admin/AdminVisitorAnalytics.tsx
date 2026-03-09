@@ -7,8 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, LineChart, Line } from "recharts";
-import { Globe, Monitor, Search, Eye, Users, Clock, TrendingUp, Printer, MapPin, Smartphone } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, LineChart, Line, FunnelChart, Funnel, LabelList } from "recharts";
+import { Globe, Monitor, Search, Eye, Users, Clock, TrendingUp, Printer, MapPin, Smartphone, Zap, ShoppingCart, CreditCard, MousePointer } from "lucide-react";
 import { format, subDays } from "date-fns";
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316'];
