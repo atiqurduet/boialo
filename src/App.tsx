@@ -46,6 +46,7 @@ const CategoryLanding = lazy(() => import("./pages/CategoryLanding"));
 const CategoryDetail = lazy(() => import("./pages/CategoryDetail"));
 const UniversalProductDetail = lazy(() => import("./pages/UniversalProductDetail"));
 const BkashCallback = lazy(() => import("./pages/BkashCallback"));
+const PaymentCallback = lazy(() => import("./pages/PaymentCallback"));
 const Categories = lazy(() => import("./pages/Categories"));
 const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
@@ -192,6 +193,8 @@ const App = () => (
                 <Route path="/category/:productType/:categorySlug" element={<CategoryLanding />} />
                 <Route path="/universal-product/:slug" element={<UniversalProductDetail />} />
                 <Route path="/bkash/callback" element={<BkashCallback />} />
+                <Route path="/nagad/callback" element={<PaymentCallback />} />
+                <Route path="/payment/callback" element={<PaymentCallback />} />
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/digital-library" element={<DigitalLibrary />} />

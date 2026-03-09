@@ -19,6 +19,7 @@ import { AddressBookSelector } from "@/components/AddressBookSelector";
 import { toast } from "sonner";
 import { z } from "zod";
 import { trackInitiateCheckout, trackAddPaymentInfo, trackAddShippingInfo, trackPurchase } from "@/lib/analytics";
+import { serverTrackInitiateCheckout, serverTrackPurchase } from "@/lib/serverTracking";
 import { cn } from "@/lib/utils";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -169,6 +170,7 @@ const Checkout = () => {
         cartItems.map(item => ({ id: item.product.id, name: item.product.title, price: item.product.price, category: item.product.category, quantity: item.quantity })),
         subtotal
       );
+      serverTrackInitiateCheckout(subtotal, cartItems.length, user?.id);
     }
   }, [cartLoading]);
 
@@ -317,16 +319,48 @@ const Checkout = () => {
     } catch (e: any) { toast.error(e.message); setIsSubmitting(false); }
   };
 
+  const initNagadPayment = async (orderId: string, orderNumber: string, totalAmount: number) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("nagad-payment", {
+        body: { action: "create", orderId, amount: totalAmount, callbackUrl: `${window.location.origin}/nagad/callback` },
+      });
+      if (error) throw error;
+      if (data.success && data.nagadURL) {
+        localStorage.setItem("pending_nagad_order", JSON.stringify({ orderId, orderNumber, paymentRefId: data.paymentRefId }));
+        window.location.href = data.nagadURL;
+      } else throw new Error(data.error || "নগদ পেমেন্ট শুরু করতে সমস্যা");
+    } catch (e: any) { toast.error(e.message); setIsSubmitting(false); }
+  };
+
+  const initSSLCommerzPayment = async (orderId: string, orderNumber: string, totalAmount: number) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("sslcommerz-payment", {
+        body: {
+          action: "create", orderId, amount: totalAmount,
+          customerName: formData.fullName, customerEmail: formData.email, customerPhone: formData.phone, customerAddress: formData.address,
+          callbackUrl: `${window.location.origin}/payment/callback`,
+        },
+      });
+      if (error) throw error;
+      if (data.success && data.gatewayUrl) {
+        localStorage.setItem("pending_ssl_order", JSON.stringify({ orderId, orderNumber, sessionKey: data.sessionKey }));
+        window.location.href = data.gatewayUrl;
+      } else throw new Error(data.error || "SSLCommerz পেমেন্ট শুরু করতে সমস্যা");
+    } catch (e: any) { toast.error(e.message); setIsSubmitting(false); }
+  };
+
   const placeOrder = async () => {
     if (!user) return;
     setIsSubmitting(true);
     try {
       const orderNumber = generateOrderNumber();
       const orderTotal = total;
+      const apiPaymentMethods = ["bkash", "nagad", "sslcommerz"];
+      const isApiPayment = apiPaymentMethods.includes(paymentMethod) && paymentMethods.find((m: any) => m.id === paymentMethod)?.payment_mode === "api";
       const { data: order, error: orderError } = await supabase.from("orders").insert({
-        user_id: user.id, order_number: orderNumber, status: paymentMethod === "bkash" ? "payment_pending" : "pending",
+        user_id: user.id, order_number: orderNumber, status: isApiPayment ? "payment_pending" : "pending",
         subtotal, delivery_charge: deliveryCharge, total: orderTotal, payment_method: paymentMethod,
-        transaction_id: paymentMethod === "bkash" ? null : (formData.transactionId || null),
+        transaction_id: isApiPayment ? null : (formData.transactionId || null),
         delivery_area: selectedZone?.zone_name_bn || "default",
         full_name: formData.fullName.trim(), phone: formData.phone.trim(), email: formData.email?.trim() || null,
         address: formData.address.trim(), notes: formData.notes?.trim() || null,
@@ -345,16 +379,25 @@ const Checkout = () => {
         await supabase.from("abandoned_checkouts").update({ recovered: true, recovered_order_id: order.id }).eq("id", abandonedCheckoutId);
       }
 
-      if (paymentMethod === "bkash") { await initBkashPayment(order.id, orderNumber, orderTotal); return; }
+      const selectedMethodObj = paymentMethods.find((m: any) => m.id === paymentMethod);
+      const isApiMode = selectedMethodObj?.payment_mode === "api";
+
+      if (paymentMethod === "bkash" && isApiMode) { await initBkashPayment(order.id, orderNumber, orderTotal); return; }
+      if (paymentMethod === "nagad" && isApiMode) { await initNagadPayment(order.id, orderNumber, orderTotal); return; }
+      if (paymentMethod === "sslcommerz" && isApiMode) { await initSSLCommerzPayment(order.id, orderNumber, orderTotal); return; }
 
       await clearCart();
       trackPurchase({
         transaction_id: orderNumber, value: orderTotal, currency: 'BDT', shipping: deliveryCharge, coupon: appliedCoupon?.code,
         items: cartItems.map(item => ({ id: item.product.id, name: item.product.title, price: item.product.price, category: item.product.category, quantity: item.quantity })),
       });
+      serverTrackPurchase({ transaction_id: orderNumber, value: orderTotal, items: cartItems.map(i => ({ id: i.product.id, name: i.product.title, price: i.product.price })) }, user?.id);
       toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
       navigate("/order-confirmation", { state: { orderNumber } });
-    } catch (e) { console.error(e); toast.error("অর্ডার করতে সমস্যা হয়েছে"); } finally { if (paymentMethod !== "bkash") setIsSubmitting(false); }
+    } catch (e) { console.error(e); toast.error("অর্ডার করতে সমস্যা হয়েছে"); } finally {
+      const apiMethods = ["bkash", "nagad", "sslcommerz"];
+      if (!apiMethods.includes(paymentMethod)) setIsSubmitting(false);
+    }
   };
 
   const isOtpRequired = () => {

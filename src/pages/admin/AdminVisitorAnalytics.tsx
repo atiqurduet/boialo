@@ -7,8 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, LineChart, Line } from "recharts";
-import { Globe, Monitor, Search, Eye, Users, Clock, TrendingUp, Printer, MapPin, Smartphone } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, LineChart, Line, FunnelChart, Funnel, LabelList } from "recharts";
+import { Globe, Monitor, Search, Eye, Users, Clock, TrendingUp, Printer, MapPin, Smartphone, Zap, ShoppingCart, CreditCard, MousePointer } from "lucide-react";
 import { format, subDays } from "date-fns";
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316'];
@@ -27,6 +28,20 @@ const AdminVisitorAnalytics = () => {
         .order('created_at', { ascending: false })
         .limit(5000);
       return data || [];
+    }
+  });
+
+  // Server-side events data
+  const { data: serverEvents = [] } = useQuery({
+    queryKey: ['server-side-events', days],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('server_side_events')
+        .select('*')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(5000);
+      return (data || []) as any[];
     }
   });
 
@@ -252,14 +267,188 @@ const AdminVisitorAnalytics = () => {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="location" className="space-y-4">
+        <Tabs defaultValue="funnel" className="space-y-4">
           <TabsList className="flex-wrap h-auto gap-1">
+            <TabsTrigger value="funnel"><ShoppingCart className="w-4 h-4 mr-1" /> ফানেল</TabsTrigger>
+            <TabsTrigger value="server"><Zap className="w-4 h-4 mr-1" /> সার্ভার ইভেন্ট</TabsTrigger>
             <TabsTrigger value="location"><Globe className="w-4 h-4 mr-1" /> লোকেশন</TabsTrigger>
             <TabsTrigger value="pages"><Eye className="w-4 h-4 mr-1" /> পেজ</TabsTrigger>
             <TabsTrigger value="search"><Search className="w-4 h-4 mr-1" /> সার্চ</TabsTrigger>
             <TabsTrigger value="devices"><Smartphone className="w-4 h-4 mr-1" /> ডিভাইস</TabsTrigger>
             <TabsTrigger value="sources"><TrendingUp className="w-4 h-4 mr-1" /> সোর্স</TabsTrigger>
           </TabsList>
+
+          {/* Conversion Funnel */}
+          <TabsContent value="funnel">
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader><CardTitle className="text-base">🔄 কনভার্শন ফানেল</CardTitle></CardHeader>
+                <CardContent>
+                  {(() => {
+                    const funnelSteps = [
+                      { name: 'পেজভিউ', key: 'PageView' },
+                      { name: 'প্রোডাক্ট দেখা', key: 'ViewContent' },
+                      { name: 'কার্টে যোগ', key: 'AddToCart' },
+                      { name: 'চেকআউট শুরু', key: 'InitiateCheckout' },
+                      { name: 'পারচেজ', key: 'Purchase' },
+                    ];
+                    const funnelData = funnelSteps.map(step => ({
+                      name: step.name,
+                      value: serverEvents.filter(e => e.event_name === step.key).length || (step.key === 'PageView' ? analytics.length : 0),
+                    }));
+                    const maxVal = Math.max(...funnelData.map(d => d.value), 1);
+                    return (
+                      <div className="space-y-3">
+                        {funnelData.map((step, i) => {
+                          const pct = maxVal > 0 ? Math.round((step.value / maxVal) * 100) : 0;
+                          const prevVal = i > 0 ? funnelData[i - 1].value : step.value;
+                          const dropoff = prevVal > 0 ? Math.round(((prevVal - step.value) / prevVal) * 100) : 0;
+                          return (
+                            <div key={step.name}>
+                              <div className="flex items-center justify-between text-sm mb-1">
+                                <span className="font-medium">{step.name}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold">{step.value}</span>
+                                  {i > 0 && dropoff > 0 && (
+                                    <Badge variant="secondary" className="text-[10px]">-{dropoff}%</Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="h-8 bg-muted rounded overflow-hidden">
+                                <div
+                                  className="h-full bg-primary/80 rounded transition-all flex items-center justify-end pr-2"
+                                  style={{ width: `${Math.max(pct, 2)}%` }}
+                                >
+                                  <span className="text-[10px] text-primary-foreground font-bold">{pct}%</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {funnelData.every(d => d.value === 0) && (
+                          <p className="text-center text-muted-foreground py-6">এখনো কোনো ফানেল ডেটা নেই</p>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle className="text-base">📊 ইভেন্ট সামারি</CardTitle></CardHeader>
+                <CardContent>
+                  {(() => {
+                    const eventCounts: Record<string, number> = {};
+                    serverEvents.forEach(e => {
+                      eventCounts[e.event_name] = (eventCounts[e.event_name] || 0) + 1;
+                    });
+                    const eventData = Object.entries(eventCounts)
+                      .sort((a, b) => b[1] - a[1])
+                      .slice(0, 15);
+                    return (
+                      <Table>
+                        <TableHeader><TableRow><TableHead>ইভেন্ট</TableHead><TableHead className="text-right">সংখ্যা</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                          {eventData.map(([name, count]) => (
+                            <TableRow key={name}>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <MousePointer className="w-3 h-3 text-muted-foreground" />
+                                  {name}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-bold">{count}</TableCell>
+                            </TableRow>
+                          ))}
+                          {eventData.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground py-6">কোনো সার্ভার-সাইড ইভেন্ট নেই</TableCell></TableRow>}
+                        </TableBody>
+                      </Table>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Server-Side Events Tab */}
+          <TabsContent value="server">
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card className="md:col-span-2">
+                <CardHeader><CardTitle className="text-base">⚡ সার্ভার-সাইড ইভেন্ট ট্রেন্ড (Ad-blocker প্রুফ)</CardTitle></CardHeader>
+                <CardContent>
+                  {(() => {
+                    const dailyEvents: Record<string, Record<string, number>> = {};
+                    serverEvents.forEach(e => {
+                      const day = format(new Date(e.created_at), 'MM/dd');
+                      if (!dailyEvents[day]) dailyEvents[day] = {};
+                      dailyEvents[day][e.event_name] = (dailyEvents[day][e.event_name] || 0) + 1;
+                    });
+                    const chartData = Object.entries(dailyEvents)
+                      .map(([date, events]) => ({ date, PageView: events.PageView || 0, ViewContent: events.ViewContent || 0, AddToCart: events.AddToCart || 0, Purchase: events.Purchase || 0 }))
+                      .reverse();
+                    return (
+                      <div className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" fontSize={12} />
+                            <YAxis fontSize={12} />
+                            <Tooltip />
+                            <Line type="monotone" dataKey="PageView" stroke="hsl(var(--primary))" strokeWidth={2} name="পেজভিউ" dot={false} />
+                            <Line type="monotone" dataKey="ViewContent" stroke="#8b5cf6" strokeWidth={2} name="প্রোডাক্ট ভিউ" dot={false} />
+                            <Line type="monotone" dataKey="AddToCart" stroke="#f59e0b" strokeWidth={2} name="কার্টে যোগ" dot={false} />
+                            <Line type="monotone" dataKey="Purchase" stroke="#10b981" strokeWidth={2} name="পারচেজ" dot={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle className="text-base">📱 ডিভাইস (সার্ভার)</CardTitle></CardHeader>
+                <CardContent>
+                  {(() => {
+                    const devMap: Record<string, number> = {};
+                    serverEvents.forEach(e => { devMap[e.device_type || 'unknown'] = (devMap[e.device_type || 'unknown'] || 0) + 1; });
+                    const devData = Object.entries(devMap).map(([name, value]) => ({ name, value }));
+                    return (
+                      <div className="h-[250px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie data={devData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                              {devData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle className="text-base">🌍 লোকেশন (সার্ভার)</CardTitle></CardHeader>
+                <CardContent>
+                  {(() => {
+                    const locMap: Record<string, number> = {};
+                    serverEvents.forEach(e => { if (e.country) locMap[e.country] = (locMap[e.country] || 0) + 1; });
+                    const locData = Object.entries(locMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+                    return (
+                      <Table>
+                        <TableHeader><TableRow><TableHead>দেশ</TableHead><TableHead className="text-right">ইভেন্ট</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                          {locData.map(([country, count]) => (
+                            <TableRow key={country}><TableCell>{country}</TableCell><TableCell className="text-right font-medium">{count}</TableCell></TableRow>
+                          ))}
+                          {locData.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground">ডেটা নেই</TableCell></TableRow>}
+                        </TableBody>
+                      </Table>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           {/* Location Tab */}
           <TabsContent value="location">
