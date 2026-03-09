@@ -662,7 +662,7 @@ const Checkout = () => {
                   <span>৳{subtotal}</span>
                 </div>
                 {couponDiscount > 0 && (
-                  <div className="flex justify-between text-green-600">
+                  <div className="flex justify-between text-primary">
                     <span className="flex items-center gap-1"><Ticket className="w-3 h-3" /> {appliedCoupon?.code}</span>
                     <span>-৳{couponDiscount}</span>
                   </div>
