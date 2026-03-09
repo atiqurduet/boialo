@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, CreditCard, Smartphone, Truck, MapPin, ChevronLeft, Loader2, Shield, Phone, Ticket, ChevronRight, Gift, Clock, Zap, Star } from "lucide-react";
+import { Check, CreditCard, Smartphone, Truck, MapPin, ChevronLeft, Loader2, Shield, Phone, Ticket, ChevronRight, Gift, Clock, Zap, Star, Package, Lock } from "lucide-react";
 import { useCartContext } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,9 +43,9 @@ const checkoutSchema = z.object({
 });
 
 const STEPS = [
-  { id: 'shipping', label: 'ডেলিভারি', icon: MapPin },
-  { id: 'payment', label: 'পেমেন্ট', icon: CreditCard },
-  { id: 'review', label: 'রিভিউ', icon: Check },
+  { id: 'shipping', label: 'ডেলিভারি তথ্য', icon: MapPin, shortLabel: 'ডেলিভারি' },
+  { id: 'payment', label: 'পেমেন্ট পদ্ধতি', icon: CreditCard, shortLabel: 'পেমেন্ট' },
+  { id: 'review', label: 'অর্ডার কনফার্ম', icon: Check, shortLabel: 'কনফার্ম' },
 ];
 
 const Checkout = () => {
@@ -133,15 +133,16 @@ const Checkout = () => {
         case 'min_order':
           if (subtotal >= (config.min_amount || 0)) applies = true;
           break;
-        case 'bulk_discount':
+        case 'bulk_discount': {
           const totalQty = cartItems.reduce((s, i) => s + i.quantity, 0);
           if (totalQty >= (config.min_quantity || 0)) applies = true;
           break;
+        }
         case 'first_order':
-          applies = true; // Will be validated server-side
+          applies = true;
           break;
         case 'time_based':
-          applies = true; // Already checked starts_at/ends_at
+          applies = true;
           break;
       }
 
@@ -278,10 +279,14 @@ const Checkout = () => {
         trackAddShippingInfo(selectedZone?.zone_name_bn || 'default', total);
       }
       setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
-  const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 0));
+  const prevStep = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 0));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // OTP
   const sendOtp = async () => {
@@ -424,138 +429,208 @@ const Checkout = () => {
   const iconMap: Record<string, any> = { cod: Truck, bkash: Smartphone, nagad: Smartphone, sslcommerz: CreditCard, card: CreditCard };
   const paymentMethods = dbPaymentMethods.map((m: any) => ({
     id: m.provider, name: m.name_bn,
-    description: m.provider === 'cod' ? 'পণ্য হাতে পেয়ে টাকা প্রদান করুন' : m.manual_number ? `${m.name_bn} মোবাইল ব্যাংকিং` : m.name_bn,
+    description: m.provider === 'cod' ? 'পণ্য হাতে পেয়ে টাকা দিন' : m.manual_number ? `${m.manual_type || 'Send Money'}` : m.name_bn,
     icon: iconMap[m.provider] || CreditCard,
     manual_number: m.manual_number, manual_type: m.manual_type,
     manual_instructions: m.manual_instructions, payment_mode: m.payment_mode || 'manual',
   }));
 
   if (authLoading || cartLoading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">লোড হচ্ছে...</p>
+        </div>
+      </div>
+    );
   }
 
+  const totalItems = cartItems.reduce((s, i) => s + i.quantity, 0);
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-muted/30">
       <AnnouncementBar />
       <Header />
-      <main className="container py-6">
-        <Link to="/cart" className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary mb-4 transition-colors">
-          <ChevronLeft className="w-4 h-4" /> শপিং ব্যাগে ফিরে যান
-        </Link>
 
-        {/* Step Progress Bar */}
-        <div className="flex items-center justify-center mb-8">
+      <main className="container max-w-5xl py-4 md:py-8">
+        {/* Compact Header */}
+        <div className="flex items-center justify-between mb-6">
+          <Link to="/cart" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ChevronLeft className="w-4 h-4" /> কার্টে ফিরুন
+          </Link>
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Lock className="w-3.5 h-3.5" />
+            <span>নিরাপদ চেকআউট</span>
+          </div>
+        </div>
+
+        {/* Clean Step Indicator */}
+        <div className="flex items-center justify-center gap-0 mb-8">
           {STEPS.map((step, i) => (
             <div key={step.id} className="flex items-center">
               <button
                 onClick={() => { if (i < currentStep) setCurrentStep(i); }}
+                disabled={i > currentStep}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all",
-                  i === currentStep ? "bg-primary text-primary-foreground shadow-md" :
-                  i < currentStep ? "bg-primary/20 text-primary cursor-pointer" :
-                  "bg-muted text-muted-foreground"
+                  "flex items-center gap-2 transition-all",
+                  i <= currentStep ? "text-foreground" : "text-muted-foreground/50",
+                  i < currentStep && "cursor-pointer hover:text-primary"
                 )}
               >
-                {i < currentStep ? <Check className="w-4 h-4" /> : <step.icon className="w-4 h-4" />}
-                <span className="hidden sm:inline">{step.label}</span>
-                <span className="sm:hidden">{i + 1}</span>
+                <div className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all",
+                  i === currentStep && "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-110",
+                  i < currentStep && "bg-primary/15 text-primary",
+                  i > currentStep && "bg-muted text-muted-foreground/50"
+                )}>
+                  {i < currentStep ? <Check className="w-4 h-4" /> : i + 1}
+                </div>
+                <span className="hidden sm:inline text-sm font-medium">{step.shortLabel}</span>
               </button>
               {i < STEPS.length - 1 && (
-                <div className={cn("w-8 md:w-16 h-0.5 mx-1", i < currentStep ? "bg-primary" : "bg-border")} />
+                <div className={cn(
+                  "w-10 md:w-20 h-[2px] mx-2 rounded-full transition-colors",
+                  i < currentStep ? "bg-primary" : "bg-border"
+                )} />
               )}
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-7">
             {/* STEP 1: Shipping */}
             {currentStep === 0 && (
-              <div className="space-y-6">
-                <div className="bg-card rounded-xl p-6 shadow-sm">
-                  <div className="flex items-center gap-2 mb-4">
-                    <MapPin className="w-5 h-5 text-primary" />
-                    <h2 className="font-bold text-lg">ডেলিভারি ঠিকানা</h2>
+              <div className="space-y-4">
+                <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
+                  <div className="px-5 py-4 border-b border-border/50 bg-muted/30">
+                    <h2 className="font-bold text-base flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      ডেলিভারি তথ্য
+                    </h2>
                   </div>
-                  <AddressBookSelector onSelect={(addr) => {
-                    setFormData(prev => ({ ...prev, fullName: addr.fullName, phone: addr.phone, address: addr.address }));
-                  }} />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>পূর্ণ নাম *</Label>
-                      <Input className={`mt-1 ${errors.fullName ? "border-destructive" : ""}`} value={formData.fullName} onChange={e => handleInputChange("fullName", e.target.value)} placeholder="আপনার নাম" />
-                      {errors.fullName && <p className="text-destructive text-xs mt-1">{errors.fullName}</p>}
-                    </div>
-                    <div>
-                      <Label>মোবাইল নম্বর * {isOtpRequired() && <span className="text-xs text-muted-foreground">(OTP যাচাই হবে)</span>}</Label>
-                      <Input className={`mt-1 ${errors.phone ? "border-destructive" : ""}`} value={formData.phone} onChange={e => handleInputChange("phone", e.target.value)} placeholder="01XXXXXXXXX" />
-                      {errors.phone && <p className="text-destructive text-xs mt-1">{errors.phone}</p>}
-                    </div>
-                    <div>
-                      <Label>ইমেইল</Label>
-                      <Input type="email" className={`mt-1 ${errors.email ? "border-destructive" : ""}`} value={formData.email} onChange={e => handleInputChange("email", e.target.value)} placeholder="email@example.com" />
-                    </div>
-                    <div>
-                      <Label>ডেলিভারি এরিয়া *</Label>
-                      {deliveryZones.length > 0 ? (
-                        <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
-                          <SelectTrigger className="mt-1"><SelectValue placeholder="এরিয়া নির্বাচন করুন" /></SelectTrigger>
-                          <SelectContent>
-                            {deliveryZones.map(zone => (
-                              <SelectItem key={zone.id} value={zone.id}>
-                                {zone.zone_name_bn} — ৳{zone.delivery_charge}
-                                {zone.estimated_days_min && ` (${zone.estimated_days_min}-${zone.estimated_days_max} দিন)`}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <RadioGroup value={selectedZoneId || "inside"} onValueChange={setSelectedZoneId} className="flex gap-4 mt-2">
-                          <div className="flex items-center space-x-2"><RadioGroupItem value="inside" id="inside" /><Label htmlFor="inside" className="font-normal cursor-pointer">ঢাকার ভিতরে (৳60)</Label></div>
-                          <div className="flex items-center space-x-2"><RadioGroupItem value="outside" id="outside" /><Label htmlFor="outside" className="font-normal cursor-pointer">ঢাকার বাইরে (৳120)</Label></div>
-                        </RadioGroup>
-                      )}
-                    </div>
-                    <div className="md:col-span-2">
-                      <Label>সম্পূর্ণ ঠিকানা *</Label>
-                      <Textarea className={`mt-1 ${errors.address ? "border-destructive" : ""}`} rows={3} value={formData.address} onChange={e => handleInputChange("address", e.target.value)} placeholder="বাড়ি নং, রাস্তা, এলাকা, থানা, জেলা" />
-                      {errors.address && <p className="text-destructive text-xs mt-1">{errors.address}</p>}
-                    </div>
-                    <div className="md:col-span-2">
-                      <Label>অর্ডার নোট (ঐচ্ছিক)</Label>
-                      <Textarea className="mt-1" rows={2} value={formData.notes} onChange={e => handleInputChange("notes", e.target.value)} placeholder="অতিরিক্ত নির্দেশনা..." />
+                  <div className="p-5">
+                    <AddressBookSelector onSelect={(addr) => {
+                      setFormData(prev => ({ ...prev, fullName: addr.fullName, phone: addr.phone, address: addr.address }));
+                    }} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">পূর্ণ নাম *</Label>
+                        <Input
+                          className={cn("h-11 rounded-xl bg-muted/30 border-border/50 focus:bg-background transition-colors", errors.fullName && "border-destructive bg-destructive/5")}
+                          value={formData.fullName}
+                          onChange={e => handleInputChange("fullName", e.target.value)}
+                          placeholder="আপনার নাম লিখুন"
+                        />
+                        {errors.fullName && <p className="text-destructive text-[11px]">{errors.fullName}</p>}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          মোবাইল নম্বর *
+                        </Label>
+                        <Input
+                          className={cn("h-11 rounded-xl bg-muted/30 border-border/50 focus:bg-background transition-colors", errors.phone && "border-destructive bg-destructive/5")}
+                          value={formData.phone}
+                          onChange={e => handleInputChange("phone", e.target.value)}
+                          placeholder="01XXXXXXXXX"
+                        />
+                        {errors.phone && <p className="text-destructive text-[11px]">{errors.phone}</p>}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">ইমেইল (ঐচ্ছিক)</Label>
+                        <Input
+                          type="email"
+                          className="h-11 rounded-xl bg-muted/30 border-border/50 focus:bg-background transition-colors"
+                          value={formData.email}
+                          onChange={e => handleInputChange("email", e.target.value)}
+                          placeholder="email@example.com"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">ডেলিভারি এরিয়া *</Label>
+                        {deliveryZones.length > 0 ? (
+                          <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
+                            <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-border/50"><SelectValue placeholder="এরিয়া নির্বাচন করুন" /></SelectTrigger>
+                            <SelectContent>
+                              {deliveryZones.map(zone => (
+                                <SelectItem key={zone.id} value={zone.id}>
+                                  {zone.zone_name_bn} — ৳{zone.delivery_charge}
+                                  {zone.estimated_days_min && ` (${zone.estimated_days_min}-${zone.estimated_days_max} দিন)`}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <RadioGroup value={selectedZoneId || "inside"} onValueChange={setSelectedZoneId} className="flex gap-3 mt-1">
+                            <label className={cn("flex-1 flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer text-sm transition-all", (selectedZoneId || "inside") === "inside" ? "border-primary bg-primary/5" : "border-border/50")}>
+                              <RadioGroupItem value="inside" id="inside" />
+                              ঢাকার ভিতরে (৳60)
+                            </label>
+                            <label className={cn("flex-1 flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer text-sm transition-all", selectedZoneId === "outside" ? "border-primary bg-primary/5" : "border-border/50")}>
+                              <RadioGroupItem value="outside" id="outside" />
+                              ঢাকার বাইরে (৳120)
+                            </label>
+                          </RadioGroup>
+                        )}
+                      </div>
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">সম্পূর্ণ ঠিকানা *</Label>
+                        <Textarea
+                          className={cn("rounded-xl bg-muted/30 border-border/50 focus:bg-background transition-colors resize-none", errors.address && "border-destructive bg-destructive/5")}
+                          rows={2}
+                          value={formData.address}
+                          onChange={e => handleInputChange("address", e.target.value)}
+                          placeholder="বাড়ি নং, রাস্তা, এলাকা, থানা, জেলা"
+                        />
+                        {errors.address && <p className="text-destructive text-[11px]">{errors.address}</p>}
+                      </div>
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">অর্ডার নোট (ঐচ্ছিক)</Label>
+                        <Textarea
+                          className="rounded-xl bg-muted/30 border-border/50 focus:bg-background transition-colors resize-none"
+                          rows={2}
+                          value={formData.notes}
+                          onChange={e => handleInputChange("notes", e.target.value)}
+                          placeholder="অতিরিক্ত কোনো নির্দেশনা থাকলে লিখুন..."
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Dynamic Additional Fields */}
                 {dynamicFields.filter(f => f.field_group === 'additional').length > 0 && (
-                  <div className="bg-card rounded-xl p-6 shadow-sm">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Gift className="w-5 h-5 text-primary" />
-                      <h2 className="font-bold text-lg">অতিরিক্ত অপশন</h2>
+                  <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-border/50 bg-muted/30">
+                      <h2 className="font-bold text-base flex items-center gap-2">
+                        <Gift className="w-4 h-4 text-primary" />
+                        অতিরিক্ত অপশন
+                      </h2>
                     </div>
-                    <div className="space-y-4">
+                    <div className="p-5 space-y-3">
                       {dynamicFields.filter(f => f.field_group === 'additional').map(field => (
                         <div key={field.id}>
                           {field.field_type === 'checkbox' && (
-                            <label className="flex items-center gap-3 cursor-pointer">
+                            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-muted/30 transition-colors">
                               <Checkbox checked={!!dynamicFieldValues[field.field_name]} onCheckedChange={checked => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: checked }))} />
                               <span className="text-sm">{field.field_label_bn}</span>
                             </label>
                           )}
                           {field.field_type === 'textarea' && dynamicFieldValues['gift_wrap'] && field.field_name === 'gift_message' && (
-                            <div>
-                              <Label>{field.field_label_bn}</Label>
-                              <Textarea className="mt-1" rows={2} placeholder={field.placeholder || ''} value={dynamicFieldValues[field.field_name] || ''} onChange={e => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: e.target.value }))} />
+                            <div className="space-y-1.5 pl-8">
+                              <Label className="text-xs font-medium text-muted-foreground">{field.field_label_bn}</Label>
+                              <Textarea className="rounded-xl bg-muted/30 border-border/50 resize-none" rows={2} placeholder={field.placeholder || ''} value={dynamicFieldValues[field.field_name] || ''} onChange={e => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: e.target.value }))} />
                             </div>
                           )}
                           {field.field_type === 'select' && (
-                            <div>
-                              <Label>{field.field_label_bn}</Label>
-                              <Select value={dynamicFieldValues[field.field_name] || ''} onValueChange={val => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: val }))}>
-                                <SelectTrigger className="mt-1"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs font-medium text-muted-foreground">{field.field_label_bn}</Label>
+                              <Select value={dynamicFieldValues[field.field_name] || 'none'} onValueChange={val => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: val === 'none' ? '' : val }))}>
+                                <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-border/50"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                                 <SelectContent>
+                                  <SelectItem value="none">নির্বাচন করুন</SelectItem>
                                   <SelectItem value="morning">সকাল (৯-১২)</SelectItem>
                                   <SelectItem value="afternoon">দুপুর (১২-৫)</SelectItem>
                                   <SelectItem value="evening">সন্ধ্যা (৫-৯)</SelectItem>
@@ -565,9 +640,9 @@ const Checkout = () => {
                             </div>
                           )}
                           {field.field_type === 'text' && (
-                            <div>
-                              <Label>{field.field_label_bn} {field.is_required && '*'}</Label>
-                              <Input className="mt-1" placeholder={field.placeholder || ''} value={dynamicFieldValues[field.field_name] || ''} onChange={e => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: e.target.value }))} />
+                            <div className="space-y-1.5">
+                              <Label className="text-xs font-medium text-muted-foreground">{field.field_label_bn} {field.is_required && '*'}</Label>
+                              <Input className="h-11 rounded-xl bg-muted/30 border-border/50" placeholder={field.placeholder || ''} value={dynamicFieldValues[field.field_name] || ''} onChange={e => setDynamicFieldValues(prev => ({ ...prev, [field.field_name]: e.target.value }))} />
                             </div>
                           )}
                         </div>
@@ -576,153 +651,203 @@ const Checkout = () => {
                   </div>
                 )}
 
-                <div className="flex justify-end">
-                  <Button onClick={nextStep} className="px-8"><span>পেমেন্টে যান</span><ChevronRight className="w-4 h-4 ml-2" /></Button>
-                </div>
+                <Button onClick={nextStep} className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-primary/20">
+                  পেমেন্টে যান <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
               </div>
             )}
 
             {/* STEP 2: Payment */}
             {currentStep === 1 && (
-              <div className="space-y-6">
-                <div className="bg-card rounded-xl p-6 shadow-sm">
-                  <div className="flex items-center gap-2 mb-4">
-                    <CreditCard className="w-5 h-5 text-primary" />
-                    <h2 className="font-bold text-lg">পেমেন্ট পদ্ধতি</h2>
+              <div className="space-y-4">
+                <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
+                  <div className="px-5 py-4 border-b border-border/50 bg-muted/30">
+                    <h2 className="font-bold text-base flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-primary" />
+                      পেমেন্ট পদ্ধতি নির্বাচন করুন
+                    </h2>
                   </div>
-                  <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="p-5">
+                    <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-2.5">
                       {paymentMethods.map(method => (
-                        <label key={method.id} className={cn("relative flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", paymentMethod === method.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
+                        <label
+                          key={method.id}
+                          className={cn(
+                            "relative flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all",
+                            paymentMethod === method.id
+                              ? "border-primary bg-primary/5 shadow-sm"
+                              : "border-border/50 hover:border-border hover:bg-muted/20"
+                          )}
+                        >
                           <RadioGroupItem value={method.id} className="sr-only" />
-                          <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", paymentMethod === method.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                          <div className={cn(
+                            "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors",
+                            paymentMethod === method.id
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
+                          )}>
                             <method.icon className="w-5 h-5" />
                           </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{method.name}</p>
-                            <p className="text-xs text-muted-foreground">{method.description}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm">{method.name}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{method.description}</p>
                           </div>
-                          {paymentMethod === method.id && <Check className="w-5 h-5 text-primary" />}
+                          {paymentMethod === method.id && (
+                            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
+                              <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                            </div>
+                          )}
                         </label>
                       ))}
-                    </div>
-                  </RadioGroup>
+                    </RadioGroup>
 
-                  {paymentMethod !== "cod" && (() => {
-                    const sel = paymentMethods.find(m => m.id === paymentMethod);
-                    if (!sel) return null;
-                    // API mode messages
-                    if (sel.payment_mode === "api") {
-                      if (paymentMethod === "bkash") {
-                        return <div className="mt-4 p-4 bg-accent/10 rounded-lg border border-border"><p className="text-sm">✅ অর্ডার সম্পন্ন করতে <strong>বিকাশ</strong> পেমেন্ট পেজে নিয়ে যাওয়া হবে।</p></div>;
+                    {/* Payment Details */}
+                    {paymentMethod !== "cod" && (() => {
+                      const sel = paymentMethods.find(m => m.id === paymentMethod);
+                      if (!sel) return null;
+                      if (sel.payment_mode === "api") {
+                        return (
+                          <div className="mt-4 p-4 bg-primary/5 rounded-xl border border-primary/20">
+                            <p className="text-sm flex items-center gap-2">
+                              <Shield className="w-4 h-4 text-primary shrink-0" />
+                              <span>অর্ডার কনফার্ম করলে <strong>{sel.name}</strong> পেমেন্ট পেজে যাবেন</span>
+                            </p>
+                          </div>
+                        );
                       }
-                      if (paymentMethod === "nagad") {
-                        return <div className="mt-4 p-4 bg-accent/10 rounded-lg border border-border"><p className="text-sm">✅ অর্ডার সম্পন্ন করতে <strong>নগদ</strong> পেমেন্ট পেজে নিয়ে যাওয়া হবে।</p></div>;
+                      if (sel.manual_number) {
+                        return (
+                          <div className="mt-4 space-y-3">
+                            <div className="p-4 bg-muted/50 rounded-xl border border-border/50">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{sel.name} নম্বর</span>
+                                <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{sel.manual_type || 'Send Money'}</span>
+                              </div>
+                              <p className="text-lg font-bold font-mono tracking-wider">{sel.manual_number}</p>
+                              {sel.manual_instructions && <p className="text-xs text-muted-foreground mt-2">{sel.manual_instructions}</p>}
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">ট্রান্জেকশন আইডি *</Label>
+                              <Input
+                                placeholder="আপনার Transaction ID লিখুন"
+                                className={cn("h-11 rounded-xl bg-muted/30 border-border/50", errors.transactionId && "border-destructive bg-destructive/5")}
+                                value={formData.transactionId}
+                                onChange={e => handleInputChange("transactionId", e.target.value)}
+                              />
+                              {errors.transactionId && <p className="text-destructive text-[11px]">{errors.transactionId}</p>}
+                            </div>
+                          </div>
+                        );
                       }
-                      if (paymentMethod === "sslcommerz") {
-                        return <div className="mt-4 p-4 bg-accent/10 rounded-lg border border-border"><p className="text-sm">✅ অর্ডার সম্পন্ন করতে <strong>SSLCommerz</strong> পেমেন্ট গেটওয়েতে নিয়ে যাওয়া হবে।</p></div>;
-                      }
-                    }
-                    // Manual mode - show account number & transaction ID input
-                    if (sel.manual_number) {
-                      return (
-                        <div className="mt-4 p-4 bg-accent/10 rounded-lg border border-border">
-                          <p className="text-sm">{sel.name} নম্বর: <strong>{sel.manual_number}</strong> ({sel.manual_type || 'Send Money'})</p>
-                          {sel.manual_instructions && <p className="text-xs text-muted-foreground mt-1">{sel.manual_instructions}</p>}
-                          <Input placeholder="Transaction ID" className={`mt-3 ${errors.transactionId ? "border-destructive" : ""}`} value={formData.transactionId} onChange={e => handleInputChange("transactionId", e.target.value)} />
-                          {errors.transactionId && <p className="text-destructive text-xs mt-1">{errors.transactionId}</p>}
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
+                      return null;
+                    })()}
+                  </div>
                 </div>
 
                 {isOtpRequired() && (
-                  <div className="bg-green-50 dark:bg-green-950/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
-                    <div className="flex items-center gap-3">
-                      <Shield className="w-8 h-8 text-green-600" />
-                      <div>
-                        <p className="font-medium text-green-800 dark:text-green-200">নিরাপত্তা যাচাই</p>
-                        <p className="text-sm text-green-600 dark:text-green-400">মোবাইল নম্বরে OTP পাঠানো হবে</p>
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
+                    <Shield className="w-5 h-5 text-primary shrink-0" />
+                    <p className="text-sm">মোবাইল নম্বরে OTP যাচাই হবে নিরাপত্তার জন্য</p>
                   </div>
                 )}
 
-                <div className="flex justify-between">
-                  <Button variant="outline" onClick={prevStep}><ChevronLeft className="w-4 h-4 mr-2" /> পিছনে</Button>
-                  <Button onClick={nextStep}><span>রিভিউ করুন</span><ChevronRight className="w-4 h-4 ml-2" /></Button>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={prevStep} className="h-12 rounded-xl px-6">
+                    <ChevronLeft className="w-4 h-4 mr-1" /> পিছনে
+                  </Button>
+                  <Button onClick={nextStep} className="flex-1 h-12 rounded-xl text-base font-semibold shadow-lg shadow-primary/20">
+                    রিভিউ করুন <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
                 </div>
               </div>
             )}
 
-            {/* STEP 3: Review */}
+            {/* STEP 3: Review & Confirm */}
             {currentStep === 2 && (
-              <div className="space-y-6">
-                <div className="bg-card rounded-xl p-6 shadow-sm">
-                  <h2 className="font-bold text-lg mb-4 flex items-center gap-2"><Check className="w-5 h-5 text-primary" /> অর্ডার রিভিউ</h2>
-                  
-                  {/* Shipping Summary */}
-                  <div className="mb-4 p-4 bg-muted/50 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium text-sm flex items-center gap-2"><MapPin className="w-4 h-4" /> ডেলিভারি তথ্য</h3>
-                      <Button variant="ghost" size="sm" onClick={() => setCurrentStep(0)}>পরিবর্তন</Button>
-                    </div>
-                    <div className="text-sm space-y-1 text-muted-foreground">
-                      <p><strong className="text-foreground">{formData.fullName}</strong></p>
-                      <p>{formData.phone} {formData.email && `• ${formData.email}`}</p>
-                      <p>{formData.address}</p>
-                      <p className="text-primary font-medium">{selectedZone?.zone_name_bn || 'ঢাকা'} — ৳{deliveryCharge}
+              <div className="space-y-4">
+                {/* Delivery Info Card */}
+                <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
+                  <div className="px-5 py-3 border-b border-border/50 bg-muted/30 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <MapPin className="w-3.5 h-3.5 text-primary" /> ডেলিভারি তথ্য
+                    </h3>
+                    <button onClick={() => setCurrentStep(0)} className="text-xs text-primary hover:underline font-medium">পরিবর্তন</button>
+                  </div>
+                  <div className="p-5 text-sm space-y-1">
+                    <p className="font-semibold">{formData.fullName}</p>
+                    <p className="text-muted-foreground">{formData.phone}{formData.email && ` • ${formData.email}`}</p>
+                    <p className="text-muted-foreground">{formData.address}</p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Truck className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-primary font-medium text-xs">
+                        {selectedZone?.zone_name_bn || 'ঢাকা'} — ৳{deliveryCharge}
                         {selectedZone?.estimated_days_min && ` (${selectedZone.estimated_days_min}-${selectedZone.estimated_days_max} দিন)`}
-                      </p>
+                      </span>
                     </div>
                   </div>
-
-                  {/* Payment Summary */}
-                  <div className="mb-4 p-4 bg-muted/50 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium text-sm flex items-center gap-2"><CreditCard className="w-4 h-4" /> পেমেন্ট</h3>
-                      <Button variant="ghost" size="sm" onClick={() => setCurrentStep(1)}>পরিবর্তন</Button>
-                    </div>
-                    <p className="text-sm">{paymentMethods.find(m => m.id === paymentMethod)?.name || paymentMethod}</p>
-                    {formData.transactionId && <p className="text-xs text-muted-foreground">TxnID: {formData.transactionId}</p>}
-                  </div>
-
-                  {/* Items */}
-                  <div className="mb-4">
-                    <h3 className="font-medium text-sm mb-2">পণ্যসমূহ ({cartItems.length}টি)</h3>
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {cartItems.map(item => (
-                        <div key={item.id} className="flex gap-3 p-2 bg-muted/30 rounded-lg">
-                          <img src={item.product.image} alt="" className="w-12 h-16 object-cover rounded" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium line-clamp-1">{item.product.title}</p>
-                            <p className="text-xs text-muted-foreground">৳{item.product.price} × {item.quantity}</p>
-                          </div>
-                          <p className="text-sm font-bold text-primary">৳{item.product.price * item.quantity}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Dynamic field values */}
-                  {Object.entries(dynamicFieldValues).some(([, v]) => v) && (
-                    <div className="p-4 bg-muted/50 rounded-lg mb-4">
-                      <h3 className="font-medium text-sm mb-2 flex items-center gap-2"><Gift className="w-4 h-4" /> অতিরিক্ত</h3>
-                      {dynamicFieldValues.gift_wrap && <p className="text-sm">🎁 গিফট র‍্যাপ</p>}
-                      {dynamicFieldValues.gift_message && <p className="text-xs text-muted-foreground">মেসেজ: {dynamicFieldValues.gift_message}</p>}
-                      {dynamicFieldValues.preferred_delivery_time && <p className="text-sm">⏰ সময়: {dynamicFieldValues.preferred_delivery_time}</p>}
-                    </div>
-                  )}
                 </div>
 
-                <div className="flex justify-between">
-                  <Button variant="outline" onClick={prevStep}><ChevronLeft className="w-4 h-4 mr-2" /> পিছনে</Button>
-                  <Button onClick={handlePlaceOrder} disabled={isSubmitting} className="px-8">
-                    {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />প্রসেসিং...</> :
-                      isOtpRequired() ? <><Shield className="w-4 h-4 mr-2" />OTP যাচাই করে অর্ডার</> :
-                      <><Check className="w-4 h-4 mr-2" />অর্ডার কনফার্ম করুন</>}
+                {/* Payment Info Card */}
+                <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
+                  <div className="px-5 py-3 border-b border-border/50 bg-muted/30 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <CreditCard className="w-3.5 h-3.5 text-primary" /> পেমেন্ট
+                    </h3>
+                    <button onClick={() => setCurrentStep(1)} className="text-xs text-primary hover:underline font-medium">পরিবর্তন</button>
+                  </div>
+                  <div className="p-5">
+                    <p className="text-sm font-medium">{paymentMethods.find(m => m.id === paymentMethod)?.name || paymentMethod}</p>
+                    {formData.transactionId && <p className="text-xs text-muted-foreground mt-1">TxnID: {formData.transactionId}</p>}
+                  </div>
+                </div>
+
+                {/* Items Card */}
+                <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
+                  <div className="px-5 py-3 border-b border-border/50 bg-muted/30">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <Package className="w-3.5 h-3.5 text-primary" /> পণ্যসমূহ ({totalItems}টি)
+                    </h3>
+                  </div>
+                  <div className="divide-y divide-border/30">
+                    {cartItems.map(item => (
+                      <div key={item.id} className="flex gap-3 p-4">
+                        <img src={item.product.image} alt="" className="w-14 h-[72px] object-cover rounded-lg border border-border/30" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium line-clamp-2 leading-snug">{item.product.title}</p>
+                          <p className="text-xs text-muted-foreground mt-1">৳{item.product.price} × {item.quantity}</p>
+                        </div>
+                        <p className="text-sm font-bold text-primary shrink-0">৳{item.product.price * item.quantity}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Dynamic field values */}
+                {Object.entries(dynamicFieldValues).some(([, v]) => v) && (
+                  <div className="bg-card rounded-2xl border border-border/50 p-5">
+                    <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Gift className="w-3.5 h-3.5 text-primary" /> অতিরিক্ত</h3>
+                    {dynamicFieldValues.gift_wrap && <p className="text-sm">🎁 গিফট র‍্যাপ</p>}
+                    {dynamicFieldValues.gift_message && <p className="text-xs text-muted-foreground">মেসেজ: {dynamicFieldValues.gift_message}</p>}
+                    {dynamicFieldValues.preferred_delivery_time && <p className="text-sm">⏰ সময়: {dynamicFieldValues.preferred_delivery_time}</p>}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={prevStep} className="h-12 rounded-xl px-6">
+                    <ChevronLeft className="w-4 h-4 mr-1" /> পিছনে
+                  </Button>
+                  <Button
+                    onClick={handlePlaceOrder}
+                    disabled={isSubmitting}
+                    className="flex-1 h-12 rounded-xl text-base font-semibold shadow-lg shadow-primary/20"
+                  >
+                    {isSubmitting ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />প্রসেসিং...</>
+                    ) : isOtpRequired() ? (
+                      <><Shield className="w-4 h-4 mr-2" />OTP যাচাই করে অর্ডার</>
+                    ) : (
+                      <><Lock className="w-4 h-4 mr-2" />অর্ডার কনফার্ম করুন</>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -730,66 +855,110 @@ const Checkout = () => {
           </div>
 
           {/* Order Summary Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-card rounded-xl p-6 shadow-sm sticky top-24">
-              <h2 className="font-bold text-lg mb-4">অর্ডার সারাংশ</h2>
-              <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
-                {cartItems.map(item => (
-                  <div key={item.id} className="flex gap-3">
-                    <img src={item.product.image} alt="" className="w-12 h-16 object-cover rounded" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium line-clamp-2">{item.product.title}</p>
-                      <p className="text-xs text-muted-foreground">৳{item.product.price} × {item.quantity}</p>
-                    </div>
-                    <p className="text-sm font-bold text-primary">৳{item.product.price * item.quantity}</p>
-                  </div>
-                ))}
+          <div className="lg:col-span-5">
+            <div className="bg-card rounded-2xl border border-border/50 overflow-hidden sticky top-20">
+              {/* Sidebar Header */}
+              <div className="px-5 py-4 border-b border-border/50 bg-muted/30">
+                <h2 className="font-bold text-base flex items-center gap-2">
+                  <Package className="w-4 h-4 text-primary" />
+                  অর্ডার সারাংশ
+                  <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{totalItems}টি পণ্য</span>
+                </h2>
               </div>
 
-              <div className="border-t border-border pt-4 space-y-2 text-sm">
-                <div className="pb-3 border-b border-border">
-                  <div className="flex items-center gap-2 mb-2"><Ticket className="w-4 h-4 text-primary" /><span className="font-medium text-sm">কুপন কোড</span></div>
-                  <CouponInput subtotal={subtotal} onCouponApplied={setAppliedCoupon} appliedCoupon={appliedCoupon}
-                    cartProductIds={cartItems.map(item => item.productId)} cartCategoryIds={cartItems.map(item => item.product.category || '').filter(Boolean)} />
+              {/* Cart Items - Compact */}
+              <div className="px-5 py-3 max-h-52 overflow-y-auto border-b border-border/30">
+                <div className="space-y-2.5">
+                  {cartItems.map(item => (
+                    <div key={item.id} className="flex gap-3 items-center">
+                      <div className="relative shrink-0">
+                        <img src={item.product.image} alt="" className="w-12 h-14 object-cover rounded-lg border border-border/30" />
+                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                          {item.quantity}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium line-clamp-2 leading-snug">{item.product.title}</p>
+                      </div>
+                      <p className="text-xs font-bold shrink-0">৳{item.product.price * item.quantity}</p>
+                    </div>
+                  ))}
                 </div>
+              </div>
 
-                <div className="flex justify-between"><span className="text-muted-foreground">সাবটোটাল</span><span>৳{subtotal}</span></div>
-                {couponDiscount > 0 && <div className="flex justify-between text-green-600"><span>কুপন ছাড় ({appliedCoupon?.code})</span><span>-৳{couponDiscount}</span></div>}
-                {dynamicDiscount > 0 && (
+              {/* Coupon */}
+              <div className="px-5 py-3 border-b border-border/30">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Ticket className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">কুপন কোড</span>
+                </div>
+                <CouponInput
+                  subtotal={subtotal}
+                  onCouponApplied={setAppliedCoupon}
+                  appliedCoupon={appliedCoupon}
+                  cartProductIds={cartItems.map(item => item.productId)}
+                  cartCategoryIds={cartItems.map(item => item.product.category || '').filter(Boolean)}
+                />
+              </div>
+
+              {/* Price Breakdown */}
+              <div className="px-5 py-4 space-y-2.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">সাবটোটাল</span>
+                  <span className="font-medium">৳{subtotal}</span>
+                </div>
+                {couponDiscount > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> {dynamicDiscountLabel || 'স্পেশাল ছাড়'}</span>
-                    <span>-৳{dynamicDiscount}</span>
+                    <span className="flex items-center gap-1"><Ticket className="w-3 h-3" /> {appliedCoupon?.code}</span>
+                    <span className="font-medium">-৳{couponDiscount}</span>
                   </div>
                 )}
-                <div className="flex justify-between"><span className="text-muted-foreground">ডেলিভারি</span><span>৳{deliveryCharge}</span></div>
+                {dynamicDiscount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> {dynamicDiscountLabel || 'ছাড়'}</span>
+                    <span className="font-medium">-৳{dynamicDiscount}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Truck className="w-3 h-3" /> ডেলিভারি
+                  </span>
+                  <span className="font-medium">৳{deliveryCharge}</span>
+                </div>
                 {selectedZone?.estimated_days_min && (
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> আনুমানিক সময়</span>
+                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> আনুমানিক</span>
                     <span>{selectedZone.estimated_days_min}-{selectedZone.estimated_days_max} দিন</span>
                   </div>
                 )}
-                <div className="border-t border-border pt-2">
-                  <div className="flex justify-between font-bold text-lg"><span>সর্বমোট</span><span className="text-primary">৳{total}</span></div>
+
+                {/* Total */}
+                <div className="border-t border-border/50 pt-3 mt-1">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-base">সর্বমোট</span>
+                    <span className="font-bold text-xl text-primary">৳{total}</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Trust Badges */}
-              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                {[
-                  { icon: Shield, text: 'নিরাপদ' },
-                  { icon: Truck, text: 'দ্রুত ডেলিভারি' },
-                  { icon: Star, text: 'গ্যারান্টি' },
-                ].map((badge, i) => (
-                  <div key={i} className="p-2 bg-muted/50 rounded-lg">
-                    <badge.icon className="w-4 h-4 mx-auto mb-1 text-primary" />
-                    <p className="text-[10px] text-muted-foreground">{badge.text}</p>
-                  </div>
-                ))}
+              {/* Trust */}
+              <div className="px-5 py-3 border-t border-border/30 bg-muted/20">
+                <div className="flex items-center justify-center gap-4 text-[10px] text-muted-foreground">
+                  {[
+                    { icon: Shield, text: 'নিরাপদ পেমেন্ট' },
+                    { icon: Truck, text: 'দ্রুত ডেলিভারি' },
+                    { icon: Star, text: 'মানের গ্যারান্টি' },
+                  ].map((badge, i) => (
+                    <div key={i} className="flex items-center gap-1">
+                      <badge.icon className="w-3 h-3 text-primary" />
+                      <span>{badge.text}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground text-center mt-2">
+                  অর্ডার করে আপনি <Link to="/terms" className="text-primary hover:underline">শর্তাবলী</Link> ও <Link to="/privacy" className="text-primary hover:underline">গোপনীয়তা নীতি</Link> মেনে নিচ্ছেন
+                </p>
               </div>
-
-              <p className="text-xs text-muted-foreground text-center mt-4">
-                অর্ডার করার মাধ্যমে আপনি আমাদের <Link to="/terms" className="text-primary hover:underline">শর্তাবলী</Link> এবং <Link to="/privacy" className="text-primary hover:underline">গোপনীয়তা নীতি</Link> মেনে নিচ্ছেন
-              </p>
             </div>
           </div>
         </div>
@@ -797,26 +966,36 @@ const Checkout = () => {
 
       {/* OTP Dialog */}
       <Dialog open={showOtpDialog} onOpenChange={setShowOtpDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-sm rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Phone className="w-5 h-5 text-primary" /> ফোন নম্বর যাচাই</DialogTitle>
-            <DialogDescription>{formData.phone} নম্বরে ৬ সংখ্যার OTP পাঠানো হয়েছে</DialogDescription>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Phone className="w-5 h-5 text-primary" />
+              </div>
+              ফোন নম্বর যাচাই
+            </DialogTitle>
+            <DialogDescription className="text-xs">{formData.phone} নম্বরে ৬ সংখ্যার OTP পাঠানো হয়েছে</DialogDescription>
           </DialogHeader>
-          <div className="space-y-6 py-4">
-            <div className="flex flex-col items-center space-y-4">
+          <div className="space-y-5 py-2">
+            <div className="flex flex-col items-center space-y-3">
               <InputOTP maxLength={6} value={otpValue} onChange={v => { setOtpValue(v); setOtpError(""); }}>
                 <InputOTPGroup>
                   <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
                   <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
                 </InputOTPGroup>
               </InputOTP>
-              {otpError && <p className="text-destructive text-sm">{otpError}</p>}
+              {otpError && <p className="text-destructive text-xs">{otpError}</p>}
             </div>
             <div className="text-center">
-              {countdown > 0 ? <p className="text-sm text-muted-foreground">পুনরায় OTP: <span className="font-bold">{countdown}s</span></p> :
-                <Button variant="ghost" size="sm" onClick={sendOtp} disabled={otpSending}>{otpSending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />পাঠানো হচ্ছে...</> : "পুনরায় OTP পাঠান"}</Button>}
+              {countdown > 0 ? (
+                <p className="text-xs text-muted-foreground">পুনরায় OTP: <span className="font-bold text-foreground">{countdown}s</span></p>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={sendOtp} disabled={otpSending} className="text-xs">
+                  {otpSending ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />পাঠানো হচ্ছে...</> : "পুনরায় OTP পাঠান"}
+                </Button>
+              )}
             </div>
-            <Button className="w-full" onClick={verifyOtp} disabled={otpValue.length !== 6 || otpVerifying}>
+            <Button className="w-full h-11 rounded-xl font-semibold" onClick={verifyOtp} disabled={otpValue.length !== 6 || otpVerifying}>
               {otpVerifying ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />যাচাই হচ্ছে...</> : <><Check className="w-4 h-4 mr-2" />যাচাই করে অর্ডার সম্পন্ন করুন</>}
             </Button>
           </div>
