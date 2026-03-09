@@ -258,6 +258,9 @@ const AdminAudienceExport = () => {
   const [newCredKey, setNewCredKey] = useState('');
   const [newCredValue, setNewCredValue] = useState('');
   const [syncingPlatform, setSyncingPlatform] = useState<string | null>(null);
+  const [inlineCredValues, setInlineCredValues] = useState<Record<string, string>>({});
+  const [inlineEditKey, setInlineEditKey] = useState<string | null>(null);
+  const [inlineEditValue, setInlineEditValue] = useState('');
 
   const saveCredential = async () => {
     if (!newCredKey || !newCredValue) { toast.error('সব ফিল্ড পূরণ করুন'); return; }
