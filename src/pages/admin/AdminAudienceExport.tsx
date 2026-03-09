@@ -258,6 +258,9 @@ const AdminAudienceExport = () => {
   const [newCredKey, setNewCredKey] = useState('');
   const [newCredValue, setNewCredValue] = useState('');
   const [syncingPlatform, setSyncingPlatform] = useState<string | null>(null);
+  const [inlineCredValues, setInlineCredValues] = useState<Record<string, string>>({});
+  const [inlineEditKey, setInlineEditKey] = useState<string | null>(null);
+  const [inlineEditValue, setInlineEditValue] = useState('');
 
   const saveCredential = async () => {
     if (!newCredKey || !newCredValue) { toast.error('সব ফিল্ড পূরণ করুন'); return; }
@@ -1317,162 +1320,192 @@ const AdminAudienceExport = () => {
               </div>
             </div>
 
-            {/* Platform Connection Cards */}
-            <div className="grid md:grid-cols-3 gap-5">
+            {/* Platform Connection Cards with Inline Credential Inputs */}
+            <div className="space-y-6">
               {[
-                { platform: 'Facebook', icon: Facebook, gradient: 'from-blue-500/10 to-blue-600/5', iconBg: 'bg-blue-500/10', iconColor: 'text-blue-600', borderActive: 'border-blue-500/30', keys: [
-                  { key: 'pixel_id', label: 'Pixel ID', desc: 'Events Manager → Data Sources → Pixel', icon: Hash },
-                  { key: 'access_token', label: 'System Access Token', desc: 'Business Settings → System Users → Generate Token', icon: Key },
-                  { key: 'ad_account_id', label: 'Ad Account ID', desc: 'act_XXXXXXXXX ফরম্যাটে পেস্ট করুন', icon: Users },
-                  { key: 'test_event_code', label: 'Test Event Code', desc: 'টেস্টিং মোডের জন্য (ঐচ্ছিক)', icon: Settings },
+                { platform: 'facebook', label: 'Facebook', icon: Facebook, gradient: 'from-blue-500/10 to-blue-600/5', iconBg: 'bg-blue-500/10', iconColor: 'text-blue-600', borderActive: 'border-blue-500/30', accentColor: 'blue', keys: [
+                  { key: 'pixel_id', label: 'Pixel ID', desc: 'Events Manager → Data Sources → Pixel', placeholder: 'e.g. 1234567890123456', required: true },
+                  { key: 'access_token', label: 'System Access Token', desc: 'Business Settings → System Users → Generate Token', placeholder: 'EAAxxxxxxx...', required: true },
+                  { key: 'ad_account_id', label: 'Ad Account ID', desc: 'act_XXXXXXXXX ফরম্যাটে পেস্ট করুন', placeholder: 'act_1234567890', required: false },
+                  { key: 'test_event_code', label: 'Test Event Code (ঐচ্ছিক)', desc: 'টেস্টিং মোডের জন্য', placeholder: 'TEST12345', required: false },
                 ]},
-                { platform: 'TikTok', icon: Zap, gradient: 'from-pink-500/10 to-fuchsia-600/5', iconBg: 'bg-pink-500/10', iconColor: 'text-pink-600', borderActive: 'border-pink-500/30', keys: [
-                  { key: 'pixel_id', label: 'Pixel Code', desc: 'TikTok Ads Manager → Assets → Events', icon: Hash },
-                  { key: 'access_token', label: 'Access Token', desc: 'TikTok Marketing API → App Management', icon: Key },
-                  { key: 'advertiser_id', label: 'Advertiser ID', desc: 'TikTok Ads Dashboard থেকে কপি করুন', icon: Users },
+                { platform: 'tiktok', label: 'TikTok', icon: Zap, gradient: 'from-pink-500/10 to-fuchsia-600/5', iconBg: 'bg-pink-500/10', iconColor: 'text-pink-600', borderActive: 'border-pink-500/30', accentColor: 'pink', keys: [
+                  { key: 'pixel_id', label: 'Pixel Code', desc: 'TikTok Ads Manager → Assets → Events', placeholder: 'e.g. CXXXXXXXXX', required: true },
+                  { key: 'access_token', label: 'Access Token', desc: 'TikTok Marketing API → App Management', placeholder: 'Token পেস্ট করুন...', required: true },
+                  { key: 'advertiser_id', label: 'Advertiser ID', desc: 'TikTok Ads Dashboard থেকে কপি করুন', placeholder: 'e.g. 7012345678901', required: false },
                 ]},
-                { platform: 'Google', icon: BarChart3, gradient: 'from-emerald-500/10 to-green-600/5', iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-600', borderActive: 'border-emerald-500/30', keys: [
-                  { key: 'measurement_id', label: 'Measurement ID', desc: 'GA4 Property → G-XXXXXXX', icon: Hash },
-                  { key: 'api_secret', label: 'API Secret', desc: 'GA4 → Admin → Data Streams → API Secrets', icon: Key },
-                  { key: 'developer_token', label: 'Developer Token', desc: 'Google Ads → Tools → API Center', icon: Settings },
-                  { key: 'customer_id', label: 'Customer ID', desc: 'XXX-XXX-XXXX ফরম্যাটে', icon: Users },
-                  { key: 'client_id', label: 'OAuth Client ID', desc: 'Google Cloud Console → Credentials', icon: Shield },
-                  { key: 'client_secret', label: 'Client Secret', desc: 'OAuth 2.0 Client Secret', icon: Shield },
-                  { key: 'refresh_token', label: 'Refresh Token', desc: 'OAuth Playground থেকে জেনারেট', icon: RefreshCw },
+                { platform: 'google', label: 'Google', icon: BarChart3, gradient: 'from-emerald-500/10 to-green-600/5', iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-600', borderActive: 'border-emerald-500/30', accentColor: 'emerald', keys: [
+                  { key: 'measurement_id', label: 'Measurement ID', desc: 'GA4 Property → G-XXXXXXX', placeholder: 'G-XXXXXXXXXX', required: true },
+                  { key: 'api_secret', label: 'API Secret', desc: 'GA4 → Admin → Data Streams → API Secrets', placeholder: 'Secret পেস্ট করুন...', required: true },
+                  { key: 'developer_token', label: 'Developer Token', desc: 'Google Ads → Tools → API Center', placeholder: 'Token পেস্ট করুন...', required: false },
+                  { key: 'customer_id', label: 'Customer ID', desc: 'XXX-XXX-XXXX ফরম্যাটে', placeholder: '123-456-7890', required: false },
+                  { key: 'client_id', label: 'OAuth Client ID', desc: 'Google Cloud Console → Credentials', placeholder: 'xxxxxx.apps.googleusercontent.com', required: false },
+                  { key: 'client_secret', label: 'Client Secret', desc: 'OAuth 2.0 Client Secret', placeholder: 'GOCSPX-xxxxxxx', required: false },
+                  { key: 'refresh_token', label: 'Refresh Token', desc: 'OAuth Playground থেকে জেনারেট', placeholder: '1//xxxxxxx', required: false },
                 ]},
-              ].map((p, i) => {
-                const configuredKeys = p.keys.filter(k => (allCredentials as any[] || []).some((c: any) => c.platform === p.platform.toLowerCase() && c.credential_key === k.key));
-                const isFullyConnected = configuredKeys.length >= 2;
-                const progress = Math.round((configuredKeys.length / Math.min(p.keys.length, 3)) * 100);
+              ].map((p) => {
+                const configuredKeys = p.keys.filter(k => (allCredentials as any[] || []).some((c: any) => c.platform === p.platform && c.credential_key === k.key));
+                const requiredKeys = p.keys.filter(k => k.required);
+                const configuredRequired = requiredKeys.filter(k => configuredKeys.some(ck => ck.key === k.key));
+                const isFullyConnected = configuredRequired.length === requiredKeys.length;
+                const progress = Math.round((configuredKeys.length / p.keys.length) * 100);
 
                 return (
-                  <Card key={i} className={`relative overflow-hidden transition-all hover:shadow-lg ${isFullyConnected ? p.borderActive : ''}`}>
+                  <Card key={p.platform} className={`relative overflow-hidden transition-all ${isFullyConnected ? p.borderActive : ''}`}>
                     <div className={`absolute inset-0 bg-gradient-to-br ${p.gradient} pointer-events-none`} />
-                    <CardHeader className="relative pb-3">
+                    <CardHeader className="relative pb-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-xl ${p.iconBg} flex items-center justify-center`}>
+                          <div className={`w-11 h-11 rounded-xl ${p.iconBg} flex items-center justify-center`}>
                             <p.icon className={`w-5 h-5 ${p.iconColor}`} />
                           </div>
                           <div>
-                            <CardTitle className="text-base">{p.platform}</CardTitle>
-                            <p className="text-xs text-muted-foreground">{configuredKeys.length}/{p.keys.length} কী সেট</p>
+                            <CardTitle className="text-lg">{p.label}</CardTitle>
+                            <p className="text-xs text-muted-foreground mt-0.5">{configuredKeys.length}/{p.keys.length} কী কনফিগার করা হয়েছে</p>
                           </div>
                         </div>
-                        {isFullyConnected ? (
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">Connected</span>
-                          </div>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-600 bg-amber-500/5">
-                            <AlertCircle className="w-2.5 h-2.5 mr-0.5" /> Incomplete
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-3">
+                          {isFullyConnected ? (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                              <span className="text-xs font-semibold text-emerald-600">Connected</span>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-xs border-amber-500/30 text-amber-600 bg-amber-500/5">
+                              <AlertCircle className="w-3 h-3 mr-1" /> সেটআপ প্রয়োজন
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                      <Progress value={progress} className="h-1 mt-3" />
+                      <Progress value={progress} className="h-1.5 mt-4" />
                     </CardHeader>
-                    <CardContent className="relative space-y-2 pt-0">
-                      {p.keys.map((k, j) => {
-                        const exists = configuredKeys.some(ck => ck.key === k.key);
-                        return (
-                          <div key={j} className={`flex items-start gap-3 p-2.5 rounded-lg transition-colors ${exists ? 'bg-emerald-500/5 border border-emerald-500/10' : 'bg-muted/30 border border-transparent hover:border-border'}`}>
-                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${exists ? 'bg-emerald-500/10' : 'bg-muted'}`}>
-                              {exists ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <k.icon className="w-3.5 h-3.5 text-muted-foreground" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <p className="text-xs font-semibold">{k.label}</p>
-                                {exists && (
-                                  <span className="text-[9px] font-mono text-muted-foreground">{'•'.repeat(6)}...{(allCredentials as any[] || []).find((c: any) => c.platform === p.platform.toLowerCase() && c.credential_key === k.key)?.credential_value?.slice(-4)}</span>
-                                )}
+                    <CardContent className="relative pt-0">
+                      <div className="grid gap-3">
+                        {p.keys.map((k) => {
+                          const existingCred = (allCredentials as any[] || []).find((c: any) => c.platform === p.platform && c.credential_key === k.key);
+                          const isEditing = inlineEditKey === `${p.platform}_${k.key}`;
+
+                          return (
+                            <div key={k.key} className={`rounded-xl border p-4 transition-all ${existingCred ? 'bg-emerald-500/[0.03] border-emerald-500/15' : 'bg-background/60 border-border/60 hover:border-border'}`}>
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-start gap-3 flex-1 min-w-0">
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${existingCred ? 'bg-emerald-500/10' : 'bg-muted'}`}>
+                                    {existingCred ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <Key className="w-4 h-4 text-muted-foreground" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-semibold">{k.label}</p>
+                                      {k.required && !existingCred && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-500 font-medium">আবশ্যক</span>}
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground mt-0.5">{k.desc}</p>
+                                    
+                                    {/* Show saved value or input */}
+                                    {existingCred && !isEditing ? (
+                                      <div className="flex items-center gap-2 mt-2.5">
+                                        <code className="text-xs font-mono px-2.5 py-1.5 rounded-lg bg-muted/60 text-muted-foreground tracking-wider">{'•'.repeat(10)}...{existingCred.credential_value?.slice(-4)}</code>
+                                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground" onClick={() => { setInlineEditKey(`${p.platform}_${k.key}`); setInlineEditValue(''); }}>
+                                          <RefreshCw className="w-3 h-3 mr-1" /> আপডেট
+                                        </Button>
+                                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-500/10" onClick={() => deleteCredential(existingCred.id)}>
+                                          <Trash2 className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-2 mt-2.5">
+                                        <Input
+                                          type="password"
+                                          className="h-9 bg-background font-mono text-xs flex-1"
+                                          value={isEditing ? inlineEditValue : (inlineCredValues[`${p.platform}_${k.key}`] || '')}
+                                          onChange={e => {
+                                            if (isEditing) {
+                                              setInlineEditValue(e.target.value);
+                                            } else {
+                                              setInlineCredValues(prev => ({ ...prev, [`${p.platform}_${k.key}`]: e.target.value }));
+                                            }
+                                          }}
+                                          placeholder={k.placeholder}
+                                        />
+                                        <Button
+                                          size="sm"
+                                          className="h-9 px-3 text-xs gap-1.5 shrink-0"
+                                          disabled={credentialSaving || !(isEditing ? inlineEditValue : inlineCredValues[`${p.platform}_${k.key}`])}
+                                          onClick={async () => {
+                                            const val = isEditing ? inlineEditValue : inlineCredValues[`${p.platform}_${k.key}`];
+                                            if (!val) return;
+                                            setCredentialSaving(true);
+                                            try {
+                                              const { error } = await supabase.from('ad_platform_credentials' as any).upsert(
+                                                { platform: p.platform, credential_key: k.key, credential_value: val, is_active: true, updated_at: new Date().toISOString() },
+                                                { onConflict: 'platform,credential_key' }
+                                              );
+                                              if (error) throw error;
+                                              toast.success(`${k.label} সেভ হয়েছে`);
+                                              setInlineCredValues(prev => { const n = { ...prev }; delete n[`${p.platform}_${k.key}`]; return n; });
+                                              setInlineEditKey(null); setInlineEditValue('');
+                                              refetchCredentials(); refetchPlatformStatus();
+                                            } catch (e: any) { toast.error(e.message || 'সেভ ব্যর্থ'); }
+                                            finally { setCredentialSaving(false); }
+                                          }}
+                                        >
+                                          {credentialSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                                          সেভ
+                                        </Button>
+                                        {isEditing && (
+                                          <Button variant="ghost" size="sm" className="h-9 px-2 text-xs" onClick={() => { setInlineEditKey(null); setInlineEditValue(''); }}>
+                                            বাতিল
+                                          </Button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                              <p className="text-[10px] text-muted-foreground leading-relaxed">{k.desc}</p>
                             </div>
-                          </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Save All Button for unconfigured keys */}
+                      {(() => {
+                        const pendingKeys = p.keys.filter(k => !configuredKeys.some(ck => ck.key === k.key) && inlineCredValues[`${p.platform}_${k.key}`]);
+                        if (pendingKeys.length < 2) return null;
+                        return (
+                          <Button
+                            className="w-full mt-4 h-11 gap-2 font-semibold"
+                            disabled={credentialSaving}
+                            onClick={async () => {
+                              setCredentialSaving(true);
+                              try {
+                                for (const k of pendingKeys) {
+                                  const val = inlineCredValues[`${p.platform}_${k.key}`];
+                                  if (!val) continue;
+                                  const { error } = await supabase.from('ad_platform_credentials' as any).upsert(
+                                    { platform: p.platform, credential_key: k.key, credential_value: val, is_active: true, updated_at: new Date().toISOString() },
+                                    { onConflict: 'platform,credential_key' }
+                                  );
+                                  if (error) throw error;
+                                }
+                                toast.success(`${p.label} এর ${pendingKeys.length}টি কী সেভ হয়েছে`);
+                                setInlineCredValues(prev => {
+                                  const n = { ...prev };
+                                  pendingKeys.forEach(k => delete n[`${p.platform}_${k.key}`]);
+                                  return n;
+                                });
+                                refetchCredentials(); refetchPlatformStatus();
+                              } catch (e: any) { toast.error(e.message || 'সেভ ব্যর্থ'); }
+                              finally { setCredentialSaving(false); }
+                            }}
+                          >
+                            {credentialSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+                            সব কী একসাথে সেভ করুন ({pendingKeys.length}টি)
+                          </Button>
                         );
-                      })}
+                      })()}
                     </CardContent>
                   </Card>
                 );
               })}
             </div>
-
-            {/* Add Credential Form */}
-            <Card className="border-dashed border-2 border-primary/20 bg-primary/[0.02]">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Settings className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">নতুন ক্রেডেনশিয়াল যোগ করুন</CardTitle>
-                    <CardDescription className="text-xs">প্ল্যাটফর্ম সিলেক্ট করে API কী সেভ করুন</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-4 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">প্ল্যাটফর্ম</Label>
-                    <Select value={newCredPlatform} onValueChange={v => { setNewCredPlatform(v); setNewCredKey(''); }}>
-                      <SelectTrigger className="h-11 bg-background">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="facebook"><span className="flex items-center gap-2"><Facebook className="w-3.5 h-3.5 text-blue-600" /> Facebook</span></SelectItem>
-                        <SelectItem value="tiktok"><span className="flex items-center gap-2"><Zap className="w-3.5 h-3.5 text-pink-600" /> TikTok</span></SelectItem>
-                        <SelectItem value="google"><span className="flex items-center gap-2"><BarChart3 className="w-3.5 h-3.5 text-emerald-600" /> Google</span></SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Credential Key</Label>
-                    <Select value={newCredKey} onValueChange={setNewCredKey}>
-                      <SelectTrigger className="h-11 bg-background"><SelectValue placeholder="সিলেক্ট করুন" /></SelectTrigger>
-                      <SelectContent>
-                        {newCredPlatform === 'facebook' && (
-                          <>
-                            <SelectItem value="pixel_id">Pixel ID</SelectItem>
-                            <SelectItem value="access_token">Access Token</SelectItem>
-                            <SelectItem value="ad_account_id">Ad Account ID</SelectItem>
-                            <SelectItem value="test_event_code">Test Event Code</SelectItem>
-                          </>
-                        )}
-                        {newCredPlatform === 'tiktok' && (
-                          <>
-                            <SelectItem value="pixel_id">Pixel ID</SelectItem>
-                            <SelectItem value="access_token">Access Token</SelectItem>
-                            <SelectItem value="advertiser_id">Advertiser ID</SelectItem>
-                          </>
-                        )}
-                        {newCredPlatform === 'google' && (
-                          <>
-                            <SelectItem value="measurement_id">Measurement ID</SelectItem>
-                            <SelectItem value="api_secret">API Secret</SelectItem>
-                            <SelectItem value="developer_token">Developer Token</SelectItem>
-                            <SelectItem value="customer_id">Customer ID</SelectItem>
-                            <SelectItem value="client_id">Client ID</SelectItem>
-                            <SelectItem value="client_secret">Client Secret</SelectItem>
-                            <SelectItem value="refresh_token">Refresh Token</SelectItem>
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Value</Label>
-                    <Input type="password" className="h-11 bg-background font-mono" value={newCredValue} onChange={e => setNewCredValue(e.target.value)} placeholder="পেস্ট করুন..." />
-                  </div>
-                  <div className="flex items-end">
-                    <Button onClick={saveCredential} disabled={credentialSaving || !newCredKey || !newCredValue} className="w-full h-11 gap-2 font-semibold">
-                      {credentialSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-                      সিকিউরলি সেভ করুন
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Saved Credentials Table */}
             {(allCredentials || []).length > 0 && (
