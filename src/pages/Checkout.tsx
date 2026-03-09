@@ -19,6 +19,7 @@ import { AddressBookSelector } from "@/components/AddressBookSelector";
 import { toast } from "sonner";
 import { z } from "zod";
 import { trackInitiateCheckout, trackAddPaymentInfo, trackAddShippingInfo, trackPurchase } from "@/lib/analytics";
+import { serverTrackInitiateCheckout, serverTrackPurchase } from "@/lib/serverTracking";
 import { cn } from "@/lib/utils";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
