@@ -57,6 +57,14 @@ const AdminAudienceExport = () => {
   const [includeEmail, setIncludeEmail] = useState(true);
   const [includePhone, setIncludePhone] = useState(true);
   const [excludeExisting, setExcludeExisting] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiPredictions, setAiPredictions] = useState<any>(null);
+  const [aiOptimizations, setAiOptimizations] = useState<any>(null);
+  const [overlapPairs, setOverlapPairs] = useState<{ a: AudienceType; b: AudienceType }[]>([
+    { a: 'purchasers', b: 'cart_abandoners' },
+    { a: 'high_value', b: 'repeat_buyers' },
+    { a: 'engaged', b: 'purchasers' },
+  ]);
 
   const since = useMemo(() => new Date(Date.now() - parseInt(days) * 86400000).toISOString(), [days]);
 
