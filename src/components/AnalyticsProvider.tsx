@@ -14,6 +14,11 @@ import {
   resetEngagement,
   serverTrackError,
 } from '@/lib/serverTracking';
+import { startSessionRecording } from '@/lib/sessionRecording';
+import { startPresenceTracking, updatePresencePage } from '@/lib/realtimePresence';
+import { autoTrackFunnel } from '@/lib/funnelTracking';
+import { trackRetention } from '@/lib/retentionTracking';
+import { autoAssignTests } from '@/lib/abTesting';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVisitorTracking } from '@/hooks/useVisitorTracking';
 
@@ -30,7 +35,7 @@ export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => {
   // Visitor tracking
   useVisitorTracking();
 
-  // Initialize pixels + advanced tracking on mount (once)
+  // Initialize all tracking systems on mount (once)
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
@@ -71,12 +76,17 @@ export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => {
 
     loadPixelConfig();
 
-    // Start advanced tracking systems
+    // Start all advanced tracking systems
     startEngagementTracking();
     startHeatmapTracking();
     trackCoreWebVitals();
     trackPagePerformance();
     startExitIntentTracking();
+    startSessionRecording();
+    startPresenceTracking(user?.id);
+    
+    // Retention tracking
+    trackRetention(user?.id);
 
     // Global error tracking
     window.addEventListener('error', (e) => {
@@ -101,6 +111,15 @@ export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => {
       trackPageView(location.pathname, document.title);
       serverTrackPageView(user?.id);
       startScrollTracking();
+      
+      // Funnel tracking
+      autoTrackFunnel('PageView');
+      
+      // Update presence with current page
+      updatePresencePage(location.pathname, user?.id);
+      
+      // Auto-assign A/B tests
+      autoAssignTests(location.pathname).catch(() => {});
     }, 100);
     
     return () => clearTimeout(timer);
