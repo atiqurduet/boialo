@@ -455,14 +455,13 @@ const ProductDetail = () => {
                       <ShoppingCart className="w-4 h-4 mr-2" />
                       কার্টে যোগ করুন
                     </Button>
-                    <Button 
-                      className="flex-1"
-                      variant="secondary"
+                    <button 
+                      className="flex-1 h-10 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md hover:shadow-lg hover:from-amber-600 hover:to-orange-600 active:scale-[0.97] transition-all duration-200"
                       onClick={() => setQuickCheckoutOpen(true)}
                     >
-                      <Zap className="w-4 h-4 mr-2" />
+                      <Zap className="w-4 h-4 fill-current" />
                       দ্রুত অর্ডার
-                    </Button>
+                    </button>
                   </>
                 )}
               </div>
