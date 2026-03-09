@@ -144,14 +144,13 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
             <span className="price-original text-xs">৳{product.originalPrice}</span>
           )}
         </div>
-        <Button 
+        <button 
           onClick={handleAddToCart} 
-          className="w-full btn-primary text-sm mt-2 gap-2 h-9" 
-          size="sm"
+          className="w-full mt-2 h-9 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary/85 text-primary-foreground shadow-sm hover:shadow-md hover:from-primary/95 hover:to-primary active:scale-[0.97] transition-all duration-200"
         >
           <ShoppingBag className="w-3.5 h-3.5" />
           অর্ডার করুন
-        </Button>
+        </button>
       </div>
     </div>
   );
