@@ -447,15 +447,26 @@ const ProductDetail = () => {
                     প্রি-অর্ডার করুন
                   </Button>
                 ) : (
-                  <Button 
-                    className="flex-1 bg-primary hover:bg-primary/90"
-                    onClick={handleAddToCart}
-                  >
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    কার্টে যোগ করুন
-                  </Button>
+                  <>
+                    <Button 
+                      className="flex-1 bg-primary hover:bg-primary/90"
+                      onClick={handleAddToCart}
+                    >
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      কার্টে যোগ করুন
+                    </Button>
+                    <Button 
+                      className="flex-1"
+                      variant="secondary"
+                      onClick={() => setQuickCheckoutOpen(true)}
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      দ্রুত অর্ডার
+                    </Button>
+                  </>
                 )}
-                <Button 
+              </div>
+              <Button 
                   className="flex-1 bg-accent hover:bg-accent/90"
                   onClick={() => setPreviewOpen(true)}
                   disabled={!previewUrl}
