@@ -215,7 +215,7 @@ export const savePredictiveScore = async (userId?: string) => {
 // Admin: Get scoring dashboard data
 export const getPredictiveAnalytics = async () => {
   try {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('predictive_scores')
       .select('*')
       .gte('updated_at', new Date(Date.now() - 24 * 60 * 60_000).toISOString())
