@@ -385,13 +385,360 @@ const AdminVisitorAnalytics = () => {
             <TabsTrigger value="search"><Search className="w-4 h-4 mr-1" /> সার্চ</TabsTrigger>
             <TabsTrigger value="devices"><Smartphone className="w-4 h-4 mr-1" /> ডিভাইস</TabsTrigger>
             <TabsTrigger value="sources"><TrendingUp className="w-4 h-4 mr-1" /> সোর্স</TabsTrigger>
+            <TabsTrigger value="sst"><Activity className="w-4 h-4 mr-1" /> সার্ভার ট্র্যাকিং</TabsTrigger>
           </TabsList>
 
-          {/* Conversion Funnel */}
-          <TabsContent value="funnel">
-            <div className="grid md:grid-cols-2 gap-4">
+          {/* ===== SERVER SITE TRACKING TAB ===== */}
+          <TabsContent value="sst">
+            <div className="space-y-6">
+              {/* Engagement Overview KPIs */}
+              {(() => {
+                const avgScroll = engagementData.length > 0 ? Math.round(engagementData.reduce((s: number, e: any) => s + (e.scroll_depth || 0), 0) / engagementData.length) : 0;
+                const avgTime = engagementData.length > 0 ? Math.round(engagementData.reduce((s: number, e: any) => s + (e.time_on_page || 0), 0) / engagementData.length) : 0;
+                const totalRageClicks = engagementData.reduce((s: number, e: any) => s + (e.rage_clicks || 0), 0);
+                const totalDeadClicks = engagementData.reduce((s: number, e: any) => s + (e.dead_clicks || 0), 0);
+                const avgEngagement = engagementData.length > 0 ? Math.round(engagementData.reduce((s: number, e: any) => s + (e.engagement_score || 0), 0) / engagementData.length) : 0;
+                const totalRecordings = recordingsData.length;
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                    {[
+                      { icon: Gauge, label: 'গড় এনগেজমেন্ট স্কোর', value: avgEngagement, color: 'text-primary' },
+                      { icon: Eye, label: 'গড় স্ক্রোল ডেপথ', value: `${avgScroll}%`, color: 'text-blue-500' },
+                      { icon: Clock, label: 'গড় পেজে সময়', value: `${avgTime}s`, color: 'text-purple-500' },
+                      { icon: AlertTriangle, label: 'রেজ ক্লিক', value: totalRageClicks, color: 'text-red-500' },
+                      { icon: MousePointer, label: 'ডেড ক্লিক', value: totalDeadClicks, color: 'text-orange-500' },
+                      { icon: Monitor, label: 'সেশন রেকর্ডিং', value: totalRecordings, color: 'text-green-500' },
+                    ].map((kpi, i) => (
+                      <Card key={i}>
+                        <CardContent className="p-3 flex items-center gap-2">
+                          <kpi.icon className={`w-6 h-6 ${kpi.color}`} />
+                          <div>
+                            <p className="text-lg font-bold">{kpi.value}</p>
+                            <p className="text-[10px] text-muted-foreground leading-tight">{kpi.label}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* Engagement Score Trend */}
               <Card>
-                <CardHeader><CardTitle className="text-base">🔄 কনভার্শন ফানেল</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-base">📊 এনগেজমেন্ট স্কোর ট্রেন্ড</CardTitle></CardHeader>
+                <CardContent>
+                  {(() => {
+                    const dailyEng: Record<string, { total: number; count: number; rage: number; dead: number }> = {};
+                    engagementData.forEach((e: any) => {
+                      const day = format(new Date(e.created_at), 'MM/dd');
+                      if (!dailyEng[day]) dailyEng[day] = { total: 0, count: 0, rage: 0, dead: 0 };
+                      dailyEng[day].total += e.engagement_score || 0;
+                      dailyEng[day].count++;
+                      dailyEng[day].rage += e.rage_clicks || 0;
+                      dailyEng[day].dead += e.dead_clicks || 0;
+                    });
+                    const chartData = Object.entries(dailyEng)
+                      .map(([date, d]) => ({ date, avgScore: Math.round(d.total / d.count), rageClicks: d.rage, deadClicks: d.dead }))
+                      .reverse();
+                    return chartData.length > 0 ? (
+                      <div className="h-[280px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" fontSize={12} />
+                            <YAxis fontSize={12} />
+                            <Tooltip />
+                            <Area type="monotone" dataKey="avgScore" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.15} name="গড় এনগেজমেন্ট" />
+                            <Area type="monotone" dataKey="rageClicks" stroke="#ef4444" fill="#ef4444" fillOpacity={0.1} name="রেজ ক্লিক" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : <p className="text-center text-muted-foreground py-8">এনগেজমেন্ট ডেটা নেই</p>;
+                  })()}
+                </CardContent>
+              </Card>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Top Engaged Pages */}
+                <Card>
+                  <CardHeader><CardTitle className="text-base">🔥 সবচেয়ে এনগেজড পেজ</CardTitle></CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const pageEng: Record<string, { total: number; count: number }> = {};
+                      engagementData.forEach((e: any) => {
+                        if (e.page_path) {
+                          if (!pageEng[e.page_path]) pageEng[e.page_path] = { total: 0, count: 0 };
+                          pageEng[e.page_path].total += e.engagement_score || 0;
+                          pageEng[e.page_path].count++;
+                        }
+                      });
+                      const pages = Object.entries(pageEng)
+                        .map(([page, d]) => ({ page, avgScore: Math.round(d.total / d.count), views: d.count }))
+                        .sort((a, b) => b.avgScore - a.avgScore)
+                        .slice(0, 10);
+                      return (
+                        <Table>
+                          <TableHeader><TableRow><TableHead>পেজ</TableHead><TableHead className="text-right">গড় স্কোর</TableHead><TableHead className="text-right">ভিউ</TableHead></TableRow></TableHeader>
+                          <TableBody>
+                            {pages.map(p => (
+                              <TableRow key={p.page}>
+                                <TableCell className="text-sm max-w-[200px] truncate">{p.page}</TableCell>
+                                <TableCell className="text-right"><Badge variant={p.avgScore > 60 ? 'default' : 'secondary'}>{p.avgScore}</Badge></TableCell>
+                                <TableCell className="text-right">{p.views}</TableCell>
+                              </TableRow>
+                            ))}
+                            {pages.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">ডেটা নেই</TableCell></TableRow>}
+                          </TableBody>
+                        </Table>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+
+                {/* User Journey Paths */}
+                <Card>
+                  <CardHeader><CardTitle className="text-base">🗺️ ইউজার জার্নি পাথ</CardTitle></CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const pathMap: Record<string, number> = {};
+                      journeyData.forEach((j: any) => {
+                        const steps = j.journey_steps || j.steps;
+                        if (Array.isArray(steps) && steps.length >= 2) {
+                          const path = steps.slice(0, 4).map((s: any) => typeof s === 'string' ? s : (s?.page || s?.path || '?')).join(' → ');
+                          pathMap[path] = (pathMap[path] || 0) + 1;
+                        }
+                      });
+                      const paths = Object.entries(pathMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+                      return (
+                        <div className="space-y-2">
+                          {paths.map(([path, count], i) => (
+                            <div key={i} className="flex items-center justify-between text-sm border-b pb-2">
+                              <div className="flex items-center gap-2 max-w-[80%]">
+                                <Route className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="truncate">{path}</span>
+                              </div>
+                              <Badge variant="secondary">{count}</Badge>
+                            </div>
+                          ))}
+                          {paths.length === 0 && <p className="text-center text-muted-foreground py-6">জার্নি ডেটা নেই</p>}
+                          <div className="pt-2 text-xs text-muted-foreground">মোট জার্নি: {journeyData.length}</div>
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Predictive Scoring */}
+                <Card>
+                  <CardHeader><CardTitle className="text-base">🧠 প্রেডিক্টিভ স্কোরিং</CardTitle></CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const segments: Record<string, number> = {};
+                      let totalPurchaseProb = 0;
+                      let totalChurnRisk = 0;
+                      predictiveData.forEach((p: any) => {
+                        const seg = p.segment || 'Unknown';
+                        segments[seg] = (segments[seg] || 0) + 1;
+                        totalPurchaseProb += p.purchase_probability || 0;
+                        totalChurnRisk += p.churn_risk || 0;
+                      });
+                      const avgPurchaseProb = predictiveData.length > 0 ? Math.round(totalPurchaseProb / predictiveData.length) : 0;
+                      const avgChurnRisk = predictiveData.length > 0 ? Math.round(totalChurnRisk / predictiveData.length) : 0;
+                      const segData = Object.entries(segments).map(([name, value]) => ({ name, value }));
+                      return (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 bg-muted rounded-lg text-center">
+                              <p className="text-2xl font-bold text-green-600">{avgPurchaseProb}%</p>
+                              <p className="text-xs text-muted-foreground">গড় ক্রয় সম্ভাবনা</p>
+                            </div>
+                            <div className="p-3 bg-muted rounded-lg text-center">
+                              <p className="text-2xl font-bold text-red-500">{avgChurnRisk}%</p>
+                              <p className="text-xs text-muted-foreground">গড় চার্ন রিস্ক</p>
+                            </div>
+                          </div>
+                          {segData.length > 0 ? (
+                            <div className="h-[200px]">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie data={segData} cx="50%" cy="50%" outerRadius={70} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                                    {segData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                                  </Pie>
+                                  <Tooltip />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </div>
+                          ) : <p className="text-center text-muted-foreground py-4">প্রেডিক্টিভ ডেটা নেই</p>}
+                          <p className="text-xs text-muted-foreground">মোট প্রোফাইল: {predictiveData.length}</p>
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+
+                {/* Attribution */}
+                <Card>
+                  <CardHeader><CardTitle className="text-base">🎯 অ্যাট্রিবিউশন</CardTitle></CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const sourceMap: Record<string, { visits: number; conversions: number; revenue: number }> = {};
+                      attributionData.forEach((a: any) => {
+                        const src = a.first_touch_source || a.last_touch_source || 'Direct';
+                        if (!sourceMap[src]) sourceMap[src] = { visits: 0, conversions: 0, revenue: 0 };
+                        sourceMap[src].visits += a.total_visits || 1;
+                        sourceMap[src].conversions += a.total_conversions || 0;
+                        sourceMap[src].revenue += a.total_revenue || 0;
+                      });
+                      const sources = Object.entries(sourceMap).sort((a, b) => b[1].visits - a[1].visits).slice(0, 10);
+                      return (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>সোর্স</TableHead>
+                              <TableHead className="text-right">ভিজিট</TableHead>
+                              <TableHead className="text-right">কনভার্শন</TableHead>
+                              <TableHead className="text-right">রেভিনিউ</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {sources.map(([source, d]) => (
+                              <TableRow key={source}>
+                                <TableCell className="font-medium">{source}</TableCell>
+                                <TableCell className="text-right">{d.visits}</TableCell>
+                                <TableCell className="text-right">{d.conversions}</TableCell>
+                                <TableCell className="text-right">৳{d.revenue.toLocaleString()}</TableCell>
+                              </TableRow>
+                            ))}
+                            {sources.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">অ্যাট্রিবিউশন ডেটা নেই</TableCell></TableRow>}
+                          </TableBody>
+                        </Table>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* A/B Tests */}
+                <Card>
+                  <CardHeader><CardTitle className="text-base">🧪 A/B টেস্ট</CardTitle></CardHeader>
+                  <CardContent>
+                    {abTests.length > 0 ? (
+                      <div className="space-y-3">
+                        {abTests.map((test: any) => {
+                          const testAssignments = abAssignments.filter((a: any) => a.test_id === test.id);
+                          const variants: Record<string, { total: number; converted: number }> = {};
+                          testAssignments.forEach((a: any) => {
+                            if (!variants[a.variant_name]) variants[a.variant_name] = { total: 0, converted: 0 };
+                            variants[a.variant_name].total++;
+                            if (a.converted) variants[a.variant_name].converted++;
+                          });
+                          return (
+                            <div key={test.id} className="border rounded-lg p-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-sm">{test.name}</span>
+                                <Badge variant={test.is_active ? 'default' : 'secondary'}>{test.is_active ? 'সক্রিয়' : 'বন্ধ'}</Badge>
+                              </div>
+                              <div className="space-y-1">
+                                {Object.entries(variants).map(([name, d]) => {
+                                  const rate = d.total > 0 ? Math.round((d.converted / d.total) * 100) : 0;
+                                  return (
+                                    <div key={name} className="flex items-center justify-between text-xs">
+                                      <span>{name}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span>{d.total} ভিজিটর</span>
+                                        <Badge variant="outline">{rate}% কনভার্শন</Badge>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                                {Object.keys(variants).length === 0 && <p className="text-xs text-muted-foreground">কোনো অ্যাসাইনমেন্ট নেই</p>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : <p className="text-center text-muted-foreground py-6">কোনো A/B টেস্ট নেই</p>}
+                  </CardContent>
+                </Card>
+
+                {/* Retention Cohorts */}
+                <Card>
+                  <CardHeader><CardTitle className="text-base">📅 রিটেনশন কোহর্ট</CardTitle></CardHeader>
+                  <CardContent>
+                    {retentionData.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>সপ্তাহ</TableHead>
+                            <TableHead className="text-right">নতুন ইউজার</TableHead>
+                            <TableHead className="text-right">ফিরে এসেছে</TableHead>
+                            <TableHead className="text-right">রিটেনশন</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {retentionData.map((c: any) => {
+                            const retRate = c.new_users > 0 ? Math.round((c.returning_users / c.new_users) * 100) : 0;
+                            return (
+                              <TableRow key={c.id}>
+                                <TableCell className="text-sm">{c.cohort_week ? format(new Date(c.cohort_week), 'MM/dd') : '-'}</TableCell>
+                                <TableCell className="text-right">{c.new_users || 0}</TableCell>
+                                <TableCell className="text-right">{c.returning_users || 0}</TableCell>
+                                <TableCell className="text-right">
+                                  <Badge variant={retRate > 30 ? 'default' : retRate > 15 ? 'secondary' : 'destructive'}>{retRate}%</Badge>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    ) : <p className="text-center text-muted-foreground py-6">রিটেনশন ডেটা নেই</p>}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Session Recordings */}
+              <Card>
+                <CardHeader><CardTitle className="text-base">🎥 সেশন রেকর্ডিং</CardTitle></CardHeader>
+                <CardContent>
+                  {recordingsData.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>সেশন</TableHead>
+                          <TableHead>ডিভাইস</TableHead>
+                          <TableHead className="text-right">সময়কাল</TableHead>
+                          <TableHead className="text-right">পেজ</TableHead>
+                          <TableHead>ফ্ল্যাগ</TableHead>
+                          <TableHead>তারিখ</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {recordingsData.slice(0, 20).map((r: any) => (
+                          <TableRow key={r.id}>
+                            <TableCell className="font-mono text-xs max-w-[100px] truncate">{r.session_id?.slice(0, 12)}...</TableCell>
+                            <TableCell><Badge variant="outline">{r.device_type || 'unknown'}</Badge></TableCell>
+                            <TableCell className="text-right">{r.duration_seconds ? `${Math.round(r.duration_seconds / 60)}m` : '-'}</TableCell>
+                            <TableCell className="text-right">{r.page_count || '-'}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                {r.has_rage_clicks && <Badge variant="destructive" className="text-[9px]">রেজ</Badge>}
+                                {r.has_errors && <Badge variant="destructive" className="text-[9px]">এরর</Badge>}
+                                {!r.has_rage_clicks && !r.has_errors && <span className="text-muted-foreground text-xs">—</span>}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs">{format(new Date(r.created_at), 'dd/MM HH:mm')}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : <p className="text-center text-muted-foreground py-6">সেশন রেকর্ডিং নেই</p>}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
                 <CardContent>
                   {(() => {
                     const funnelSteps = [
