@@ -611,9 +611,19 @@ const Checkout = () => {
                   {paymentMethod !== "cod" && (() => {
                     const sel = paymentMethods.find(m => m.id === paymentMethod);
                     if (!sel) return null;
-                    if (paymentMethod === "bkash" && sel.payment_mode === "api") {
-                      return <div className="mt-4 p-4 bg-accent/10 rounded-lg border border-border"><p className="text-sm">অর্ডার সম্পন্ন করতে বিকাশ পেমেন্ট পেজে নিয়ে যাওয়া হবে।</p></div>;
+                    // API mode messages
+                    if (sel.payment_mode === "api") {
+                      if (paymentMethod === "bkash") {
+                        return <div className="mt-4 p-4 bg-accent/10 rounded-lg border border-border"><p className="text-sm">✅ অর্ডার সম্পন্ন করতে <strong>বিকাশ</strong> পেমেন্ট পেজে নিয়ে যাওয়া হবে।</p></div>;
+                      }
+                      if (paymentMethod === "nagad") {
+                        return <div className="mt-4 p-4 bg-accent/10 rounded-lg border border-border"><p className="text-sm">✅ অর্ডার সম্পন্ন করতে <strong>নগদ</strong> পেমেন্ট পেজে নিয়ে যাওয়া হবে।</p></div>;
+                      }
+                      if (paymentMethod === "sslcommerz") {
+                        return <div className="mt-4 p-4 bg-accent/10 rounded-lg border border-border"><p className="text-sm">✅ অর্ডার সম্পন্ন করতে <strong>SSLCommerz</strong> পেমেন্ট গেটওয়েতে নিয়ে যাওয়া হবে।</p></div>;
+                      }
                     }
+                    // Manual mode - show account number & transaction ID input
                     if (sel.manual_number) {
                       return (
                         <div className="mt-4 p-4 bg-accent/10 rounded-lg border border-border">
