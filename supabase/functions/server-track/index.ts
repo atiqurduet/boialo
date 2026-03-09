@@ -153,25 +153,33 @@ serve(async (req) => {
       }).catch(() => {}); // Gracefully fail if RPC doesn't exist yet
     }
 
-    // ─── Forward to Facebook CAPI ─────────────────────────
+    // ─── Forward Conversions to Ad Platforms ──────────────
     const conversionEvents = ["Purchase", "AddToCart", "InitiateCheckout", "ViewContent", "Lead", "CompleteRegistration", "AddToWishlist", "Search"];
     const conversions = rows.filter(r => conversionEvents.includes(r.event_name) && !r.is_bot);
 
+    let fbForwarded = 0, ttForwarded = 0, gaForwarded = 0;
+
     if (conversions.length > 0) {
-      try {
-        const { data: settings } = await supabase
-          .from("site_settings")
-          .select("setting_key, setting_value")
-          .in("setting_key", ["fb_pixel_id", "fb_capi_token"]);
+      const { data: settings } = await supabase
+        .from("site_settings")
+        .select("setting_key, setting_value")
+        .in("setting_key", [
+          "fb_pixel_id", "fb_capi_token",
+          "tiktok_pixel_id", "tiktok_access_token",
+          "ga_measurement_id", "ga_api_secret",
+        ]);
 
-        let pixelId = settings?.find((s: any) => s.setting_key === "fb_pixel_id")?.setting_value;
-        let accessToken = settings?.find((s: any) => s.setting_key === "fb_capi_token")?.setting_value;
+      const getSetting = (key: string) => {
+        let val = settings?.find((s: any) => s.setting_key === key)?.setting_value;
+        try { if (typeof val === 'string') val = JSON.parse(val); } catch {}
+        return typeof val === 'string' && val.length > 3 ? val : null;
+      };
 
-        // Parse if JSON-wrapped
-        try { if (typeof pixelId === 'string') pixelId = JSON.parse(pixelId); } catch {}
-        try { if (typeof accessToken === 'string') accessToken = JSON.parse(accessToken); } catch {}
-
-        if (pixelId && accessToken && String(pixelId).length > 3 && String(accessToken).length > 3) {
+      // ─── Facebook CAPI ─────────────────────────────────
+      const fbPixelId = getSetting("fb_pixel_id");
+      const fbToken = getSetting("fb_capi_token");
+      if (fbPixelId && fbToken) {
+        try {
           const fbEvents = conversions.map((r) => ({
             event_name: r.event_name,
             event_time: Math.floor(Date.now() / 1000),
@@ -193,18 +201,90 @@ serve(async (req) => {
           }));
 
           const fbRes = await fetch(
-            `https://graph.facebook.com/v21.0/${pixelId}/events?access_token=${accessToken}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ data: fbEvents, test_event_code: undefined }),
-            }
+            `https://graph.facebook.com/v21.0/${fbPixelId}/events?access_token=${fbToken}`,
+            { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: fbEvents }) }
           );
           const fbResult = await fbRes.json();
           console.log("FB CAPI result:", JSON.stringify(fbResult));
-        }
-      } catch (e) {
-        console.error("FB CAPI forward error:", e);
+          fbForwarded = conversions.length;
+        } catch (e) { console.error("FB CAPI error:", e); }
+      }
+
+      // ─── TikTok Events API ─────────────────────────────
+      const ttPixelId = getSetting("tiktok_pixel_id");
+      const ttToken = getSetting("tiktok_access_token");
+      if (ttPixelId && ttToken) {
+        try {
+          const ttEventMap: Record<string, string> = {
+            Purchase: "CompletePayment", AddToCart: "AddToCart", InitiateCheckout: "InitiateCheckout",
+            ViewContent: "ViewContent", Lead: "SubmitForm", CompleteRegistration: "CompleteRegistration",
+            AddToWishlist: "AddToWishlist", Search: "Search",
+          };
+
+          const ttEvents = conversions.map((r) => ({
+            pixel_code: ttPixelId,
+            event: ttEventMap[r.event_name] || r.event_name,
+            event_id: r.dedup_key || crypto.randomUUID(),
+            timestamp: new Date().toISOString(),
+            context: {
+              user_agent: r.user_agent,
+              ip: r.ip_address,
+              page: { url: r.page_path ? `https://boialo.lovable.app${r.page_path}` : undefined },
+              user: { external_id: r.user_id || r.fingerprint_id || r.session_id },
+            },
+            properties: {
+              currency: r.event_data?.currency || "BDT",
+              value: r.event_data?.value || 0,
+              contents: r.event_data?.content_ids ? [{ content_id: r.event_data.content_ids[0], content_type: "product" }] : undefined,
+            },
+          }));
+
+          const ttRes = await fetch("https://business-api.tiktok.com/open_api/v1.3/event/track/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Access-Token": ttToken },
+            body: JSON.stringify({ event_source: "web", event_source_id: ttPixelId, data: ttEvents }),
+          });
+          const ttResult = await ttRes.json();
+          console.log("TikTok Events API result:", JSON.stringify(ttResult));
+          ttForwarded = conversions.length;
+        } catch (e) { console.error("TikTok Events API error:", e); }
+      }
+
+      // ─── Google Analytics 4 Measurement Protocol ───────
+      const gaMeasurementId = getSetting("ga_measurement_id");
+      const gaApiSecret = getSetting("ga_api_secret");
+      if (gaMeasurementId && gaApiSecret) {
+        try {
+          const gaEventMap: Record<string, string> = {
+            Purchase: "purchase", AddToCart: "add_to_cart", InitiateCheckout: "begin_checkout",
+            ViewContent: "view_item", Lead: "generate_lead", CompleteRegistration: "sign_up",
+            AddToWishlist: "add_to_wishlist", Search: "search",
+          };
+
+          for (const r of conversions) {
+            const clientId = r.fingerprint_id || r.session_id || crypto.randomUUID();
+            const gaPayload = {
+              client_id: clientId,
+              user_id: r.user_id || undefined,
+              events: [{
+                name: gaEventMap[r.event_name] || r.event_name.toLowerCase(),
+                params: {
+                  currency: r.event_data?.currency || "BDT",
+                  value: r.event_data?.value || 0,
+                  items: r.event_data?.content_ids ? r.event_data.content_ids.map((id: string) => ({ item_id: id })) : undefined,
+                  engagement_time_msec: 100,
+                },
+              }],
+            };
+
+            await fetch(
+              `https://www.google-analytics.com/mp/collect?measurement_id=${gaMeasurementId}&api_secret=${gaApiSecret}`,
+              { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(gaPayload) }
+            );
+          }
+          gaForwarded = conversions.length;
+          console.log("GA4 Measurement Protocol forwarded:", gaForwarded);
+        } catch (e) { console.error("GA4 MP error:", e); }
       }
     }
 
@@ -212,7 +292,7 @@ serve(async (req) => {
       ok: true, 
       count: rows.length,
       bots_filtered: rows.filter(r => r.is_bot).length,
-      conversions_forwarded: conversions.length,
+      conversions_forwarded: { facebook: fbForwarded, tiktok: ttForwarded, google: gaForwarded },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

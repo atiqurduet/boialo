@@ -116,6 +116,7 @@ const AdminInventory = lazy(() => import("./pages/admin/AdminInventory"));
 const AdminDeliveryZones = lazy(() => import("./pages/admin/AdminDeliveryZones"));
 const AdminReferralProgram = lazy(() => import("./pages/admin/AdminReferralProgram"));
 const AdminVisitorAnalytics = lazy(() => import("./pages/admin/AdminVisitorAnalytics"));
+const AdminAudienceExport = lazy(() => import("./pages/admin/AdminAudienceExport"));
 const AdminSocialMedia = lazy(() => import("./pages/admin/AdminSocialMedia"));
 const AdminDynamicPricing = lazy(() => import("./pages/admin/AdminDynamicPricing"));
 const AdminSEOTools = lazy(() => import("./pages/admin/AdminSEOTools"));
@@ -263,6 +264,7 @@ const App = () => (
                 <Route path="/admin/delivery-zones" element={<AdminDeliveryZones />} />
                 <Route path="/admin/referral" element={<AdminReferralProgram />} />
                 <Route path="/admin/visitor-analytics" element={<AdminVisitorAnalytics />} />
+                <Route path="/admin/audience-export" element={<AdminAudienceExport />} />
                 <Route path="/admin/social-media" element={<AdminSocialMedia />} />
                 <Route path="/admin/dynamic-pricing" element={<AdminDynamicPricing />} />
                 <Route path="/admin/seo-tools" element={<AdminSEOTools />} />
