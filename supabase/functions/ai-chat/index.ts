@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { detectIntent, extractPriceRange, generatePhoneticVariations, extractSearchKeywords } from "./utils.ts";
+import { detectIntent, detectSentiment, extractPriceRange, generatePhoneticVariations, extractSearchKeywords, summarizeConversation } from "./utils.ts";
 import { buildCustomerPrompt, buildAdminPrompt } from "./prompts.ts";
 
 const corsHeaders = {
@@ -15,17 +15,18 @@ Deno.serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { messages, mode, context } = await req.json();
+    const { messages, mode, context, userId } = await req.json();
     let systemPrompt = "";
 
     if (mode === "customer") {
       const lastUserMsg = messages?.[messages.length - 1]?.content || "";
       const intent = detectIntent(lastUserMsg);
+      const sentiment = detectSentiment(lastUserMsg);
       const priceRange = extractPriceRange(lastUserMsg);
-      console.log("Intent:", intent, "| Query:", lastUserMsg.slice(0, 60));
+      const convSummary = summarizeConversation(messages);
+      console.log("Intent:", intent, "| Sentiment:", sentiment, "| Query:", lastUserMsg.slice(0, 60));
 
-      // For greetings/complaints/delivery/coupon — skip heavy search, just fetch minimal context
-      const needsSearch = ["product_search", "price_query", "recommendation", "general", "category_browse"].includes(intent);
+      const needsSearch = ["product_search", "price_query", "recommendation", "general", "category_browse", "comparison", "gift_suggestion"].includes(intent);
 
       const keywords = needsSearch ? extractSearchKeywords(lastUserMsg) : [];
       const wordPatterns = keywords.filter(w => w.length >= 3);
@@ -34,7 +35,7 @@ Deno.serve(async (req) => {
       const searchTerms = keywords.join(" ").trim();
       const allSearchTerms = [...uniqueVariations, ...banglaWords];
 
-      // ── PHASE 1: Fetch base data + search ALL in parallel ──
+      // ── PHASE 1: Fetch base data + search + user context ALL in parallel ──
       const basePromises: Promise<any>[] = [
         supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent, sales_count").eq("is_active", true).order("sales_count", { ascending: false }).limit(10),
         supabase.from("categories").select("name_bn, slug").eq("is_active", true).limit(15),
@@ -44,7 +45,7 @@ Deno.serve(async (req) => {
         supabase.from("product_bundles").select("name_bn, bundle_price, original_price").eq("is_active", true).limit(5),
       ];
 
-      // Add search queries in SAME parallel batch if needed
+      // Search queries
       if (needsSearch && allSearchTerms.length > 0) {
         const bookOr = allSearchTerms.flatMap(w => [`title_bn.ilike.%${w}%`, `title_en.ilike.%${w}%`]).join(",");
         const univOr = allSearchTerms.flatMap(w => [`name_bn.ilike.%${w}%`, `name_en.ilike.%${w}%`]).join(",");
@@ -60,26 +61,42 @@ Deno.serve(async (req) => {
         if (priceRange.max) { bq = bq.lte("price", priceRange.max); uq = uq.lte("price", priceRange.max); eq = eq.lte("price", priceRange.max); }
 
         basePromises.push(
-          bq.limit(10),                                                          // [6] books search
-          uq.limit(8),                                                           // [7] universal search
-          eq.limit(8),                                                           // [8] ebook search
-          supabase.from("writers").select("id, name_bn").or(writerOr).limit(3),  // [9] writer lookup
-          supabase.from("publishers").select("id, name_bn").or(pubOr).limit(3),  // [10] publisher lookup
+          bq.limit(10),  // [6]
+          uq.limit(8),   // [7]
+          eq.limit(8),   // [8]
+          supabase.from("writers").select("id, name_bn").or(writerOr).limit(3),  // [9]
+          supabase.from("publishers").select("id, name_bn").or(pubOr).limit(3),  // [10]
           intent === "category_browse"
-            ? supabase.from("categories").select("id, name_bn").eq("is_active", true).or(catOr).limit(3) // [11] category lookup
-            : Promise.resolve({ data: [] }),
+            ? supabase.from("categories").select("id, name_bn").eq("is_active", true).or(catOr).limit(3)
+            : Promise.resolve({ data: [] }),  // [11]
         );
       }
 
-      // Order tracking in parallel too
+      // User context queries (parallel with everything else)
+      const userPromises: Promise<any>[] = [];
+      if (userId) {
+        userPromises.push(
+          supabase.from("profiles").select("full_name, phone").eq("id", userId).single(),
+          supabase.from("orders").select("order_number, status, total_amount").eq("user_id", userId).order("created_at", { ascending: false }).limit(3),
+          supabase.from("loyalty_points").select("points").eq("user_id", userId).single(),
+          supabase.from("wishlist_items").select("product_id, products(title_bn)").eq("user_id", userId).limit(5),
+          supabase.from("cart_items").select("quantity, product_id, products(title_bn)").eq("user_id", userId).limit(5),
+        );
+      }
+
+      // Order tracking
       let orderTrackingPromise: Promise<any> = Promise.resolve(null);
       if (intent === "order_tracking") {
         const m = lastUserMsg.match(/(?:BOI|ORD|#)[\-]?(\d{4,})/i) || lastUserMsg.match(/(\d{6,})/);
         if (m) orderTrackingPromise = supabase.rpc("get_order_tracking", { p_order_number: m[0].replace('#', '') });
       }
 
-      // Execute ALL queries in one parallel batch
-      const [results, otResult] = await Promise.all([Promise.all(basePromises), orderTrackingPromise]);
+      // Execute ALL in one parallel batch
+      const [results, otResult, ...userResults] = await Promise.all([
+        Promise.all(basePromises),
+        orderTrackingPromise,
+        ...userPromises,
+      ]);
 
       const [productsRes, categoriesRes, settingsRes, offersRes, deliveryRes, bundlesRes] = results;
       let allBookResults = results[6]?.data || [];
@@ -89,23 +106,31 @@ Deno.serve(async (req) => {
       const publisherLookup = results[10]?.data || [];
       const categoryLookup = results[11]?.data || [];
 
+      // Build user context
+      let userContext: any = null;
+      if (userId && userResults.length > 0) {
+        userContext = {
+          profile: userResults[0]?.data || null,
+          recentOrders: userResults[1]?.data || [],
+          loyaltyPoints: userResults[2]?.data?.points || 0,
+          wishlistItems: (userResults[3]?.data || []).map((w: any) => ({ title_bn: w.products?.title_bn })),
+          cartItems: (userResults[4]?.data || []).map((c: any) => ({ title_bn: c.products?.title_bn, quantity: c.quantity })),
+        };
+      }
+
       let writerResults: any[] = [];
       let publisherResults: any[] = [];
       let categoryResults: any[] = [];
       const orderTracking = otResult?.data && !otResult.data?.error ? otResult.data : null;
 
-      // ── PHASE 2: Enrich & fallback (only 1 extra parallel batch if needed) ──
+      // ── PHASE 2: Enrich & fallback ──
       const phase2: Promise<any>[] = [];
-
-      // Enrich books with writer/publisher names
       if (allBookResults.length > 0) {
         const wIds = [...new Set(allBookResults.map((b: any) => b.writer_id).filter(Boolean))];
         const pIds = [...new Set(allBookResults.map((b: any) => b.publisher_id).filter(Boolean))];
         if (wIds.length) phase2.push(supabase.from("writers").select("id, name_bn").in("id", wIds));
         if (pIds.length) phase2.push(supabase.from("publishers").select("id, name_bn").in("id", pIds));
       }
-
-      // If no direct book results, use writer/publisher/category lookups for fallback
       if (allBookResults.length === 0 && needsSearch) {
         if (writerLookup.length > 0) {
           let q = supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent, writer_id").eq("is_active", true).in("writer_id", writerLookup.map((w: any) => w.id));
@@ -130,29 +155,19 @@ Deno.serve(async (req) => {
       if (phase2.length > 0) {
         const p2 = await Promise.all(phase2);
         let idx = 0;
-
         if (allBookResults.length > 0) {
-          // Enrichment results
           const wIds = [...new Set(allBookResults.map((b: any) => b.writer_id).filter(Boolean))];
           const pIds = [...new Set(allBookResults.map((b: any) => b.publisher_id).filter(Boolean))];
           const wm = new Map(wIds.length ? (p2[idx++]?.data || []).map((w: any) => [w.id, w.name_bn]) : []);
           const pm = new Map(pIds.length ? (p2[idx++]?.data || []).map((p: any) => [p.id, p.name_bn]) : []);
           allBookResults = allBookResults.map((b: any) => ({ ...b, writer_name: wm.get(b.writer_id), publisher_name: pm.get(b.publisher_id) }));
         } else {
-          // Fallback results
-          if (writerLookup.length > 0) {
-            writerResults = (p2[idx++]?.data || []).map((b: any) => ({ ...b, writer_name: writerLookup.find((w: any) => w.id === b.writer_id)?.name_bn || "" }));
-          }
-          if (publisherLookup.length > 0) {
-            publisherResults = (p2[idx++]?.data || []).map((b: any) => ({ ...b, publisher_name: publisherLookup.find((p: any) => p.id === b.publisher_id)?.name_bn || "" }));
-          }
-          if (categoryLookup.length > 0) {
-            categoryResults = p2[idx++]?.data || [];
-          }
+          if (writerLookup.length > 0) writerResults = (p2[idx++]?.data || []).map((b: any) => ({ ...b, writer_name: writerLookup.find((w: any) => w.id === b.writer_id)?.name_bn || "" }));
+          if (publisherLookup.length > 0) publisherResults = (p2[idx++]?.data || []).map((b: any) => ({ ...b, publisher_name: publisherLookup.find((p: any) => p.id === b.publisher_id)?.name_bn || "" }));
+          if (categoryLookup.length > 0) categoryResults = p2[idx++]?.data || [];
         }
       }
 
-      // Deduplicate
       const seen = new Set<string>();
       const dedup = (arr: any[]) => arr.filter(p => { if (seen.has(p.slug)) return false; seen.add(p.slug); return true; });
       const searchResults = [
@@ -168,19 +183,24 @@ Deno.serve(async (req) => {
         settings: settingsMap, products: productsRes.data, categories: categoriesRes.data,
         coupons: offersRes.data, delivery: deliveryRes.data, bundles: bundlesRes.data,
         searchResults: searchResults.length > 0 ? searchResults : null,
-        universalProducts: null, ebooks: null, orderTracking,
-        intent, priceRange,
+        orderTracking, intent, priceRange, userContext,
         categoryResults: categoryResults.length > 0 ? categoryResults : null,
         publisherResults: publisherResults.length > 0 ? publisherResults : null,
         writerResults: writerResults.length > 0 ? writerResults : null,
       });
+
+      // Add conversation summary & sentiment hint
+      if (convSummary) systemPrompt += convSummary;
+      if (sentiment === "negative" || sentiment === "urgent") {
+        systemPrompt += `\n⚡ গ্রাহকের মেজাজ: ${sentiment === "negative" ? "বিরক্ত/হতাশ — বিশেষ যত্ন নাও, সমবেদনা দেখাও" : "জরুরি — দ্রুত ও সরাসরি উত্তর দাও"}`;
+      }
 
     } else if (mode === "admin") {
       const since30 = new Date(Date.now() - 30 * 86400000).toISOString();
       const since7 = new Date(Date.now() - 7 * 86400000).toISOString();
       const since90 = new Date(Date.now() - 90 * 86400000).toISOString();
 
-      const [orders30, orders7, orders90, productsRes, customersRes, abandonedRes, couponsRes, reviewsRes] = await Promise.all([
+      const [orders30, orders7, orders90, productsRes, customersRes, abandonedRes, couponsRes, reviewsRes, returnedOrders, repeatCustomers] = await Promise.all([
         supabase.from("orders").select("total_amount, status, payment_method, delivery_area", { count: "exact" }).gte("created_at", since30),
         supabase.from("orders").select("total_amount, status", { count: "exact" }).gte("created_at", since7),
         supabase.from("orders").select("total_amount", { count: "exact" }).gte("created_at", since90),
@@ -189,6 +209,8 @@ Deno.serve(async (req) => {
         supabase.from("abandoned_checkouts").select("subtotal", { count: "exact" }).gte("created_at", since30).eq("recovered", false),
         supabase.from("coupons").select("code", { count: "exact" }).eq("is_active", true),
         supabase.from("product_reviews").select("rating", { count: "exact" }).gte("created_at", since30),
+        supabase.from("orders").select("id", { count: "exact" }).eq("status", "returned").gte("created_at", since30),
+        supabase.from("orders").select("user_id").gte("created_at", since90),
       ]);
 
       const t30 = orders30.count || 0, t7 = orders7.count || 0, t90 = orders90.count || 0;
@@ -199,6 +221,16 @@ Deno.serve(async (req) => {
       const oos = ls.filter((p: any) => (p.stock_quantity || 0) === 0);
       const nc = (customersRes.data || []).filter((c: any) => c.created_at >= since30).length;
       const av = (abandonedRes.data || []).reduce((s: number, a: any) => s + (a.subtotal || 0), 0);
+
+      // Return rate
+      const returnRate = t30 > 0 ? ((returnedOrders.count || 0) / t30 * 100).toFixed(1) : undefined;
+
+      // Repeat customer rate
+      const userOrderCounts = new Map<string, number>();
+      (repeatCustomers.data || []).forEach((o: any) => { userOrderCounts.set(o.user_id, (userOrderCounts.get(o.user_id) || 0) + 1); });
+      const totalBuyers = userOrderCounts.size;
+      const repeatBuyers = [...userOrderCounts.values()].filter(c => c > 1).length;
+      const repeatCustomerRate = totalBuyers > 0 ? ((repeatBuyers / totalBuyers) * 100).toFixed(1) : undefined;
 
       const sb: Record<string, number> = {}, pb: Record<string, number> = {}, ab: Record<string, number> = {};
       (orders30.data || []).forEach((o: any) => { sb[o.status] = (sb[o.status] || 0) + 1; pb[o.payment_method || "unknown"] = (pb[o.payment_method || "unknown"] || 0) + 1; ab[o.delivery_area || "অজানা"] = (ab[o.delivery_area || "অজানা"] || 0) + 1; });
@@ -214,15 +246,18 @@ Deno.serve(async (req) => {
         topProducts: topP, lowStockItems: ls.slice(0, 8).map((p: any) => `${p.title_bn}(${p.stock_quantity || 0})`).join(", "),
         avgRating: (reviewsRes.data || []).length > 0 ? ((reviewsRes.data || []).reduce((s: number, r: any) => s + (r.rating || 0), 0) / reviewsRes.data!.length).toFixed(1) : "N/A",
         couponsCount: couponsRes.count || 0,
+        returnRate: returnRate ? parseFloat(returnRate) : undefined,
+        repeatCustomerRate: repeatCustomerRate ? parseFloat(repeatCustomerRate) : undefined,
       }, context);
     } else {
       throw new Error("Invalid mode");
     }
 
+    // Use smarter model for better intelligence
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "google/gemini-2.5-flash-lite", messages: [{ role: "system", content: systemPrompt }, ...messages], stream: true }),
+      body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "system", content: systemPrompt }, ...messages], stream: true }),
     });
 
     if (!response.ok) {
