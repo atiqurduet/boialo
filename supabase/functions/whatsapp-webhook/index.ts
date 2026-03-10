@@ -69,7 +69,7 @@ async function buildSystemPrompt(supabase: any, userMessage: string) {
   const siteName = settingsMap.site_name || "বইআলো";
   const siteUrl = settingsMap.site_url || "https://boialo.lovable.app";
   const bestSellers = (productsRes.data || []).slice(0, 8).map((p: any) =>
-    `• ${p.title_bn} - ৳${p.price}${p.discount_percentage ? ` (${p.discount_percentage}% ছাড়)` : ""} | ${siteUrl}/product/${p.slug}`
+    `• ${p.title_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""} | ${siteUrl}/product/${p.slug}`
   ).join("\n");
   const categoryList = (categoriesRes.data || []).map((c: any) => c.name_bn).join(", ");
   const activeCoupons = (offersRes.data || []).map((c: any) =>
