@@ -187,17 +187,17 @@ serve(async (req) => {
       let allUniversalResults: any[] = [];
       let allEbookResults: any[] = [];
 
-      if (wordPatterns.length > 0) {
-        // Build OR conditions: each word matches against both bn and en titles
-        const bookOrConds = wordPatterns.flatMap(w => [
+      if (uniqueVariations.length > 0) {
+        // Build OR conditions using all phonetic variations
+        const bookOrConds = uniqueVariations.flatMap(w => [
           `title_bn.ilike.%${w}%`,
           `title_en.ilike.%${w}%`,
         ]).join(",");
-        const univOrConds = wordPatterns.flatMap(w => [
+        const univOrConds = uniqueVariations.flatMap(w => [
           `name_bn.ilike.%${w}%`,
           `name_en.ilike.%${w}%`,
         ]).join(",");
-        const ebookOrConds = wordPatterns.flatMap(w => [
+        const ebookOrConds = uniqueVariations.flatMap(w => [
           `title_bn.ilike.%${w}%`,
           `title_en.ilike.%${w}%`,
         ]).join(",");
