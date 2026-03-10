@@ -72,6 +72,12 @@ const AdminChatbotSettings = () => {
     setFallbackMessage(map.chatbot_fallback_message || "");
     setRestrictedTopics(Array.isArray(map.chatbot_restricted_topics) ? map.chatbot_restricted_topics : []);
     setFaqs(Array.isArray(map.chatbot_faq) ? map.chatbot_faq : []);
+    setFbEnabled(map.chatbot_fb_enabled === true || map.chatbot_fb_enabled === "true");
+    setWaEnabled(map.chatbot_wa_enabled === true || map.chatbot_wa_enabled === "true");
+    setFbPageToken(map.chatbot_fb_page_token || "");
+    setFbVerifyToken(map.chatbot_fb_verify_token || "");
+    setWaAccessToken(map.chatbot_wa_access_token || "");
+    setWaPhoneNumberId(map.chatbot_wa_phone_number_id || "");
     setLoading(false);
   };
 
