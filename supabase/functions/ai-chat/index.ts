@@ -228,8 +228,8 @@ serve(async (req) => {
         ...dedup(allUniversalResults).map((p: any) => ({ ...p, title_bn: p.name_bn, _type: "universal" })),
         ...dedup(allEbookResults).map((p: any) => ({ ...p, _type: "ebook" })),
       ];
+      console.log("Search results found:", searchResults.length, searchResults.map((r: any) => r.title_bn || r.name_bn).join(", "));
 
-      // Fetch universal products and ebooks for general context
       const [universalRes, ebooksRes] = await Promise.all([
         supabase.from("universal_products").select("name_bn, price, slug, discount_percent").eq("is_active", true).order("created_at", { ascending: false }).limit(8),
         supabase.from("digital_products").select("title_bn, price, slug, is_free").eq("is_active", true).order("created_at", { ascending: false }).limit(8),
