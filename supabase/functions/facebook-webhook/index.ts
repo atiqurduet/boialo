@@ -36,7 +36,7 @@ async function buildSystemPrompt(supabase: any, userMessage: string) {
     // English fallback
     if (searchResults.length === 0) {
       const [booksEn, universalEn] = await Promise.all([
-        supabase.from("products").select("title_bn, price, slug, discount_percentage").eq("is_active", true).ilike("title_en", `%${searchTerms}%`).limit(8),
+        supabase.from("products").select("title_bn, price, slug, discount_percent").eq("is_active", true).ilike("title_en", `%${searchTerms}%`).limit(8),
         supabase.from("universal_products").select("name_bn, price, slug, discount_percent").eq("is_active", true).ilike("name_en", `%${searchTerms}%`).limit(8),
       ]);
       searchResults = [
