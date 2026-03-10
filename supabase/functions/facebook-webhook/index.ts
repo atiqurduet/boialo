@@ -22,7 +22,7 @@ async function buildSystemPrompt(supabase: any, userMessage: string) {
   let searchResults: any[] = [];
   if (searchTerms.length >= 2) {
     const [booksBn, universalBn, ebooksBn] = await Promise.all([
-      supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percentage").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(8),
+      supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(8),
       supabase.from("universal_products").select("name_bn, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("name_bn", `%${searchTerms}%`).limit(8),
       supabase.from("digital_products").select("title_bn, price, slug, is_free").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(8),
     ]);
