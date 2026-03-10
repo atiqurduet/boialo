@@ -35,6 +35,7 @@ import {
   BookOpen,
   MapPin,
   Globe,
+  Bot,
   type LucideIcon
 } from 'lucide-react';
 
@@ -62,6 +63,7 @@ export const menuCategories: MenuCategory[] = [
     roles: ['super_admin', 'admin', 'manager', 'support'],
     items: [
       { icon: LayoutDashboard, label: 'ড্যাশবোর্ড', href: '/admin', roles: ['super_admin', 'admin', 'manager', 'support'] },
+      { icon: Bot, label: 'AI অ্যাসিস্ট্যান্ট', href: '/admin/ai-assistant', roles: ['super_admin', 'admin', 'manager'], badge: 'AI', badgeColor: 'success' },
       { icon: ClipboardList, label: 'আমার টাস্ক', href: '/admin/my-dashboard', roles: ['super_admin', 'admin', 'manager', 'support'] },
       { icon: BarChart3, label: 'রিপোর্ট ও অ্যানালিটিক্স', href: '/admin/reports', roles: ['super_admin', 'admin', 'manager'] },
       { icon: BarChart3, label: 'চেকআউট অ্যানালিটিক্স', href: '/admin/checkout-analytics', roles: ['super_admin', 'admin', 'manager'] },

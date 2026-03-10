@@ -125,7 +125,7 @@ const AdminStaffActivity = lazy(() => import("./pages/admin/AdminStaffActivity")
 const AdminMyDashboard = lazy(() => import("./pages/admin/AdminMyDashboard"));
 const AdminEbooks = lazy(() => import("./pages/admin/AdminEbooks"));
 const AdminEproducts = lazy(() => import("./pages/admin/AdminEproducts"));
-
+const AdminAIAssistant = lazy(() => import("./pages/admin/AdminAIAssistant"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -271,6 +271,7 @@ const App = () => (
                 <Route path="/admin/popup-banners" element={<AdminPopupBanners />} />
                 <Route path="/admin/ebooks" element={<AdminEbooks />} />
                 <Route path="/admin/eproducts" element={<AdminEproducts />} />
+                <Route path="/admin/ai-assistant" element={<AdminAIAssistant />} />
                 
                 {/* Dynamic Page Route - must be before catch-all */}
                 <Route path="/:slug" element={<DynamicPage />} />

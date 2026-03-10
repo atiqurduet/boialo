@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { MessageCircle, X, Send, Minimize2, Paperclip, FileText, Loader2 } from "lucide-react";
+import { MessageCircle, X, Send, Minimize2, Paperclip, FileText, Loader2, Bot, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import EmojiPicker from "@/components/chat/EmojiPicker";
@@ -47,10 +47,13 @@ const ChatWidget = () => {
   const [uploading, setUploading] = useState(false);
   const [stagedFile, setStagedFile] = useState<StagedFile | null>(null);
   const [isAdminTyping, setIsAdminTyping] = useState(false);
+  const [chatMode, setChatMode] = useState<"ai" | "human">("ai");
+  const [aiResponding, setAiResponding] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const aiChatHistoryRef = useRef<Array<{role: string; content: string}>>([]);
 
   // Generate or get visitor ID based on phone
   const getVisitorId = (phone?: string) => {
@@ -381,6 +384,83 @@ const ChatWidget = () => {
         console.error("Message send error:", error);
         throw error;
       }
+
+      // If in AI mode, get AI response
+      if (chatMode === "ai" && messageText) {
+        setAiResponding(true);
+        setIsAdminTyping(true);
+        try {
+          aiChatHistoryRef.current.push({ role: "user", content: messageText });
+          
+          const AI_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+          const resp = await fetch(AI_CHAT_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({ 
+              messages: aiChatHistoryRef.current, 
+              mode: "customer" 
+            }),
+          });
+
+          if (!resp.ok || !resp.body) {
+            throw new Error("AI response failed");
+          }
+
+          // Stream the response
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let textBuffer = "";
+          let fullResponse = "";
+          let streamDone = false;
+
+          while (!streamDone) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            textBuffer += decoder.decode(value, { stream: true });
+
+            let newlineIndex: number;
+            while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+              let line = textBuffer.slice(0, newlineIndex);
+              textBuffer = textBuffer.slice(newlineIndex + 1);
+              if (line.endsWith("\r")) line = line.slice(0, -1);
+              if (line.startsWith(":") || line.trim() === "") continue;
+              if (!line.startsWith("data: ")) continue;
+              const jsonStr = line.slice(6).trim();
+              if (jsonStr === "[DONE]") { streamDone = true; break; }
+              try {
+                const parsed = JSON.parse(jsonStr);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) fullResponse += content;
+              } catch {
+                textBuffer = line + "\n" + textBuffer;
+                break;
+              }
+            }
+          }
+
+          if (fullResponse.trim()) {
+            aiChatHistoryRef.current.push({ role: "assistant", content: fullResponse });
+            
+            // Save AI response as a chat message
+            const visitorId = localStorage.getItem("chat_visitor_id") || "";
+            await supabase.rpc("insert_visitor_chat_message", {
+              p_conversation_id: conversationId,
+              p_visitor_id: visitorId,
+              p_sender_type: "admin",
+              p_sender_name: "🤖 AI সহকারী",
+              p_message: fullResponse.trim(),
+            });
+          }
+        } catch (aiError) {
+          console.error("AI response error:", aiError);
+        } finally {
+          setAiResponding(false);
+          setIsAdminTyping(false);
+        }
+      }
     } catch (error) {
       toast.error("মেসেজ পাঠাতে সমস্যা হয়েছে");
       setNewMessage(messageText);
@@ -446,8 +526,22 @@ const ChatWidget = () => {
       {/* Header */}
       <div className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-          <span className="font-medium">{siteName} সাপোর্ট</span>
+          {chatMode === "ai" ? (
+            <Bot className="w-4 h-4" />
+          ) : (
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+          )}
+          <span className="font-medium">
+            {chatMode === "ai" ? "AI সহকারী" : `${siteName} সাপোর্ট`}
+          </span>
+          {visitorInfo.submitted && (
+            <button
+              onClick={() => setChatMode(chatMode === "ai" ? "human" : "ai")}
+              className="text-[10px] bg-primary-foreground/20 hover:bg-primary-foreground/30 px-2 py-0.5 rounded-full transition-colors"
+            >
+              {chatMode === "ai" ? "👤 লাইভ চ্যাট" : "🤖 AI"}
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <Button
