@@ -12,7 +12,7 @@ function buildCustomerPrompt(data: any) {
   const siteName = settings.site_name || "বইআলো";
 
   const bestSellers = (products || []).slice(0, 10).map((p: any) =>
-    `• ${p.title_bn} - ৳${p.price}${p.discount_percentage ? ` (${p.discount_percentage}% ছাড়)` : ""} | স্টক: ${p.stock_quantity || 0} | /product/${p.slug}`
+    `• ${p.title_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""} | স্টক: ${p.stock_quantity || 0} | /product/${p.slug}`
   ).join("\n");
 
   const categoryList = (categories || []).map((c: any) => `${c.name_bn} (/category/${c.slug})`).join(", ");
@@ -37,7 +37,7 @@ function buildCustomerPrompt(data: any) {
         const link = type === "book" ? `/product/${p.slug}` : type === "universal" ? `/universal-product/${p.slug}` : `/ebook/${p.slug}`;
         const name = p.title_bn || p.name_bn || "প্রোডাক্ট";
         const stock = p.stock_quantity !== undefined ? ` | স্টক: ${p.stock_quantity}` : "";
-        const discount = p.discount_percentage || p.discount_percent;
+        const discount = p.discount_percent;
         return `• ${name} - ৳${p.price}${discount ? ` (${discount}% ছাড়)` : ""}${stock} | [${link}]`;
       }).join("\n");
   }
@@ -136,6 +136,7 @@ serve(async (req) => {
 
     if (mode === "customer") {
       const lastUserMsg = messages?.[messages.length - 1]?.content || "";
+      console.log("Customer query:", lastUserMsg);
 
       // Dynamic product search based on user query
       // Remove filler words and punctuation for cleaner search
@@ -145,9 +146,10 @@ serve(async (req) => {
       const searchTerms = meaningfulWords.join(" ").trim();
       // Also create individual word search patterns
       const wordPatterns = meaningfulWords.filter(w => w.length >= 3);
+      console.log("Search terms:", searchTerms, "| Word patterns:", wordPatterns);
       
       const [productsRes, categoriesRes, settingsRes, offersRes, deliveryRes, bundlesRes] = await Promise.all([
-        supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percentage, sales_count").eq("is_active", true).order("sales_count", { ascending: false }).limit(15),
+        supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent, sales_count").eq("is_active", true).order("sales_count", { ascending: false }).limit(15),
         supabase.from("categories").select("name_bn, slug").eq("is_active", true).limit(20),
         supabase.from("site_settings").select("setting_key, setting_value").in("setting_key", ["site_name", "contact_phone", "contact_email"]),
         supabase.from("coupons").select("code, discount_type, discount_value, min_order_amount").eq("is_active", true).limit(5),
@@ -155,45 +157,47 @@ serve(async (req) => {
         supabase.from("product_bundles").select("name_bn, bundle_price, original_price").eq("is_active", true).limit(5),
       ]);
 
-      // Multi-strategy search: full phrase + individual words + English
+      // Search using OR conditions for each meaningful word (most robust approach)
       let allBookResults: any[] = [];
       let allUniversalResults: any[] = [];
       let allEbookResults: any[] = [];
 
-      if (searchTerms.length >= 2) {
-        // Strategy 1: Full phrase search (Bengali + English simultaneously)
-        const [booksBnFull, booksEnFull, univBnFull, univEnFull, ebooksFull] = await Promise.all([
-          supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percentage").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10),
-          supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percentage").eq("is_active", true).ilike("title_en", `%${searchTerms}%`).limit(10),
+      if (wordPatterns.length > 0) {
+        // Build OR conditions: each word matches against both bn and en titles
+        const bookOrConds = wordPatterns.flatMap(w => [
+          `title_bn.ilike.%${w}%`,
+          `title_en.ilike.%${w}%`,
+        ]).join(",");
+        const univOrConds = wordPatterns.flatMap(w => [
+          `name_bn.ilike.%${w}%`,
+          `name_en.ilike.%${w}%`,
+        ]).join(",");
+        const ebookOrConds = wordPatterns.flatMap(w => [
+          `title_bn.ilike.%${w}%`,
+          `title_en.ilike.%${w}%`,
+        ]).join(",");
+
+        const [bookRes, univRes, ebookRes] = await Promise.all([
+          supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).or(bookOrConds).limit(10),
+          supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).or(univOrConds).limit(10),
+          supabase.from("digital_products").select("title_bn, title_en, price, slug, is_free, discount_percent").eq("is_active", true).or(ebookOrConds).limit(10),
+        ]);
+        console.log("Word search - books:", bookRes.data?.length, "err:", bookRes.error?.message, "univ:", univRes.data?.length, "ebooks:", ebookRes.data?.length);
+        allBookResults = bookRes.data || [];
+        allUniversalResults = univRes.data || [];
+        allEbookResults = ebookRes.data || [];
+      } else if (searchTerms.length >= 2) {
+        // Fallback: full phrase search (for single-word queries)
+        const [booksBn, booksEn, univBn, univEn, ebooksBn] = await Promise.all([
+          supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10),
+          supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("title_en", `%${searchTerms}%`).limit(10),
           supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("name_bn", `%${searchTerms}%`).limit(10),
           supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("name_en", `%${searchTerms}%`).limit(10),
-          supabase.from("digital_products").select("title_bn, price, slug, is_free, discount_percent").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10),
+          supabase.from("digital_products").select("title_bn, title_en, price, slug, is_free, discount_percent").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10),
         ]);
-        allBookResults = [...(booksBnFull.data || []), ...(booksEnFull.data || [])];
-        allUniversalResults = [...(univBnFull.data || []), ...(univEnFull.data || [])];
-        allEbookResults = ebooksFull.data || [];
-
-        // Strategy 2: If full phrase didn't match, try individual words
-        if (allBookResults.length === 0 && wordPatterns.length > 0) {
-          // Build OR conditions for each word across both Bengali and English
-          const orConditions = wordPatterns.flatMap(w => [
-            `title_bn.ilike.%${w}%`,
-            `title_en.ilike.%${w}%`,
-          ]).join(",");
-          const univOrConditions = wordPatterns.flatMap(w => [
-            `name_bn.ilike.%${w}%`,
-            `name_en.ilike.%${w}%`,
-          ]).join(",");
-
-          const [wordBooks, wordUniv, wordEbooks] = await Promise.all([
-            supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percentage").eq("is_active", true).or(orConditions).limit(10),
-            supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).or(univOrConditions).limit(10),
-            supabase.from("digital_products").select("title_bn, price, slug, is_free, discount_percent").eq("is_active", true).or(wordPatterns.map(w => `title_bn.ilike.%${w}%`).join(",")).limit(10),
-          ]);
-          allBookResults = wordBooks.data || [];
-          allUniversalResults = wordUniv.data || [];
-          allEbookResults = wordEbooks.data || [];
-        }
+        allBookResults = [...(booksBn.data || []), ...(booksEn.data || [])];
+        allUniversalResults = [...(univBn.data || []), ...(univEn.data || [])];
+        allEbookResults = ebooksBn.data || [];
       }
 
       // Strategy 3: Search by writer/author name if still no results
@@ -205,7 +209,7 @@ serve(async (req) => {
         const { data: writerData } = await supabase.from("writers").select("id").or(writerOrConds).limit(3);
         if (writerData && writerData.length > 0) {
           const writerIds = writerData.map((w: any) => w.id);
-          const { data: wb } = await supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percentage").eq("is_active", true).in("writer_id", writerIds).limit(10);
+          const { data: wb } = await supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent").eq("is_active", true).in("writer_id", writerIds).limit(10);
           writerBooks = wb || [];
         }
       }
@@ -226,8 +230,8 @@ serve(async (req) => {
         ...dedup(allUniversalResults).map((p: any) => ({ ...p, title_bn: p.name_bn, _type: "universal" })),
         ...dedup(allEbookResults).map((p: any) => ({ ...p, _type: "ebook" })),
       ];
+      console.log("Search results found:", searchResults.length, searchResults.map((r: any) => r.title_bn || r.name_bn).join(", "));
 
-      // Fetch universal products and ebooks for general context
       const [universalRes, ebooksRes] = await Promise.all([
         supabase.from("universal_products").select("name_bn, price, slug, discount_percent").eq("is_active", true).order("created_at", { ascending: false }).limit(8),
         supabase.from("digital_products").select("title_bn, price, slug, is_free").eq("is_active", true).order("created_at", { ascending: false }).limit(8),
@@ -269,7 +273,7 @@ serve(async (req) => {
         supabase.from("orders").select("total_amount, status, payment_method, delivery_area", { count: "exact" }).gte("created_at", since30),
         supabase.from("orders").select("total_amount, status", { count: "exact" }).gte("created_at", since7),
         supabase.from("orders").select("total_amount", { count: "exact" }).gte("created_at", since90),
-        supabase.from("products").select("title_bn, price, stock_quantity, sales_count, discount_percentage", { count: "exact" }).eq("is_active", true),
+        supabase.from("products").select("title_bn, price, stock_quantity, sales_count, discount_percent", { count: "exact" }).eq("is_active", true),
         supabase.from("profiles").select("id, created_at", { count: "exact" }),
         supabase.from("abandoned_checkouts").select("subtotal", { count: "exact" }).gte("created_at", since30).eq("recovered", false),
         supabase.from("coupons").select("code", { count: "exact" }).eq("is_active", true),

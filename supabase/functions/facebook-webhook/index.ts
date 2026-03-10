@@ -11,7 +11,7 @@ async function buildSystemPrompt(supabase: any, userMessage: string) {
   const searchTerms = userMessage.replace(/[।,?!।?\-]/g, " ").trim();
 
   const [productsRes, categoriesRes, settingsRes, offersRes, deliveryRes] = await Promise.all([
-    supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percentage").eq("is_active", true).order("sales_count", { ascending: false }).limit(10),
+    supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent").eq("is_active", true).order("sales_count", { ascending: false }).limit(10),
     supabase.from("categories").select("name_bn, slug").eq("is_active", true).limit(15),
     supabase.from("site_settings").select("setting_key, setting_value").in("setting_key", ["site_name", "contact_phone", "contact_email", "site_url"]),
     supabase.from("coupons").select("code, discount_type, discount_value, min_order_amount").eq("is_active", true).limit(5),
@@ -22,13 +22,13 @@ async function buildSystemPrompt(supabase: any, userMessage: string) {
   let searchResults: any[] = [];
   if (searchTerms.length >= 2) {
     const [booksBn, universalBn, ebooksBn] = await Promise.all([
-      supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percentage").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(8),
+      supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(8),
       supabase.from("universal_products").select("name_bn, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("name_bn", `%${searchTerms}%`).limit(8),
       supabase.from("digital_products").select("title_bn, price, slug, is_free").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(8),
     ]);
 
     searchResults = [
-      ...(booksBn.data || []).map((p: any) => `📚 ${p.title_bn} - ৳${p.price}${p.discount_percentage ? ` (${p.discount_percentage}% ছাড়)` : ""}`),
+      ...(booksBn.data || []).map((p: any) => `📚 ${p.title_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""}`),
       ...(universalBn.data || []).map((p: any) => `🛍️ ${p.name_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""}`),
       ...(ebooksBn.data || []).map((p: any) => `📱 ${p.title_bn} - ${p.is_free ? "ফ্রি" : `৳${p.price}`}`),
     ];
@@ -36,11 +36,11 @@ async function buildSystemPrompt(supabase: any, userMessage: string) {
     // English fallback
     if (searchResults.length === 0) {
       const [booksEn, universalEn] = await Promise.all([
-        supabase.from("products").select("title_bn, price, slug, discount_percentage").eq("is_active", true).ilike("title_en", `%${searchTerms}%`).limit(8),
+        supabase.from("products").select("title_bn, price, slug, discount_percent").eq("is_active", true).ilike("title_en", `%${searchTerms}%`).limit(8),
         supabase.from("universal_products").select("name_bn, price, slug, discount_percent").eq("is_active", true).ilike("name_en", `%${searchTerms}%`).limit(8),
       ]);
       searchResults = [
-        ...(booksEn.data || []).map((p: any) => `📚 ${p.title_bn} - ৳${p.price}${p.discount_percentage ? ` (${p.discount_percentage}% ছাড়)` : ""}`),
+        ...(booksEn.data || []).map((p: any) => `📚 ${p.title_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""}`),
         ...(universalEn.data || []).map((p: any) => `🛍️ ${p.name_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""}`),
       ];
     }
@@ -69,7 +69,7 @@ async function buildSystemPrompt(supabase: any, userMessage: string) {
   const siteName = settingsMap.site_name || "বইআলো";
   const siteUrl = settingsMap.site_url || "https://boialo.lovable.app";
   const bestSellers = (productsRes.data || []).slice(0, 8).map((p: any) =>
-    `• ${p.title_bn} - ৳${p.price}${p.discount_percentage ? ` (${p.discount_percentage}% ছাড়)` : ""} | ${siteUrl}/product/${p.slug}`
+    `• ${p.title_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""} | ${siteUrl}/product/${p.slug}`
   ).join("\n");
   const categoryList = (categoriesRes.data || []).map((c: any) => c.name_bn).join(", ");
   const activeCoupons = (offersRes.data || []).map((c: any) =>
