@@ -138,43 +138,71 @@ serve(async (req) => {
       const lastUserMsg = messages?.[messages.length - 1]?.content || "";
 
       // Dynamic product search based on user query
-      const searchTerms = lastUserMsg.replace(/[।,?!।?\-]/g, " ").trim();
+      // Remove filler words and punctuation for cleaner search
+      const fillerWords = new Set(["boi", "ta", "ache", "ki", "kothay", "den", "chai", "lagbe", "dorkar", "book", "price", "dam", "কি", "আছে", "কোথায়", "দাম", "কত", "চাই", "লাগবে", "দরকার", "দেন", "একটা", "একটি", "টা", "টি", "বইটা", "বইটি", "the", "a", "is", "are", "do", "you", "have", "want", "need", "please"]);
+      const rawTerms = lastUserMsg.replace(/[।,?!।?\-।:;()"'।]/g, " ").trim();
+      const meaningfulWords = rawTerms.split(/\s+/).filter(w => w.length >= 2 && !fillerWords.has(w.toLowerCase()));
+      const searchTerms = meaningfulWords.join(" ").trim();
+      // Also create individual word search patterns
+      const wordPatterns = meaningfulWords.filter(w => w.length >= 3);
       
-      const [productsRes, categoriesRes, settingsRes, offersRes, deliveryRes, bundlesRes, searchBooksRes, searchUniversalRes, searchEbooksRes] = await Promise.all([
+      const [productsRes, categoriesRes, settingsRes, offersRes, deliveryRes, bundlesRes] = await Promise.all([
         supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percentage, sales_count").eq("is_active", true).order("sales_count", { ascending: false }).limit(15),
         supabase.from("categories").select("name_bn, slug").eq("is_active", true).limit(20),
         supabase.from("site_settings").select("setting_key, setting_value").in("setting_key", ["site_name", "contact_phone", "contact_email"]),
         supabase.from("coupons").select("code, discount_type, discount_value, min_order_amount").eq("is_active", true).limit(5),
         supabase.from("delivery_zones").select("zone_name_bn, delivery_charge, estimated_days_min, estimated_days_max").eq("is_active", true).limit(10),
         supabase.from("product_bundles").select("name_bn, bundle_price, original_price").eq("is_active", true).limit(5),
-        // Dynamic search across all product types
-        searchTerms.length >= 2
-          ? supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percentage").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10)
-          : Promise.resolve({ data: [] }),
-        searchTerms.length >= 2
-          ? supabase.from("universal_products").select("name_bn, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("name_bn", `%${searchTerms}%`).limit(10)
-          : Promise.resolve({ data: [] }),
-        searchTerms.length >= 2
-          ? supabase.from("digital_products").select("title_bn, price, slug, is_free, discount_percent").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10)
-          : Promise.resolve({ data: [] }),
       ]);
 
-      // Also try English title search if Bengali didn't match
-      let extraBookSearch: any[] = [];
-      let extraUniversalSearch: any[] = [];
-      if (searchTerms.length >= 2 && (searchBooksRes.data || []).length === 0) {
-        const [engBooks, engUniversal] = await Promise.all([
+      // Multi-strategy search: full phrase + individual words + English
+      let allBookResults: any[] = [];
+      let allUniversalResults: any[] = [];
+      let allEbookResults: any[] = [];
+
+      if (searchTerms.length >= 2) {
+        // Strategy 1: Full phrase search (Bengali + English simultaneously)
+        const [booksBnFull, booksEnFull, univBnFull, univEnFull, ebooksFull] = await Promise.all([
+          supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percentage").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10),
           supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percentage").eq("is_active", true).ilike("title_en", `%${searchTerms}%`).limit(10),
+          supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("name_bn", `%${searchTerms}%`).limit(10),
           supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("name_en", `%${searchTerms}%`).limit(10),
+          supabase.from("digital_products").select("title_bn, price, slug, is_free, discount_percent").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10),
         ]);
-        extraBookSearch = engBooks.data || [];
-        extraUniversalSearch = engUniversal.data || [];
+        allBookResults = [...(booksBnFull.data || []), ...(booksEnFull.data || [])];
+        allUniversalResults = [...(univBnFull.data || []), ...(univEnFull.data || [])];
+        allEbookResults = ebooksFull.data || [];
+
+        // Strategy 2: If full phrase didn't match, try individual words
+        if (allBookResults.length === 0 && wordPatterns.length > 0) {
+          // Build OR conditions for each word across both Bengali and English
+          const orConditions = wordPatterns.flatMap(w => [
+            `title_bn.ilike.%${w}%`,
+            `title_en.ilike.%${w}%`,
+          ]).join(",");
+          const univOrConditions = wordPatterns.flatMap(w => [
+            `name_bn.ilike.%${w}%`,
+            `name_en.ilike.%${w}%`,
+          ]).join(",");
+
+          const [wordBooks, wordUniv, wordEbooks] = await Promise.all([
+            supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percentage").eq("is_active", true).or(orConditions).limit(10),
+            supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).or(univOrConditions).limit(10),
+            supabase.from("digital_products").select("title_bn, price, slug, is_free, discount_percent").eq("is_active", true).or(wordPatterns.map(w => `title_bn.ilike.%${w}%`).join(",")).limit(10),
+          ]);
+          allBookResults = wordBooks.data || [];
+          allUniversalResults = wordUniv.data || [];
+          allEbookResults = wordEbooks.data || [];
+        }
       }
 
-      // Also search by writer/author name
+      // Strategy 3: Search by writer/author name if still no results
       let writerBooks: any[] = [];
-      if (searchTerms.length >= 2 && (searchBooksRes.data || []).length === 0 && extraBookSearch.length === 0) {
-        const { data: writerData } = await supabase.from("writers").select("id").or(`name_bn.ilike.%${searchTerms}%,name_en.ilike.%${searchTerms}%`).limit(3);
+      if (searchTerms.length >= 2 && allBookResults.length === 0) {
+        const writerOrConds = wordPatterns.length > 0
+          ? wordPatterns.flatMap(w => [`name_bn.ilike.%${w}%`, `name_en.ilike.%${w}%`]).join(",")
+          : `name_bn.ilike.%${searchTerms}%,name_en.ilike.%${searchTerms}%`;
+        const { data: writerData } = await supabase.from("writers").select("id").or(writerOrConds).limit(3);
         if (writerData && writerData.length > 0) {
           const writerIds = writerData.map((w: any) => w.id);
           const { data: wb } = await supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percentage").eq("is_active", true).in("writer_id", writerIds).limit(10);
@@ -182,14 +210,21 @@ serve(async (req) => {
         }
       }
 
+      // Deduplicate results by slug
+      const seen = new Set<string>();
+      const dedup = (arr: any[]) => arr.filter(p => {
+        const key = p.slug;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
       // Combine search results
       const searchResults = [
-        ...(searchBooksRes.data || []).map((p: any) => ({ ...p, _type: "book" })),
-        ...extraBookSearch.map((p: any) => ({ ...p, _type: "book" })),
-        ...writerBooks.map((p: any) => ({ ...p, _type: "book" })),
-        ...(searchUniversalRes.data || []).map((p: any) => ({ ...p, title_bn: p.name_bn, _type: "universal" })),
-        ...extraUniversalSearch.map((p: any) => ({ ...p, title_bn: p.name_bn, _type: "universal" })),
-        ...(searchEbooksRes.data || []).map((p: any) => ({ ...p, _type: "ebook" })),
+        ...dedup(allBookResults).map((p: any) => ({ ...p, _type: "book" })),
+        ...dedup(writerBooks).map((p: any) => ({ ...p, _type: "book" })),
+        ...dedup(allUniversalResults).map((p: any) => ({ ...p, title_bn: p.name_bn, _type: "universal" })),
+        ...dedup(allEbookResults).map((p: any) => ({ ...p, _type: "ebook" })),
       ];
 
       // Fetch universal products and ebooks for general context
