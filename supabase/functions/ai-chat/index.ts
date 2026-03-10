@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -92,7 +92,8 @@ function buildCustomerPrompt(data: any) {
 7. 🔍 সার্চ রেজাল্ট থাকলে ঐগুলো অগ্রাধিকার দাও
 8. প্রোডাক্টের দাম, স্টক, ছাড় সব সঠিকভাবে জানাও
 9. ই-বুক এবং ইউনিভার্সাল প্রোডাক্ট সম্পর্কেও জানাও
-10. গ্রাহক হতাশ হলে সমবেদনা দেখাও`;
+10. গ্রাহক হতাশ হলে সমবেদনা দেখাও
+11. কখনো "নমস্কার" বলবে না। অভিবাদনে "আসসালামু আলাইকুম" বা "হ্যালো" বা সরাসরি উত্তর দাও`;
 }
 
 function buildAdminPrompt(data: any, context?: string) {
