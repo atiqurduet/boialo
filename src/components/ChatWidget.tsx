@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { MessageCircle, X, Send, Minimize2, Paperclip, FileText, Loader2 } from "lucide-react";
+import { MessageCircle, X, Send, Minimize2, Paperclip, FileText, Loader2, Bot, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import EmojiPicker from "@/components/chat/EmojiPicker";
