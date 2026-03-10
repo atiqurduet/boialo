@@ -2,7 +2,6 @@ export function buildCustomerPrompt(data: any) {
   const { settings, products, categories, coupons, delivery, bundles, searchResults, orderTracking, intent, priceRange, categoryResults, publisherResults, writerResults, userContext, chatbotSettings } = data;
   const siteName = settings.site_name || "বইআলো";
   const botName = chatbotSettings?.chatbot_name || "বই বন্ধু";
-  const siteName = settings.site_name || "বইআলো";
 
   const bestSellers = (products || []).slice(0, 10).map((p: any) =>
     `• ${p.title_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""} | স্টক: ${p.stock_quantity || 0} | /product/${p.slug}`
