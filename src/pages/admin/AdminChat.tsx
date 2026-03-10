@@ -286,13 +286,19 @@ const AdminChat = () => {
     mutationFn: async (message: string) => {
       if (!selectedConversation) return;
       
+      const senderName = adminProfile?.full_name || user?.email?.split("@")[0] || "Support";
       const { error } = await supabase.from("chat_messages").insert({
         conversation_id: selectedConversation,
         sender_type: "admin",
         sender_id: user?.id,
-        sender_name: "Support Team",
+        sender_name: senderName,
         message,
       });
+
+      // Also assign this conversation to the current staff if not assigned
+      if (!selectedConv?.assigned_to) {
+        await supabase.from("chat_conversations").update({ assigned_to: user?.id }).eq("id", selectedConversation);
+      }
       
       if (error) throw error;
 
