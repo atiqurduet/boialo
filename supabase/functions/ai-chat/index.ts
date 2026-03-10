@@ -140,14 +140,38 @@ serve(async (req) => {
       console.log("Customer query:", lastUserMsg);
 
       // Dynamic product search based on user query
+      // Phonetic normalization for Banglish variations
+      function generatePhoneticVariations(word: string): string[] {
+        const variations = new Set<string>([word]);
+        const replacements: [RegExp, string][] = [
+          [/o/gi, 'a'], [/a/gi, 'o'], // gitanjoli ↔ gitanjali
+          [/ee/gi, 'i'], [/i/gi, 'ee'],
+          [/oo/gi, 'u'], [/u/gi, 'oo'],
+          [/sh/gi, 'ss'], [/ss/gi, 'sh'],
+          [/ph/gi, 'f'], [/f/gi, 'ph'],
+          [/v/gi, 'bh'], [/bh/gi, 'v'],
+          [/th/gi, 't'], [/ch/gi, 'c'],
+          [/z/gi, 'j'], [/j/gi, 'z'],
+          [/ou/gi, 'u'], [/ow/gi, 'o'],
+        ];
+        const lower = word.toLowerCase();
+        for (const [pattern, replacement] of replacements) {
+          const variant = lower.replace(pattern, replacement);
+          if (variant !== lower && variant.length >= 3) variations.add(variant);
+        }
+        return Array.from(variations);
+      }
+
       // Remove filler words and punctuation for cleaner search
       const fillerWords = new Set(["boi", "ta", "ache", "ki", "kothay", "den", "chai", "lagbe", "dorkar", "book", "price", "dam", "কি", "আছে", "কোথায়", "দাম", "কত", "চাই", "লাগবে", "দরকার", "দেন", "একটা", "একটি", "টা", "টি", "বইটা", "বইটি", "the", "a", "is", "are", "do", "you", "have", "want", "need", "please"]);
       const rawTerms = lastUserMsg.replace(/[।,?!।?\-।:;()"'।]/g, " ").trim();
       const meaningfulWords = rawTerms.split(/\s+/).filter(w => w.length >= 2 && !fillerWords.has(w.toLowerCase()));
       const searchTerms = meaningfulWords.join(" ").trim();
-      // Also create individual word search patterns
+      // Generate phonetic variations for each meaningful word
       const wordPatterns = meaningfulWords.filter(w => w.length >= 3);
-      console.log("Search terms:", searchTerms, "| Word patterns:", wordPatterns);
+      const allVariations = wordPatterns.flatMap(w => generatePhoneticVariations(w));
+      const uniqueVariations = [...new Set(allVariations)];
+      console.log("Search terms:", searchTerms, "| Word patterns:", wordPatterns, "| Variations:", uniqueVariations);
       
       const [productsRes, categoriesRes, settingsRes, offersRes, deliveryRes, bundlesRes] = await Promise.all([
         supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent, sales_count").eq("is_active", true).order("sales_count", { ascending: false }).limit(15),
