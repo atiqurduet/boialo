@@ -1,12 +1,10 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Fetch admin chatbot settings from site_settings
 async function getChatbotSettings(supabase: any) {
   const { data } = await supabase
     .from("site_settings")
@@ -16,7 +14,6 @@ async function getChatbotSettings(supabase: any) {
       "chatbot_fb_verify_token", "chatbot_name", "chatbot_tone", "chatbot_faq",
       "chatbot_custom_instructions", "chatbot_restricted_topics", "chatbot_fallback_message",
     ]);
-
   const cs: Record<string, any> = {};
   (data || []).forEach((s: any) => {
     try { cs[s.setting_key] = typeof s.setting_value === "string" ? JSON.parse(s.setting_value) : s.setting_value; } catch { cs[s.setting_key] = s.setting_value; }
@@ -24,7 +21,63 @@ async function getChatbotSettings(supabase: any) {
   return cs;
 }
 
-// Build system prompt with dynamic product data + admin settings
+// Get or create conversation & return conversation_id
+async function getOrCreateConversation(supabase: any, visitorId: string, visitorName: string, visitorPhone?: string) {
+  const { data: existing } = await supabase
+    .from("chat_conversations")
+    .select("id")
+    .eq("visitor_id", visitorId)
+    .eq("status", "open")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (existing?.id) return existing.id;
+
+  const { data: newConv } = await supabase
+    .from("chat_conversations")
+    .insert({
+      visitor_id: visitorId,
+      visitor_name: visitorName,
+      visitor_phone: visitorPhone || null,
+      status: "open",
+      last_message_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  return newConv?.id;
+}
+
+// Save message to chat_messages
+async function saveMessage(supabase: any, conversationId: string, senderType: string, senderName: string, message: string) {
+  await supabase.from("chat_messages").insert({
+    conversation_id: conversationId,
+    sender_type: senderType,
+    sender_name: senderName,
+    message,
+    message_type: "text",
+  });
+  await supabase.from("chat_conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conversationId);
+}
+
+// Get recent conversation history as AI messages
+async function getConversationHistory(supabase: any, conversationId: string, limit = 10): Promise<{ role: string; content: string }[]> {
+  const { data } = await supabase
+    .from("chat_messages")
+    .select("sender_type, message")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (!data || data.length === 0) return [];
+
+  return data.reverse().map((m: any) => ({
+    role: m.sender_type === "visitor" ? "user" : "assistant",
+    content: m.message,
+  }));
+}
+
 async function buildSystemPrompt(supabase: any, userMessage: string, cs: Record<string, any>) {
   const searchTerms = userMessage.replace(/[।,?!।?\-]/g, " ").trim();
   const botName = cs.chatbot_name || "বই বন্ধু";
@@ -67,49 +120,30 @@ async function buildSystemPrompt(supabase: any, userMessage: string, cs: Record<
     const orderNum = orderMatch[0].replace('#', '');
     const { data: od } = await supabase.rpc("get_order_tracking", { p_order_number: orderNum });
     if (od && !od.error) {
-      const statusMap: Record<string, string> = {
-        pending: "⏳ পেন্ডিং", confirmed: "✅ কনফার্মড", processing: "🔄 প্রসেসিং",
-        shipped: "🚚 শিপড", delivered: "📦 ডেলিভারড", cancelled: "❌ বাতিল"
-      };
+      const statusMap: Record<string, string> = { pending: "⏳ পেন্ডিং", confirmed: "✅ কনফার্মড", processing: "🔄 প্রসেসিং", shipped: "🚚 শিপড", delivered: "📦 ডেলিভারড", cancelled: "❌ বাতিল" };
       orderInfo = `\n📦 অর্ডার #${od.order_number}: ${statusMap[od.status] || od.status} | কুরিয়ার: ${od.courier_provider || "N/A"} | ট্র্যাকিং: ${od.tracking_number || "শীঘ্রই"}`;
     }
   }
 
   const settingsMap: Record<string, string> = {};
-  (settingsRes.data || []).forEach((s: any) => {
-    settingsMap[s.setting_key] = typeof s.setting_value === "string" ? s.setting_value : JSON.stringify(s.setting_value);
-  });
+  (settingsRes.data || []).forEach((s: any) => { settingsMap[s.setting_key] = typeof s.setting_value === "string" ? s.setting_value : JSON.stringify(s.setting_value); });
 
   const siteName = settingsMap.site_name || "বইআলো";
   const siteUrl = settingsMap.site_url || "https://boialo.lovable.app";
-  const bestSellers = (productsRes.data || []).slice(0, 8).map((p: any) =>
-    `• ${p.title_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""} | ${siteUrl}/product/${p.slug}`
-  ).join("\n");
+  const bestSellers = (productsRes.data || []).slice(0, 8).map((p: any) => `• ${p.title_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""} | ${siteUrl}/product/${p.slug}`).join("\n");
   const categoryList = (categoriesRes.data || []).map((c: any) => c.name_bn).join(", ");
-  const activeCoupons = (offersRes.data || []).map((c: any) =>
-    `• কোড: ${c.code} - ${c.discount_type === 'percentage' ? `${c.discount_value}%` : `৳${c.discount_value}`} ছাড়`
-  ).join("\n");
-  const deliveryInfo = (deliveryRes.data || []).map((d: any) =>
-    `• ${d.zone_name_bn}: ৳${d.delivery_charge}`
-  ).join("\n");
+  const activeCoupons = (offersRes.data || []).map((c: any) => `• কোড: ${c.code} - ${c.discount_type === 'percentage' ? `${c.discount_value}%` : `৳${c.discount_value}`} ছাড়`).join("\n");
+  const deliveryInfo = (deliveryRes.data || []).map((d: any) => `• ${d.zone_name_bn}: ৳${d.delivery_charge}`).join("\n");
 
-  // Tone from admin settings
-  const toneMap: Record<string, string> = {
-    friendly: "বন্ধুসুলভ ও আন্তরিক ভাবে কথা বলো",
-    professional: "প্রফেশনাল ও সংক্ষিপ্ত ভাবে উত্তর দাও",
-    casual: "ক্যাজুয়াল ও মজাদার ভাবে কথা বলো",
-    formal: "ফর্মাল ও সম্মানজনক ভাবে আপনি সম্বোধন ব্যবহার করো",
-  };
+  const toneMap: Record<string, string> = { friendly: "বন্ধুসুলভ ও আন্তরিক ভাবে কথা বলো", professional: "প্রফেশনাল ও সংক্ষিপ্ত ভাবে উত্তর দাও", casual: "ক্যাজুয়াল ও মজাদার ভাবে কথা বলো", formal: "ফর্মাল ও সম্মানজনক ভাবে আপনি সম্বোধন ব্যবহার করো" };
   const toneInstruction = toneMap[cs.chatbot_tone] || toneMap.friendly;
 
-  // FAQ from admin
   const faqItems = Array.isArray(cs.chatbot_faq) ? cs.chatbot_faq : [];
   let faqSection = "";
   if (faqItems.length > 0) {
     faqSection = `\n\n📋 FAQ:\n` + faqItems.filter((f: any) => f.question && f.answer).map((f: any) => `প্রশ্ন: "${f.question}"\nউত্তর: ${f.answer}`).join("\n\n");
   }
 
-  // Restricted topics
   const restricted = Array.isArray(cs.chatbot_restricted_topics) ? cs.chatbot_restricted_topics : [];
   let restrictedSection = "";
   if (restricted.length > 0) {
@@ -117,7 +151,6 @@ async function buildSystemPrompt(supabase: any, userMessage: string, cs: Record<
     restrictedSection = `\n\n🚫 নিষিদ্ধ (এগুলো বললে বলবে: "${fallback}"):\n${restricted.map((t: string) => `- ${t}`).join("\n")}`;
   }
 
-  // Custom instructions
   const customInstructions = cs.chatbot_custom_instructions;
   let customSection = "";
   if (customInstructions && typeof customInstructions === "string" && customInstructions.trim()) {
@@ -125,6 +158,8 @@ async function buildSystemPrompt(supabase: any, userMessage: string, cs: Record<
   }
 
   return `তুমি "${siteName}" এর WhatsApp AI সহকারী "${botName}"। সবসময় বাংলায় উত্তর দাও।
+তুমি কথোপকথনের ইতিহাস মনে রাখো — আগের মেসেজ context হিসেবে পাবে। ধারাবাহিকভাবে উত্তর দাও।
+
 🌐 ওয়েবসাইট: ${siteUrl}
 📞 ফোন: ${settingsMap.contact_phone || "N/A"} | ইমেইল: ${settingsMap.contact_email || "N/A"}
 
@@ -143,10 +178,11 @@ ${searchResults.length > 0 ? `\n🔍 সার্চ রেজাল্ট:\n${s
 6. ইমোজি ব্যবহার করো
 7. সার্চ রেজাল্ট ও FAQ থাকলে সেগুলো অগ্রাধিকার দাও
 8. WhatsApp এ মার্কডাউন: *bold*, _italic_, ~strikethrough~ ব্যবহার করো
-9. কখনো "নমস্কার" বলবে না। "আসসালামু আলাইকুম"/"হ্যালো" ব্যবহার করো`;
+9. কখনো "নমস্কার" বলবে না। "আসসালামু আলাইকুম"/"হ্যালো" ব্যবহার করো
+10. আগের কথোপকথনের সাথে consistent থাকো — যা আগে বলেছো সেটা মনে রাখো`;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabase = createClient(
@@ -179,13 +215,11 @@ serve(async (req) => {
 
     const cs = await getChatbotSettings(supabase);
 
-    // Check if WA integration is enabled
     if (cs.chatbot_wa_enabled === false || cs.chatbot_wa_enabled === "false") {
       console.log("WA chatbot disabled via admin settings");
       return new Response("OK", { status: 200 });
     }
 
-    // Use admin-stored tokens first, fallback to env secrets
     const WHATSAPP_ACCESS_TOKEN = cs.chatbot_wa_access_token || Deno.env.get("WHATSAPP_ACCESS_TOKEN");
     const WHATSAPP_PHONE_NUMBER_ID = cs.chatbot_wa_phone_number_id || Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -207,45 +241,59 @@ serve(async (req) => {
         const messageText = msg.text?.body;
         if (!senderPhone || !messageText) continue;
 
+        const visitorId = `wa_${senderPhone}`;
+        const senderName = change.value?.contacts?.[0]?.profile?.name || "WhatsApp User";
+
+        // Get or create conversation
+        const conversationId = await getOrCreateConversation(supabase, visitorId, senderName, senderPhone);
+        if (!conversationId) {
+          console.error("Failed to get/create conversation");
+          continue;
+        }
+
+        // Save incoming user message
+        await saveMessage(supabase, conversationId, "visitor", senderName, messageText);
+
         await markAsRead(msg.id, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN);
 
         const systemPrompt = await buildSystemPrompt(supabase, messageText, cs);
+
+        // Get conversation history (last 10 messages)
+        const history = await getConversationHistory(supabase, conversationId, 10);
+
+        const aiMessages = [
+          { role: "system", content: systemPrompt },
+          ...history,
+        ];
 
         const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             model: "google/gemini-3-flash-preview",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: messageText },
-            ],
+            messages: aiMessages,
             stream: false,
           }),
         });
 
         if (!aiResponse.ok) {
           console.error("AI gateway error:", aiResponse.status);
-          await sendWAMessage(senderPhone, "দুঃখিত, এই মুহূর্তে সমস্যা হচ্ছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন। 🙏", WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN);
+          const errMsg = "দুঃখিত, এই মুহূর্তে সমস্যা হচ্ছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন। 🙏";
+          await sendWAMessage(senderPhone, errMsg, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN);
+          await saveMessage(supabase, conversationId, "bot", cs.chatbot_name || "বই বন্ধু", errMsg);
           continue;
         }
 
         const aiData = await aiResponse.json();
         const reply = aiData.choices?.[0]?.message?.content || "দুঃখিত, উত্তর দিতে পারছি না। 🙏";
 
+        // Save bot reply
+        await saveMessage(supabase, conversationId, "bot", cs.chatbot_name || "বই বন্ধু", reply);
+
         const chunks = splitMessage(reply, 4096);
         for (const chunk of chunks) {
           await sendWAMessage(senderPhone, chunk, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN);
         }
-
-        const senderName = change.value?.contacts?.[0]?.profile?.name || "WhatsApp User";
-        await supabase.from("chat_conversations").upsert({
-          visitor_id: `wa_${senderPhone}`,
-          visitor_name: senderName,
-          visitor_phone: senderPhone,
-          status: "open",
-          last_message_at: new Date().toISOString(),
-        }, { onConflict: "visitor_id" }).select().single();
       }
     }
 
