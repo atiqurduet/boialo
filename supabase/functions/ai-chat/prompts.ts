@@ -1,5 +1,7 @@
 export function buildCustomerPrompt(data: any) {
-  const { settings, products, categories, coupons, delivery, bundles, searchResults, orderTracking, intent, priceRange, categoryResults, publisherResults, writerResults, userContext } = data;
+  const { settings, products, categories, coupons, delivery, bundles, searchResults, orderTracking, intent, priceRange, categoryResults, publisherResults, writerResults, userContext, chatbotSettings } = data;
+  const siteName = settings.site_name || "বইআলো";
+  const botName = chatbotSettings?.chatbot_name || "বই বন্ধু";
   const siteName = settings.site_name || "বইআলো";
 
   const bestSellers = (products || []).slice(0, 10).map((p: any) =>
@@ -71,7 +73,39 @@ export function buildCustomerPrompt(data: any) {
     }
   }
 
-  return `তুমি "${siteName}" অনলাইন শপের AI সহকারী "বই বন্ধু"। তুমি অত্যন্ত বুদ্ধিমান, সহানুভূতিশীল ও বাংলাদেশের সংস্কৃতি বোঝো।
+  // Build tone instruction
+  const toneMap: Record<string, string> = {
+    friendly: "বন্ধুসুলভ ও আন্তরিক — একজন বুদ্ধিমান বন্ধুর মতো কথা বলো",
+    professional: "প্রফেশনাল ও সংক্ষিপ্ত — ব্যবসায়িক ভাষায় উত্তর দাও",
+    casual: "ক্যাজুয়াল ও মজাদার — হালকা মেজাজে কথা বলো",
+    formal: "ফর্মাল ও সম্মানজনক — আপনি সম্বোধন ব্যবহার করো",
+  };
+  const toneInstruction = toneMap[chatbotSettings?.chatbot_tone] || toneMap.friendly;
+
+  // Build FAQ section
+  const faqItems = Array.isArray(chatbotSettings?.chatbot_faq) ? chatbotSettings.chatbot_faq : [];
+  let faqSection = "";
+  if (faqItems.length > 0) {
+    faqSection = `\n\n📋 প্রি-সেট FAQ (এই প্রশ্নগুলো পেলে এই উত্তর অগ্রাধিকার দাও):\n` +
+      faqItems.filter((f: any) => f.question && f.answer).map((f: any) => `প্রশ্ন: "${f.question}"\nউত্তর: ${f.answer}`).join("\n\n");
+  }
+
+  // Build restricted topics
+  const restricted = Array.isArray(chatbotSettings?.chatbot_restricted_topics) ? chatbotSettings.chatbot_restricted_topics : [];
+  let restrictedSection = "";
+  if (restricted.length > 0) {
+    const fallback = chatbotSettings?.chatbot_fallback_message || "দুঃখিত, এই বিষয়ে আমি সাহায্য করতে পারছি না।";
+    restrictedSection = `\n\n🚫 নিষিদ্ধ বিষয় (এগুলো সম্পর্কে কোনো উত্তর দেবে না, পরিবর্তে বলবে: "${fallback}"):\n${restricted.map((t: string) => `- ${t}`).join("\n")}`;
+  }
+
+  // Custom instructions from admin
+  const customInstructions = chatbotSettings?.chatbot_custom_instructions;
+  let customSection = "";
+  if (customInstructions && typeof customInstructions === "string" && customInstructions.trim()) {
+    customSection = `\n\n📝 অ্যাডমিনের বিশেষ নির্দেশনা (অবশ্যই মেনে চলো):\n${customInstructions}`;
+  }
+
+  return `তুমি "${siteName}" অনলাইন শপের AI সহকারী "${botName}"। তুমি অত্যন্ত বুদ্ধিমান, সহানুভূতিশীল ও বাংলাদেশের সংস্কৃতি বোঝো।
 
 🧠 তোমার বিশেষ দক্ষতা:
 - কথোপকথনের প্রসঙ্গ মনে রাখো — আগের মেসেজ দেখে ধারাবাহিকভাবে উত্তর দাও
@@ -88,11 +122,11 @@ export function buildCustomerPrompt(data: any) {
 📂 ক্যাটাগরি: ${categoryList || "N/A"}
 🎁 অফার:\n${activeCoupons || "বর্তমানে কোনো অফার নেই"}
 🚚 ডেলিভারি:\n${deliveryInfo || "ঢাকায় ৳60, বাইরে ৳120"}
-📦 বান্ডেল:\n${bundleInfo || "নেই"}${searchSection}${contextSections}${orderSection}${priceHint}${userSection}
+📦 বান্ডেল:\n${bundleInfo || "নেই"}${searchSection}${contextSections}${orderSection}${priceHint}${userSection}${faqSection}${restrictedSection}${customSection}
 🎯 ইন্টেন্ট: ${intent}
 
 ⭐ নিয়ম:
-1. ফ্রেন্ডলি ও সংক্ষিপ্ত কিন্তু তথ্যপূর্ণ — একজন বুদ্ধিমান বন্ধুর মতো কথা বলো
+1. ${toneInstruction}
 2. প্রোডাক্ট রিকমেন্ডে নাম, মূল্য ও মার্কডাউন লিংক [নাম](path) দাও
 3. অর্ডার ট্র্যাকিং এ অর্ডার নম্বর (BOI-XXXX) জিজ্ঞেস করো
 4. রিফান্ড/জটিল সমস্যায় 👤 লাইভ চ্যাট ও ফোন দাও
@@ -107,7 +141,8 @@ export function buildCustomerPrompt(data: any) {
 13. গ্রাহক লগ-ইন থাকলে তার নাম ধরে সম্বোধন করো
 14. কার্ট/উইশলিস্ট context থাকলে সেটা reference করে cross-sell/upsell করো
 15. প্রশ্ন অস্পষ্ট হলে নিজে থেকে clarifying question করো
-16. একই conversation-এ আগে যা বলেছো তার সাথে consistent থাকো`;
+16. একই conversation-এ আগে যা বলেছো তার সাথে consistent থাকো
+17. FAQ-তে মিল পেলে সেই উত্তর সরাসরি ব্যবহার করো`;
 }
 
 export function buildAdminPrompt(data: any, context?: string) {

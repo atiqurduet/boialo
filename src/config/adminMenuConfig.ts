@@ -83,6 +83,7 @@ export const menuCategories: MenuCategory[] = [
       { icon: RefreshCw, label: 'রিফান্ড রিকোয়েস্ট', href: '/admin/refund-requests', roles: ['super_admin', 'admin', 'manager', 'support'] },
       { icon: AlertTriangle, label: 'ফ্রড রিভিউ', href: '/admin/fraud-review', roles: ['super_admin', 'admin', 'manager'] },
       { icon: MessageCircle, label: 'লাইভ চ্যাট', href: '/admin/chat', roles: ['super_admin', 'admin', 'manager', 'support'] },
+      { icon: Bot, label: 'চ্যাটবট সেটিংস', href: '/admin/chatbot-settings', roles: ['super_admin', 'admin'] },
       { icon: Mail, label: 'কন্টাক্ট বার্তা', href: '/admin/contact-messages', roles: ['super_admin', 'admin', 'manager', 'support'] },
     ]
   },
