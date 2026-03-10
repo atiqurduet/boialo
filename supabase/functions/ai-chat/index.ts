@@ -209,7 +209,7 @@ serve(async (req) => {
         const { data: writerData } = await supabase.from("writers").select("id").or(writerOrConds).limit(3);
         if (writerData && writerData.length > 0) {
           const writerIds = writerData.map((w: any) => w.id);
-          const { data: wb } = await supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percentage").eq("is_active", true).in("writer_id", writerIds).limit(10);
+          const { data: wb } = await supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent").eq("is_active", true).in("writer_id", writerIds).limit(10);
           writerBooks = wb || [];
         }
       }
