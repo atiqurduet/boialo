@@ -228,8 +228,8 @@ serve(async (req) => {
       // Strategy 3: Search by writer/author name if still no results
       let writerBooks: any[] = [];
       if (searchTerms.length >= 2 && allBookResults.length === 0) {
-        const writerOrConds = wordPatterns.length > 0
-          ? wordPatterns.flatMap(w => [`name_bn.ilike.%${w}%`, `name_en.ilike.%${w}%`]).join(",")
+        const writerOrConds = uniqueVariations.length > 0
+          ? uniqueVariations.flatMap(w => [`name_bn.ilike.%${w}%`, `name_en.ilike.%${w}%`]).join(",")
           : `name_bn.ilike.%${searchTerms}%,name_en.ilike.%${searchTerms}%`;
         const { data: writerData } = await supabase.from("writers").select("id").or(writerOrConds).limit(3);
         if (writerData && writerData.length > 0) {
