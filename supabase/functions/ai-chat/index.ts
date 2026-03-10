@@ -171,6 +171,7 @@ serve(async (req) => {
           supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("name_en", `%${searchTerms}%`).limit(10),
           supabase.from("digital_products").select("title_bn, price, slug, is_free, discount_percent").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10),
         ]);
+        console.log("Strategy1 BnBooks:", booksBnFull.data?.length, booksBnFull.error?.message, "EnBooks:", booksEnFull.data?.length, booksEnFull.error?.message);
         allBookResults = [...(booksBnFull.data || []), ...(booksEnFull.data || [])];
         allUniversalResults = [...(univBnFull.data || []), ...(univEnFull.data || [])];
         allEbookResults = ebooksFull.data || [];
