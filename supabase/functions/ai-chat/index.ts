@@ -273,7 +273,7 @@ serve(async (req) => {
         supabase.from("orders").select("total_amount, status, payment_method, delivery_area", { count: "exact" }).gte("created_at", since30),
         supabase.from("orders").select("total_amount, status", { count: "exact" }).gte("created_at", since7),
         supabase.from("orders").select("total_amount", { count: "exact" }).gte("created_at", since90),
-        supabase.from("products").select("title_bn, price, stock_quantity, sales_count, discount_percentage", { count: "exact" }).eq("is_active", true),
+        supabase.from("products").select("title_bn, price, stock_quantity, sales_count, discount_percent", { count: "exact" }).eq("is_active", true),
         supabase.from("profiles").select("id, created_at", { count: "exact" }),
         supabase.from("abandoned_checkouts").select("subtotal", { count: "exact" }).gte("created_at", since30).eq("recovered", false),
         supabase.from("coupons").select("code", { count: "exact" }).eq("is_active", true),
