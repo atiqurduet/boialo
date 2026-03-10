@@ -84,10 +84,6 @@ const ChatWidget = () => {
     };
     checkEnabled();
   }, []);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const aiChatHistoryRef = useRef<Array<{ role: string; content: string }>>([]);
 
   const getVisitorId = (phone?: string) => {
     if (phone) return `phone_${phone.replace(/\D/g, '')}`;
