@@ -730,6 +730,12 @@ const AdminChat = () => {
                             <p className="text-xs text-muted-foreground mt-1">
                               {format(new Date(conv.last_message_at), "dd MMM yyyy, hh:mm a", { locale: bn })}
                             </p>
+                            {conv.assigned_to && (
+                              <p className="text-[10px] text-primary font-medium mt-0.5 flex items-center gap-1">
+                                <User className="h-2.5 w-2.5" />
+                                {getStaffName(conv.assigned_to)}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </button>
