@@ -11,7 +11,7 @@ async function buildSystemPrompt(supabase: any, userMessage: string) {
   const searchTerms = userMessage.replace(/[।,?!।?\-]/g, " ").trim();
 
   const [productsRes, categoriesRes, settingsRes, offersRes, deliveryRes] = await Promise.all([
-    supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percentage").eq("is_active", true).order("sales_count", { ascending: false }).limit(10),
+    supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent").eq("is_active", true).order("sales_count", { ascending: false }).limit(10),
     supabase.from("categories").select("name_bn, slug").eq("is_active", true).limit(15),
     supabase.from("site_settings").select("setting_key, setting_value").in("setting_key", ["site_name", "contact_phone", "contact_email", "site_url"]),
     supabase.from("coupons").select("code, discount_type, discount_value, min_order_amount").eq("is_active", true).limit(5),
