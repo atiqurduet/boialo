@@ -37,7 +37,7 @@ function buildCustomerPrompt(data: any) {
         const link = type === "book" ? `/product/${p.slug}` : type === "universal" ? `/universal-product/${p.slug}` : `/ebook/${p.slug}`;
         const name = p.title_bn || p.name_bn || "প্রোডাক্ট";
         const stock = p.stock_quantity !== undefined ? ` | স্টক: ${p.stock_quantity}` : "";
-        const discount = p.discount_percentage || p.discount_percent;
+        const discount = p.discount_percent;
         return `• ${name} - ৳${p.price}${discount ? ` (${discount}% ছাড়)` : ""}${stock} | [${link}]`;
       }).join("\n");
   }
