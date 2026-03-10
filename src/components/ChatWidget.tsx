@@ -61,6 +61,29 @@ const ChatWidget = () => {
   const [showQuickActions, setShowQuickActions] = useState(true);
   const [feedbackGiven, setFeedbackGiven] = useState<Record<string, "up" | "down">>({});
   const [pulseButton, setPulseButton] = useState(true);
+  const [chatbotEnabled, setChatbotEnabled] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const aiChatHistoryRef = useRef<Array<{ role: string; content: string }>>([]);
+
+  // Check if chatbot is enabled
+  useEffect(() => {
+    const checkEnabled = async () => {
+      const { data } = await supabase
+        .from("site_settings")
+        .select("setting_value")
+        .eq("setting_key", "chatbot_enabled")
+        .single();
+      if (data) {
+        try {
+          const val = typeof data.setting_value === "string" ? JSON.parse(data.setting_value) : data.setting_value;
+          setChatbotEnabled(val !== false && val !== "false");
+        } catch { setChatbotEnabled(true); }
+      }
+    };
+    checkEnabled();
+  }, []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
