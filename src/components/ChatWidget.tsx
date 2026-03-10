@@ -47,10 +47,13 @@ const ChatWidget = () => {
   const [uploading, setUploading] = useState(false);
   const [stagedFile, setStagedFile] = useState<StagedFile | null>(null);
   const [isAdminTyping, setIsAdminTyping] = useState(false);
+  const [chatMode, setChatMode] = useState<"ai" | "human">("ai");
+  const [aiResponding, setAiResponding] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const aiChatHistoryRef = useRef<Array<{role: string; content: string}>>([]);
 
   // Generate or get visitor ID based on phone
   const getVisitorId = (phone?: string) => {
