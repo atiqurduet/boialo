@@ -271,6 +271,7 @@ const App = () => (
                 <Route path="/admin/popup-banners" element={<AdminPopupBanners />} />
                 <Route path="/admin/ebooks" element={<AdminEbooks />} />
                 <Route path="/admin/eproducts" element={<AdminEproducts />} />
+                <Route path="/admin/ai-assistant" element={<AdminAIAssistant />} />
                 
                 {/* Dynamic Page Route - must be before catch-all */}
                 <Route path="/:slug" element={<DynamicPage />} />
