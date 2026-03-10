@@ -49,7 +49,10 @@ const AdminChatbotSettings = () => {
       .in("setting_key", [
         "chatbot_enabled", "chatbot_greeting", "chatbot_custom_instructions",
         "chatbot_faq", "chatbot_name", "chatbot_tone",
-        "chatbot_restricted_topics", "chatbot_fallback_message"
+        "chatbot_restricted_topics", "chatbot_fallback_message",
+        "chatbot_fb_enabled", "chatbot_wa_enabled",
+        "chatbot_fb_page_token", "chatbot_fb_verify_token",
+        "chatbot_wa_access_token", "chatbot_wa_phone_number_id"
       ]);
 
     const map: Record<string, any> = {};
