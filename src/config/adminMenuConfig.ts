@@ -35,6 +35,7 @@ import {
   BookOpen,
   MapPin,
   Globe,
+  Bot,
   type LucideIcon
 } from 'lucide-react';
 
