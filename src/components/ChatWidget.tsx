@@ -232,7 +232,23 @@ const ChatWidget = () => {
       if (stagedFile) { attachment = await uploadFile(stagedFile.file); removeStagedFile(); }
       const finalMsg = messageText || (attachment?.type === 'image' ? '📷 ছবি' : '📄 PDF');
       const visitorId = localStorage.getItem("chat_visitor_id") || "";
-      await supabase.rpc("insert_visitor_chat_message", {
+
+      // Optimistically show user message immediately
+      const optimisticId = `opt_${Date.now()}`;
+      const optimisticMsg: Message = {
+        id: optimisticId,
+        sender_type: "customer",
+        sender_name: visitorInfo.name,
+        message: finalMsg,
+        created_at: new Date().toISOString(),
+        attachment_url: attachment?.url || null,
+        attachment_type: attachment?.type || null,
+        attachment_name: attachment?.name || null,
+      };
+      setMessages(prev => [...prev, optimisticMsg]);
+
+      // Save to DB (don't await blocking - let realtime handle dedup)
+      const rpcPromise = supabase.rpc("insert_visitor_chat_message", {
         p_conversation_id: conversationId, p_visitor_id: visitorId,
         p_sender_type: "customer", p_sender_name: visitorInfo.name,
         p_message: finalMsg,
@@ -245,6 +261,10 @@ const ChatWidget = () => {
         setAiResponding(true);
         setIsAdminTyping(true);
         try {
+          // Wait for RPC to complete before AI call
+          const { error: rpcError } = await rpcPromise;
+          if (rpcError) console.error("RPC insert error:", rpcError);
+
           aiChatHistoryRef.current.push({ role: "user", content: messageText });
           const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`, {
             method: "POST",
@@ -254,11 +274,17 @@ const ChatWidget = () => {
           if (!resp.ok || !resp.body) {
             if (resp.status === 429) throw new Error("অনেক বেশি রিকোয়েস্ট, কিছুক্ষণ পর চেষ্টা করুন");
             if (resp.status === 402) throw new Error("সার্ভিস সাময়িক অনুপলব্ধ");
+            const errText = await resp.text().catch(() => "");
+            console.error("AI response error:", resp.status, errText);
             throw new Error("AI সংযোগ ব্যর্থ");
           }
+
+          // Stream AI response and show progressively
           const reader = resp.body.getReader();
           const decoder = new TextDecoder();
           let buf = "", fullResp = "", done = false;
+          const aiMsgId = `ai_${Date.now()}`;
+
           while (!done) {
             const { done: d, value } = await reader.read();
             if (d) break;
@@ -270,27 +296,95 @@ const ChatWidget = () => {
               if (!line.startsWith("data: ")) continue;
               const j = line.slice(6).trim();
               if (j === "[DONE]") { done = true; break; }
-              try { const p = JSON.parse(j); const c = p.choices?.[0]?.delta?.content; if (c) fullResp += c; }
+              try {
+                const p = JSON.parse(j);
+                const c = p.choices?.[0]?.delta?.content;
+                if (c) {
+                  fullResp += c;
+                  // Update AI message in real-time (streaming effect)
+                  setMessages(prev => {
+                    const existing = prev.find(m => m.id === aiMsgId);
+                    if (existing) {
+                      return prev.map(m => m.id === aiMsgId ? { ...m, message: fullResp } : m);
+                    }
+                    return [...prev, {
+                      id: aiMsgId,
+                      sender_type: "admin",
+                      sender_name: "🤖 AI সহকারী",
+                      message: fullResp,
+                      created_at: new Date().toISOString(),
+                    }];
+                  });
+                }
+              }
               catch { buf = line + "\n" + buf; break; }
             }
           }
+
+          // Flush remaining buffer
+          if (buf.trim()) {
+            for (let raw of buf.split("\n")) {
+              if (!raw) continue;
+              if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+              if (!raw.startsWith("data: ")) continue;
+              const j = raw.slice(6).trim();
+              if (j === "[DONE]") continue;
+              try {
+                const p = JSON.parse(j);
+                const c = p.choices?.[0]?.delta?.content;
+                if (c) {
+                  fullResp += c;
+                  setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, message: fullResp } : m));
+                }
+              } catch { /* ignore */ }
+            }
+          }
+
           if (fullResp.trim()) {
             aiChatHistoryRef.current.push({ role: "assistant", content: fullResp });
+            // Save AI response to DB
             await supabase.rpc("insert_visitor_chat_message", {
               p_conversation_id: conversationId, p_visitor_id: visitorId,
               p_sender_type: "admin", p_sender_name: "🤖 AI সহকারী", p_message: fullResp.trim(),
             });
+          } else {
+            // No response received - show error
+            const errMsg = "দুঃখিত, উত্তর পাওয়া যায়নি। আবার চেষ্টা করুন। 🙏";
+            setMessages(prev => [...prev, {
+              id: aiMsgId,
+              sender_type: "admin",
+              sender_name: "🤖 AI সহকারী",
+              message: errMsg,
+              created_at: new Date().toISOString(),
+            }]);
           }
         } catch (aiErr: any) {
           console.error("AI error:", aiErr);
-          await supabase.rpc("insert_visitor_chat_message", {
-            p_conversation_id: conversationId, p_visitor_id: localStorage.getItem("chat_visitor_id") || "",
-            p_sender_type: "admin", p_sender_name: "🤖 AI সহকারী",
-            p_message: `⚠️ ${aiErr.message || "সমস্যা হয়েছে।"} \"👤 লাইভ চ্যাট\" এ যোগাযোগ করুন। 🙏`,
-          });
+          const errMsg = `⚠️ ${aiErr.message || "সমস্যা হয়েছে।"} "👤 লাইভ চ্যাট" এ যোগাযোগ করুন। 🙏`;
+          setMessages(prev => [...prev, {
+            id: `err_${Date.now()}`,
+            sender_type: "admin",
+            sender_name: "🤖 AI সহকারী",
+            message: errMsg,
+            created_at: new Date().toISOString(),
+          }]);
+          // Also save error to DB
+          try {
+            await supabase.rpc("insert_visitor_chat_message", {
+              p_conversation_id: conversationId, p_visitor_id: visitorId,
+              p_sender_type: "admin", p_sender_name: "🤖 AI সহকারী", p_message: errMsg,
+            });
+          } catch { /* ignore */ }
         } finally { setAiResponding(false); setIsAdminTyping(false); }
+      } else {
+        // Human mode - just save the message
+        await rpcPromise;
       }
-    } catch { toast.error("মেসেজ পাঠাতে সমস্যা"); setNewMessage(messageText); }
+    } catch (err: any) {
+      console.error("Send message error:", err);
+      toast.error("মেসেজ পাঠাতে সমস্যা");
+      setNewMessage(messageText);
+    }
     finally { setUploading(false); }
   };
 
