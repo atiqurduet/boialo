@@ -149,7 +149,7 @@ serve(async (req) => {
       console.log("Search terms:", searchTerms, "| Word patterns:", wordPatterns);
       
       const [productsRes, categoriesRes, settingsRes, offersRes, deliveryRes, bundlesRes] = await Promise.all([
-        supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percentage, sales_count").eq("is_active", true).order("sales_count", { ascending: false }).limit(15),
+        supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent, sales_count").eq("is_active", true).order("sales_count", { ascending: false }).limit(15),
         supabase.from("categories").select("name_bn, slug").eq("is_active", true).limit(20),
         supabase.from("site_settings").select("setting_key, setting_value").in("setting_key", ["site_name", "contact_phone", "contact_email"]),
         supabase.from("coupons").select("code, discount_type, discount_value, min_order_amount").eq("is_active", true).limit(5),
