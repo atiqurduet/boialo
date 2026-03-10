@@ -12,7 +12,7 @@ function buildCustomerPrompt(data: any) {
   const siteName = settings.site_name || "বইআলো";
 
   const bestSellers = (products || []).slice(0, 10).map((p: any) =>
-    `• ${p.title_bn} - ৳${p.price}${p.discount_percentage ? ` (${p.discount_percentage}% ছাড়)` : ""} | স্টক: ${p.stock_quantity || 0} | /product/${p.slug}`
+    `• ${p.title_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""} | স্টক: ${p.stock_quantity || 0} | /product/${p.slug}`
   ).join("\n");
 
   const categoryList = (categories || []).map((c: any) => `${c.name_bn} (/category/${c.slug})`).join(", ");
