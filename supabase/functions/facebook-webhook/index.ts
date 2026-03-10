@@ -40,7 +40,7 @@ async function buildSystemPrompt(supabase: any, userMessage: string) {
         supabase.from("universal_products").select("name_bn, price, slug, discount_percent").eq("is_active", true).ilike("name_en", `%${searchTerms}%`).limit(8),
       ]);
       searchResults = [
-        ...(booksEn.data || []).map((p: any) => `📚 ${p.title_bn} - ৳${p.price}${p.discount_percentage ? ` (${p.discount_percentage}% ছাড়)` : ""}`),
+        ...(booksEn.data || []).map((p: any) => `📚 ${p.title_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""}`),
         ...(universalEn.data || []).map((p: any) => `🛍️ ${p.name_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""}`),
       ];
     }
