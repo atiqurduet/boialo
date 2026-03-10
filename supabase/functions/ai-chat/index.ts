@@ -22,109 +22,132 @@ Deno.serve(async (req) => {
       const lastUserMsg = messages?.[messages.length - 1]?.content || "";
       const intent = detectIntent(lastUserMsg);
       const priceRange = extractPriceRange(lastUserMsg);
-      const keywords = extractSearchKeywords(lastUserMsg);
+      console.log("Intent:", intent, "| Query:", lastUserMsg.slice(0, 60));
+
+      // For greetings/complaints/delivery/coupon — skip heavy search, just fetch minimal context
+      const needsSearch = ["product_search", "price_query", "recommendation", "general", "category_browse"].includes(intent);
+
+      const keywords = needsSearch ? extractSearchKeywords(lastUserMsg) : [];
       const wordPatterns = keywords.filter(w => w.length >= 3);
-      const allVariations = wordPatterns.flatMap(w => generatePhoneticVariations(w));
-      const uniqueVariations = [...new Set(allVariations)];
+      const uniqueVariations = [...new Set(wordPatterns.flatMap(w => generatePhoneticVariations(w)))];
       const banglaWords = keywords.filter(w => /[\u0980-\u09FF]/.test(w));
       const searchTerms = keywords.join(" ").trim();
+      const allSearchTerms = [...uniqueVariations, ...banglaWords];
 
-      console.log("Intent:", intent, "| Keywords:", keywords, "| Variations:", uniqueVariations.length);
-
-      const [productsRes, categoriesRes, settingsRes, offersRes, deliveryRes, bundlesRes] = await Promise.all([
-        supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent, sales_count").eq("is_active", true).order("sales_count", { ascending: false }).limit(15),
-        supabase.from("categories").select("name_bn, slug").eq("is_active", true).limit(20),
+      // ── PHASE 1: Fetch base data + search ALL in parallel ──
+      const basePromises: Promise<any>[] = [
+        supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent, sales_count").eq("is_active", true).order("sales_count", { ascending: false }).limit(10),
+        supabase.from("categories").select("name_bn, slug").eq("is_active", true).limit(15),
         supabase.from("site_settings").select("setting_key, setting_value").in("setting_key", ["site_name", "contact_phone", "contact_email"]),
         supabase.from("coupons").select("code, discount_type, discount_value, min_order_amount").eq("is_active", true).limit(5),
-        supabase.from("delivery_zones").select("zone_name_bn, delivery_charge, estimated_days_min, estimated_days_max").eq("is_active", true).limit(10),
+        supabase.from("delivery_zones").select("zone_name_bn, delivery_charge, estimated_days_min, estimated_days_max").eq("is_active", true).limit(8),
         supabase.from("product_bundles").select("name_bn, bundle_price, original_price").eq("is_active", true).limit(5),
-      ]);
+      ];
 
-      let allBookResults: any[] = [];
-      let allUniversalResults: any[] = [];
-      let allEbookResults: any[] = [];
-      let categoryResults: any[] = [];
-      let publisherResults: any[] = [];
-      let writerResults: any[] = [];
+      // Add search queries in SAME parallel batch if needed
+      if (needsSearch && allSearchTerms.length > 0) {
+        const bookOr = allSearchTerms.flatMap(w => [`title_bn.ilike.%${w}%`, `title_en.ilike.%${w}%`]).join(",");
+        const univOr = allSearchTerms.flatMap(w => [`name_bn.ilike.%${w}%`, `name_en.ilike.%${w}%`]).join(",");
+        const ebookOr = allSearchTerms.flatMap(w => [`title_bn.ilike.%${w}%`, `title_en.ilike.%${w}%`]).join(",");
+        const writerOr = allSearchTerms.flatMap(w => [`name_bn.ilike.%${w}%`, `name_en.ilike.%${w}%`]).join(",");
+        const pubOr = allSearchTerms.flatMap(w => [`name_bn.ilike.%${w}%`, `name_en.ilike.%${w}%`]).join(",");
+        const catOr = allSearchTerms.flatMap(w => [`name_bn.ilike.%${w}%`, `name_en.ilike.%${w}%`]).join(",");
 
-      const shouldSearch = ["product_search", "price_query", "recommendation", "general"].includes(intent) && (uniqueVariations.length > 0 || banglaWords.length > 0);
-
-      if (shouldSearch) {
-        const allSearchTerms = [...uniqueVariations, ...banglaWords];
-        const bookOrConds = allSearchTerms.flatMap(w => [`title_bn.ilike.%${w}%`, `title_en.ilike.%${w}%`]).join(",");
-        const univOrConds = allSearchTerms.flatMap(w => [`name_bn.ilike.%${w}%`, `name_en.ilike.%${w}%`]).join(",");
-        const ebookOrConds = allSearchTerms.flatMap(w => [`title_bn.ilike.%${w}%`, `title_en.ilike.%${w}%`]).join(",");
-
-        let bq = supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percent, writer_id, publisher_id").eq("is_active", true).or(bookOrConds);
-        let uq = supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).or(univOrConds);
-        let eq = supabase.from("digital_products").select("title_bn, title_en, price, slug, is_free, discount_percent").eq("is_active", true).or(ebookOrConds);
-
+        let bq = supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent, writer_id, publisher_id").eq("is_active", true).or(bookOr);
+        let uq = supabase.from("universal_products").select("name_bn, price, slug, stock_quantity, discount_percent").eq("is_active", true).or(univOr);
+        let eq = supabase.from("digital_products").select("title_bn, price, slug, is_free, discount_percent").eq("is_active", true).or(ebookOr);
         if (priceRange.min) { bq = bq.gte("price", priceRange.min); uq = uq.gte("price", priceRange.min); eq = eq.gte("price", priceRange.min); }
         if (priceRange.max) { bq = bq.lte("price", priceRange.max); uq = uq.lte("price", priceRange.max); eq = eq.lte("price", priceRange.max); }
 
-        const [bookRes, univRes, ebookRes] = await Promise.all([bq.limit(12), uq.limit(10), eq.limit(10)]);
-        allBookResults = bookRes.data || [];
-        allUniversalResults = univRes.data || [];
-        allEbookResults = ebookRes.data || [];
+        basePromises.push(
+          bq.limit(10),                                                          // [6] books search
+          uq.limit(8),                                                           // [7] universal search
+          eq.limit(8),                                                           // [8] ebook search
+          supabase.from("writers").select("id, name_bn").or(writerOr).limit(3),  // [9] writer lookup
+          supabase.from("publishers").select("id, name_bn").or(pubOr).limit(3),  // [10] publisher lookup
+          intent === "category_browse"
+            ? supabase.from("categories").select("id, name_bn").eq("is_active", true).or(catOr).limit(3) // [11] category lookup
+            : Promise.resolve({ data: [] }),
+        );
+      }
 
-        // Enrich with writer/publisher names
+      // Order tracking in parallel too
+      let orderTrackingPromise: Promise<any> = Promise.resolve(null);
+      if (intent === "order_tracking") {
+        const m = lastUserMsg.match(/(?:BOI|ORD|#)[\-]?(\d{4,})/i) || lastUserMsg.match(/(\d{6,})/);
+        if (m) orderTrackingPromise = supabase.rpc("get_order_tracking", { p_order_number: m[0].replace('#', '') });
+      }
+
+      // Execute ALL queries in one parallel batch
+      const [results, otResult] = await Promise.all([Promise.all(basePromises), orderTrackingPromise]);
+
+      const [productsRes, categoriesRes, settingsRes, offersRes, deliveryRes, bundlesRes] = results;
+      let allBookResults = results[6]?.data || [];
+      const allUniversalResults = results[7]?.data || [];
+      const allEbookResults = results[8]?.data || [];
+      const writerLookup = results[9]?.data || [];
+      const publisherLookup = results[10]?.data || [];
+      const categoryLookup = results[11]?.data || [];
+
+      let writerResults: any[] = [];
+      let publisherResults: any[] = [];
+      let categoryResults: any[] = [];
+      const orderTracking = otResult?.data && !otResult.data?.error ? otResult.data : null;
+
+      // ── PHASE 2: Enrich & fallback (only 1 extra parallel batch if needed) ──
+      const phase2: Promise<any>[] = [];
+
+      // Enrich books with writer/publisher names
+      if (allBookResults.length > 0) {
+        const wIds = [...new Set(allBookResults.map((b: any) => b.writer_id).filter(Boolean))];
+        const pIds = [...new Set(allBookResults.map((b: any) => b.publisher_id).filter(Boolean))];
+        if (wIds.length) phase2.push(supabase.from("writers").select("id, name_bn").in("id", wIds));
+        if (pIds.length) phase2.push(supabase.from("publishers").select("id, name_bn").in("id", pIds));
+      }
+
+      // If no direct book results, use writer/publisher/category lookups for fallback
+      if (allBookResults.length === 0 && needsSearch) {
+        if (writerLookup.length > 0) {
+          let q = supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent, writer_id").eq("is_active", true).in("writer_id", writerLookup.map((w: any) => w.id));
+          if (priceRange.min) q = q.gte("price", priceRange.min);
+          if (priceRange.max) q = q.lte("price", priceRange.max);
+          phase2.push(q.limit(8));
+        }
+        if (publisherLookup.length > 0) {
+          let q = supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent, publisher_id").eq("is_active", true).in("publisher_id", publisherLookup.map((p: any) => p.id));
+          if (priceRange.min) q = q.gte("price", priceRange.min);
+          if (priceRange.max) q = q.lte("price", priceRange.max);
+          phase2.push(q.limit(8));
+        }
+        if (categoryLookup.length > 0) {
+          let q = supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent").eq("is_active", true).in("category_id", categoryLookup.map((c: any) => c.id));
+          if (priceRange.min) q = q.gte("price", priceRange.min);
+          if (priceRange.max) q = q.lte("price", priceRange.max);
+          phase2.push(q.order("sales_count", { ascending: false }).limit(8));
+        }
+      }
+
+      if (phase2.length > 0) {
+        const p2 = await Promise.all(phase2);
+        let idx = 0;
+
         if (allBookResults.length > 0) {
-          const wIds = [...new Set(allBookResults.map(b => b.writer_id).filter(Boolean))];
-          const pIds = [...new Set(allBookResults.map(b => b.publisher_id).filter(Boolean))];
-          const [wd, pd] = await Promise.all([
-            wIds.length > 0 ? supabase.from("writers").select("id, name_bn").in("id", wIds) : { data: [] },
-            pIds.length > 0 ? supabase.from("publishers").select("id, name_bn").in("id", pIds) : { data: [] },
-          ]);
-          const wm = new Map((wd.data || []).map((w: any) => [w.id, w.name_bn]));
-          const pm = new Map((pd.data || []).map((p: any) => [p.id, p.name_bn]));
-          allBookResults = allBookResults.map(b => ({ ...b, writer_name: wm.get(b.writer_id), publisher_name: pm.get(b.publisher_id) }));
-        }
-      }
-
-      // Writer search fallback
-      if (searchTerms.length >= 2 && allBookResults.length === 0) {
-        const terms = [...uniqueVariations, ...banglaWords];
-        if (terms.length > 0) {
-          const wOr = terms.flatMap(w => [`name_bn.ilike.%${w}%`, `name_en.ilike.%${w}%`]).join(",");
-          const { data: wd } = await supabase.from("writers").select("id, name_bn").or(wOr).limit(3);
-          if (wd?.length) {
-            let q = supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent, writer_id").eq("is_active", true).in("writer_id", wd.map((w: any) => w.id));
-            if (priceRange.min) q = q.gte("price", priceRange.min);
-            if (priceRange.max) q = q.lte("price", priceRange.max);
-            const { data: wb } = await q.limit(10);
-            writerResults = (wb || []).map((b: any) => ({ ...b, writer_name: wd.find((w: any) => w.id === b.writer_id)?.name_bn || "" }));
+          // Enrichment results
+          const wIds = [...new Set(allBookResults.map((b: any) => b.writer_id).filter(Boolean))];
+          const pIds = [...new Set(allBookResults.map((b: any) => b.publisher_id).filter(Boolean))];
+          const wm = new Map(wIds.length ? (p2[idx++]?.data || []).map((w: any) => [w.id, w.name_bn]) : []);
+          const pm = new Map(pIds.length ? (p2[idx++]?.data || []).map((p: any) => [p.id, p.name_bn]) : []);
+          allBookResults = allBookResults.map((b: any) => ({ ...b, writer_name: wm.get(b.writer_id), publisher_name: pm.get(b.publisher_id) }));
+        } else {
+          // Fallback results
+          if (writerLookup.length > 0) {
+            writerResults = (p2[idx++]?.data || []).map((b: any) => ({ ...b, writer_name: writerLookup.find((w: any) => w.id === b.writer_id)?.name_bn || "" }));
           }
-        }
-      }
-
-      // Publisher search fallback
-      if (searchTerms.length >= 2 && allBookResults.length === 0 && writerResults.length === 0) {
-        const terms = [...uniqueVariations, ...banglaWords];
-        if (terms.length > 0) {
-          const pOr = terms.flatMap(w => [`name_bn.ilike.%${w}%`, `name_en.ilike.%${w}%`]).join(",");
-          const { data: pd } = await supabase.from("publishers").select("id, name_bn").or(pOr).limit(3);
-          if (pd?.length) {
-            let q = supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent, publisher_id").eq("is_active", true).in("publisher_id", pd.map((p: any) => p.id));
-            if (priceRange.min) q = q.gte("price", priceRange.min);
-            if (priceRange.max) q = q.lte("price", priceRange.max);
-            const { data: pb } = await q.limit(10);
-            publisherResults = (pb || []).map((b: any) => ({ ...b, publisher_name: pd.find((p: any) => p.id === b.publisher_id)?.name_bn || "" }));
+          if (publisherLookup.length > 0) {
+            publisherResults = (p2[idx++]?.data || []).map((b: any) => ({ ...b, publisher_name: publisherLookup.find((p: any) => p.id === b.publisher_id)?.name_bn || "" }));
           }
-        }
-      }
-
-      // Category search
-      if (intent === "category_browse" || (allBookResults.length === 0 && writerResults.length === 0 && publisherResults.length === 0 && searchTerms.length >= 2)) {
-        const terms = [...uniqueVariations, ...banglaWords];
-        if (terms.length > 0) {
-          const cOr = terms.flatMap(w => [`name_bn.ilike.%${w}%`, `name_en.ilike.%${w}%`]).join(",");
-          const { data: cd } = await supabase.from("categories").select("id, name_bn").eq("is_active", true).or(cOr).limit(3);
-          if (cd?.length) {
-            let q = supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent").eq("is_active", true).in("category_id", cd.map((c: any) => c.id));
-            if (priceRange.min) q = q.gte("price", priceRange.min);
-            if (priceRange.max) q = q.lte("price", priceRange.max);
-            const { data: cb } = await q.order("sales_count", { ascending: false }).limit(10);
-            categoryResults = cb || [];
+          if (categoryLookup.length > 0) {
+            categoryResults = p2[idx++]?.data || [];
           }
         }
       }
@@ -138,25 +161,14 @@ Deno.serve(async (req) => {
         ...dedup(allEbookResults).map((p: any) => ({ ...p, _type: "ebook" })),
       ];
 
-      const [universalRes, ebooksRes] = await Promise.all([
-        supabase.from("universal_products").select("name_bn, price, slug, discount_percent").eq("is_active", true).order("created_at", { ascending: false }).limit(8),
-        supabase.from("digital_products").select("title_bn, price, slug, is_free").eq("is_active", true).order("created_at", { ascending: false }).limit(8),
-      ]);
-
       const settingsMap: Record<string, string> = {};
       (settingsRes.data || []).forEach((s: any) => { settingsMap[s.setting_key] = typeof s.setting_value === "string" ? s.setting_value : JSON.stringify(s.setting_value); });
-
-      let orderTracking = null;
-      if (intent === "order_tracking") {
-        const m = lastUserMsg.match(/(?:BOI|ORD|#)[\-]?(\d{4,})/i) || lastUserMsg.match(/(\d{6,})/);
-        if (m) { const { data: od } = await supabase.rpc("get_order_tracking", { p_order_number: m[0].replace('#', '') }); if (od && !od.error) orderTracking = od; }
-      }
 
       systemPrompt = buildCustomerPrompt({
         settings: settingsMap, products: productsRes.data, categories: categoriesRes.data,
         coupons: offersRes.data, delivery: deliveryRes.data, bundles: bundlesRes.data,
         searchResults: searchResults.length > 0 ? searchResults : null,
-        universalProducts: universalRes.data, ebooks: ebooksRes.data, orderTracking,
+        universalProducts: null, ebooks: null, orderTracking,
         intent, priceRange,
         categoryResults: categoryResults.length > 0 ? categoryResults : null,
         publisherResults: publisherResults.length > 0 ? publisherResults : null,
@@ -183,33 +195,25 @@ Deno.serve(async (req) => {
       const r30 = (orders30.data || []).reduce((s: number, o: any) => s + (o.total_amount || 0), 0);
       const r7 = (orders7.data || []).reduce((s: number, o: any) => s + (o.total_amount || 0), 0);
       const aov = t30 > 0 ? Math.round(r30 / t30) : 0;
-      const tp = productsRes.count || 0;
       const ls = (productsRes.data || []).filter((p: any) => (p.stock_quantity || 0) < 5);
-      const oos = (productsRes.data || []).filter((p: any) => (p.stock_quantity || 0) === 0);
-      const tc = customersRes.count || 0;
+      const oos = ls.filter((p: any) => (p.stock_quantity || 0) === 0);
       const nc = (customersRes.data || []).filter((c: any) => c.created_at >= since30).length;
-      const ac = abandonedRes.count || 0;
       const av = (abandonedRes.data || []).reduce((s: number, a: any) => s + (a.subtotal || 0), 0);
 
-      const sb: Record<string, number> = {};
-      (orders30.data || []).forEach((o: any) => { sb[o.status] = (sb[o.status] || 0) + 1; });
-      const pb: Record<string, number> = {};
-      (orders30.data || []).forEach((o: any) => { pb[o.payment_method || "unknown"] = (pb[o.payment_method || "unknown"] || 0) + 1; });
-      const ab: Record<string, number> = {};
-      (orders30.data || []).forEach((o: any) => { ab[o.delivery_area || "অজানা"] = (ab[o.delivery_area || "অজানা"] || 0) + 1; });
+      const sb: Record<string, number> = {}, pb: Record<string, number> = {}, ab: Record<string, number> = {};
+      (orders30.data || []).forEach((o: any) => { sb[o.status] = (sb[o.status] || 0) + 1; pb[o.payment_method || "unknown"] = (pb[o.payment_method || "unknown"] || 0) + 1; ab[o.delivery_area || "অজানা"] = (ab[o.delivery_area || "অজানা"] || 0) + 1; });
 
       const topP = (productsRes.data || []).sort((a: any, b: any) => (b.sales_count || 0) - (a.sales_count || 0)).slice(0, 10)
         .map((p: any) => `${p.title_bn}(৳${p.price},${p.sales_count || 0}বিক্রি)`).join(", ");
-      const lsi = ls.slice(0, 8).map((p: any) => `${p.title_bn}(${p.stock_quantity || 0})`).join(", ");
-      const ar = (reviewsRes.data || []).length > 0
-        ? ((reviewsRes.data || []).reduce((s: number, r: any) => s + (r.rating || 0), 0) / reviewsRes.data!.length).toFixed(1) : "N/A";
 
       systemPrompt = buildAdminPrompt({
         revenue30: r30, revenue7: r7, totalOrders30: t30, totalOrders7: t7, totalOrders90: t90, aov,
         statusBreakdown: sb, paymentBreakdown: pb, areaBreakdown: ab,
-        totalProducts: tp, outOfStock: oos.length, lowStock: ls.length,
-        totalCustomers: tc, newCustomers30: nc, abandonedCount: ac, abandonedValue: av,
-        topProducts: topP, lowStockItems: lsi, avgRating: ar, couponsCount: couponsRes.count || 0,
+        totalProducts: productsRes.count || 0, outOfStock: oos.length, lowStock: ls.length,
+        totalCustomers: customersRes.count || 0, newCustomers30: nc, abandonedCount: abandonedRes.count || 0, abandonedValue: av,
+        topProducts: topP, lowStockItems: ls.slice(0, 8).map((p: any) => `${p.title_bn}(${p.stock_quantity || 0})`).join(", "),
+        avgRating: (reviewsRes.data || []).length > 0 ? ((reviewsRes.data || []).reduce((s: number, r: any) => s + (r.rating || 0), 0) / reviewsRes.data!.length).toFixed(1) : "N/A",
+        couponsCount: couponsRes.count || 0,
       }, context);
     } else {
       throw new Error("Invalid mode");
@@ -218,14 +222,14 @@ Deno.serve(async (req) => {
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: [{ role: "system", content: systemPrompt }, ...messages], stream: true }),
+      body: JSON.stringify({ model: "google/gemini-2.5-flash-lite", messages: [{ role: "system", content: systemPrompt }, ...messages], stream: true }),
     });
 
     if (!response.ok) {
-      const status = response.status;
-      if (status === 429) return new Response(JSON.stringify({ error: "রেট লিমিট" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (status === 402) return new Response(JSON.stringify({ error: "ক্রেডিট শেষ" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      throw new Error(`AI gateway error: ${status}`);
+      const s = response.status;
+      if (s === 429) return new Response(JSON.stringify({ error: "রেট লিমিট" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (s === 402) return new Response(JSON.stringify({ error: "ক্রেডিট শেষ" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      throw new Error(`AI gateway error: ${s}`);
     }
 
     return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
