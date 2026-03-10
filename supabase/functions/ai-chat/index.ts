@@ -157,46 +157,47 @@ serve(async (req) => {
         supabase.from("product_bundles").select("name_bn, bundle_price, original_price").eq("is_active", true).limit(5),
       ]);
 
-      // Multi-strategy search: full phrase + individual words + English
+      // Search using OR conditions for each meaningful word (most robust approach)
       let allBookResults: any[] = [];
       let allUniversalResults: any[] = [];
       let allEbookResults: any[] = [];
 
-      if (searchTerms.length >= 2) {
-        // Strategy 1: Full phrase search (Bengali + English simultaneously)
-        const [booksBnFull, booksEnFull, univBnFull, univEnFull, ebooksFull] = await Promise.all([
+      if (wordPatterns.length > 0) {
+        // Build OR conditions: each word matches against both bn and en titles
+        const bookOrConds = wordPatterns.flatMap(w => [
+          `title_bn.ilike.%${w}%`,
+          `title_en.ilike.%${w}%`,
+        ]).join(",");
+        const univOrConds = wordPatterns.flatMap(w => [
+          `name_bn.ilike.%${w}%`,
+          `name_en.ilike.%${w}%`,
+        ]).join(",");
+        const ebookOrConds = wordPatterns.flatMap(w => [
+          `title_bn.ilike.%${w}%`,
+          `title_en.ilike.%${w}%`,
+        ]).join(",");
+
+        const [bookRes, univRes, ebookRes] = await Promise.all([
+          supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percentage").eq("is_active", true).or(bookOrConds).limit(10),
+          supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).or(univOrConds).limit(10),
+          supabase.from("digital_products").select("title_bn, title_en, price, slug, is_free, discount_percent").eq("is_active", true).or(ebookOrConds).limit(10),
+        ]);
+        console.log("Word search - books:", bookRes.data?.length, "err:", bookRes.error?.message, "univ:", univRes.data?.length, "ebooks:", ebookRes.data?.length);
+        allBookResults = bookRes.data || [];
+        allUniversalResults = univRes.data || [];
+        allEbookResults = ebookRes.data || [];
+      } else if (searchTerms.length >= 2) {
+        // Fallback: full phrase search (for single-word queries)
+        const [booksBn, booksEn, univBn, univEn, ebooksBn] = await Promise.all([
           supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percentage").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10),
           supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percentage").eq("is_active", true).ilike("title_en", `%${searchTerms}%`).limit(10),
           supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("name_bn", `%${searchTerms}%`).limit(10),
           supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("name_en", `%${searchTerms}%`).limit(10),
-          supabase.from("digital_products").select("title_bn, price, slug, is_free, discount_percent").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10),
+          supabase.from("digital_products").select("title_bn, title_en, price, slug, is_free, discount_percent").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10),
         ]);
-        console.log("Strategy1 BnBooks:", booksBnFull.data?.length, booksBnFull.error?.message, "EnBooks:", booksEnFull.data?.length, booksEnFull.error?.message);
-        allBookResults = [...(booksBnFull.data || []), ...(booksEnFull.data || [])];
-        allUniversalResults = [...(univBnFull.data || []), ...(univEnFull.data || [])];
-        allEbookResults = ebooksFull.data || [];
-
-        // Strategy 2: If full phrase didn't match, try individual words
-        if (allBookResults.length === 0 && wordPatterns.length > 0) {
-          // Build OR conditions for each word across both Bengali and English
-          const orConditions = wordPatterns.flatMap(w => [
-            `title_bn.ilike.%${w}%`,
-            `title_en.ilike.%${w}%`,
-          ]).join(",");
-          const univOrConditions = wordPatterns.flatMap(w => [
-            `name_bn.ilike.%${w}%`,
-            `name_en.ilike.%${w}%`,
-          ]).join(",");
-
-          const [wordBooks, wordUniv, wordEbooks] = await Promise.all([
-            supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percentage").eq("is_active", true).or(orConditions).limit(10),
-            supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).or(univOrConditions).limit(10),
-            supabase.from("digital_products").select("title_bn, price, slug, is_free, discount_percent").eq("is_active", true).or(wordPatterns.map(w => `title_bn.ilike.%${w}%`).join(",")).limit(10),
-          ]);
-          allBookResults = wordBooks.data || [];
-          allUniversalResults = wordUniv.data || [];
-          allEbookResults = wordEbooks.data || [];
-        }
+        allBookResults = [...(booksBn.data || []), ...(booksEn.data || [])];
+        allUniversalResults = [...(univBn.data || []), ...(univEn.data || [])];
+        allEbookResults = ebooksBn.data || [];
       }
 
       // Strategy 3: Search by writer/author name if still no results
