@@ -369,10 +369,12 @@ const ChatWidget = () => {
             created_at: new Date().toISOString(),
           }]);
           // Also save error to DB
-          await supabase.rpc("insert_visitor_chat_message", {
-            p_conversation_id: conversationId, p_visitor_id: visitorId,
-            p_sender_type: "admin", p_sender_name: "🤖 AI সহকারী", p_message: errMsg,
-          }).catch(() => {});
+          try {
+            await supabase.rpc("insert_visitor_chat_message", {
+              p_conversation_id: conversationId, p_visitor_id: visitorId,
+              p_sender_type: "admin", p_sender_name: "🤖 AI সহকারী", p_message: errMsg,
+            });
+          } catch { /* ignore */ }
         } finally { setAiResponding(false); setIsAdminTyping(false); }
       } else {
         // Human mode - just save the message
