@@ -19,6 +19,29 @@ Deno.serve(async (req) => {
     let systemPrompt = "";
 
     if (mode === "customer") {
+      // Fetch chatbot settings
+      const { data: chatbotSettingsRaw } = await supabase
+        .from("site_settings")
+        .select("setting_key, setting_value")
+        .in("setting_key", [
+          "chatbot_enabled", "chatbot_greeting", "chatbot_custom_instructions",
+          "chatbot_faq", "chatbot_name", "chatbot_tone",
+          "chatbot_restricted_topics", "chatbot_fallback_message"
+        ]);
+      
+      const cs: Record<string, any> = {};
+      (chatbotSettingsRaw || []).forEach((s: any) => {
+        try { cs[s.setting_key] = typeof s.setting_value === "string" ? JSON.parse(s.setting_value) : s.setting_value; } catch { cs[s.setting_key] = s.setting_value; }
+      });
+
+      // Check if chatbot is disabled
+      if (cs.chatbot_enabled === false || cs.chatbot_enabled === "false") {
+        return new Response(
+          `data: ${JSON.stringify({ choices: [{ delta: { content: cs.chatbot_fallback_message || "চ্যাটবট বর্তমানে বন্ধ আছে। অনুগ্রহ করে পরে আবার চেষ্টা করুন।" } }] })}\n\ndata: [DONE]\n\n`,
+          { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } }
+        );
+      }
+
       const lastUserMsg = messages?.[messages.length - 1]?.content || "";
       const intent = detectIntent(lastUserMsg);
       const sentiment = detectSentiment(lastUserMsg);
