@@ -189,8 +189,8 @@ serve(async (req) => {
       } else if (searchTerms.length >= 2) {
         // Fallback: full phrase search (for single-word queries)
         const [booksBn, booksEn, univBn, univEn, ebooksBn] = await Promise.all([
-          supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percentage").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10),
-          supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percentage").eq("is_active", true).ilike("title_en", `%${searchTerms}%`).limit(10),
+          supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10),
+          supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("title_en", `%${searchTerms}%`).limit(10),
           supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("name_bn", `%${searchTerms}%`).limit(10),
           supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("name_en", `%${searchTerms}%`).limit(10),
           supabase.from("digital_products").select("title_bn, title_en, price, slug, is_free, discount_percent").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(10),
