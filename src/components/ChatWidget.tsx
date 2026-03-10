@@ -569,8 +569,13 @@ const ChatWidget = () => {
                   {messages.map(msg => (
                     <div key={msg.id} className={`flex ${msg.sender_type === "customer" ? "justify-end" : "justify-start"} group animate-in fade-in slide-in-from-bottom-1 duration-300`}>
                       {msg.sender_type !== "customer" && (
-                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center mr-2 mt-1 shrink-0 border border-primary/10">
-                          {msg.sender_name?.includes("🤖") ? <Bot className="w-4 h-4 text-primary" /> : <User className="w-4 h-4 text-primary" />}
+                        <div className="flex flex-col items-center mr-2 mt-1 shrink-0">
+                          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center border border-primary/10">
+                            {msg.sender_name?.includes("🤖") ? <Bot className="w-4 h-4 text-primary" /> : <User className="w-4 h-4 text-primary" />}
+                          </div>
+                          {!msg.sender_name?.includes("🤖") && msg.sender_name && (
+                            <span className="text-[8px] text-muted-foreground/60 mt-0.5 max-w-[50px] text-center truncate">{msg.sender_name}</span>
+                          )}
                         </div>
                       )}
                       <div className="flex flex-col max-w-[80%]">

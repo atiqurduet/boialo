@@ -109,6 +109,36 @@ const AdminChat = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+
+  // Fetch current admin's profile name
+  const { data: adminProfile } = useQuery({
+    queryKey: ["admin-profile", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch all staff profiles for display
+  const { data: staffProfiles } = useQuery({
+    queryKey: ["staff-profiles"],
+    queryFn: async () => {
+      const { data: roles } = await supabase.from("user_roles").select("user_id, role");
+      if (!roles?.length) return {};
+      const staffIds = roles.map(r => r.user_id);
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", staffIds);
+      const map: Record<string, string> = {};
+      (profiles || []).forEach((p: any) => { map[p.id] = p.full_name || "Staff"; });
+      return map;
+    },
+  });
+
+  const getStaffName = (senderId: string | null) => {
+    if (!senderId) return "Support";
+    return staffProfiles?.[senderId] || "Support";
+  };
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
@@ -256,13 +286,19 @@ const AdminChat = () => {
     mutationFn: async (message: string) => {
       if (!selectedConversation) return;
       
+      const senderName = adminProfile?.full_name || user?.email?.split("@")[0] || "Support";
       const { error } = await supabase.from("chat_messages").insert({
         conversation_id: selectedConversation,
         sender_type: "admin",
         sender_id: user?.id,
-        sender_name: "Support Team",
+        sender_name: senderName,
         message,
       });
+
+      // Also assign this conversation to the current staff if not assigned
+      if (!selectedConv?.assigned_to) {
+        await supabase.from("chat_conversations").update({ assigned_to: user?.id }).eq("id", selectedConversation);
+      }
       
       if (error) throw error;
 
@@ -694,6 +730,12 @@ const AdminChat = () => {
                             <p className="text-xs text-muted-foreground mt-1">
                               {format(new Date(conv.last_message_at), "dd MMM yyyy, hh:mm a", { locale: bn })}
                             </p>
+                            {conv.assigned_to && (
+                              <p className="text-[10px] text-primary font-medium mt-0.5 flex items-center gap-1">
+                                <User className="h-2.5 w-2.5" />
+                                {getStaffName(conv.assigned_to)}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </button>
@@ -767,6 +809,12 @@ const AdminChat = () => {
                               {selectedConv.visitor_email}
                             </span>
                           )}
+                          {selectedConv?.assigned_to && (
+                            <span className="flex items-center gap-1 text-primary">
+                              <User className="h-3 w-3" />
+                              {getStaffName(selectedConv.assigned_to)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -817,6 +865,12 @@ const AdminChat = () => {
                                 : "bg-muted rounded-bl-sm"
                             }`}
                           >
+                            {/* Show staff name for admin messages */}
+                            {msg.sender_type === "admin" && (
+                              <p className="text-xs font-semibold mb-1 text-primary-foreground/80">
+                                {msg.sender_name?.includes("🤖") ? "🤖 AI সহকারী" : (msg.sender_name || getStaffName((msg as any).sender_id))}
+                              </p>
+                            )}
                             <p className="text-base whitespace-pre-wrap leading-relaxed">{msg.message}</p>
                             {/* Attachment display */}
                             {msg.attachment_url && msg.attachment_type === 'image' && (
