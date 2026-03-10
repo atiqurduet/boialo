@@ -4,7 +4,7 @@ type Message = { role: "user" | "assistant"; content: string };
 
 const AI_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 
-export function useAIChat(mode: "customer" | "admin") {
+export function useAIChat(mode: "customer" | "admin", userId?: string) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -34,7 +34,7 @@ export function useAIChat(mode: "customer" | "admin") {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: allMessages, mode, context }),
+        body: JSON.stringify({ messages: allMessages, mode, context, userId }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -94,12 +94,11 @@ export function useAIChat(mode: "customer" | "admin") {
       }
     } catch (e: any) {
       console.error("AI chat error:", e);
-      // Add error as assistant message
       setMessages(prev => [...prev, { role: "assistant", content: `⚠️ ${e.message || "সমস্যা হয়েছে, আবার চেষ্টা করুন।"}` }]);
     } finally {
       setIsLoading(false);
     }
-  }, [messages, mode]);
+  }, [messages, mode, userId]);
 
   const clearMessages = useCallback(() => setMessages([]), []);
 
