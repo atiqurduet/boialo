@@ -427,6 +427,9 @@ const ChatWidget = () => {
   };
 
   // ===== FLOATING BUTTON =====
+  // Hide chatbot if disabled from admin
+  if (!chatbotEnabled) return null;
+
   if (!isOpen) {
     return (
       <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2.5">
