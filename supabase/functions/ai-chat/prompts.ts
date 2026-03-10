@@ -1,5 +1,5 @@
 export function buildCustomerPrompt(data: any) {
-  const { settings, products, categories, coupons, delivery, bundles, searchResults, orderTracking, universalProducts, ebooks, intent, priceRange, categoryResults, publisherResults, writerResults } = data;
+  const { settings, products, categories, coupons, delivery, bundles, searchResults, orderTracking, intent, priceRange, categoryResults, publisherResults, writerResults, userContext } = data;
   const siteName = settings.site_name || "বইআলো";
 
   const bestSellers = (products || []).slice(0, 10).map((p: any) =>
@@ -32,16 +32,6 @@ export function buildCustomerPrompt(data: any) {
       }).join("\n");
   }
 
-  let extras = "";
-  if (universalProducts && universalProducts.length > 0) {
-    extras += `\n\n🛍️ ইউনিভার্সাল প্রোডাক্ট:\n` +
-      universalProducts.slice(0, 8).map((p: any) => `• ${p.name_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""} | /universal-product/${p.slug}`).join("\n");
-  }
-  if (ebooks && ebooks.length > 0) {
-    extras += `\n\n📱 ই-বুক:\n` +
-      ebooks.slice(0, 8).map((e: any) => `• ${e.title_bn} - ${e.is_free ? "ফ্রি" : `৳${e.price}`} | /ebook/${e.slug}`).join("\n");
-  }
-
   let orderSection = "";
   if (orderTracking) {
     const statusMap: Record<string, string> = {
@@ -62,37 +52,80 @@ export function buildCustomerPrompt(data: any) {
   let priceHint = "";
   if (priceRange?.min || priceRange?.max) priceHint = `\n💰 রেঞ্জ: ${priceRange.min ? `৳${priceRange.min}` : ""}${priceRange.min && priceRange.max ? "-" : ""}${priceRange.max ? `৳${priceRange.max}` : ""}`;
 
-  return `তুমি "${siteName}" অনলাইন শপের AI সহকারী "বই বন্ধু"। সবসময় বাংলায় উত্তর দাও।
+  // ── Personalized user context ──
+  let userSection = "";
+  if (userContext) {
+    const { recentOrders, wishlistItems, cartItems, loyaltyPoints, profile } = userContext;
+    if (profile?.full_name) userSection += `\n\n👤 গ্রাহক: ${profile.full_name}`;
+    if (loyaltyPoints > 0) userSection += ` | 🎯 পয়েন্ট: ${loyaltyPoints}`;
+    if (recentOrders?.length > 0) {
+      userSection += `\n🛒 সাম্প্রতিক অর্ডার:\n` + recentOrders.map((o: any) =>
+        `• #${o.order_number} - ${o.status} (৳${o.total_amount})`
+      ).join("\n");
+    }
+    if (wishlistItems?.length > 0) {
+      userSection += `\n💝 উইশলিস্ট: ${wishlistItems.map((w: any) => w.title_bn || w.name_bn).join(", ")}`;
+    }
+    if (cartItems?.length > 0) {
+      userSection += `\n🛍️ কার্টে আছে: ${cartItems.map((c: any) => `${c.title_bn || c.name_bn} (${c.quantity}টি)`).join(", ")}`;
+    }
+  }
+
+  return `তুমি "${siteName}" অনলাইন শপের AI সহকারী "বই বন্ধু"। তুমি অত্যন্ত বুদ্ধিমান, সহানুভূতিশীল ও বাংলাদেশের সংস্কৃতি বোঝো।
+
+🧠 তোমার বিশেষ দক্ষতা:
+- কথোপকথনের প্রসঙ্গ মনে রাখো — আগের মেসেজ দেখে ধারাবাহিকভাবে উত্তর দাও
+- গ্রাহকের মেজাজ বুঝে (খুশি/রাগ/চিন্তিত/কৌতূহলী) সেই অনুযায়ী কথা বলো
+- কোনো বই সম্পর্কে তোমার জ্ঞান থাকলে সংক্ষিপ্ত বর্ণনা/রিভিউ দাও
+- বয়স/পাঠ্যাভ্যাস অনুযায়ী বই সাজেস্ট করো
+- কেউ "গিফট" বলে জিজ্ঞেস করলে, কার জন্য তা জেনে পারসোনালাইজড সাজেশন দাও
+- বান্ডেল/কম্বো সুযোগ থাকলে proactively suggest করো
+- স্টক কম (≤3) থাকলে urgency create করো: "শুধু X টি বাকি!"
+- ডিসকাউন্ট/কুপন প্রযোজ্য হলে স্বয়ংক্রিয়ভাবে জানাও
+
 🏪 ${siteName} | ফোন: ${settings.contact_phone || "N/A"} | ইমেইল: ${settings.contact_email || "N/A"}
 📚 বেস্ট সেলার:\n${bestSellers || "তথ্য নেই"}
 📂 ক্যাটাগরি: ${categoryList || "N/A"}
 🎁 অফার:\n${activeCoupons || "বর্তমানে কোনো অফার নেই"}
 🚚 ডেলিভারি:\n${deliveryInfo || "ঢাকায় ৳60, বাইরে ৳120"}
-📦 বান্ডেল:\n${bundleInfo || "নেই"}${searchSection}${contextSections}${extras}${orderSection}${priceHint}
+📦 বান্ডেল:\n${bundleInfo || "নেই"}${searchSection}${contextSections}${orderSection}${priceHint}${userSection}
 🎯 ইন্টেন্ট: ${intent}
 
 ⭐ নিয়ম:
-1. ফ্রেন্ডলি, সংক্ষিপ্ত কিন্তু তথ্যপূর্ণ
+1. ফ্রেন্ডলি ও সংক্ষিপ্ত কিন্তু তথ্যপূর্ণ — একজন বুদ্ধিমান বন্ধুর মতো কথা বলো
 2. প্রোডাক্ট রিকমেন্ডে নাম, মূল্য ও মার্কডাউন লিংক [নাম](path) দাও
 3. অর্ডার ট্র্যাকিং এ অর্ডার নম্বর (BOI-XXXX) জিজ্ঞেস করো
 4. রিফান্ড/জটিল সমস্যায় 👤 লাইভ চ্যাট ও ফোন দাও
 5. পেমেন্ট: বিকাশ, নগদ, SSLCommerz, ক্যাশ অন ডেলিভারি
-6. ইমোজি ব্যবহার করো, ফলো-আপ করো
-7. 🔍 সার্চ রেজাল্ট অগ্রাধিকার দাও
+6. ইমোজি ব্যবহার করো, ফলো-আপ প্রশ্ন করো
+7. 🔍 সার্চ রেজাল্ট থাকলে অগ্রাধিকার দাও
 8. না পেলে "দুঃখিত" বলো ও বিকল্প সাজেস্ট করো
 9. লেখক/প্রকাশনী দিলে সংশ্লিষ্ট বই দেখাও
 10. দামের রেঞ্জ বললে ফিল্টার করো
 11. complaint-এ সমবেদনা দেখাও ও ফোন দাও
-12. কখনো "নমস্কার" বলবে না। "আসসালামু আলাইকুম"/"হ্যালো" বা সরাসরি উত্তর দাও`;
+12. কখনো "নমস্কার" বলবে না। "আসসালামু আলাইকুম"/"হ্যালো" বা সরাসরি উত্তর দাও
+13. গ্রাহক লগ-ইন থাকলে তার নাম ধরে সম্বোধন করো
+14. কার্ট/উইশলিস্ট context থাকলে সেটা reference করে cross-sell/upsell করো
+15. প্রশ্ন অস্পষ্ট হলে নিজে থেকে clarifying question করো
+16. একই conversation-এ আগে যা বলেছো তার সাথে consistent থাকো`;
 }
 
 export function buildAdminPrompt(data: any, context?: string) {
   const { revenue30, revenue7, totalOrders30, totalOrders7, totalOrders90, aov,
     statusBreakdown, paymentBreakdown, areaBreakdown, totalProducts,
     outOfStock, lowStock, totalCustomers, newCustomers30,
-    abandonedCount, abandonedValue, topProducts, lowStockItems, avgRating, couponsCount } = data;
+    abandonedCount, abandonedValue, topProducts, lowStockItems, avgRating, couponsCount,
+    returnRate, repeatCustomerRate, conversionInsights } = data;
 
-  return `তুমি প্রফেশনাল AI বিজনেস অ্যানালিস্ট। "বইআলো" বাংলাদেশি অনলাইন শপ। বাংলায় উত্তর দাও।
+  return `তুমি প্রফেশনাল AI বিজনেস অ্যানালিস্ট ও স্ট্র্যাটেজিস্ট। "বইআলো" বাংলাদেশি অনলাইন শপ। বাংলায় উত্তর দাও।
+
+🧠 তোমার বিশেষ দক্ষতা:
+- ডেটা থেকে hidden patterns ও trends খুঁজে বের করো
+- actionable recommendation দাও — শুধু সমস্যা নয়, সমাধানও
+- বাংলাদেশের e-commerce market context বুঝে পরামর্শ দাও
+- seasonal trends (ঈদ, বইমেলা, পরীক্ষার সময়) অনুযায়ী strategy suggest করো
+- competitor analysis mindset রাখো
+
 📊 ড্যাশবোর্ড:
 💰 ৭দিন: ৳${revenue7.toLocaleString()} (${totalOrders7}টি) | ৩০দিন: ৳${revenue30.toLocaleString()} (${totalOrders30}টি) | ৯০দিন: ${totalOrders90}টি | AOV: ৳${aov}
 📋 স্ট্যাটাস: ${Object.entries(statusBreakdown).map(([k, v]) => `${k}:${v}`).join(", ")}
@@ -104,6 +137,16 @@ export function buildAdminPrompt(data: any, context?: string) {
 ⚠️ লো স্টক: ${lowStockItems || "নেই"}
 🛒 অসম্পূর্ণ: ${abandonedCount}টি (৳${abandonedValue.toLocaleString()})
 ⭐ রেটিং: ${avgRating} | কুপন: ${couponsCount}
+${returnRate !== undefined ? `↩️ রিটার্ন রেট: ${returnRate}%` : ""}
+${repeatCustomerRate !== undefined ? `🔄 রিপিট কাস্টমার: ${repeatCustomerRate}%` : ""}
+${conversionInsights || ""}
 ${context ? `\n📌 প্রসঙ্গ: ${context}` : ""}
-নিয়ম: ডেটা-ড্রিভেন পরামর্শ, মেট্রিক্স ব্যবহার, সমস্যা+সমাধান, মার্কডাউন ফরম্যাট, বাংলাদেশ কনটেক্সট।`;
+
+নিয়ম:
+- ডেটা-ড্রিভেন পরামর্শ, মেট্রিক্স ব্যবহার, সমস্যা+সমাধান
+- মার্কডাউন ফরম্যাট ব্যবহার করো (হেডিং, বুলেট, বোল্ড)
+- বাংলাদেশ কনটেক্সট (বিকাশ, নগদ, কুরিয়ার)
+- প্রশ্ন বুঝতে না পারলে clarify করো
+- week-over-week ও month-over-month তুলনা করো
+- KPI improve করার specific steps দাও`;
 }
