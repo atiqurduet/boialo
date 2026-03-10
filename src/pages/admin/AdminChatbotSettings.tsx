@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Bot, Save, Plus, Trash2, MessageCircle, Shield, Sparkles, BookOpen, Loader2 } from "lucide-react";
+import { Bot, Save, Plus, Trash2, MessageCircle, Shield, Sparkles, BookOpen, Loader2, Facebook, Phone, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface FAQItem {
   question: string;
@@ -29,6 +30,12 @@ const AdminChatbotSettings = () => {
   const [restrictedTopics, setRestrictedTopics] = useState<string[]>([]);
   const [newTopic, setNewTopic] = useState("");
   const [faqs, setFaqs] = useState<FAQItem[]>([]);
+  const [fbEnabled, setFbEnabled] = useState(false);
+  const [waEnabled, setWaEnabled] = useState(false);
+  const [fbPageToken, setFbPageToken] = useState("");
+  const [fbVerifyToken, setFbVerifyToken] = useState("");
+  const [waAccessToken, setWaAccessToken] = useState("");
+  const [waPhoneNumberId, setWaPhoneNumberId] = useState("");
 
   useEffect(() => {
     fetchSettings();
