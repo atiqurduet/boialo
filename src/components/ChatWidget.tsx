@@ -384,6 +384,83 @@ const ChatWidget = () => {
         console.error("Message send error:", error);
         throw error;
       }
+
+      // If in AI mode, get AI response
+      if (chatMode === "ai" && messageText) {
+        setAiResponding(true);
+        setIsAdminTyping(true);
+        try {
+          aiChatHistoryRef.current.push({ role: "user", content: messageText });
+          
+          const AI_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+          const resp = await fetch(AI_CHAT_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({ 
+              messages: aiChatHistoryRef.current, 
+              mode: "customer" 
+            }),
+          });
+
+          if (!resp.ok || !resp.body) {
+            throw new Error("AI response failed");
+          }
+
+          // Stream the response
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let textBuffer = "";
+          let fullResponse = "";
+          let streamDone = false;
+
+          while (!streamDone) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            textBuffer += decoder.decode(value, { stream: true });
+
+            let newlineIndex: number;
+            while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+              let line = textBuffer.slice(0, newlineIndex);
+              textBuffer = textBuffer.slice(newlineIndex + 1);
+              if (line.endsWith("\r")) line = line.slice(0, -1);
+              if (line.startsWith(":") || line.trim() === "") continue;
+              if (!line.startsWith("data: ")) continue;
+              const jsonStr = line.slice(6).trim();
+              if (jsonStr === "[DONE]") { streamDone = true; break; }
+              try {
+                const parsed = JSON.parse(jsonStr);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) fullResponse += content;
+              } catch {
+                textBuffer = line + "\n" + textBuffer;
+                break;
+              }
+            }
+          }
+
+          if (fullResponse.trim()) {
+            aiChatHistoryRef.current.push({ role: "assistant", content: fullResponse });
+            
+            // Save AI response as a chat message
+            const visitorId = localStorage.getItem("chat_visitor_id") || "";
+            await supabase.rpc("insert_visitor_chat_message", {
+              p_conversation_id: conversationId,
+              p_visitor_id: visitorId,
+              p_sender_type: "admin",
+              p_sender_name: "🤖 AI সহকারী",
+              p_message: fullResponse.trim(),
+            });
+          }
+        } catch (aiError) {
+          console.error("AI response error:", aiError);
+        } finally {
+          setAiResponding(false);
+          setIsAdminTyping(false);
+        }
+      }
     } catch (error) {
       toast.error("মেসেজ পাঠাতে সমস্যা হয়েছে");
       setNewMessage(messageText);
