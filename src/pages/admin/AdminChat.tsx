@@ -803,6 +803,12 @@ const AdminChat = () => {
                               {selectedConv.visitor_email}
                             </span>
                           )}
+                          {selectedConv?.assigned_to && (
+                            <span className="flex items-center gap-1 text-primary">
+                              <User className="h-3 w-3" />
+                              {getStaffName(selectedConv.assigned_to)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
