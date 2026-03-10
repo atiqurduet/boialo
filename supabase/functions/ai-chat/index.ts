@@ -136,6 +136,7 @@ serve(async (req) => {
 
     if (mode === "customer") {
       const lastUserMsg = messages?.[messages.length - 1]?.content || "";
+      console.log("Customer query:", lastUserMsg);
 
       // Dynamic product search based on user query
       // Remove filler words and punctuation for cleaner search
@@ -145,6 +146,7 @@ serve(async (req) => {
       const searchTerms = meaningfulWords.join(" ").trim();
       // Also create individual word search patterns
       const wordPatterns = meaningfulWords.filter(w => w.length >= 3);
+      console.log("Search terms:", searchTerms, "| Word patterns:", wordPatterns);
       
       const [productsRes, categoriesRes, settingsRes, offersRes, deliveryRes, bundlesRes] = await Promise.all([
         supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percentage, sales_count").eq("is_active", true).order("sales_count", { ascending: false }).limit(15),
