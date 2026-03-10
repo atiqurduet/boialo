@@ -155,195 +155,328 @@ const AdminChatbotSettings = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-              <Bot className="w-6 h-6 text-white" />
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
+              <Bot className="w-6 h-6 text-primary-foreground" />
             </div>
             <div>
               <h1 className="text-xl font-bold">AI চ্যাটবট সেটিংস</h1>
-              <p className="text-sm text-muted-foreground">চ্যাটবটের আচরণ, গ্রিটিং, FAQ এবং নিয়ন্ত্রণ</p>
+              <p className="text-sm text-muted-foreground">চ্যাটবট, FAQ, ইন্টিগ্রেশন সব এক জায়গায়</p>
             </div>
           </div>
-          <Button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700">
+          <Button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-primary to-primary/80">
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
             সেভ করুন
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Basic Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Sparkles className="w-4 h-4 text-violet-500" /> সাধারণ সেটিংস
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                <div>
-                  <Label className="font-medium">চ্যাটবট চালু/বন্ধ</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">ওয়েবসাইটে AI চ্যাটবট দেখানো হবে কিনা</p>
-                </div>
-                <Switch checked={enabled} onCheckedChange={setEnabled} />
-              </div>
+        <Tabs defaultValue="general" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="general">⚙️ সাধারণ</TabsTrigger>
+            <TabsTrigger value="instructions">📝 নির্দেশনা</TabsTrigger>
+            <TabsTrigger value="faq">📋 FAQ</TabsTrigger>
+            <TabsTrigger value="integrations">🔗 ইন্টিগ্রেশন</TabsTrigger>
+          </TabsList>
 
-              <div className="space-y-2">
-                <Label>বটের নাম</Label>
-                <Input value={botName} onChange={(e) => setBotName(e.target.value)} placeholder="বই বন্ধু" />
-              </div>
+          {/* ── General Tab ── */}
+          <TabsContent value="general">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Sparkles className="w-4 h-4 text-primary" /> সাধারণ সেটিংস
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                    <div>
+                      <Label className="font-medium">চ্যাটবট চালু/বন্ধ</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">ওয়েবসাইটে AI চ্যাটবট দেখানো হবে কিনা</p>
+                    </div>
+                    <Switch checked={enabled} onCheckedChange={setEnabled} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>বটের নাম</Label>
+                    <Input value={botName} onChange={(e) => setBotName(e.target.value)} placeholder="বই বন্ধু" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>কথা বলার ধরন (Tone)</Label>
+                    <Select value={tone} onValueChange={setTone}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="friendly">🤗 বন্ধুসুলভ</SelectItem>
+                        <SelectItem value="professional">💼 প্রফেশনাল</SelectItem>
+                        <SelectItem value="casual">😊 ক্যাজুয়াল</SelectItem>
+                        <SelectItem value="formal">🎩 ফর্মাল</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div className="space-y-2">
-                <Label>কথা বলার ধরন (Tone)</Label>
-                <Select value={tone} onValueChange={setTone}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="friendly">🤗 বন্ধুসুলভ</SelectItem>
-                    <SelectItem value="professional">💼 প্রফেশনাল</SelectItem>
-                    <SelectItem value="casual">😊 ক্যাজুয়াল</SelectItem>
-                    <SelectItem value="formal">🎩 ফর্মাল</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>গ্রিটিং মেসেজ</Label>
-                <Textarea
-                  value={greeting}
-                  onChange={(e) => setGreeting(e.target.value)}
-                  placeholder="আসসালামু আলাইকুম! 👋 আমি বই বন্ধু..."
-                  rows={3}
-                />
-                <p className="text-xs text-muted-foreground">গ্রাহক প্রথমবার চ্যাট খুললে এই মেসেজ দেখবে</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>ফলব্যাক মেসেজ</Label>
-                <Textarea
-                  value={fallbackMessage}
-                  onChange={(e) => setFallbackMessage(e.target.value)}
-                  placeholder="দুঃখিত, এই বিষয়ে আমি সাহায্য করতে পারছি না..."
-                  rows={2}
-                />
-                <p className="text-xs text-muted-foreground">নিষিদ্ধ বিষয়ে জিজ্ঞেস করলে বট এই উত্তর দেবে</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Custom Instructions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <MessageCircle className="w-4 h-4 text-blue-500" /> কাস্টম নির্দেশনা
-              </CardTitle>
-              <CardDescription>বটকে কীভাবে উত্তর দিতে হবে সে সম্পর্কে বিশেষ নির্দেশনা</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <Label>কাস্টম প্রম্পট / নির্দেশনা</Label>
-                <Textarea
-                  value={customInstructions}
-                  onChange={(e) => setCustomInstructions(e.target.value)}
-                  placeholder={"উদাহরণ:\n- সবসময় বাংলায় উত্তর দাও\n- প্রতিটি উত্তরে কমপক্ষে ২টি বই সাজেস্ট করো\n- ডেলিভারি চার্জ সম্পর্কে সবসময় জানাও\n- প্রোমোশনাল কোড WELCOME10 সবাইকে জানাও"}
-                  rows={8}
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">এই নির্দেশনাগুলো AI এর সিস্টেম প্রম্পটে যুক্ত হবে</p>
-              </div>
-
-              {/* Restricted Topics */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-red-500" />
-                  <Label>নিষিদ্ধ বিষয়</Label>
-                </div>
-                <p className="text-xs text-muted-foreground">এই বিষয়গুলো সম্পর্কে বট উত্তর দেবে না</p>
-                <div className="flex gap-2">
-                  <Input
-                    value={newTopic}
-                    onChange={(e) => setNewTopic(e.target.value)}
-                    placeholder="বিষয় লিখুন..."
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTopic())}
-                  />
-                  <Button variant="outline" size="icon" onClick={addTopic}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {restrictedTopics.map((topic, i) => (
-                    <Badge key={i} variant="secondary" className="gap-1 pr-1">
-                      {topic}
-                      <button onClick={() => removeTopic(i)} className="ml-1 hover:text-destructive">
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                  {restrictedTopics.length === 0 && (
-                    <p className="text-xs text-muted-foreground italic">কোনো নিষিদ্ধ বিষয় নেই</p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* FAQ Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <BookOpen className="w-4 h-4 text-emerald-500" /> FAQ / প্রি-সেট উত্তর
-                </CardTitle>
-                <CardDescription>কমন প্রশ্নের জন্য আগে থেকে উত্তর সেট করুন — AI এই উত্তরগুলো অগ্রাধিকার দেবে</CardDescription>
-              </div>
-              <Button variant="outline" size="sm" onClick={addFAQ}>
-                <Plus className="w-4 h-4 mr-1" /> FAQ যোগ করুন
-              </Button>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <MessageCircle className="w-4 h-4 text-primary" /> মেসেজ
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="space-y-2">
+                    <Label>গ্রিটিং মেসেজ</Label>
+                    <Textarea value={greeting} onChange={(e) => setGreeting(e.target.value)} placeholder="আসসালামু আলাইকুম! 👋 আমি বই বন্ধু..." rows={3} />
+                    <p className="text-xs text-muted-foreground">গ্রাহক প্রথমবার চ্যাট খুললে এই মেসেজ দেখবে</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>ফলব্যাক মেসেজ</Label>
+                    <Textarea value={fallbackMessage} onChange={(e) => setFallbackMessage(e.target.value)} placeholder="দুঃখিত, এই বিষয়ে আমি সাহায্য করতে পারছি না..." rows={2} />
+                    <p className="text-xs text-muted-foreground">নিষিদ্ধ বিষয়ে জিজ্ঞেস করলে বট এই উত্তর দেবে</p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardHeader>
-          <CardContent>
-            {faqs.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">কোনো FAQ যোগ করা হয়নি</p>
-                <p className="text-xs mt-1">উপরের বাটনে ক্লিক করে FAQ যোগ করুন</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {faqs.map((faq, i) => (
-                  <div key={i} className="p-4 rounded-lg border bg-muted/20 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-xs font-medium text-muted-foreground mt-2">#{i + 1}</span>
-                      <div className="flex-1 space-y-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">প্রশ্ন</Label>
-                          <Input
-                            value={faq.question}
-                            onChange={(e) => updateFAQ(i, "question", e.target.value)}
-                            placeholder="যেমন: ডেলিভারি চার্জ কত?"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">উত্তর</Label>
-                          <Textarea
-                            value={faq.answer}
-                            onChange={(e) => updateFAQ(i, "answer", e.target.value)}
-                            placeholder="যেমন: ঢাকার ভিতরে ৳60, ঢাকার বাইরে ৳120..."
-                            rows={2}
-                          />
+          </TabsContent>
+
+          {/* ── Instructions Tab ── */}
+          <TabsContent value="instructions">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <MessageCircle className="w-4 h-4 text-primary" /> কাস্টম নির্দেশনা
+                </CardTitle>
+                <CardDescription>বটকে কীভাবে উত্তর দিতে হবে সে সম্পর্কে বিশেষ নির্দেশনা</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label>কাস্টম প্রম্পট / নির্দেশনা</Label>
+                  <Textarea
+                    value={customInstructions}
+                    onChange={(e) => setCustomInstructions(e.target.value)}
+                    placeholder={"উদাহরণ:\n- সবসময় বাংলায় উত্তর দাও\n- প্রতিটি উত্তরে কমপক্ষে ২টি বই সাজেস্ট করো\n- ডেলিভারি চার্জ সম্পর্কে সবসময় জানাও\n- প্রোমোশনাল কোড WELCOME10 সবাইকে জানাও"}
+                    rows={8}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">এই নির্দেশনাগুলো ওয়েবসাইট, Facebook ও WhatsApp সব চ্যানেলে প্রযোজ্য হবে</p>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-destructive" />
+                    <Label>নিষিদ্ধ বিষয়</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">এই বিষয়গুলো সম্পর্কে বট উত্তর দেবে না</p>
+                  <div className="flex gap-2">
+                    <Input value={newTopic} onChange={(e) => setNewTopic(e.target.value)} placeholder="বিষয় লিখুন..." onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTopic())} />
+                    <Button variant="outline" size="icon" onClick={addTopic}><Plus className="w-4 h-4" /></Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {restrictedTopics.map((topic, i) => (
+                      <Badge key={i} variant="secondary" className="gap-1 pr-1">
+                        {topic}
+                        <button onClick={() => removeTopic(i)} className="ml-1 hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
+                      </Badge>
+                    ))}
+                    {restrictedTopics.length === 0 && <p className="text-xs text-muted-foreground italic">কোনো নিষিদ্ধ বিষয় নেই</p>}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── FAQ Tab ── */}
+          <TabsContent value="faq">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <BookOpen className="w-4 h-4 text-primary" /> FAQ / প্রি-সেট উত্তর
+                    </CardTitle>
+                    <CardDescription>কমন প্রশ্নের জন্য আগে থেকে উত্তর সেট করুন — AI এই উত্তরগুলো অগ্রাধিকার দেবে</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={addFAQ}><Plus className="w-4 h-4 mr-1" /> FAQ যোগ করুন</Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {faqs.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">কোনো FAQ যোগ করা হয়নি</p>
+                    <p className="text-xs mt-1">উপরের বাটনে ক্লিক করে FAQ যোগ করুন</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {faqs.map((faq, i) => (
+                      <div key={i} className="p-4 rounded-lg border bg-muted/20 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-xs font-medium text-muted-foreground mt-2">#{i + 1}</span>
+                          <div className="flex-1 space-y-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs">প্রশ্ন</Label>
+                              <Input value={faq.question} onChange={(e) => updateFAQ(i, "question", e.target.value)} placeholder="যেমন: ডেলিভারি চার্জ কত?" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">উত্তর</Label>
+                              <Textarea value={faq.answer} onChange={(e) => updateFAQ(i, "answer", e.target.value)} placeholder="যেমন: ঢাকার ভিতরে ৳60, ঢাকার বাইরে ৳120..." rows={2} />
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon" onClick={() => removeFAQ(i)} className="text-destructive hover:text-destructive shrink-0 mt-2"><Trash2 className="w-4 h-4" /></Button>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" onClick={() => removeFAQ(i)} className="text-destructive hover:text-destructive shrink-0 mt-2">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Integrations Tab ── */}
+          <TabsContent value="integrations">
+            <div className="space-y-6">
+              <div className="p-4 rounded-lg border bg-muted/30">
+                <p className="text-sm text-muted-foreground">
+                  Facebook Messenger ও WhatsApp Business এ AI চ্যাটবট চালু করুন। একই FAQ, নির্দেশনা ও টোন সব চ্যানেলে প্রযোজ্য হবে — আলাদা করে সেটআপ করার দরকার নেই।
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Facebook Messenger */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Facebook className="w-5 h-5 text-blue-600" /> Facebook Messenger
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        {fbEnabled && fbPageToken ? (
+                          <Badge variant="default" className="bg-green-600 text-white"><CheckCircle2 className="w-3 h-3 mr-1" /> সক্রিয়</Badge>
+                        ) : (
+                          <Badge variant="secondary"><XCircle className="w-3 h-3 mr-1" /> নিষ্ক্রিয়</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <CardDescription>Facebook পেজের মেসেঞ্জারে AI বট চালু করুন</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                      <div>
+                        <Label className="font-medium">Messenger বট চালু</Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">Facebook Messenger এ AI উত্তর দেবে</p>
+                      </div>
+                      <Switch checked={fbEnabled} onCheckedChange={setFbEnabled} />
+                    </div>
+                    {fbEnabled && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Page Access Token</Label>
+                          <Input type="password" value={fbPageToken} onChange={(e) => setFbPageToken(e.target.value)} placeholder="EAAxxxxxx..." />
+                          <p className="text-xs text-muted-foreground">Facebook Developer Console → Page Access Token</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Verify Token</Label>
+                          <Input value={fbVerifyToken} onChange={(e) => setFbVerifyToken(e.target.value)} placeholder="my_custom_verify_token" />
+                          <p className="text-xs text-muted-foreground">Webhook সেটআপে ব্যবহৃত কাস্টম টোকেন</p>
+                        </div>
+                        <div className="p-3 rounded-lg border bg-muted/20 space-y-2">
+                          <Label className="text-xs font-medium">Webhook URL (Facebook এ পেস্ট করুন)</Label>
+                          <div className="flex gap-2">
+                            <Input readOnly value={`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID || 'nyzvjuzrkhdbuqlcxhzn'}.supabase.co/functions/v1/facebook-webhook`} className="text-xs font-mono" />
+                            <Button variant="outline" size="sm" onClick={() => {
+                              navigator.clipboard.writeText(`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID || 'nyzvjuzrkhdbuqlcxhzn'}.supabase.co/functions/v1/facebook-webhook`);
+                              toast.success("Webhook URL কপি হয়েছে!");
+                            }}>কপি</Button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* WhatsApp Business */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Phone className="w-5 h-5 text-green-600" /> WhatsApp Business
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        {waEnabled && waAccessToken ? (
+                          <Badge variant="default" className="bg-green-600 text-white"><CheckCircle2 className="w-3 h-3 mr-1" /> সক্রিয়</Badge>
+                        ) : (
+                          <Badge variant="secondary"><XCircle className="w-3 h-3 mr-1" /> নিষ্ক্রিয়</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <CardDescription>WhatsApp Business API তে AI বট চালু করুন</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                      <div>
+                        <Label className="font-medium">WhatsApp বট চালু</Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">WhatsApp এ AI উত্তর দেবে</p>
+                      </div>
+                      <Switch checked={waEnabled} onCheckedChange={setWaEnabled} />
+                    </div>
+                    {waEnabled && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Access Token</Label>
+                          <Input type="password" value={waAccessToken} onChange={(e) => setWaAccessToken(e.target.value)} placeholder="EAAxxxxxx..." />
+                          <p className="text-xs text-muted-foreground">WhatsApp Cloud API → Permanent Access Token</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Phone Number ID</Label>
+                          <Input value={waPhoneNumberId} onChange={(e) => setWaPhoneNumberId(e.target.value)} placeholder="1234567890" />
+                          <p className="text-xs text-muted-foreground">Meta Business Suite → WhatsApp Phone Number ID</p>
+                        </div>
+                        <div className="p-3 rounded-lg border bg-muted/20 space-y-2">
+                          <Label className="text-xs font-medium">Webhook URL (Meta Business এ পেস্ট করুন)</Label>
+                          <div className="flex gap-2">
+                            <Input readOnly value={`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID || 'nyzvjuzrkhdbuqlcxhzn'}.supabase.co/functions/v1/whatsapp-webhook`} className="text-xs font-mono" />
+                            <Button variant="outline" size="sm" onClick={() => {
+                              navigator.clipboard.writeText(`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID || 'nyzvjuzrkhdbuqlcxhzn'}.supabase.co/functions/v1/whatsapp-webhook`);
+                              toast.success("Webhook URL কপি হয়েছে!");
+                            }}>কপি</Button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Integration Tips */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <ExternalLink className="w-4 h-4 text-primary" /> সেটআপ গাইড
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="space-y-2">
+                      <h4 className="font-medium flex items-center gap-2"><Facebook className="w-4 h-4 text-blue-600" /> Facebook Messenger</h4>
+                      <ol className="list-decimal list-inside space-y-1 text-muted-foreground text-xs">
+                        <li>developers.facebook.com এ গিয়ে App তৈরি করুন</li>
+                        <li>Messenger Product যোগ করুন</li>
+                        <li>Page Access Token জেনারেট করুন</li>
+                        <li>Webhook URL পেস্ট করুন ও Verify Token দিন</li>
+                        <li>"messages" event সাবস্ক্রাইব করুন</li>
+                      </ol>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="font-medium flex items-center gap-2"><Phone className="w-4 h-4 text-green-600" /> WhatsApp Business</h4>
+                      <ol className="list-decimal list-inside space-y-1 text-muted-foreground text-xs">
+                        <li>Meta Business Suite এ WhatsApp Business Account তৈরি করুন</li>
+                        <li>WhatsApp Cloud API সেটআপ করুন</li>
+                        <li>Permanent Access Token জেনারেট করুন</li>
+                        <li>Phone Number ID কপি করুন</li>
+                        <li>Webhook URL পেস্ট করুন ও Verify Token দিন</li>
+                      </ol>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AdminLayout>
   );
