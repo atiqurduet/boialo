@@ -125,7 +125,7 @@ const AdminStaffActivity = lazy(() => import("./pages/admin/AdminStaffActivity")
 const AdminMyDashboard = lazy(() => import("./pages/admin/AdminMyDashboard"));
 const AdminEbooks = lazy(() => import("./pages/admin/AdminEbooks"));
 const AdminEproducts = lazy(() => import("./pages/admin/AdminEproducts"));
-
+const AdminAIAssistant = lazy(() => import("./pages/admin/AdminAIAssistant"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
