@@ -6,9 +6,28 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Build system prompt with dynamic product data
-async function buildSystemPrompt(supabase: any, userMessage: string) {
+// Fetch admin chatbot settings from site_settings
+async function getChatbotSettings(supabase: any) {
+  const { data } = await supabase
+    .from("site_settings")
+    .select("setting_key, setting_value")
+    .in("setting_key", [
+      "chatbot_fb_enabled", "chatbot_fb_page_token", "chatbot_fb_verify_token",
+      "chatbot_name", "chatbot_tone", "chatbot_faq",
+      "chatbot_custom_instructions", "chatbot_restricted_topics", "chatbot_fallback_message",
+    ]);
+
+  const cs: Record<string, any> = {};
+  (data || []).forEach((s: any) => {
+    try { cs[s.setting_key] = typeof s.setting_value === "string" ? JSON.parse(s.setting_value) : s.setting_value; } catch { cs[s.setting_key] = s.setting_value; }
+  });
+  return cs;
+}
+
+// Build system prompt with dynamic product data + admin settings
+async function buildSystemPrompt(supabase: any, userMessage: string, cs: Record<string, any>) {
   const searchTerms = userMessage.replace(/[।,?!।?\-]/g, " ").trim();
+  const botName = cs.chatbot_name || "বই বন্ধু";
 
   const [productsRes, categoriesRes, settingsRes, offersRes, deliveryRes] = await Promise.all([
     supabase.from("products").select("title_bn, price, slug, stock_quantity, discount_percent").eq("is_active", true).order("sales_count", { ascending: false }).limit(10),
@@ -26,14 +45,11 @@ async function buildSystemPrompt(supabase: any, userMessage: string) {
       supabase.from("universal_products").select("name_bn, price, slug, stock_quantity, discount_percent").eq("is_active", true).ilike("name_bn", `%${searchTerms}%`).limit(8),
       supabase.from("digital_products").select("title_bn, price, slug, is_free").eq("is_active", true).ilike("title_bn", `%${searchTerms}%`).limit(8),
     ]);
-
     searchResults = [
       ...(booksBn.data || []).map((p: any) => `📚 ${p.title_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""}`),
       ...(universalBn.data || []).map((p: any) => `🛍️ ${p.name_bn} - ৳${p.price}${p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : ""}`),
       ...(ebooksBn.data || []).map((p: any) => `📱 ${p.title_bn} - ${p.is_free ? "ফ্রি" : `৳${p.price}`}`),
     ];
-
-    // English fallback
     if (searchResults.length === 0) {
       const [booksEn, universalEn] = await Promise.all([
         supabase.from("products").select("title_bn, price, slug, discount_percent").eq("is_active", true).ilike("title_en", `%${searchTerms}%`).limit(8),
@@ -79,7 +95,38 @@ async function buildSystemPrompt(supabase: any, userMessage: string) {
     `• ${d.zone_name_bn}: ৳${d.delivery_charge}`
   ).join("\n");
 
-  return `তুমি "${siteName}" এর Facebook Messenger AI সহকারী "বই বন্ধু"। সবসময় বাংলায় উত্তর দাও।
+  // Tone from admin settings
+  const toneMap: Record<string, string> = {
+    friendly: "বন্ধুসুলভ ও আন্তরিক ভাবে কথা বলো",
+    professional: "প্রফেশনাল ও সংক্ষিপ্ত ভাবে উত্তর দাও",
+    casual: "ক্যাজুয়াল ও মজাদার ভাবে কথা বলো",
+    formal: "ফর্মাল ও সম্মানজনক ভাবে আপনি সম্বোধন ব্যবহার করো",
+  };
+  const toneInstruction = toneMap[cs.chatbot_tone] || toneMap.friendly;
+
+  // FAQ from admin
+  const faqItems = Array.isArray(cs.chatbot_faq) ? cs.chatbot_faq : [];
+  let faqSection = "";
+  if (faqItems.length > 0) {
+    faqSection = `\n\n📋 FAQ:\n` + faqItems.filter((f: any) => f.question && f.answer).map((f: any) => `প্রশ্ন: "${f.question}"\nউত্তর: ${f.answer}`).join("\n\n");
+  }
+
+  // Restricted topics
+  const restricted = Array.isArray(cs.chatbot_restricted_topics) ? cs.chatbot_restricted_topics : [];
+  let restrictedSection = "";
+  if (restricted.length > 0) {
+    const fallback = cs.chatbot_fallback_message || "দুঃখিত, এই বিষয়ে আমি সাহায্য করতে পারছি না।";
+    restrictedSection = `\n\n🚫 নিষিদ্ধ (এগুলো বললে বলবে: "${fallback}"):\n${restricted.map((t: string) => `- ${t}`).join("\n")}`;
+  }
+
+  // Custom instructions
+  const customInstructions = cs.chatbot_custom_instructions;
+  let customSection = "";
+  if (customInstructions && typeof customInstructions === "string" && customInstructions.trim()) {
+    customSection = `\n\n📝 বিশেষ নির্দেশনা:\n${customInstructions}`;
+  }
+
+  return `তুমি "${siteName}" এর Facebook Messenger AI সহকারী "${botName}"। সবসময় বাংলায় উত্তর দাও।
 🌐 ওয়েবসাইট: ${siteUrl}
 📞 ফোন: ${settingsMap.contact_phone || "N/A"} | ইমেইল: ${settingsMap.contact_email || "N/A"}
 
@@ -87,21 +134,26 @@ async function buildSystemPrompt(supabase: any, userMessage: string) {
 📂 ক্যাটাগরি: ${categoryList || "N/A"}
 🎁 অফার:\n${activeCoupons || "বর্তমানে কোনো অফার নেই"}
 🚚 ডেলিভারি:\n${deliveryInfo || "ঢাকায় ৳60, বাইরে ৳120"}
-${searchResults.length > 0 ? `\n🔍 সার্চ রেজাল্ট:\n${searchResults.join("\n")}` : ""}${orderInfo}
+${searchResults.length > 0 ? `\n🔍 সার্চ রেজাল্ট:\n${searchResults.join("\n")}` : ""}${orderInfo}${faqSection}${restrictedSection}${customSection}
 
 ⭐ নিয়ম:
-1. ফ্রেন্ডলি, সংক্ষিপ্ত (২-৩ বাক্য) উত্তর দাও
+1. ${toneInstruction}
 2. প্রোডাক্ট রিকমেন্ড করলে সম্পূর্ণ URL সহ দাও (মেসেঞ্জারে মার্কডাউন কাজ করে না)
 3. অর্ডার ট্র্যাকিং এ অর্ডার নম্বর জিজ্ঞেস করো
 4. রিফান্ড/জটিল সমস্যায় ফোনে যোগাযোগ করতে বলো
 5. পেমেন্ট: বিকাশ, নগদ, SSLCommerz, ক্যাশ অন ডেলিভারি
 6. ইমোজি ব্যবহার করো
-7. সার্চ রেজাল্ট থাকলে সেগুলো অগ্রাধিকার দাও`;
+7. সার্চ রেজাল্ট ও FAQ থাকলে সেগুলো অগ্রাধিকার দাও
+8. কখনো "নমস্কার" বলবে না। "আসসালামু আলাইকুম"/"হ্যালো" ব্যবহার করো`;
 }
 
 serve(async (req) => {
-  // CORS
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
 
   const url = new URL(req.url);
 
@@ -111,7 +163,9 @@ serve(async (req) => {
     const token = url.searchParams.get("hub.verify_token");
     const challenge = url.searchParams.get("hub.challenge");
 
-    const FB_VERIFY_TOKEN = Deno.env.get("FB_VERIFY_TOKEN");
+    // Get verify token from admin settings first, fallback to env
+    const cs = await getChatbotSettings(supabase);
+    const FB_VERIFY_TOKEN = cs.chatbot_fb_verify_token || Deno.env.get("FB_VERIFY_TOKEN");
 
     if (mode === "subscribe" && token === FB_VERIFY_TOKEN) {
       console.log("Facebook webhook verified");
@@ -125,43 +179,38 @@ serve(async (req) => {
     const body = await req.json();
     console.log("FB webhook event:", JSON.stringify(body).slice(0, 500));
 
-    const FB_PAGE_ACCESS_TOKEN = Deno.env.get("FB_PAGE_ACCESS_TOKEN");
+    const cs = await getChatbotSettings(supabase);
+
+    // Check if FB integration is enabled
+    if (cs.chatbot_fb_enabled === false || cs.chatbot_fb_enabled === "false") {
+      console.log("FB chatbot disabled via admin settings");
+      return new Response("OK", { status: 200 });
+    }
+
+    // Use admin-stored tokens first, fallback to env secrets
+    const FB_PAGE_ACCESS_TOKEN = cs.chatbot_fb_page_token || Deno.env.get("FB_PAGE_ACCESS_TOKEN");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!FB_PAGE_ACCESS_TOKEN || !LOVABLE_API_KEY) {
       console.error("Missing FB_PAGE_ACCESS_TOKEN or LOVABLE_API_KEY");
-      return new Response("OK", { status: 200 }); // Always return 200 to FB
+      return new Response("OK", { status: 200 });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    // Process each messaging entry
     if (body.object === "page") {
       for (const entry of body.entry || []) {
         for (const event of entry.messaging || []) {
           const senderId = event.sender?.id;
           const messageText = event.message?.text;
-
           if (!senderId || !messageText) continue;
-
-          // Don't reply to echoes
           if (event.message?.is_echo) continue;
 
-          // Send typing indicator
           await sendFBAction(senderId, "typing_on", FB_PAGE_ACCESS_TOKEN);
 
-          // Build context and get AI response
-          const systemPrompt = await buildSystemPrompt(supabase, messageText);
+          const systemPrompt = await buildSystemPrompt(supabase, messageText, cs);
 
           const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               model: "google/gemini-3-flash-preview",
               messages: [
@@ -181,13 +230,11 @@ serve(async (req) => {
           const aiData = await aiResponse.json();
           const reply = aiData.choices?.[0]?.message?.content || "দুঃখিত, উত্তর দিতে পারছি না। 🙏";
 
-          // Split long messages (FB limit: 2000 chars)
           const chunks = splitMessage(reply, 2000);
           for (const chunk of chunks) {
             await sendFBMessage(senderId, chunk, FB_PAGE_ACCESS_TOKEN);
           }
 
-          // Log interaction
           await supabase.from("chat_conversations").upsert({
             visitor_id: `fb_${senderId}`,
             visitor_name: `Facebook User`,
@@ -201,48 +248,33 @@ serve(async (req) => {
     return new Response("OK", { status: 200 });
   } catch (error) {
     console.error("Facebook webhook error:", error);
-    return new Response("OK", { status: 200 }); // Always 200 for FB
+    return new Response("OK", { status: 200 });
   }
 });
 
-// Send text message via Facebook Send API
 async function sendFBMessage(recipientId: string, text: string, token: string) {
   const resp = await fetch(`https://graph.facebook.com/v19.0/me/messages?access_token=${token}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      recipient: { id: recipientId },
-      message: { text },
-    }),
+    body: JSON.stringify({ recipient: { id: recipientId }, message: { text } }),
   });
-  if (!resp.ok) {
-    const err = await resp.text();
-    console.error("FB Send API error:", err);
-  }
+  if (!resp.ok) console.error("FB Send API error:", await resp.text());
 }
 
-// Send typing indicator or other actions
 async function sendFBAction(recipientId: string, action: string, token: string) {
   await fetch(`https://graph.facebook.com/v19.0/me/messages?access_token=${token}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      recipient: { id: recipientId },
-      sender_action: action,
-    }),
+    body: JSON.stringify({ recipient: { id: recipientId }, sender_action: action }),
   });
 }
 
-// Split long messages into chunks
 function splitMessage(text: string, maxLength: number): string[] {
   if (text.length <= maxLength) return [text];
   const chunks: string[] = [];
   let remaining = text;
   while (remaining.length > 0) {
-    if (remaining.length <= maxLength) {
-      chunks.push(remaining);
-      break;
-    }
+    if (remaining.length <= maxLength) { chunks.push(remaining); break; }
     let splitAt = remaining.lastIndexOf("\n", maxLength);
     if (splitAt === -1 || splitAt < maxLength / 2) splitAt = maxLength;
     chunks.push(remaining.slice(0, splitAt));
