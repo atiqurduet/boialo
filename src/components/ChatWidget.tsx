@@ -526,8 +526,22 @@ const ChatWidget = () => {
       {/* Header */}
       <div className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-          <span className="font-medium">{siteName} সাপোর্ট</span>
+          {chatMode === "ai" ? (
+            <Bot className="w-4 h-4" />
+          ) : (
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+          )}
+          <span className="font-medium">
+            {chatMode === "ai" ? "AI সহকারী" : `${siteName} সাপোর্ট`}
+          </span>
+          {visitorInfo.submitted && (
+            <button
+              onClick={() => setChatMode(chatMode === "ai" ? "human" : "ai")}
+              className="text-[10px] bg-primary-foreground/20 hover:bg-primary-foreground/30 px-2 py-0.5 rounded-full transition-colors"
+            >
+              {chatMode === "ai" ? "👤 লাইভ চ্যাট" : "🤖 AI"}
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <Button
