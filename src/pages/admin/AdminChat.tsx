@@ -853,6 +853,12 @@ const AdminChat = () => {
                                 : "bg-muted rounded-bl-sm"
                             }`}
                           >
+                            {/* Show staff name for admin messages */}
+                            {msg.sender_type === "admin" && (
+                              <p className="text-xs font-semibold mb-1 text-primary-foreground/80">
+                                {msg.sender_name?.includes("🤖") ? "🤖 AI সহকারী" : (msg.sender_name || getStaffName((msg as any).sender_id))}
+                              </p>
+                            )}
                             <p className="text-base whitespace-pre-wrap leading-relaxed">{msg.message}</p>
                             {/* Attachment display */}
                             {msg.attachment_url && msg.attachment_type === 'image' && (
