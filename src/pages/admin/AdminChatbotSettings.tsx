@@ -99,6 +99,12 @@ const AdminChatbotSettings = () => {
         saveSetting("chatbot_fallback_message", fallbackMessage),
         saveSetting("chatbot_restricted_topics", restrictedTopics),
         saveSetting("chatbot_faq", faqs),
+        saveSetting("chatbot_fb_enabled", fbEnabled),
+        saveSetting("chatbot_wa_enabled", waEnabled),
+        saveSetting("chatbot_fb_page_token", fbPageToken),
+        saveSetting("chatbot_fb_verify_token", fbVerifyToken),
+        saveSetting("chatbot_wa_access_token", waAccessToken),
+        saveSetting("chatbot_wa_phone_number_id", waPhoneNumberId),
       ]);
       toast.success("চ্যাটবট সেটিংস সেভ হয়েছে!");
     } catch {
