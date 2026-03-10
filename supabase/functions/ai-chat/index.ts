@@ -178,7 +178,7 @@ serve(async (req) => {
         ]).join(",");
 
         const [bookRes, univRes, ebookRes] = await Promise.all([
-          supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percentage").eq("is_active", true).or(bookOrConds).limit(10),
+          supabase.from("products").select("title_bn, title_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).or(bookOrConds).limit(10),
           supabase.from("universal_products").select("name_bn, name_en, price, slug, stock_quantity, discount_percent").eq("is_active", true).or(univOrConds).limit(10),
           supabase.from("digital_products").select("title_bn, title_en, price, slug, is_free, discount_percent").eq("is_active", true).or(ebookOrConds).limit(10),
         ]);
