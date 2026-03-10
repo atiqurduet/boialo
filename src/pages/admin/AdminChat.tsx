@@ -109,6 +109,36 @@ const AdminChat = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+
+  // Fetch current admin's profile name
+  const { data: adminProfile } = useQuery({
+    queryKey: ["admin-profile", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch all staff profiles for display
+  const { data: staffProfiles } = useQuery({
+    queryKey: ["staff-profiles"],
+    queryFn: async () => {
+      const { data: roles } = await supabase.from("user_roles").select("user_id, role");
+      if (!roles?.length) return {};
+      const staffIds = roles.map(r => r.user_id);
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", staffIds);
+      const map: Record<string, string> = {};
+      (profiles || []).forEach((p: any) => { map[p.id] = p.full_name || "Staff"; });
+      return map;
+    },
+  });
+
+  const getStaffName = (senderId: string | null) => {
+    if (!senderId) return "Support";
+    return staffProfiles?.[senderId] || "Support";
+  };
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
