@@ -273,6 +273,7 @@ const App = () => (
                 <Route path="/admin/ebooks" element={<AdminEbooks />} />
                 <Route path="/admin/eproducts" element={<AdminEproducts />} />
                 <Route path="/admin/ai-assistant" element={<AdminAIAssistant />} />
+                <Route path="/admin/chatbot-settings" element={<AdminChatbotSettings />} />
                 
                 {/* Dynamic Page Route - must be before catch-all */}
                 <Route path="/:slug" element={<DynamicPage />} />
