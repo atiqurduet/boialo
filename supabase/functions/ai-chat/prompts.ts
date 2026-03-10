@@ -1,5 +1,7 @@
 export function buildCustomerPrompt(data: any) {
-  const { settings, products, categories, coupons, delivery, bundles, searchResults, orderTracking, intent, priceRange, categoryResults, publisherResults, writerResults, userContext } = data;
+  const { settings, products, categories, coupons, delivery, bundles, searchResults, orderTracking, intent, priceRange, categoryResults, publisherResults, writerResults, userContext, chatbotSettings } = data;
+  const siteName = settings.site_name || "বইআলো";
+  const botName = chatbotSettings?.chatbot_name || "বই বন্ধু";
   const siteName = settings.site_name || "বইআলো";
 
   const bestSellers = (products || []).slice(0, 10).map((p: any) =>

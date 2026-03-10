@@ -210,6 +210,7 @@ Deno.serve(async (req) => {
         categoryResults: categoryResults.length > 0 ? categoryResults : null,
         publisherResults: publisherResults.length > 0 ? publisherResults : null,
         writerResults: writerResults.length > 0 ? writerResults : null,
+        chatbotSettings: cs,
       });
 
       // Add conversation summary & sentiment hint
