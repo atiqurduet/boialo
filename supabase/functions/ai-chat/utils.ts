@@ -1,7 +1,7 @@
 // ──────────────────────────────────────────
-// INTENT DETECTION
+// INTENT DETECTION (Enhanced with multi-intent & confidence)
 // ──────────────────────────────────────────
-export type Intent = "product_search" | "order_tracking" | "greeting" | "price_query" | "category_browse" | "complaint" | "delivery_query" | "coupon_query" | "recommendation" | "general";
+export type Intent = "product_search" | "order_tracking" | "greeting" | "price_query" | "category_browse" | "complaint" | "delivery_query" | "coupon_query" | "recommendation" | "comparison" | "gift_suggestion" | "general";
 
 export function detectIntent(msg: string): Intent {
   const lower = msg.toLowerCase();
@@ -13,6 +13,10 @@ export function detectIntent(msg: string): Intent {
     return "greeting";
   if (/অভিযোগ|সমস্যা|রিফান্ড|রিটার্ন|ক্ষতিগ্রস্ত|ভুল|নষ্ট|complaint|refund|return|damaged|wrong|broken/i.test(msg))
     return "complaint";
+  if (/তুলনা|compare|versus|vs|পার্থক্য|difference|কোনটা ভালো|which is better/i.test(msg))
+    return "comparison";
+  if (/গিফট|gift|উপহার|জন্মদিন|birthday|বিয়ে|wedding|present/i.test(msg))
+    return "gift_suggestion";
   if (/ডেলিভারি|শিপিং|কত দিন|কবে আসবে|delivery|shipping|how long|কুরিয়ার/i.test(msg))
     return "delivery_query";
   if (/কুপন|অফার|ডিসকাউন্ট|ছাড়|coupon|offer|discount|promo|কোড/i.test(msg))
@@ -26,6 +30,18 @@ export function detectIntent(msg: string): Intent {
   if (/বই|বুক|book|প্রোডাক্ট|product|আছে|কিনতে|কিনব|পাওয়া|দেখান|খুঁজ|search|find|show|want|need|লাগবে|চাই|দরকার/i.test(msg))
     return "product_search";
   return "general";
+}
+
+// ──────────────────────────────────────────
+// SENTIMENT DETECTION
+// ──────────────────────────────────────────
+export type Sentiment = "positive" | "negative" | "neutral" | "urgent";
+
+export function detectSentiment(msg: string): Sentiment {
+  if (/জরুরি|urgent|asap|এখনই|দ্রুত|তাড়াতাড়ি|quickly/i.test(msg)) return "urgent";
+  if (/ধন্যবাদ|thanks|thank|ভালো|great|awesome|চমৎকার|অসাধারণ|খুশি|happy|love|পছন্দ/i.test(msg)) return "positive";
+  if (/রাগ|angry|বিরক্ত|হতাশ|frustrated|disappointed|খারাপ|bad|worst|বাজে|ভয়ঙ্কর|terrible/i.test(msg)) return "negative";
+  return "neutral";
 }
 
 // ──────────────────────────────────────────
@@ -89,4 +105,23 @@ const FILLER_WORDS = new Set([
 export function extractSearchKeywords(msg: string): string[] {
   const cleaned = msg.replace(/[।,?!;\-:()\"'।৳\d]/g, " ").trim();
   return cleaned.split(/\s+/).filter(w => w.length >= 2 && !FILLER_WORDS.has(w.toLowerCase()));
+}
+
+// ──────────────────────────────────────────
+// CONVERSATION CONTEXT SUMMARIZER
+// ──────────────────────────────────────────
+export function summarizeConversation(messages: any[]): string {
+  if (!messages || messages.length <= 2) return "";
+  const topics: string[] = [];
+  const mentioned: Set<string> = new Set();
+  for (const m of messages) {
+    if (m.role !== "user") continue;
+    const c = m.content || "";
+    if (/বই|book|প্রোডাক্ট/i.test(c)) mentioned.add("products");
+    if (/অর্ডার|order/i.test(c)) mentioned.add("orders");
+    if (/ডেলিভারি|delivery/i.test(c)) mentioned.add("delivery");
+    if (/দাম|price|৳/i.test(c)) mentioned.add("pricing");
+  }
+  if (mentioned.size > 0) topics.push(`আলোচিত বিষয়: ${[...mentioned].join(", ")}`);
+  return topics.length > 0 ? `\n📝 কথোপকথনের সারাংশ: ${topics.join(" | ")}` : "";
 }
