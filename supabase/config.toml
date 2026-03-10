@@ -60,3 +60,6 @@ verify_jwt = false
 [functions.ad-audience-sync]
 verify_jwt = false
 
+[functions.ai-chat]
+verify_jwt = false
+
