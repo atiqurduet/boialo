@@ -41,7 +41,7 @@ const defaultSlides = [
 export const DynamicHeroSlider = ({ banners }: DynamicHeroSliderProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const touchStartRef = useRef<number>(0);
   const hasBanners = banners.length > 0;
   const slideCount = hasBanners ? banners.length : defaultSlides.length;
