@@ -84,7 +84,7 @@ export function QuickCheckoutModal({
 
     const fetchData = async () => {
       const [payRes] = await Promise.all([
-        supabase.from("payment_methods").select("*").eq("is_active", true).order("sort_order"),
+        (supabase as any).rpc("get_public_payment_methods"),
       ]);
       if (payRes.data) setDbPaymentMethods(payRes.data);
 

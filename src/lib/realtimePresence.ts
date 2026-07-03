@@ -34,17 +34,15 @@ const updatePresence = async (pagePath: string, userId?: string | null, cartValu
   const loc = getLocation();
 
   try {
-    await supabase.from('realtime_presence').upsert({
-      session_id: sessionId,
-      page_path: pagePath,
-      user_id: userId || null,
-      device_type: getDeviceType(),
-      country: loc.country,
-      city: loc.city,
-      is_online: true,
-      cart_value: cartValue || 0,
-      last_seen_at: new Date().toISOString(),
-    }, { onConflict: 'session_id' });
+    await (supabase as any).rpc('upsert_presence', {
+      p_session_id: sessionId,
+      p_page_path: pagePath,
+      p_user_id: userId || null,
+      p_device_type: getDeviceType(),
+      p_country: loc.country,
+      p_city: loc.city,
+      p_cart_value: cartValue || 0,
+    });
   } catch (e) {
     console.debug('Presence update failed:', e);
   }
@@ -53,10 +51,7 @@ const updatePresence = async (pagePath: string, userId?: string | null, cartValu
 const markOffline = async () => {
   const sessionId = getSessionId();
   try {
-    await supabase.from('realtime_presence').update({
-      is_online: false,
-      last_seen_at: new Date().toISOString(),
-    }).eq('session_id', sessionId);
+    await (supabase as any).rpc('mark_presence_offline', { p_session_id: sessionId });
   } catch {}
 };
 

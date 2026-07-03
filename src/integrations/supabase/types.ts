@@ -6567,6 +6567,21 @@ export type Database = {
             } & "Could not choose the best candidate function between: public.get_least_loaded_staff(_role => text), public.get_least_loaded_staff(_role => app_role). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
           }
       get_order_tracking: { Args: { p_order_number: string }; Returns: Json }
+      get_public_payment_methods: {
+        Args: never
+        Returns: {
+          id: string
+          is_active: boolean
+          manual_instructions: string
+          manual_number: string
+          manual_type: string
+          name_bn: string
+          name_en: string
+          payment_mode: string
+          provider: string
+          sort_order: number
+        }[]
+      }
       get_visitor_chat_messages: {
         Args: { p_conversation_id: string; p_visitor_id: string }
         Returns: {
@@ -6662,12 +6677,66 @@ export type Database = {
         }
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_support: { Args: { _user_id: string }; Returns: boolean }
+      mark_presence_offline: {
+        Args: { p_session_id: string }
+        Returns: undefined
+      }
       smart_auto_assign: {
         Args: { _order_id?: string; _task_type: string }
         Returns: string
       }
+      subscribe_email: {
+        Args: { p_email: string; p_source: string }
+        Returns: Json
+      }
+      track_retention_conversion: {
+        Args: {
+          p_cohort_date: string
+          p_fingerprint: string
+          p_revenue: number
+        }
+        Returns: undefined
+      }
+      track_retention_visit: {
+        Args: {
+          p_cohort_date: string
+          p_fingerprint: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       update_visitor_conversation_timestamp: {
         Args: { p_conversation_id: string; p_visitor_id: string }
+        Returns: undefined
+      }
+      upsert_predictive_score: {
+        Args: {
+          p_churn_risk: number
+          p_ltv_tier: string
+          p_next_action: string
+          p_purchase_probability: number
+          p_recommended_action: string
+          p_segment: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      upsert_presence: {
+        Args: {
+          p_cart_value: number
+          p_city: string
+          p_country: string
+          p_device_type: string
+          p_page_path: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      upsert_retention_visit: {
+        Args: { p_cohort_id: string; p_user_id: string; p_visit_day: number }
         Returns: undefined
       }
       validate_gift_card: { Args: { p_code: string }; Returns: Json }

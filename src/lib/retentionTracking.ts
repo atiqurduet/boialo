@@ -38,47 +38,13 @@ export const trackRetention = async (userId?: string | null) => {
 
   const fingerprint = getFingerprint();
   const cohortDate = getWeekStart(new Date());
-  const now = new Date().toISOString();
 
   try {
-    // Check if cohort entry exists
-    const { data: existing } = await supabase
-      .from('retention_cohorts')
-      .select('id, visit_count, total_page_views, first_visit_at')
-      .eq('fingerprint_id', fingerprint)
-      .eq('cohort_date', cohortDate)
-      .eq('cohort_type', 'weekly')
-      .maybeSingle();
-
-    if (existing) {
-      const daysSinceFirst = Math.floor(
-        (Date.now() - new Date(existing.first_visit_at).getTime()) / (24 * 60 * 60_000)
-      );
-
-      await supabase.from('retention_cohorts').update({
-        last_visit_at: now,
-        visit_count: (existing.visit_count || 0) + 1,
-        total_page_views: (existing.total_page_views || 0) + 1,
-        days_since_first_visit: daysSinceFirst,
-        user_id: userId || undefined,
-        is_retained: true,
-        updated_at: now,
-      }).eq('id', existing.id);
-    } else {
-      await supabase.from('retention_cohorts').insert({
-        cohort_date: cohortDate,
-        cohort_type: 'weekly',
-        fingerprint_id: fingerprint,
-        user_id: userId || null,
-        first_visit_at: now,
-        last_visit_at: now,
-        visit_count: 1,
-        total_page_views: 1,
-        total_sessions: 1,
-        days_since_first_visit: 0,
-        is_retained: true,
-      });
-    }
+    await (supabase as any).rpc('track_retention_visit', {
+      p_fingerprint: fingerprint,
+      p_cohort_date: cohortDate,
+      p_user_id: userId || null,
+    });
   } catch (e) {
     console.debug('Retention tracking failed:', e);
   }
@@ -88,22 +54,12 @@ export const trackRetention = async (userId?: string | null) => {
 export const trackRetentionConversion = async (revenue: number) => {
   const fingerprint = getFingerprint();
   const cohortDate = getWeekStart(new Date());
-
   try {
-    const { data } = await supabase
-      .from('retention_cohorts')
-      .select('id, total_conversions, total_revenue')
-      .eq('fingerprint_id', fingerprint)
-      .eq('cohort_date', cohortDate)
-      .maybeSingle();
-
-    if (data) {
-      await supabase.from('retention_cohorts').update({
-        total_conversions: (data.total_conversions || 0) + 1,
-        total_revenue: (data.total_revenue || 0) + revenue,
-        updated_at: new Date().toISOString(),
-      }).eq('id', data.id);
-    }
+    await (supabase as any).rpc('track_retention_conversion', {
+      p_fingerprint: fingerprint,
+      p_cohort_date: cohortDate,
+      p_revenue: revenue,
+    });
   } catch {}
 };
 

@@ -26,29 +26,21 @@ const Preorder = () => {
     }
     setSubLoading(true);
     try {
-      const { data: existing } = await supabase
-        .from('email_subscribers')
-        .select('id, status')
-        .eq('email', subEmail.trim().toLowerCase())
-        .maybeSingle();
-
-      if (existing) {
-        if (existing.status === 'active') {
-          toast.info("আপনি ইতিমধ্যে সাবস্ক্রাইব করেছেন");
-        } else {
-          await supabase
-            .from('email_subscribers')
-            .update({ status: 'active', unsubscribed_at: null, updated_at: new Date().toISOString() })
-            .eq('id', existing.id);
-          toast.success("আবার সাবস্ক্রাইব করা হয়েছে!");
-        }
-      } else {
-        const { error } = await supabase
-          .from('email_subscribers')
-          .insert({ email: subEmail.trim().toLowerCase(), source: 'preorder_page', status: 'active' });
-        if (error) throw error;
+      const { data, error } = await (supabase as any).rpc('subscribe_email', {
+        p_email: subEmail.trim().toLowerCase(),
+        p_source: 'preorder_page',
+      });
+      if (error) throw error;
+      const status = (data as any)?.status;
+      if (status === 'already_active') {
+        toast.info("আপনি ইতিমধ্যে সাবস্ক্রাইব করেছেন");
+      } else if (status === 'resubscribed') {
+        toast.success("আবার সাবস্ক্রাইব করা হয়েছে!");
+      } else if (status === 'subscribed') {
         trackSubscribe('preorder');
         toast.success("সফলভাবে সাবস্ক্রাইব করা হয়েছে!");
+      } else {
+        toast.error("সঠিক ইমেইল ঠিকানা দিন");
       }
       setSubEmail("");
     } catch (error) {
