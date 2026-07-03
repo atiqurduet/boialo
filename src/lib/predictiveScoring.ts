@@ -196,17 +196,16 @@ export const savePredictiveScore = async (userId?: string) => {
   const score = calculatePredictiveScore();
 
   try {
-    await (supabase as any).from('predictive_scores').upsert({
-      session_id: getSessionId(),
-      user_id: userId || null,
-      purchase_probability: score.purchaseProbability,
-      churn_risk: score.churnRisk,
-      ltv_tier: score.lifetimeValueTier,
-      segment: score.segment,
-      next_action: score.nextActionPrediction,
-      recommended_action: score.recommendedAction,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'session_id' });
+    await (supabase as any).rpc('upsert_predictive_score', {
+      p_session_id: getSessionId(),
+      p_user_id: userId || null,
+      p_purchase_probability: score.purchaseProbability,
+      p_churn_risk: score.churnRisk,
+      p_ltv_tier: score.lifetimeValueTier,
+      p_segment: score.segment,
+      p_next_action: score.nextActionPrediction,
+      p_recommended_action: score.recommendedAction,
+    });
   } catch (e) {
     console.debug('Predictive score save failed:', e);
   }
