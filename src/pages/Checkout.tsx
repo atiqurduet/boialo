@@ -82,7 +82,7 @@ const Checkout = () => {
     const fetchAll = async () => {
       const [otpRes, payRes, zoneRes, fieldsRes, rulesRes] = await Promise.all([
         supabase.from("site_settings").select("setting_key, setting_value").eq("category", "security").in("setting_key", ["otp_enabled", "otp_only_for_cod", "otp_required_for_cod", "otp_required_for_new_customers"]),
-        supabase.from("payment_methods").select("*").eq("is_active", true).order("sort_order"),
+        (supabase as any).rpc("get_public_payment_methods"),
         supabase.from("delivery_zones").select("*").eq("is_active", true).order("sort_order"),
         supabase.from("checkout_form_fields").select("*").eq("is_active", true).order("sort_order"),
         supabase.from("dynamic_pricing_rules").select("*").eq("is_active", true).order("priority", { ascending: false }),
