@@ -6690,6 +6690,22 @@ export type Database = {
         Args: { p_email: string; p_source: string }
         Returns: Json
       }
+      track_retention_conversion: {
+        Args: {
+          p_cohort_date: string
+          p_fingerprint: string
+          p_revenue: number
+        }
+        Returns: undefined
+      }
+      track_retention_visit: {
+        Args: {
+          p_cohort_date: string
+          p_fingerprint: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       update_visitor_conversation_timestamp: {
         Args: { p_conversation_id: string; p_visitor_id: string }
         Returns: undefined
