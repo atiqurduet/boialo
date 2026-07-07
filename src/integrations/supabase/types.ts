@@ -4308,7 +4308,7 @@ export type Database = {
           is_active: boolean | null
           p256dh: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           auth: string
@@ -4318,7 +4318,7 @@ export type Database = {
           is_active?: boolean | null
           p256dh: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           auth?: string
@@ -4328,7 +4328,7 @@ export type Database = {
           is_active?: boolean | null
           p256dh?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
