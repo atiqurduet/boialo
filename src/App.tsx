@@ -229,6 +229,7 @@ const App = () => (
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/reports" element={<AdminReports />} />
                 <Route path="/admin/settings" element={<AdminSettings />} />
+                <Route path="/admin/env-variables" element={<AdminEnvVariables />} />
                 <Route path="/admin/payments" element={<AdminPayments />} />
                 <Route path="/admin/couriers" element={<AdminCouriers />} />
                 <Route path="/admin/customers" element={<AdminCustomers />} />
