@@ -28,17 +28,14 @@ export const useAdminAuth = (): AdminAuthState => {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        const { data, error } = await (supabase as any)
+          .rpc('get_my_admin_role');
 
         if (error) {
           console.error('Error fetching user role:', error);
           setRole(null);
         } else {
-          setRole(data?.role as AppRole || null);
+          setRole(data as AppRole || null);
         }
       } catch (err) {
         console.error('Error:', err);

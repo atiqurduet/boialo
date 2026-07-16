@@ -31,14 +31,10 @@ export function usePermissions(): UserPermissions & { isLoading: boolean } {
     queryKey: ["user-role", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const { data, error } = await (supabase as any).rpc("get_my_admin_role");
       
       if (error) throw error;
-      return data?.role as AppRole | null;
+      return data as AppRole | null;
     },
     enabled: !!user?.id,
   });

@@ -6566,6 +6566,7 @@ export type Database = {
               error: true
             } & "Could not choose the best candidate function between: public.get_least_loaded_staff(_role => text), public.get_least_loaded_staff(_role => app_role). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
           }
+      get_my_admin_role: { Args: never; Returns: string }
       get_order_tracking: { Args: { p_order_number: string }; Returns: Json }
       get_public_payment_methods: {
         Args: never
