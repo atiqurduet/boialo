@@ -172,6 +172,7 @@ export const menuCategories: MenuCategory[] = [
     roles: ['super_admin'],
     items: [
       { icon: Settings, label: 'সাইট সেটিংস', href: '/admin/settings', roles: ['super_admin'] },
+      { icon: Settings, label: 'Environment Variables', href: '/admin/env-variables', roles: ['super_admin'] },
       { icon: CreditCard, label: 'পেমেন্ট', href: '/admin/payments', roles: ['super_admin'] },
       { icon: Truck, label: 'কুরিয়ার', href: '/admin/couriers', roles: ['super_admin'] },
       { icon: MapPin, label: 'ডেলিভারি জোন', href: '/admin/delivery-zones', roles: ['super_admin'] },

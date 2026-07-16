@@ -94,6 +94,7 @@ const AdminProductTypes = lazy(() => import("./pages/admin/AdminProductTypes"));
 const AdminOffers = lazy(() => import("./pages/admin/AdminOffers"));
 const AdminEmailMarketing = lazy(() => import("./pages/admin/AdminEmailMarketing"));
 const AdminTasks = lazy(() => import("./pages/admin/AdminTasks"));
+const AdminEnvVariables = lazy(() => import("./pages/admin/AdminEnvVariables"));
 const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications"));
 const AdminChat = lazy(() => import("./pages/admin/AdminChat"));
 const AdminRefundPolicy = lazy(() => import("./pages/admin/AdminRefundPolicy"));
@@ -228,6 +229,7 @@ const App = () => (
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/reports" element={<AdminReports />} />
                 <Route path="/admin/settings" element={<AdminSettings />} />
+                <Route path="/admin/env-variables" element={<AdminEnvVariables />} />
                 <Route path="/admin/payments" element={<AdminPayments />} />
                 <Route path="/admin/couriers" element={<AdminCouriers />} />
                 <Route path="/admin/customers" element={<AdminCustomers />} />

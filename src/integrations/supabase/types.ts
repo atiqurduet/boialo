@@ -397,6 +397,42 @@ export type Database = {
         }
         Relationships: []
       }
+      app_secrets: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       audience_sync_jobs: {
         Row: {
           audience_name: string | null
@@ -6553,6 +6589,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_app_secret: { Args: { p_name: string }; Returns: string }
       get_least_loaded_staff:
         | {
             Args: { _role: Database["public"]["Enums"]["app_role"] }
