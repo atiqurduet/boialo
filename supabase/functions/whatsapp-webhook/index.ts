@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { aiChatCompletion, hasAiProvider } from "../_shared/ai-gateway.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -222,9 +223,8 @@ Deno.serve(async (req) => {
 
     const WHATSAPP_ACCESS_TOKEN = cs.chatbot_wa_access_token || Deno.env.get("WHATSAPP_ACCESS_TOKEN");
     const WHATSAPP_PHONE_NUMBER_ID = cs.chatbot_wa_phone_number_id || Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-
-    if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID || !LOVABLE_API_KEY) {
+    const hasAi = await hasAiProvider();
+    if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID || !hasAi) {
       console.error("Missing WhatsApp secrets");
       return new Response("OK", { status: 200 });
     }
@@ -266,14 +266,10 @@ Deno.serve(async (req) => {
           ...history,
         ];
 
-        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
-            messages: aiMessages,
-            stream: false,
-          }),
+        const aiResponse = await aiChatCompletion({
+          model: "google/gemini-3-flash-preview",
+          messages: aiMessages,
+          stream: false,
         });
 
         if (!aiResponse.ok) {
