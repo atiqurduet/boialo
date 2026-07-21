@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getSiteUrl } from "../_shared/site-url.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -88,6 +89,7 @@ async function processInBackground(rows: any[]) {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+    const siteUrl = await getSiteUrl(supabase);
 
     // Insert events
     const { error } = await supabase.from("server_side_events").insert(rows);
@@ -190,7 +192,7 @@ async function processInBackground(rows: any[]) {
             event_time: Math.floor(Date.now() / 1000),
             event_id: r.dedup_key || crypto.randomUUID(),
             action_source: "website",
-            event_source_url: r.page_path ? `https://boialo.lovable.app${r.page_path}` : undefined,
+            event_source_url: r.page_path ? `${siteUrl}${r.page_path}` : undefined,
             user_data: {
               client_ip_address: r.ip_address,
               client_user_agent: r.user_agent,
@@ -220,7 +222,7 @@ async function processInBackground(rows: any[]) {
             event: ttEventMap[r.event_name] || r.event_name,
             event_id: r.dedup_key || crypto.randomUUID(),
             timestamp: new Date().toISOString(),
-            context: { user_agent: r.user_agent, ip: r.ip_address, page: { url: r.page_path ? `https://boialo.lovable.app${r.page_path}` : undefined }, user: { external_id: r.user_id || r.fingerprint_id || r.session_id } },
+            context: { user_agent: r.user_agent, ip: r.ip_address, page: { url: r.page_path ? `${siteUrl}${r.page_path}` : undefined }, user: { external_id: r.user_id || r.fingerprint_id || r.session_id } },
             properties: { currency: r.event_data?.currency || "BDT", value: r.event_data?.value || 0 },
           }));
           const res = await fetch("https://business-api.tiktok.com/open_api/v1.3/event/track/", {
