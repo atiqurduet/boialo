@@ -21,6 +21,9 @@ import { Eye, EyeOff, Loader2, Phone, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+// Self-hosting-friendly: use native Supabase OAuth directly (bypasses Lovable broker).
+// When running on Lovable Cloud, the Lovable auth gate still works with this flow
+// as long as the Google provider is enabled in the backend Auth settings.
 import { toast } from "sonner";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 
@@ -500,8 +503,11 @@ const SignIn = () => {
                   variant="outline"
                   className="w-full gap-2"
                   onClick={async () => {
-                    const { error } = await lovable.auth.signInWithOAuth("google", {
-                      redirect_uri: window.location.origin,
+                    const { error } = await supabase.auth.signInWithOAuth({
+                      provider: "google",
+                      options: {
+                        redirectTo: `${window.location.origin}/`,
+                      },
                     });
                     if (error) toast.error(error.message);
                   }}
