@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiChatCompletion, hasAiProvider } from "../_shared/ai-gateway.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,8 +22,7 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    if (!(await hasAiProvider())) {
       return new Response(
         JSON.stringify({ error: "AI service not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -30,15 +30,9 @@ serve(async (req) => {
     }
 
     // Step 1: Use Gemini to analyze the image and extract search keywords
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
+    const aiResponse = await aiChatCompletion({
+      model: "google/gemini-2.5-flash",
+      messages: [
           {
             role: "user",
             content: [
@@ -63,7 +57,6 @@ Return ONLY the JSON, no markdown or extra text.`
             ]
           }
         ],
-      }),
     });
 
     if (!aiResponse.ok) {
