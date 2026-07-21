@@ -108,10 +108,11 @@ serve(async (req) => {
     const { data: userRole, error: roleError } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("user_id", user.id);
 
-    if (roleError || !userRole) {
+    const allowed = ["super_admin", "admin", "manager"];
+    const hasAccess = (userRole || []).some((r: any) => allowed.includes(r.role));
+    if (roleError || !hasAccess) {
       console.error("Role check error:", roleError);
       return new Response(JSON.stringify({ error: "Access denied" }), {
         status: 403,
