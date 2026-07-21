@@ -1174,7 +1174,7 @@ const AdminEproducts = () => {
                 <div className="border rounded-lg p-4 bg-muted/30">
                   <p className="text-xs text-muted-foreground mb-2">গুগল প্রিভিউ</p>
                   <p className="text-primary text-base font-medium line-clamp-1">{form.meta_title || form.title_bn}</p>
-                  <p className="text-xs text-emerald-700 line-clamp-1">boialo.lovable.app/eproducts/{form.slug}</p>
+                  <p className="text-xs text-emerald-700 line-clamp-1">{typeof window !== 'undefined' ? window.location.host : 'boialo.lovable.app'}/eproducts/{form.slug}</p>
                   <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{form.meta_description || form.description_bn?.substring(0, 160)}</p>
                 </div>
               )}

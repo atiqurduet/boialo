@@ -365,7 +365,7 @@ const createDefaultBlock = (type: BlockType): EmailBlock => {
   return { id: genId(), type, content: d.content || {}, settings: d.settings || {} };
 };
 
-const siteUrl = "https://boialo.lovable.app";
+const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://boialo.lovable.app';
 
 // ── Professional HTML card generators ──
 const productCardHtml = (p: any, style: string = "modern") => {

@@ -444,7 +444,7 @@ const AdminBlog = () => {
                   <p className="text-primary text-base font-medium line-clamp-1">
                     {form.meta_title || form.title_bn || "পোস্ট শিরোনাম"}
                   </p>
-                  <p className="text-primary/70 text-xs">boialo.lovable.app/blog/{form.slug || "..."}</p>
+                  <p className="text-primary/70 text-xs">{typeof window !== 'undefined' ? window.location.host : 'boialo.lovable.app'}/blog/{form.slug || "..."}</p>
                   <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
                     {form.meta_description || form.excerpt_bn || "পোস্টের বিবরণ এখানে দেখা যাবে..."}
                   </p>
