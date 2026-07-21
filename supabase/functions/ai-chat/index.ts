@@ -15,7 +15,35 @@ Deno.serve(async (req) => {
     if (!(await hasAiProvider())) throw new Error("No AI provider key configured");
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { messages, mode, context, userId } = await req.json();
+    const { messages, mode, context } = await req.json();
+
+    // Require authenticated caller; derive userId/role from JWT (never trust client body)
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = userData.user.id;
+
+    if (mode === "admin") {
+      const { data: role } = await supabase
+        .from("user_roles").select("role").eq("user_id", userId);
+      const roles = (role || []).map((r: any) => r.role);
+      const isAdmin = roles.some((r: string) => ["super_admin", "admin", "manager"].includes(r));
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
     let systemPrompt = "";
 
     if (mode === "customer") {
