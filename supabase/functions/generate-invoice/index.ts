@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { getSiteUrl } from "../_shared/site-url.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -176,7 +177,8 @@ serve(async (req) => {
       : `<div class="logo">${settings.company_name}</div>`;
 
     // Generate QR code URL for order tracking
-    const trackingUrl = `https://boialo.lovable.app/track/${order.order_number}`;
+    const siteUrl = await getSiteUrl(supabase);
+    const trackingUrl = `${siteUrl}/track/${order.order_number}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(trackingUrl)}`;
 
     const html = `<!DOCTYPE html>
