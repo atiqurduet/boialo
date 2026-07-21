@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiChatCompletion, hasAiProvider } from "../_shared/ai-gateway.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -103,8 +104,7 @@ serve(async (req) => {
     const { type, data } = await req.json();
     const requestType = type as RequestType;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    if (!(await hasAiProvider())) throw new Error("No AI provider key configured");
 
     let systemPrompt = "";
     let userPrompt = "";
@@ -193,19 +193,14 @@ Provide a JSON response with this exact structure:
         });
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
+    const response = await aiChatCompletion({
+      model: "google/gemini-2.5-flash",
+      messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        tools: [
+      // @ts-ignore extra fields passed through
+      tools: [
           {
             type: "function",
             function: {
@@ -224,9 +219,9 @@ Provide a JSON response with this exact structure:
             },
           },
         ],
-        tool_choice: { type: "function", function: { name: "seo_analysis_result" } },
-      }),
-    });
+      // @ts-ignore
+      tool_choice: { type: "function", function: { name: "seo_analysis_result" } },
+    } as any);
 
     if (!response.ok) {
       if (response.status === 429) {
