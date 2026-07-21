@@ -34,7 +34,7 @@ export function useAIChat(mode: "customer" | "admin", userId?: string) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: allMessages, mode, context, userId }),
+        body: JSON.stringify({ messages: allMessages, mode, context }),
       });
 
       if (!resp.ok || !resp.body) {
