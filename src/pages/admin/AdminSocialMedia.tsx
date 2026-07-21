@@ -101,7 +101,7 @@ const CONDITION_TYPES = [
   { id: 'has_image', label: 'ছবি আছে', type: 'boolean' },
 ];
 
-const BASE_URL = 'https://boialo.lovable.app';
+const BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'https://boialo.lovable.app';
 
 // Shared product selector hook
 const useProductCategorySelector = (searchKey: string) => {

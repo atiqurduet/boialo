@@ -88,12 +88,14 @@ supabase secrets set GEMINI_API_KEY=AIzaxxxx     # optional
 ### উপায় ২: Admin Panel
 Site login → `/admin/env-variables` → key/value যোগ করুন।
 
-### Self-hosting এর জন্য এই দুটো অবশ্যই যোগ করুন
+### Self-hosting এর জন্য এই গুলো অবশ্যই যোগ করুন
 ```
 SUPABASE_FUNCTIONS_URL = https://<your-ref>.supabase.co/functions/v1
 SUPABASE_ANON_KEY      = <your anon/publishable key>
+SITE_URL               = https://your-domain.com
 ```
-এগুলো `notify_new_product` trigger ঠিকভাবে কাজ করার জন্য দরকার।
+- `SUPABASE_FUNCTIONS_URL` + `SUPABASE_ANON_KEY` → `notify_new_product` trigger এর জন্য
+- `SITE_URL` → invoice QR code, tracking link, Facebook/TikTok CAPI, WhatsApp/Facebook webhook fallback URL এর জন্য
 
 > ⚠️ `LOVABLE_API_KEY` self-hosting এ কাজ করবে না। AI features চাইলে `OPENAI_API_KEY` বা `GEMINI_API_KEY` set করুন। না দিলেও site স্বাভাবিকভাবে চলবে, শুধু AI features (chat bot, image search, keyword research, audience AI) off থাকবে।
 
