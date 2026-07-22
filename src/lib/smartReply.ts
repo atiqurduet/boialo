@@ -209,8 +209,16 @@ function replyGreeting(name?: string): string {
   return `আসসালামু আলাইকুম${name ? " " + name : ""}! 👋\n\nআপনাকে সাহায্য করতে পারি:\n\n🔍 বই/প্রোডাক্ট খুঁজতে — নাম লিখুন\n📦 অর্ডার ট্র্যাক — অর্ডার নম্বর দিন\n🎁 অফার — "অফার" লিখুন\n🚚 ডেলিভারি চার্জ — "ডেলিভারি" লিখুন`;
 }
 
-function replyFallback(): string {
-  return `হুম, আপনার প্রশ্নটা ঠিক বুঝতে পারিনি। 🤔\n\nএগুলো করতে পারেন:\n\n• 🔍 প্রোডাক্টের নাম লিখুন\n• 📦 অর্ডার নম্বর দিয়ে ট্র্যাক করুন\n• 🎁 "অফার" লিখে সক্রিয় কুপন দেখুন\n• 🚚 "ডেলিভারি" লিখে চার্জ জানুন\n• 👤 উপরের **"লাইভ"** বাটনে ক্লিক করে সরাসরি স্টাফের সাথে কথা বলুন`;
+function replyFallback(reason?: "no_context" | "context_empty" | "followup_no_ref" | "default"): string {
+  const intro =
+    reason === "context_empty"
+      ? `😅 আগের আলোচনায় কোনো নির্দিষ্ট প্রোডাক্ট পেলাম না।`
+      : reason === "followup_no_ref"
+      ? `🤔 আপনি কোন প্রোডাক্ট/অর্ডার সম্পর্কে জিজ্ঞেস করছেন সেটা বুঝতে পারিনি।`
+      : reason === "no_context"
+      ? `🤔 আপনার প্রশ্নটা একটু অস্পষ্ট মনে হলো।`
+      : `হুম, আপনার প্রশ্নটা ঠিক বুঝতে পারিনি। 🤔`;
+  return `${intro}\n\nএগুলো করতে পারেন:\n\n• 🔍 প্রোডাক্টের **নাম** লিখুন (যেমন: "হুমায়ূন আহমেদ")\n• 📦 **অর্ডার নম্বর** দিন (যেমন: BOI123456)\n• 🎁 "অফার" লিখে সক্রিয় কুপন দেখুন\n• 🚚 "ডেলিভারি" লিখে চার্জ জানুন\n• 👤 উপরের **"লাইভ"** বাটনে ক্লিক করে সরাসরি স্টাফের সাথে কথা বলুন`;
 }
 
 export async function generateSmartReply(
@@ -274,8 +282,15 @@ export async function generateSmartReply(
         : `${prefix}🔍 **"${cleanTerm}"** এর সার্চ রেজাল্ট:`;
       return `${header}\n\n${results.join("\n")}\n\nআরো তথ্য লাগলে লিংকে ক্লিক করুন।`;
     }
-    return `😔 **"${cleanTerm}"** নামে কিছু খুঁজে পেলাম না।\n\n• বানান চেক করুন\n• অন্য নাম দিয়ে চেষ্টা করুন\n• অথবা [পুরো ক্যাটালগ](/shop) দেখুন`;
+    const note = usedContext
+      ? `\n\n(আগের আলোচনার প্রোডাক্ট **"${cleanTerm}"** ধরে খুঁজেছিলাম, কিন্তু মিল পাইনি।)`
+      : "";
+    return `😔 **"${cleanTerm}"** নামে কিছু খুঁজে পেলাম না।${note}\n\n• বানান চেক করুন\n• অন্য নাম দিয়ে চেষ্টা করুন\n• অথবা [পুরো ক্যাটালগ](/shop) দেখুন\n• সরাসরি সাহায্যের জন্য উপরের **"লাইভ"** বাটনে ক্লিক করুন`;
   }
 
-  return replyFallback();
+  // Follow-up cue ছিল কিন্তু context এ কোনো reference নেই
+  if (isFollowUpCue) return replyFallback("followup_no_ref");
+  // Context ছিল না বা derive করতে পারিনি
+  if (recent.length > 0) return replyFallback("context_empty");
+  return replyFallback("no_context");
 }
