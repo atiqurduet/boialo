@@ -18,6 +18,82 @@ const FALLBACK_QUICK_REPLIES: Record<string, string[]> = {
   no_results: ["🔍 নতুন কীওয়ার্ড দিন", "📚 বেস্ট সেলার", "🎁 অফার দেখুন", "👤 লাইভ চ্যাট"],
 };
 
+// Trim to a display-friendly length (≤ ~22 chars) for chip text.
+function trimChip(s: string, max = 22): string {
+  const t = s.trim();
+  return t.length > max ? t.slice(0, max - 1) + "…" : t;
+}
+
+// Deduplicate, drop empties, cap between 3 and 5 chips.
+function finalizeQuickReplies(items: (string | null | undefined)[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of items) {
+    if (!raw) continue;
+    const v = raw.trim();
+    if (!v || seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+    if (out.length >= 5) break;
+  }
+  return out.slice(0, 5);
+}
+
+/**
+ * Build a context-aware quick-reply set for a fallback situation.
+ * Prioritizes chips that reference the last product/order the user mentioned,
+ * then fills with intent-driven defaults, always ending with "লাইভ চ্যাট".
+ */
+function buildDynamicQuickReplies(
+  reason: "default" | "no_context" | "context_empty" | "followup_no_ref" | "no_results",
+  opts: {
+    productTerm?: string | null;
+    orderNumber?: string | null;
+    priceAsked?: boolean;
+    stockAsked?: boolean;
+    userMessage?: string;
+  } = {}
+): string[] {
+  const { productTerm, orderNumber, priceAsked, stockAsked, userMessage = "" } = opts;
+  const chips: (string | null)[] = [];
+  const lower = userMessage.toLowerCase();
+
+  // 1) Product-scoped chips (highest priority when a product is in context)
+  if (productTerm) {
+    const label = trimChip(productTerm, 16);
+    if (!priceAsked) chips.push(`💰 "${label}" এর দাম`);
+    if (!stockAsked) chips.push(`📦 "${label}" স্টকে?`);
+    chips.push(`🔍 একই ধরনের আরও বই`);
+  }
+
+  // 2) Order-scoped chip
+  if (orderNumber) {
+    chips.push(`📦 অর্ডার #${orderNumber} ট্র্যাক`);
+  }
+
+  // 3) Intent-driven chips based on the current user message
+  if (hasAny(lower, deliveryWords)) chips.push("🚚 ডেলিভারি চার্জ");
+  if (hasAny(lower, paymentWords)) chips.push("💳 পেমেন্ট মাধ্যম");
+  if (hasAny(lower, returnWords)) chips.push("↩️ রিটার্ন পলিসি");
+  if (hasAny(lower, ebookWords)) chips.push("📱 ই-বুক দেখুন");
+
+  // 4) Reason-specific defaults (help pool)
+  const pool = FALLBACK_QUICK_REPLIES[reason] ?? FALLBACK_QUICK_REPLIES.default;
+  // Skip generic "লাইভ চ্যাট" here; appended at the end.
+  for (const c of pool) if (!c.includes("লাইভ")) chips.push(c);
+
+  // 5) Always finish with a live-chat escape hatch
+  chips.push("👤 লাইভ চ্যাট");
+
+  const finalized = finalizeQuickReplies(chips);
+  // Ensure a minimum of 3 chips by topping up from the default pool if needed.
+  if (finalized.length < 3) {
+    const topUp = finalizeQuickReplies([...finalized, ...FALLBACK_QUICK_REPLIES.default]);
+    return topUp.slice(0, Math.max(3, topUp.length));
+  }
+  return finalized;
+}
+
 const statusMap: Record<string, string> = {
   pending: "⏳ পেন্ডিং",
   confirmed: "✅ কনফার্মড",
@@ -240,7 +316,12 @@ export async function generateSmartReply(
   history: ChatContextMessage[] = []
 ): Promise<SmartReplyResult> {
   const text = userMessage.toLowerCase().trim();
-  if (!text) return { message: replyFallback("default"), quickReplies: FALLBACK_QUICK_REPLIES.default };
+  if (!text) {
+    return {
+      message: replyFallback("default"),
+      quickReplies: buildDynamicQuickReplies("default", { userMessage }),
+    };
+  }
 
   // Only use the last 5 messages of prior context.
   const recent = history.slice(-5);
@@ -304,17 +385,42 @@ export async function generateSmartReply(
       : "";
     return {
       message: `😔 **"${cleanTerm}"** নামে কিছু খুঁজে পেলাম না।${note}\n\n• বানান চেক করুন\n• অন্য নাম দিয়ে চেষ্টা করুন\n• অথবা [পুরো ক্যাটালগ](/shop) দেখুন`,
-      quickReplies: FALLBACK_QUICK_REPLIES.no_results,
+      quickReplies: buildDynamicQuickReplies("no_results", {
+        productTerm: ctx.productTerm,
+        orderNumber: ctx.orderNumber,
+        priceAsked,
+        stockAsked,
+        userMessage,
+      }),
     };
   }
 
   // Follow-up cue ছিল কিন্তু context এ কোনো reference নেই
   if (isFollowUpCue) {
-    return { message: replyFallback("followup_no_ref"), quickReplies: FALLBACK_QUICK_REPLIES.followup_no_ref };
+    return {
+      message: replyFallback("followup_no_ref"),
+      quickReplies: buildDynamicQuickReplies("followup_no_ref", {
+        productTerm: ctx.productTerm,
+        orderNumber: ctx.orderNumber,
+        priceAsked,
+        stockAsked,
+        userMessage,
+      }),
+    };
   }
   // Context ছিল না বা derive করতে পারিনি
   if (recent.length > 0) {
-    return { message: replyFallback("context_empty"), quickReplies: FALLBACK_QUICK_REPLIES.context_empty };
+    return {
+      message: replyFallback("context_empty"),
+      quickReplies: buildDynamicQuickReplies("context_empty", {
+        productTerm: ctx.productTerm,
+        orderNumber: ctx.orderNumber,
+        userMessage,
+      }),
+    };
   }
-  return { message: replyFallback("no_context"), quickReplies: FALLBACK_QUICK_REPLIES.no_context };
+  return {
+    message: replyFallback("no_context"),
+    quickReplies: buildDynamicQuickReplies("no_context", { userMessage }),
+  };
 }
