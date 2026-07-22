@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Upload, X, Image, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { MediaPickerButton } from '@/components/admin/MediaPickerButton';
 
 interface SectionImageUploadProps {
   value: string;
@@ -145,6 +146,14 @@ export const SectionImageUpload = ({
               <Upload className="h-4 w-4 mr-2" />
               আপলোড
             </Button>
+            <MediaPickerButton
+              defaultFolder="banners"
+              accept="image"
+              label="লাইব্রেরি"
+              size="sm"
+              className="flex-1"
+              onSelect={(urls) => urls[0] && onChange(urls[0])}
+            />
             <Button
               type="button"
               variant="outline"

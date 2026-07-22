@@ -128,6 +128,7 @@ const AdminEbooks = lazy(() => import("./pages/admin/AdminEbooks"));
 const AdminEproducts = lazy(() => import("./pages/admin/AdminEproducts"));
 const AdminAIAssistant = lazy(() => import("./pages/admin/AdminAIAssistant"));
 const AdminChatbotSettings = lazy(() => import("./pages/admin/AdminChatbotSettings"));
+const AdminMedia = lazy(() => import("./pages/admin/AdminMedia"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -276,6 +277,7 @@ const App = () => (
                 <Route path="/admin/eproducts" element={<AdminEproducts />} />
                 <Route path="/admin/ai-assistant" element={<AdminAIAssistant />} />
                 <Route path="/admin/chatbot-settings" element={<AdminChatbotSettings />} />
+                <Route path="/admin/media" element={<AdminMedia />} />
                 
                 {/* Dynamic Page Route - must be before catch-all */}
                 <Route path="/:slug" element={<DynamicPage />} />

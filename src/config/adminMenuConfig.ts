@@ -150,6 +150,7 @@ export const menuCategories: MenuCategory[] = [
       { icon: Paintbrush, label: 'অ্যাপিয়ারেন্স', href: '/admin/appearance', roles: ['super_admin', 'admin'] },
       { icon: Palette, label: 'লোগো ও ব্র্যান্ডিং', href: '/admin/branding', roles: ['super_admin', 'admin', 'manager'] },
       { icon: Image, label: 'ব্যানার', href: '/admin/banners', roles: ['super_admin', 'admin', 'manager'] },
+      { icon: Image, label: 'মিডিয়া লাইব্রেরি', href: '/admin/media', roles: ['super_admin', 'admin', 'manager'] },
       { icon: Navigation, label: 'মেনু', href: '/admin/menu', roles: ['super_admin', 'admin', 'manager'] },
       { icon: Footprints, label: 'ফুটার', href: '/admin/footer', roles: ['super_admin', 'admin', 'manager'] },
       { icon: Globe, label: 'SEO টুলস', href: '/admin/seo-tools', roles: ['super_admin', 'admin', 'manager'] },
