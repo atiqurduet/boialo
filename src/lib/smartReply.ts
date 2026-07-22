@@ -116,6 +116,55 @@ const deliveryWords = ["ডেলিভারি", "delivery", "চার্জ"
 const trackWords = ["ট্র্যাক", "track", "অর্ডার কোথায়", "অর্ডার স্ট্যাটাস"];
 const ebookWords = ["ই-বুক", "ইবুক", "ebook", "digital", "ডিজিটাল", "pdf"];
 const bookSuggestWords = ["সাজেস্ট", "recommend", "suggest", "বেস্ট সেলার", "জনপ্রিয়", "popular"];
+const authorWords = ["লেখক", "রাইটার", "author", "writer", "এর বই", "লিখেছেন"];
+const categoryWords = ["ক্যাটাগরি", "category", "বিভাগ", "genre", "ঘরানা"];
+const cancelWords = ["বাতিল", "cancel", "ক্যান্সেল", "এডিট", "edit", "পরিবর্তন", "modify"];
+const codWords = ["cod", "ক্যাশ অন ডেলিভারি", "ক্যাশ অন", "cash on delivery"];
+const hoursWords = ["অফিস টাইম", "অফিস সময়", "কখন খোলা", "open hours", "working hours", "সময়সূচি"];
+const accountWords = ["একাউন্ট", "অ্যাকাউন্ট", "account", "login", "লগইন", "পাসওয়ার্ড", "password", "signup", "রেজিস্টার"];
+
+// Banglish → Bangla normalization for common tokens
+const BANGLISH_MAP: Array<[RegExp, string]> = [
+  [/\bboi\b/gi, "বই"],
+  [/\bebook(s)?\b/gi, "ই-বুক"],
+  [/\border\b/gi, "অর্ডার"],
+  [/\bcancel\b/gi, "বাতিল"],
+  [/\bdelivery\b/gi, "ডেলিভারি"],
+  [/\bprice\b/gi, "দাম"],
+  [/\bstock\b/gi, "স্টক"],
+  [/\boffer(s)?\b/gi, "অফার"],
+  [/\btk\b|\btaka\b|\btk\.\b/gi, "টাকা"],
+];
+
+function normalizeInput(s: string): string {
+  let out = s;
+  for (const [re, rep] of BANGLISH_MAP) out = out.replace(re, rep);
+  return out.replace(/\s+/g, " ").trim();
+}
+
+// Bengali digits → ASCII
+function toAsciiDigits(s: string): string {
+  const bn = "০১২৩৪৫৬৭৮৯";
+  return s.replace(/[০-৯]/g, (d) => String(bn.indexOf(d)));
+}
+
+// Parse a price constraint from the user message.
+// Supports "500 টাকার নিচে", "under 500", "৩০০-৫০০ টাকা", "৫০০ এর মধ্যে".
+function parsePriceRange(msg: string): { min?: number; max?: number } | null {
+  const t = toAsciiDigits(msg.toLowerCase());
+  const range = t.match(/(\d{2,6})\s*(?:-|to|থেকে)\s*(\d{2,6})/);
+  if (range) {
+    const a = +range[1], b = +range[2];
+    return { min: Math.min(a, b), max: Math.max(a, b) };
+  }
+  const under = t.match(/(\d{2,6})\s*(?:টাকার\s*(?:নিচে|কম|ভেতরে|মধ্যে)|এর\s*(?:মধ্যে|নিচে|কম))/) ||
+    t.match(/(?:under|below|less than|<=?)\s*(\d{2,6})/);
+  if (under) return { max: +under[1] };
+  const over = t.match(/(\d{2,6})\s*(?:টাকার\s*(?:উপরে|বেশি))/) ||
+    t.match(/(?:over|above|more than|>=?)\s*(\d{2,6})/);
+  if (over) return { min: +over[1] };
+  return null;
+}
 
 const hasAny = (t: string, arr: string[]) => arr.some((w) => t.includes(w.toLowerCase()));
 
@@ -266,6 +315,88 @@ async function replyBestSellers(): Promise<string> {
   return `🔥 **বেস্ট সেলার বই:**\n\n${lines}`;
 }
 
+async function replyAuthor(term: string): Promise<string | null> {
+  const cleaned = term.replace(new RegExp(authorWords.join("|"), "gi"), " ").trim();
+  const q = cleaned.length >= 2 ? cleaned : term;
+  if (q.length < 2) return null;
+  const { data: writers } = await supabase
+    .from("writers").select("id, name_bn, slug")
+    .eq("is_active", true).or(`name_bn.ilike.%${q}%,name_en.ilike.%${q}%`).limit(1);
+  const writer = writers?.[0] as any;
+  if (!writer) return null;
+  const { data: books } = await supabase
+    .from("products").select("title_bn, price, slug, discount_percent, stock_quantity")
+    .eq("is_active", true).eq("writer_id", writer.id).order("sales_count", { ascending: false }).limit(8);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  if (!books?.length) {
+    return `✍️ **${writer.name_bn}** — লেখকের প্রোফাইল পেলাম, কিন্তু আপাতত কোনো বই পাওয়া যাচ্ছে না।`;
+  }
+  const lines = books.map((p: any) => {
+    const disc = p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : "";
+    const stock = p.stock_quantity > 0 ? "" : " ❌";
+    return `• [${p.title_bn}](${origin}/product/${p.slug}) — ৳${p.price}${disc}${stock}`;
+  }).join("\n");
+  return `✍️ **${writer.name_bn}**-এর বইসমূহ:\n\n${lines}`;
+}
+
+async function replyCategory(term: string): Promise<string | null> {
+  const cleaned = term.replace(new RegExp(categoryWords.join("|"), "gi"), " ").trim();
+  const q = cleaned.length >= 2 ? cleaned : term;
+  if (q.length < 2) return null;
+  const { data: cats } = await supabase
+    .from("categories").select("id, name_bn, slug")
+    .eq("is_active", true).or(`name_bn.ilike.%${q}%,name_en.ilike.%${q}%`).limit(1);
+  const cat = cats?.[0] as any;
+  if (!cat) return null;
+  const { data: books } = await supabase
+    .from("products").select("title_bn, price, slug, discount_percent")
+    .eq("is_active", true).eq("category_id", cat.id).order("sales_count", { ascending: false }).limit(8);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const header = `📂 **${cat.name_bn}** ক্যাটাগরির বই:`;
+  if (!books?.length) return `${header}\n\nআপাতত এই ক্যাটাগরিতে কোনো বই নেই। [সব ক্যাটাগরি](${origin}/categories) দেখুন।`;
+  const lines = books.map((p: any) => {
+    const disc = p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : "";
+    return `• [${p.title_bn}](${origin}/product/${p.slug}) — ৳${p.price}${disc}`;
+  }).join("\n");
+  return `${header}\n\n${lines}\n\n[পুরো ক্যাটাগরি দেখুন](${origin}/category/${cat.slug})`;
+}
+
+async function replyPriceRange(range: { min?: number; max?: number }): Promise<string> {
+  let q = supabase.from("products")
+    .select("title_bn, price, slug, discount_percent, stock_quantity")
+    .eq("is_active", true).gt("stock_quantity", 0);
+  if (typeof range.min === "number") q = q.gte("price", range.min);
+  if (typeof range.max === "number") q = q.lte("price", range.max);
+  const { data } = await q.order("sales_count", { ascending: false }).limit(8);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const label = range.min && range.max
+    ? `৳${range.min}–৳${range.max}`
+    : range.max ? `৳${range.max}-এর নিচে` : `৳${range.min}-এর উপরে`;
+  if (!data?.length) return `😔 **${label}** দামের মধ্যে কোনো বই এখন পাওয়া যাচ্ছে না।`;
+  const lines = data.map((p: any) => {
+    const disc = p.discount_percent ? ` (${p.discount_percent}% ছাড়)` : "";
+    return `• [${p.title_bn}](${origin}/product/${p.slug}) — ৳${p.price}${disc}`;
+  }).join("\n");
+  return `💰 **${label}** দামের বই:\n\n${lines}`;
+}
+
+function replyCancelEdit(): string {
+  return `✏️ **অর্ডার বাতিল / এডিট:**\n\n• **প্রসেসিং** স্ট্যাটাসের আগ পর্যন্ত বাতিল করা যাবে\n• "লাইভ চ্যাট" এ অর্ডার নম্বর দিয়ে জানান — আমাদের স্টাফ সাথে সাথে সাহায্য করবে\n• অথবা [My Orders](/orders) পেজ থেকে অ্যাকশন নিন`;
+}
+
+function replyCOD(): string {
+  return `💵 **ক্যাশ অন ডেলিভারি (COD):**\n\n• সব প্রোডাক্টে COD available\n• কোনো অতিরিক্ত চার্জ নেই\n• ডেলিভারির সময় পণ্য চেক করে পেমেন্ট করবেন\n• চেকআউটে পেমেন্ট মাধ্যম হিসেবে "COD" বাছাই করুন`;
+}
+
+async function replyOfficeHours(): Promise<string> {
+  const hours = await getSetting("office_hours");
+  return `🕒 **অফিস সময়:** ${hours || "সকাল ১০টা - রাত ১০টা (শুক্রবার বন্ধ)"}\n\nএর বাইরে মেসেজ পাঠালেও পরদিন সকালেই উত্তর পাবেন ইনশাআল্লাহ।`;
+}
+
+function replyAccountHelp(): string {
+  return `🔐 **একাউন্ট / লগইন সাহায্য:**\n\n• [সাইন ইন](/signin) পেজে যান\n• Google দিয়ে এক ক্লিকে লগইন করতে পারবেন\n• পাসওয়ার্ড ভুলে গেলে "Forgot password" ক্লিক করুন\n• সমস্যা হলে "লাইভ চ্যাট" এ জানান`;
+}
+
 async function replyEbooks(): Promise<string> {
   const { data } = await supabase.from("digital_products")
     .select("title_bn, price, slug, is_free")
@@ -315,7 +446,8 @@ export async function generateSmartReply(
   visitorName?: string,
   history: ChatContextMessage[] = []
 ): Promise<SmartReplyResult> {
-  const text = userMessage.toLowerCase().trim();
+  const normalized = normalizeInput(userMessage);
+  const text = normalized.toLowerCase();
   if (!text) {
     return {
       message: replyFallback("default"),
@@ -346,6 +478,26 @@ export async function generateSmartReply(
   if (hasAny(text, thanksWords)) return { message: "আপনাকেও ধন্যবাদ! 😊 আর কোনো সাহায্য লাগলে জানাবেন।" };
   if (hasAny(text, byeWords)) return { message: "আল্লাহ হাফেজ! 🙏 আবার আসবেন।" };
 
+  // Price-range search: "৫০০ টাকার নিচে", "under 500", "৩০০-৫০০"
+  const range = parsePriceRange(userMessage);
+  if (range) return { message: await replyPriceRange(range) };
+
+  if (hasAny(text, cancelWords)) return { message: replyCancelEdit() };
+  if (hasAny(text, codWords)) return { message: replyCOD() };
+  if (hasAny(text, hoursWords)) return { message: await replyOfficeHours() };
+  if (hasAny(text, accountWords)) return { message: replyAccountHelp() };
+
+  // Author lookup: "হুমায়ূন আহমেদ এর বই", "author humayun"
+  if (hasAny(text, authorWords)) {
+    const r = await replyAuthor(normalized);
+    if (r) return { message: r };
+  }
+  // Category lookup: "উপন্যাস ক্যাটাগরি"
+  if (hasAny(text, categoryWords)) {
+    const r = await replyCategory(normalized);
+    if (r) return { message: r };
+  }
+
   if (hasAny(text, deliveryWords)) return { message: await replyDelivery() };
   if (hasAny(text, offerWords)) return { message: await replyOffers() };
   if (hasAny(text, paymentWords)) return { message: replyPayment() };
@@ -355,7 +507,7 @@ export async function generateSmartReply(
   if (hasAny(text, bookSuggestWords)) return { message: await replyBestSellers() };
 
   // Try product search for anything else meaningful
-  let cleanTerm = cleanSearchTerm(userMessage);
+  let cleanTerm = cleanSearchTerm(normalized);
   let usedContext = false;
 
   // Follow-up cues: "এটার দাম?", "স্টক আছে?", "কোথায়?" — resolve via history.
@@ -379,6 +531,21 @@ export async function generateSmartReply(
       return {
         message: `${header}\n\n${results.join("\n")}\n\nআরো তথ্য লাগলে লিংকে ক্লিক করুন।`,
       };
+    }
+    // No direct product match — try author or category as a smart fallback
+    const authorTry = await replyAuthor(cleanTerm);
+    if (authorTry) return { message: authorTry };
+    const catTry = await replyCategory(cleanTerm);
+    if (catTry) return { message: catTry };
+    // Word-by-word retry: try the longest single token
+    const tokens = cleanTerm.split(/\s+/).filter((w) => w.length >= 3).sort((a, b) => b.length - a.length);
+    for (const tok of tokens.slice(0, 2)) {
+      const partial = await searchProducts(tok);
+      if (partial.length) {
+        return {
+          message: `🔍 হুবহু মিল পাইনি, তবে **"${tok}"** দিয়ে এগুলো পেলাম:\n\n${partial.join("\n")}`,
+        };
+      }
     }
     const note = usedContext
       ? `\n\n(আগের আলোচনার প্রোডাক্ট **"${cleanTerm}"** ধরে খুঁজেছিলাম, কিন্তু মিল পাইনি।)`
