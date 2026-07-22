@@ -1,0 +1,35 @@
+<?php
+// Copy this file to config.php and set your own strong secret.
+// The SAME secret must be set in Supabase Edge Function secrets as MEDIA_HMAC_SECRET.
+// Generate one: openssl rand -hex 32
+
+define('MEDIA_HMAC_SECRET', 'REPLACE_WITH_STRONG_RANDOM_HEX_STRING_MIN_32_CHARS');
+
+// Allowed origins for CORS (comma-separated). Use "*" only for testing.
+define('MEDIA_ALLOWED_ORIGINS', 'https://boialo.com,https://boialo.lovable.app');
+
+// Base public URL for uploaded files (no trailing slash).
+define('MEDIA_BASE_URL', 'https://boialo.com/uploads');
+
+// Filesystem path where files are stored (relative to this file, or absolute).
+define('MEDIA_STORAGE_PATH', __DIR__ . '/..');
+
+// Max sizes (bytes)
+define('MEDIA_MAX_IMAGE_SIZE', 5 * 1024 * 1024);   // 5 MB
+define('MEDIA_MAX_PDF_SIZE', 100 * 1024 * 1024);   // 100 MB
+
+// Allowed extensions -> MIME type
+$MEDIA_ALLOWED = [
+  'jpg'  => 'image/jpeg',
+  'jpeg' => 'image/jpeg',
+  'png'  => 'image/png',
+  'webp' => 'image/webp',
+  'gif'  => 'image/gif',
+  'pdf'  => 'application/pdf',
+];
+
+// Allowed folder names (whitelist to prevent path traversal)
+$MEDIA_FOLDERS = ['products', 'ebooks', 'banners', 'blog', 'branding', 'universal', 'general'];
+
+// Token clock skew tolerance (seconds)
+define('MEDIA_TOKEN_TTL', 600); // 10 minutes

@@ -1,0 +1,28 @@
+# Block PHP execution in uploads folder
+<FilesMatch "\.(php|phtml|phar|pl|py|jsp|asp|htm|shtml|sh|cgi)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+Options -ExecCGI -Indexes
+
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Access-Control-Allow-Origin "*"
+  Header set Cache-Control "public, max-age=31536000"
+</IfModule>
+
+# But allow the api folder to run PHP
+<Directory "api">
+  <FilesMatch "\.php$">
+    <IfModule mod_authz_core.c>
+      Require all granted
+    </IfModule>
+  </FilesMatch>
+  Options +ExecCGI
+</Directory>
