@@ -316,7 +316,12 @@ export async function generateSmartReply(
   history: ChatContextMessage[] = []
 ): Promise<SmartReplyResult> {
   const text = userMessage.toLowerCase().trim();
-  if (!text) return { message: replyFallback("default"), quickReplies: FALLBACK_QUICK_REPLIES.default };
+  if (!text) {
+    return {
+      message: replyFallback("default"),
+      quickReplies: buildDynamicQuickReplies("default", { userMessage }),
+    };
+  }
 
   // Only use the last 5 messages of prior context.
   const recent = history.slice(-5);
@@ -380,17 +385,42 @@ export async function generateSmartReply(
       : "";
     return {
       message: `😔 **"${cleanTerm}"** নামে কিছু খুঁজে পেলাম না।${note}\n\n• বানান চেক করুন\n• অন্য নাম দিয়ে চেষ্টা করুন\n• অথবা [পুরো ক্যাটালগ](/shop) দেখুন`,
-      quickReplies: FALLBACK_QUICK_REPLIES.no_results,
+      quickReplies: buildDynamicQuickReplies("no_results", {
+        productTerm: ctx.productTerm,
+        orderNumber: ctx.orderNumber,
+        priceAsked,
+        stockAsked,
+        userMessage,
+      }),
     };
   }
 
   // Follow-up cue ছিল কিন্তু context এ কোনো reference নেই
   if (isFollowUpCue) {
-    return { message: replyFallback("followup_no_ref"), quickReplies: FALLBACK_QUICK_REPLIES.followup_no_ref };
+    return {
+      message: replyFallback("followup_no_ref"),
+      quickReplies: buildDynamicQuickReplies("followup_no_ref", {
+        productTerm: ctx.productTerm,
+        orderNumber: ctx.orderNumber,
+        priceAsked,
+        stockAsked,
+        userMessage,
+      }),
+    };
   }
   // Context ছিল না বা derive করতে পারিনি
   if (recent.length > 0) {
-    return { message: replyFallback("context_empty"), quickReplies: FALLBACK_QUICK_REPLIES.context_empty };
+    return {
+      message: replyFallback("context_empty"),
+      quickReplies: buildDynamicQuickReplies("context_empty", {
+        productTerm: ctx.productTerm,
+        orderNumber: ctx.orderNumber,
+        userMessage,
+      }),
+    };
   }
-  return { message: replyFallback("no_context"), quickReplies: FALLBACK_QUICK_REPLIES.no_context };
+  return {
+    message: replyFallback("no_context"),
+    quickReplies: buildDynamicQuickReplies("no_context", { userMessage }),
+  };
 }
