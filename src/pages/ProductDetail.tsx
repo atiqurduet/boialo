@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { SEOHead } from "@/components/SEOHead";
 import { useParams, Link } from "react-router-dom";
-import { AIRecommendations } from "@/components/AIRecommendations";
+
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -554,10 +554,6 @@ const ProductDetail = () => {
           <RecentlyViewedFullWidth currentProductId={product.id} />
         </div>
 
-        {/* AI Recommendations */}
-        <div className="mt-4">
-          <AIRecommendations limit={8} columns={4} title="আপনার জন্য সাজেশন" subtitle="আপনার পছন্দ অনুযায়ী বাছাই করা" />
-        </div>
       </main>
 
       <Footer />
