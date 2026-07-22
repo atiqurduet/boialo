@@ -1,5 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export interface ChatContextMessage {
+  sender_type: string; // "customer" | "admin"
+  message: string;
+}
+
 const statusMap: Record<string, string> = {
   pending: "⏳ পেন্ডিং",
   confirmed: "✅ কনফার্মড",
@@ -28,6 +33,55 @@ const hasAny = (t: string, arr: string[]) => arr.some((w) => t.includes(w.toLowe
 function extractOrderNumber(msg: string): string | null {
   const m = msg.match(/(?:BOI|ORD|#)[\-]?(\d{4,})/i) || msg.match(/\b(\d{6,})\b/);
   return m ? m[0].replace("#", "") : null;
+}
+
+// Words we should NOT treat as product search terms when scanning history.
+const STOP_TERMS = [
+  ...priceWords, ...stockWords, ...greetings, ...thanksWords, ...byeWords,
+  ...paymentWords, ...contactWords, ...returnWords, ...offerWords,
+  ...deliveryWords, ...trackWords, ...ebookWords, ...bookSuggestWords,
+  "খুঁজে", "খুঁজুন", "চাই", "লাগবে", "দিন", "দাও", "বই", "এটা", "ওটা",
+  "এইটা", "ওইটা", "এইটার", "ওইটার", "এটার", "ওটার", "সেটা", "সেটার",
+  "it", "this", "that", "কোথায়", "কেমন", "কি", "কী",
+];
+
+function cleanSearchTerm(raw: string): string {
+  return raw
+    .replace(/[।,?!।?\-]/g, " ")
+    .replace(new RegExp(STOP_TERMS.join("|"), "gi"), " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Pull a likely product name / order number from recent chat history.
+function deriveFromHistory(history: ChatContextMessage[]): {
+  productTerm: string | null;
+  orderNumber: string | null;
+} {
+  let productTerm: string | null = null;
+  let orderNumber: string | null = null;
+  // Walk newest -> oldest
+  for (let i = history.length - 1; i >= 0; i--) {
+    const m = history[i];
+    if (!m?.message) continue;
+    if (!orderNumber) {
+      const on = extractOrderNumber(m.message);
+      if (on) orderNumber = on;
+    }
+    if (!productTerm) {
+      // Prefer bot messages: they contain resolved product titles inside [Title](url)
+      if (m.sender_type === "admin") {
+        const linkMatch = m.message.match(/\[([^\]]{2,80})\]\((?:https?:[^)]+)?\/(?:product|products|ebooks)\/[^)]+\)/);
+        if (linkMatch) productTerm = linkMatch[1].trim();
+      }
+      if (!productTerm && m.sender_type === "customer") {
+        const cleaned = cleanSearchTerm(m.message);
+        if (cleaned.length >= 2) productTerm = cleaned;
+      }
+    }
+    if (productTerm && orderNumber) break;
+  }
+  return { productTerm, orderNumber };
 }
 
 async function getSetting(key: string): Promise<string | null> {
@@ -159,15 +213,28 @@ function replyFallback(): string {
   return `হুম, আপনার প্রশ্নটা ঠিক বুঝতে পারিনি। 🤔\n\nএগুলো করতে পারেন:\n\n• 🔍 প্রোডাক্টের নাম লিখুন\n• 📦 অর্ডার নম্বর দিয়ে ট্র্যাক করুন\n• 🎁 "অফার" লিখে সক্রিয় কুপন দেখুন\n• 🚚 "ডেলিভারি" লিখে চার্জ জানুন\n• 👤 উপরের **"লাইভ"** বাটনে ক্লিক করে সরাসরি স্টাফের সাথে কথা বলুন`;
 }
 
-export async function generateSmartReply(userMessage: string, visitorName?: string): Promise<string> {
+export async function generateSmartReply(
+  userMessage: string,
+  visitorName?: string,
+  history: ChatContextMessage[] = []
+): Promise<string> {
   const text = userMessage.toLowerCase().trim();
   if (!text) return replyFallback();
 
-  // Order tracking (highest priority — has order number)
+  // Only use the last 5 messages of prior context.
+  const recent = history.slice(-5);
+  const ctx = deriveFromHistory(recent);
+
+  // Order tracking (highest priority — has order number in current msg)
   const orderReply = await replyOrderTracking(userMessage);
   if (orderReply) return orderReply;
 
   if (hasAny(text, trackWords)) {
+    // Follow-up: user previously mentioned an order — resolve it now.
+    if (ctx.orderNumber) {
+      const followUp = await replyOrderTracking(ctx.orderNumber);
+      if (followUp) return followUp;
+    }
     return "📦 আপনার **অর্ডার নম্বর** লিখুন (যেমন: BOI123456 বা #123456) — সাথে সাথে স্ট্যাটাস জানিয়ে দিচ্ছি!";
   }
 
@@ -184,21 +251,27 @@ export async function generateSmartReply(userMessage: string, visitorName?: stri
   if (hasAny(text, bookSuggestWords)) return await replyBestSellers();
 
   // Try product search for anything else meaningful
-  const cleanTerm = userMessage
-    .replace(/[।,?!।?\-]/g, " ")
-    .replace(new RegExp([...priceWords, ...stockWords, "খুঁজে", "খুঁজুন", "চাই", "লাগবে", "দিন", "দাও", "বই"].join("|"), "gi"), " ")
-    .trim();
+  let cleanTerm = cleanSearchTerm(userMessage);
+  let usedContext = false;
+
+  // Follow-up cues: "এটার দাম?", "স্টক আছে?", "কোথায়?" — resolve via history.
+  const priceAsked = hasAny(text, priceWords);
+  const stockAsked = hasAny(text, stockWords);
+  const isFollowUpCue = priceAsked || stockAsked || /^(এটা|ওটা|এইটা|ওইটা|সেটা|it|this|that)/i.test(userMessage.trim());
+  if ((cleanTerm.length < 2 || isFollowUpCue) && ctx.productTerm) {
+    cleanTerm = ctx.productTerm;
+    usedContext = true;
+  }
 
   if (cleanTerm.length >= 2) {
     const results = await searchProducts(cleanTerm);
     if (results.length > 0) {
-      const priceAsked = hasAny(text, priceWords);
-      const stockAsked = hasAny(text, stockWords);
+      const prefix = usedContext ? `(আগের আলোচনার সূত্রে) ` : "";
       const header = priceAsked
-        ? `💰 **"${cleanTerm}"** এর দাম:`
+        ? `${prefix}💰 **"${cleanTerm}"** এর দাম:`
         : stockAsked
-        ? `📦 **"${cleanTerm}"** এর স্টক:`
-        : `🔍 **"${cleanTerm}"** এর সার্চ রেজাল্ট:`;
+        ? `${prefix}📦 **"${cleanTerm}"** এর স্টক:`
+        : `${prefix}🔍 **"${cleanTerm}"** এর সার্চ রেজাল্ট:`;
       return `${header}\n\n${results.join("\n")}\n\nআরো তথ্য লাগলে লিংকে ক্লিক করুন।`;
     }
     return `😔 **"${cleanTerm}"** নামে কিছু খুঁজে পেলাম না।\n\n• বানান চেক করুন\n• অন্য নাম দিয়ে চেষ্টা করুন\n• অথবা [পুরো ক্যাটালগ](/shop) দেখুন`;

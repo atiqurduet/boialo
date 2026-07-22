@@ -286,7 +286,12 @@ const ChatWidget = () => {
           // Rule-based smart reply (no external AI). Small artificial delay
           // so the typing indicator feels natural.
           await new Promise((r) => setTimeout(r, 400));
-          const reply = await generateSmartReply(messageText, visitorInfo.name);
+          // Send last 5 prior messages as context so follow-ups resolve properly.
+          const historyCtx = messages.slice(-5).map((m) => ({
+            sender_type: m.sender_type,
+            message: m.message,
+          }));
+          const reply = await generateSmartReply(messageText, visitorInfo.name, historyCtx);
           const botMsgId = `bot_${Date.now()}`;
           setMessages((prev) => [
             ...prev,
