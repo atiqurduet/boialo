@@ -5,6 +5,19 @@ export interface ChatContextMessage {
   message: string;
 }
 
+export interface SmartReplyResult {
+  message: string;
+  quickReplies?: string[];
+}
+
+const FALLBACK_QUICK_REPLIES: Record<string, string[]> = {
+  default: ["🎁 অফার দেখুন", "🚚 ডেলিভারি চার্জ", "📚 বেস্ট সেলার", "📱 ই-বুক", "👤 লাইভ চ্যাট"],
+  followup_no_ref: ["📦 অর্ডার ট্র্যাক", "🔍 বই খুঁজুন", "🎁 অফার দেখুন", "👤 লাইভ চ্যাট"],
+  context_empty: ["🔍 বই খুঁজুন", "📚 বেস্ট সেলার", "📱 ই-বুক", "👤 লাইভ চ্যাট"],
+  no_context: ["🎁 অফার দেখুন", "🚚 ডেলিভারি চার্জ", "📚 বেস্ট সেলার", "👤 লাইভ চ্যাট"],
+  no_results: ["🔍 নতুন কীওয়ার্ড দিন", "📚 বেস্ট সেলার", "🎁 অফার দেখুন", "👤 লাইভ চ্যাট"],
+};
+
 const statusMap: Record<string, string> = {
   pending: "⏳ পেন্ডিং",
   confirmed: "✅ কনফার্মড",
@@ -225,9 +238,9 @@ export async function generateSmartReply(
   userMessage: string,
   visitorName?: string,
   history: ChatContextMessage[] = []
-): Promise<string> {
+): Promise<SmartReplyResult> {
   const text = userMessage.toLowerCase().trim();
-  if (!text) return replyFallback();
+  if (!text) return { message: replyFallback("default"), quickReplies: FALLBACK_QUICK_REPLIES.default };
 
   // Only use the last 5 messages of prior context.
   const recent = history.slice(-5);
@@ -235,28 +248,30 @@ export async function generateSmartReply(
 
   // Order tracking (highest priority — has order number in current msg)
   const orderReply = await replyOrderTracking(userMessage);
-  if (orderReply) return orderReply;
+  if (orderReply) return { message: orderReply };
 
   if (hasAny(text, trackWords)) {
     // Follow-up: user previously mentioned an order — resolve it now.
     if (ctx.orderNumber) {
       const followUp = await replyOrderTracking(ctx.orderNumber);
-      if (followUp) return followUp;
+      if (followUp) return { message: followUp };
     }
-    return "📦 আপনার **অর্ডার নম্বর** লিখুন (যেমন: BOI123456 বা #123456) — সাথে সাথে স্ট্যাটাস জানিয়ে দিচ্ছি!";
+    return {
+      message: "📦 আপনার **অর্ডার নম্বর** লিখুন (যেমন: BOI123456 বা #123456) — সাথে সাথে স্ট্যাটাস জানিয়ে দিচ্ছি!",
+    };
   }
 
-  if (hasAny(text, greetings)) return replyGreeting(visitorName);
-  if (hasAny(text, thanksWords)) return "আপনাকেও ধন্যবাদ! 😊 আর কোনো সাহায্য লাগলে জানাবেন।";
-  if (hasAny(text, byeWords)) return "আল্লাহ হাফেজ! 🙏 আবার আসবেন।";
+  if (hasAny(text, greetings)) return { message: replyGreeting(visitorName) };
+  if (hasAny(text, thanksWords)) return { message: "আপনাকেও ধন্যবাদ! 😊 আর কোনো সাহায্য লাগলে জানাবেন।" };
+  if (hasAny(text, byeWords)) return { message: "আল্লাহ হাফেজ! 🙏 আবার আসবেন।" };
 
-  if (hasAny(text, deliveryWords)) return await replyDelivery();
-  if (hasAny(text, offerWords)) return await replyOffers();
-  if (hasAny(text, paymentWords)) return replyPayment();
-  if (hasAny(text, returnWords)) return replyReturn();
-  if (hasAny(text, contactWords)) return await replyContact();
-  if (hasAny(text, ebookWords)) return await replyEbooks();
-  if (hasAny(text, bookSuggestWords)) return await replyBestSellers();
+  if (hasAny(text, deliveryWords)) return { message: await replyDelivery() };
+  if (hasAny(text, offerWords)) return { message: await replyOffers() };
+  if (hasAny(text, paymentWords)) return { message: replyPayment() };
+  if (hasAny(text, returnWords)) return { message: replyReturn() };
+  if (hasAny(text, contactWords)) return { message: await replyContact() };
+  if (hasAny(text, ebookWords)) return { message: await replyEbooks() };
+  if (hasAny(text, bookSuggestWords)) return { message: await replyBestSellers() };
 
   // Try product search for anything else meaningful
   let cleanTerm = cleanSearchTerm(userMessage);
@@ -280,17 +295,26 @@ export async function generateSmartReply(
         : stockAsked
         ? `${prefix}📦 **"${cleanTerm}"** এর স্টক:`
         : `${prefix}🔍 **"${cleanTerm}"** এর সার্চ রেজাল্ট:`;
-      return `${header}\n\n${results.join("\n")}\n\nআরো তথ্য লাগলে লিংকে ক্লিক করুন।`;
+      return {
+        message: `${header}\n\n${results.join("\n")}\n\nআরো তথ্য লাগলে লিংকে ক্লিক করুন।`,
+      };
     }
     const note = usedContext
       ? `\n\n(আগের আলোচনার প্রোডাক্ট **"${cleanTerm}"** ধরে খুঁজেছিলাম, কিন্তু মিল পাইনি।)`
       : "";
-    return `😔 **"${cleanTerm}"** নামে কিছু খুঁজে পেলাম না।${note}\n\n• বানান চেক করুন\n• অন্য নাম দিয়ে চেষ্টা করুন\n• অথবা [পুরো ক্যাটালগ](/shop) দেখুন\n• সরাসরি সাহায্যের জন্য উপরের **"লাইভ"** বাটনে ক্লিক করুন`;
+    return {
+      message: `😔 **"${cleanTerm}"** নামে কিছু খুঁজে পেলাম না।${note}\n\n• বানান চেক করুন\n• অন্য নাম দিয়ে চেষ্টা করুন\n• অথবা [পুরো ক্যাটালগ](/shop) দেখুন`,
+      quickReplies: FALLBACK_QUICK_REPLIES.no_results,
+    };
   }
 
   // Follow-up cue ছিল কিন্তু context এ কোনো reference নেই
-  if (isFollowUpCue) return replyFallback("followup_no_ref");
+  if (isFollowUpCue) {
+    return { message: replyFallback("followup_no_ref"), quickReplies: FALLBACK_QUICK_REPLIES.followup_no_ref };
+  }
   // Context ছিল না বা derive করতে পারিনি
-  if (recent.length > 0) return replyFallback("context_empty");
-  return replyFallback("no_context");
+  if (recent.length > 0) {
+    return { message: replyFallback("context_empty"), quickReplies: FALLBACK_QUICK_REPLIES.context_empty };
+  }
+  return { message: replyFallback("no_context"), quickReplies: FALLBACK_QUICK_REPLIES.no_context };
 }
