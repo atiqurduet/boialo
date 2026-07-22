@@ -291,8 +291,15 @@ const ChatWidget = () => {
             sender_type: m.sender_type,
             message: m.message,
           }));
-          const reply = await generateSmartReply(messageText, visitorInfo.name, historyCtx);
+          const { message: reply, quickReplies } = await generateSmartReply(
+            messageText,
+            visitorInfo.name,
+            historyCtx
+          );
           const botMsgId = `bot_${Date.now()}`;
+          if (quickReplies?.length) {
+            setQuickRepliesByMsg((prev) => ({ ...prev, [botMsgId]: quickReplies }));
+          }
           setMessages((prev) => [
             ...prev,
             {
