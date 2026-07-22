@@ -1,5 +1,5 @@
 import { useState } from "react";
-import AdminLayout from "@/components/admin/AdminLayout";
+import { AdminLayout } from "@/components/admin/AdminLayout";
 import MediaLibraryModal from "@/components/admin/MediaLibraryModal";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
