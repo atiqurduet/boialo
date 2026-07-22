@@ -2663,6 +2663,57 @@ export type Database = {
           },
         ]
       }
+      media_library: {
+        Row: {
+          created_at: string
+          filename: string
+          folder: string
+          height: number | null
+          id: string
+          mime_type: string | null
+          original_filename: string | null
+          size_bytes: number | null
+          storage_provider: string
+          tags: string[] | null
+          thumbnail_url: string | null
+          uploaded_by: string | null
+          url: string
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          filename: string
+          folder?: string
+          height?: number | null
+          id?: string
+          mime_type?: string | null
+          original_filename?: string | null
+          size_bytes?: number | null
+          storage_provider?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          uploaded_by?: string | null
+          url: string
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          filename?: string
+          folder?: string
+          height?: number | null
+          id?: string
+          mime_type?: string | null
+          original_filename?: string | null
+          size_bytes?: number | null
+          storage_provider?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          uploaded_by?: string | null
+          url?: string
+          width?: number | null
+        }
+        Relationships: []
+      }
       menu_items: {
         Row: {
           created_at: string
