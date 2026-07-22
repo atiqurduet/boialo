@@ -61,6 +61,7 @@ const ChatWidget = () => {
   const [aiResponding, setAiResponding] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
   const [feedbackGiven, setFeedbackGiven] = useState<Record<string, "up" | "down">>({});
+  const [quickRepliesByMsg, setQuickRepliesByMsg] = useState<Record<string, string[]>>({});
   const [pulseButton, setPulseButton] = useState(true);
   const [chatbotEnabled, setChatbotEnabled] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -234,6 +235,26 @@ const ChatWidget = () => {
     }, 100);
   };
 
+  const handleQuickReply = (msgId: string, text: string) => {
+    // "👤 লাইভ চ্যাট" → switch to human support instead of sending as a query.
+    if (text.includes("লাইভ")) {
+      setChatMode("human");
+      toast.success("লাইভ সাপোর্টে সংযুক্ত হচ্ছে...");
+      setQuickRepliesByMsg((prev) => {
+        const next = { ...prev };
+        delete next[msgId];
+        return next;
+      });
+      return;
+    }
+    setQuickRepliesByMsg((prev) => {
+      const next = { ...prev };
+      delete next[msgId];
+      return next;
+    });
+    handleQuickAction(text);
+  };
+
   const handleFeedback = (msgId: string, type: "up" | "down") => {
     setFeedbackGiven(prev => ({ ...prev, [msgId]: type }));
     toast.success(type === "up" ? "ধন্যবাদ! 😊" : "আমরা উন্নতি করব 🙏");
@@ -291,8 +312,15 @@ const ChatWidget = () => {
             sender_type: m.sender_type,
             message: m.message,
           }));
-          const reply = await generateSmartReply(messageText, visitorInfo.name, historyCtx);
+          const { message: reply, quickReplies } = await generateSmartReply(
+            messageText,
+            visitorInfo.name,
+            historyCtx
+          );
           const botMsgId = `bot_${Date.now()}`;
+          if (quickReplies?.length) {
+            setQuickRepliesByMsg((prev) => ({ ...prev, [botMsgId]: quickReplies }));
+          }
           setMessages((prev) => [
             ...prev,
             {
@@ -540,6 +568,20 @@ const ChatWidget = () => {
                           )}
                           {feedbackGiven[msg.id] && <span className="text-[10px]">{feedbackGiven[msg.id] === "up" ? "👍" : "👎"}</span>}
                         </div>
+                        {msg.sender_type !== "customer" && quickRepliesByMsg[msg.id]?.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {quickRepliesByMsg[msg.id].map((qr, idx) => (
+                              <button
+                                key={`${msg.id}-qr-${idx}`}
+                                onClick={() => handleQuickReply(msg.id, qr)}
+                                disabled={uploading || aiResponding}
+                                className="text-[11px] font-semibold px-2.5 py-1 rounded-full border border-primary/25 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary/40 transition-all active:scale-95 disabled:opacity-40"
+                              >
+                                {qr}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
