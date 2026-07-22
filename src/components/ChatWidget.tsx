@@ -16,6 +16,7 @@ import { useSiteSettings } from "@/hooks/useSiteSettings";
 import EmojiPicker from "@/components/chat/EmojiPicker";
 import StagedAttachment from "@/components/chat/StagedAttachment";
 import TypingIndicator from "@/components/chat/TypingIndicator";
+import { generateSmartReply } from "@/lib/smartReply";
 
 interface Message {
   id: string;
@@ -65,7 +66,6 @@ const ChatWidget = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const aiChatHistoryRef = useRef<Array<{ role: string; content: string }>>([]);
 
   // Check if chatbot is enabled
   useEffect(() => {
@@ -280,110 +280,38 @@ const ChatWidget = () => {
         setAiResponding(true);
         setIsAdminTyping(true);
         try {
-          // Wait for RPC to complete before AI call
           const { error: rpcError } = await rpcPromise;
           if (rpcError) console.error("RPC insert error:", rpcError);
 
-          aiChatHistoryRef.current.push({ role: "user", content: messageText });
-          const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-            body: JSON.stringify({ messages: aiChatHistoryRef.current, mode: "customer" }),
-          });
-          if (!resp.ok || !resp.body) {
-            if (resp.status === 429) throw new Error("অনেক বেশি রিকোয়েস্ট, কিছুক্ষণ পর চেষ্টা করুন");
-            if (resp.status === 402) throw new Error("সার্ভিস সাময়িক অনুপলব্ধ");
-            const errText = await resp.text().catch(() => "");
-            console.error("AI response error:", resp.status, errText);
-            throw new Error("AI সংযোগ ব্যর্থ");
-          }
-
-          // Stream AI response and show progressively
-          const reader = resp.body.getReader();
-          const decoder = new TextDecoder();
-          let buf = "", fullResp = "", done = false;
-          const aiMsgId = `ai_${Date.now()}`;
-
-          while (!done) {
-            const { done: d, value } = await reader.read();
-            if (d) break;
-            buf += decoder.decode(value, { stream: true });
-            let ni: number;
-            while ((ni = buf.indexOf("\n")) !== -1) {
-              let line = buf.slice(0, ni); buf = buf.slice(ni + 1);
-              if (line.endsWith("\r")) line = line.slice(0, -1);
-              if (!line.startsWith("data: ")) continue;
-              const j = line.slice(6).trim();
-              if (j === "[DONE]") { done = true; break; }
-              try {
-                const p = JSON.parse(j);
-                const c = p.choices?.[0]?.delta?.content;
-                if (c) {
-                  fullResp += c;
-                  // Update AI message in real-time (streaming effect)
-                  setMessages(prev => {
-                    const existing = prev.find(m => m.id === aiMsgId);
-                    if (existing) {
-                      return prev.map(m => m.id === aiMsgId ? { ...m, message: fullResp } : m);
-                    }
-                    return [...prev, {
-                      id: aiMsgId,
-                      sender_type: "admin",
-                      sender_name: "🤖 AI সহকারী",
-                      message: fullResp,
-                      created_at: new Date().toISOString(),
-                    }];
-                  });
-                }
-              }
-              catch { buf = line + "\n" + buf; break; }
-            }
-          }
-
-          // Flush remaining buffer
-          if (buf.trim()) {
-            for (let raw of buf.split("\n")) {
-              if (!raw) continue;
-              if (raw.endsWith("\r")) raw = raw.slice(0, -1);
-              if (!raw.startsWith("data: ")) continue;
-              const j = raw.slice(6).trim();
-              if (j === "[DONE]") continue;
-              try {
-                const p = JSON.parse(j);
-                const c = p.choices?.[0]?.delta?.content;
-                if (c) {
-                  fullResp += c;
-                  setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, message: fullResp } : m));
-                }
-              } catch { /* ignore */ }
-            }
-          }
-
-          if (fullResp.trim()) {
-            aiChatHistoryRef.current.push({ role: "assistant", content: fullResp });
-            // Save AI response to DB
-            await supabase.rpc("insert_visitor_chat_message", {
-              p_conversation_id: conversationId, p_visitor_id: visitorId,
-              p_sender_type: "admin", p_sender_name: "🤖 AI সহকারী", p_message: fullResp.trim(),
-            });
-          } else {
-            // No response received - show error
-            const errMsg = "দুঃখিত, উত্তর পাওয়া যায়নি। আবার চেষ্টা করুন। 🙏";
-            setMessages(prev => [...prev, {
-              id: aiMsgId,
+          // Rule-based smart reply (no external AI). Small artificial delay
+          // so the typing indicator feels natural.
+          await new Promise((r) => setTimeout(r, 400));
+          const reply = await generateSmartReply(messageText, visitorInfo.name);
+          const botMsgId = `bot_${Date.now()}`;
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: botMsgId,
               sender_type: "admin",
-              sender_name: "🤖 AI সহকারী",
-              message: errMsg,
+              sender_name: "🤖 স্মার্ট সহকারী",
+              message: reply,
               created_at: new Date().toISOString(),
-            }]);
-          }
+            },
+          ]);
+          await supabase.rpc("insert_visitor_chat_message", {
+            p_conversation_id: conversationId,
+            p_visitor_id: visitorId,
+            p_sender_type: "admin",
+            p_sender_name: "🤖 স্মার্ট সহকারী",
+            p_message: reply,
+          });
         } catch (aiErr: any) {
-          console.error("AI error:", aiErr);
+          console.error("Smart reply error:", aiErr);
           const errMsg = `⚠️ ${aiErr.message || "সমস্যা হয়েছে।"} "👤 লাইভ চ্যাট" এ যোগাযোগ করুন। 🙏`;
           setMessages(prev => [...prev, {
             id: `err_${Date.now()}`,
             sender_type: "admin",
-            sender_name: "🤖 AI সহকারী",
+            sender_name: "🤖 স্মার্ট সহকারী",
             message: errMsg,
             created_at: new Date().toISOString(),
           }]);
@@ -391,7 +319,7 @@ const ChatWidget = () => {
           try {
             await supabase.rpc("insert_visitor_chat_message", {
               p_conversation_id: conversationId, p_visitor_id: visitorId,
-              p_sender_type: "admin", p_sender_name: "🤖 AI সহকারী", p_message: errMsg,
+              p_sender_type: "admin", p_sender_name: "🤖 স্মার্ট সহকারী", p_message: errMsg,
             });
           } catch { /* ignore */ }
         } finally { setAiResponding(false); setIsAdminTyping(false); }
