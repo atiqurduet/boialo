@@ -1,92 +1,89 @@
+# Self-Hosted Media Library (cPanel)
 
-# Self-Hosting Compatibility Plan
-
-লক্ষ্য: প্রোজেক্ট এমনভাবে refactor করব যাতে **যেকোনো standard Supabase project + যেকোনো hosting** (cPanel/Vercel/VPS) এ deploy করলেই কাজ করে। Lovable-specific dependency সরিয়ে দেব, AI-related coupling কমাব।
-
----
-
-## Phase 1 — Auth (Google Login Fix) 🔴 Critical
-
-**সমস্যা:** `@lovable.dev/cloud-auth-js` package Lovable OAuth broker (`oauth.lovable.app`) ব্যবহার করে। Self-hosting এ কাজ করবে না।
-
-**পরিবর্তন যা আমি করব:**
-- `src/pages/SignIn.tsx` এবং যেসব জায়গায় `lovable.auth.signInWithOAuth` আছে — সরাসরি `supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } })` এ replace করব।
-- `src/integrations/lovable/index.ts` কে thin wrapper বানাব যা internally native Supabase call করে (backward compatible)।
-- `AuthContext.tsx` এ Google callback handling ঠিক আছে কিনা verify করব।
-
-**যা আপনাকে করতে হবে (self-hosting এ):**
-- Google Cloud Console → OAuth Client তৈরি → Supabase callback URL যোগ করুন
-- Supabase Dashboard → Authentication → Providers → Google enable + Client ID/Secret paste
-- Site URL এবং Redirect URLs configure করুন
+লক্ষ্য: সব image ও PDF cPanel-এ upload হবে, Supabase-এ শুধু ছোট index থাকবে। এক জায়গায় বাল্ক আপলোড → সব product/banner/ebook/page থেকে ওই library থেকে select করলেই URL DB-তে যাবে।
 
 ---
 
-## Phase 2 — AI Dependency Reduction 🟡
+## Architecture
 
-**সমস্যা:** ৬টি Edge Function AI ব্যবহার করে, সব `LOVABLE_API_KEY` এর উপর নির্ভর।
+```
+cPanel (public_html/uploads/)          Supabase (minimal)
+├── products/2026/07/uuid.jpg          media_library table:
+├── ebooks/2026/07/uuid.pdf            - id, url, thumbnail_url
+├── banners/...                        - filename, mime, size
+├── blog/...                           - folder, uploaded_by
+└── api/                               - created_at
+    ├── upload.php    (token+auth)     
+    ├── delete.php    (token+auth)     Product row saves:
+    └── config.php    (secret)         image_urls: [url1, url2]  (as now)
+```
 
-**যা আমি করব:**
-- ইতোমধ্যে `_shared/ai-gateway.ts` তৈরি করা আছে (OpenAI/Gemini fallback সাপোর্ট করে) — verify করব সবগুলো function সেটা ব্যবহার করছে।
-- AI-optional করব: যদি কোনো AI key set না থাকে, functions gracefully fallback দেবে (e.g., image-search → keyword-based search, ai-chat → template response)।
-- Admin panel এ AI status indicator যোগ করব — কোন provider active দেখাবে।
-
-**AI dependency এভাবে কমবে:**
-| Feature | আগে | পরে |
-|---------|-----|-----|
-| Chat bot | LOVABLE_API_KEY required | OpenAI/Gemini optional, fallback template |
-| Image search | LOVABLE required | Gemini optional, fallback text search |
-| Keyword research | LOVABLE required | OpenAI optional, hide feature if no key |
-| Audience AI | LOVABLE required | Optional, hide if no key |
-
-**যা আপনাকে করতে হবে:**
-- OpenAI বা Gemini key নিন (optional — না দিলেও site কাজ করবে, শুধু AI features off থাকবে)
-- Admin → Environment Variables থেকে key সেট করুন
+- cPanel-এ ফাইল, Supabase-এ শুধু metadata index (~200 bytes/file)
+- Existing Supabase Storage URLs untouched — gradually migrate
 
 ---
 
-## Phase 3 — Hardcoded Lovable References Cleanup 🟢
+## Security (best practice)
 
-**যা আমি করব:**
-- `.env` file এর `VITE_SUPABASE_URL` etc. self-hosting এ properly load হচ্ছে verify করব
-- `supabase/functions/*/index.ts` এ hardcoded `nyzvjuzrkhdbuqlcxhzn.supabase.co` reference (যেমন `notify_new_product` trigger) কে environment-aware করব
-- Anon key hardcoded থাকলে সেগুলো `SUPABASE_ANON_KEY` env থেকে পড়ব
-- CORS headers verify — সব function এ properly set আছে কিনা
-
----
-
-## Phase 4 — Documentation
-
-**যা আমি করব:**
-- Root এ `SELF_HOSTING.md` তৈরি করব:
-  - Step-by-step Supabase setup
-  - Google OAuth setup
-  - Edge Function deployment
-  - Secret configuration
-  - Frontend build & upload to cPanel
-  - Common troubleshooting
+1. **HMAC-signed upload token** — frontend Supabase Edge Function থেকে 5-min expiring signed token পায়, PHP script token verify করে (shared secret + timestamp + HMAC-SHA256)। কেউ direct upload করতে পারবে না।
+2. **Admin-only** — Edge Function `is_admin()` check করে তারপর token issue করে
+3. **Server-side validation** (PHP): MIME sniff, extension whitelist (jpg/png/webp/gif/pdf), max size (image 5MB, pdf 100MB), random UUID filename, EXIF strip
+4. **.htaccess hardening** in `/uploads/`: `Options -ExecCGI -Indexes`, `.php`/`.phtml` execution blocked → uploaded file কখনো execute হবে না
+5. **CORS**: শুধু আপনার domain-এ allow
 
 ---
 
-## Scope যা এই কাজে **নেই**
+## Deliverables
 
-- Database schema change করব না (আপনার data intact থাকবে)
-- Admin panel UI redesign করব না
-- MySQL এ port করব না (আপনি চাইলে আলাদাভাবে করতে হবে)
-- Existing features remove করব না — শুধু hosting-portable বানাব
+### A. cPanel side (আপনি upload করবেন — আমি file তৈরি করে দেব)
+
+- `cpanel/api/upload.php` — multipart upload, HMAC verify, UUID rename, folder routing, thumbnail generate (GD)
+- `cpanel/api/delete.php` — HMAC-verified delete
+- `cpanel/api/config.php.example` — `MEDIA_HMAC_SECRET` placeholder
+- `cpanel/uploads/.htaccess` — execution block, hotlink allow-list
+- `cpanel/README.md` — cPanel setup steps
+
+### B. Supabase side
+
+- Migration: `media_library` table (RLS: admin CRUD, public SELECT) + `GRANT`s
+- Edge function `media-sign-upload` — verifies admin, returns `{uploadUrl, token, expires, path}`
+- Edge function `media-sign-delete` — same for deletion
+
+### C. Frontend
+
+- `src/lib/mediaClient.ts` — upload/delete helpers, calls edge function then PHP
+- `src/components/admin/MediaLibraryModal.tsx` — grid view, bulk upload (drag+drop, multi-file), search, folder filter, single/multi select, delete, pagination
+- `src/components/admin/MediaPickerButton.tsx` — reusable button that opens the modal, returns selected URL(s)
+- Integrations (replace existing uploaders):
+  - `ProductImageUpload.tsx` — books
+  - Universal product image field
+  - Ebook cover + PDF upload
+  - `SectionImageUpload.tsx` — banners, pages, blog, branding
+- New admin page: `/admin/media` — full library management
+- Menu entry under Admin sidebar
+
+### D. Config
+
+- `.env` (frontend): `VITE_MEDIA_BASE_URL=https://boialo.com/uploads`
+- Edge function secret: `MEDIA_HMAC_SECRET` (via `add_secret`, same value goes into cPanel `config.php`)
+- Fallback: যদি `VITE_MEDIA_BASE_URL` না থাকে, existing Supabase Storage flow use হবে (no breakage)
 
 ---
 
-## Technical Summary
+## Technical notes
 
-| Component | File | Change |
-|-----------|------|--------|
-| Google Login | `src/pages/SignIn.tsx`, `src/integrations/lovable/index.ts` | Native Supabase OAuth |
-| AI Gateway | `supabase/functions/_shared/ai-gateway.ts` | Verify all 6 functions use it + graceful fallback |
-| Hardcoded URLs | `supabase/functions/*/index.ts` + DB trigger `notify_new_product` | Use env vars |
-| Docs | `SELF_HOSTING.md` (new) | Complete deployment guide |
+- **Signed URL flow**: Frontend → Edge Function (`media-sign-upload`) → returns `{ token, folder, filename }` → Frontend POSTs file to `https://boialo.com/uploads/api/upload.php` with token in header → PHP verifies HMAC + timestamp → saves → returns `{ url, thumbnail_url }` → Frontend inserts row into `media_library` via Supabase → picker shows it
+- **DB minimization**: `media_library` optional — picker can also work purely on cPanel listing endpoint if you want zero DB usage (I'll add a `list.php` for that mode)
+- **Backward compat**: existing `product-images` bucket URLs keep rendering; Media Library shows both cPanel files and imported Supabase URLs in one grid
+- **File organization on cPanel**: `/uploads/{folder}/{YYYY}/{MM}/{uuid}.{ext}` — easy backup, no folder blowup
 
 ---
 
-## অনুমতি চাই
+## User action required
 
-উপরের ৪টি Phase আমি চালাব। কোনো step skip করতে চাইলে বলুন, নাহলে "yes" বললে শুরু করব।
+1. cPanel-এ `public_html/uploads/api/` folder-এ আমার তৈরি PHP files upload করবেন
+2. `config.php`-তে একটা strong secret বসাবেন (একই secret Lovable secrets-এ save হবে)
+3. `.env`-এ আপনার domain বসাবেন
+4. Test upload → done
+
+Approve করলে সব code লিখে দিচ্ছি। শুরু করব?

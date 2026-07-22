@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { MediaPickerButton } from './MediaPickerButton';
 
 interface ProductImageUploadProps {
   images: string[];
@@ -139,6 +140,13 @@ export const ProductImageUpload = ({ images, onImagesChange, productId }: Produc
             </>
           )}
         </Button>
+        <MediaPickerButton
+          multiple
+          defaultFolder="products"
+          accept="image"
+          label="লাইব্রেরি থেকে নিন"
+          onSelect={(urls) => onImagesChange([...images, ...urls])}
+        />
         <span className="text-sm text-muted-foreground">
           সর্বোচ্চ ৫MB, JPG/PNG/WEBP
         </span>
