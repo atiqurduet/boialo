@@ -240,17 +240,17 @@ export const MobileMenu = ({ isOpen, onClose, dynamicMenuItems, siteName = "ব�
           <div className="p-4 bg-gradient-to-t from-muted/80 to-muted/30 border-t border-border">
             <p className="text-xs text-muted-foreground font-medium mb-3">যোগাযোগ করুন</p>
             <div className="space-y-3">
-              <a href="tel:+8809613000000" className="flex items-center gap-3 text-sm text-foreground hover:text-primary transition-colors group">
+              <a href="tel:+8801714005986" className="flex items-center gap-3 text-sm text-foreground hover:text-primary transition-colors group">
                 <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                   <Phone className="w-4 h-4 text-primary" />
                 </div>
-                09613-000000
+                01714-005986
               </a>
-              <a href="mailto:info@example.com" className="flex items-center gap-3 text-sm text-foreground hover:text-primary transition-colors group">
+              <a href="mailto:info@boialo.com" className="flex items-center gap-3 text-sm text-foreground hover:text-primary transition-colors group">
                 <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                   <Mail className="w-4 h-4 text-primary" />
                 </div>
-                info@example.com
+                info@boialo.com
               </a>
             </div>
           </div>
