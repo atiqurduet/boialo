@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Heart, User, Phone, Mail, ChevronRight, Home, ShoppingBag, HelpCircle, Info, FileText, X } from "lucide-react";
+import { Heart, User, Phone, Mail, ChevronRight, Home, ShoppingBag, HelpCircle, Info, FileText, X, MessageCircle } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 
@@ -251,6 +251,17 @@ export const MobileMenu = ({ isOpen, onClose, dynamicMenuItems, siteName = "ব�
                   <Mail className="w-4 h-4 text-primary" />
                 </div>
                 info@boialo.com
+              </a>
+              <a
+                href="https://wa.me/8801714005986"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 text-sm text-foreground hover:text-green-600 transition-colors group"
+              >
+                <div className="w-8 h-8 bg-green-500/10 rounded-full flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
+                  <MessageCircle className="w-4 h-4 text-green-600" />
+                </div>
+                WhatsApp চ্যাট
               </a>
             </div>
           </div>
