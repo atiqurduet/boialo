@@ -19,6 +19,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Download, Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { downloadXLSX, parseSpreadsheetFile } from '@/lib/xlsxBulk';
 
 interface PublisherBulkActionsProps {
   onImportComplete: () => void;
@@ -55,14 +56,6 @@ export const PublisherBulkActions = ({ onImportComplete }: PublisherBulkActionsP
     return title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-').replace(/^-|-$/g, '');
   };
 
-  const escapeCSV = (value: string) => {
-    if (!value) return '';
-    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-      return `"${value.replace(/"/g, '""')}"`;
-    }
-    return value;
-  };
-
   const handleExport = async () => {
     setExporting(true);
     try {
@@ -73,33 +66,18 @@ export const PublisherBulkActions = ({ onImportComplete }: PublisherBulkActionsP
 
       if (error) throw error;
 
-      const csvRows = [CSV_HEADERS.join(',')];
-
-      for (const pub of data || []) {
-        const row = [
-          escapeCSV(pub.name_bn),
-          escapeCSV(pub.name_en),
-          escapeCSV(pub.slug),
-          escapeCSV(pub.description_bn || ''),
-          escapeCSV(pub.description_en || ''),
-          escapeCSV(pub.website_url || ''),
-          pub.is_active ? 'TRUE' : 'FALSE',
-          escapeCSV(pub.meta_title || ''),
-          escapeCSV(pub.meta_description || ''),
-        ];
-        csvRows.push(row.join(','));
-      }
-
-      const csvContent = csvRows.join('\n');
-      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `publishers_export_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      const rows = (data || []).map((p: any) => [
+        p.name_bn,
+        p.name_en,
+        p.slug,
+        p.description_bn || '',
+        p.description_en || '',
+        p.website_url || '',
+        p.is_active ? 'TRUE' : 'FALSE',
+        p.meta_title || '',
+        p.meta_description || '',
+      ]);
+      downloadXLSX(CSV_HEADERS, rows, `publishers_export_${new Date().toISOString().split('T')[0]}.xlsx`);
 
       toast({ title: 'সফল', description: `${data?.length || 0}টি প্রকাশনী এক্সপোর্ট হয়েছে` });
     } catch (error: any) {
@@ -110,59 +88,15 @@ export const PublisherBulkActions = ({ onImportComplete }: PublisherBulkActionsP
     }
   };
 
-  const parseCSVLine = (line: string): string[] => {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === ',' && !inQuotes) {
-        result.push(current);
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    result.push(current);
-    return result;
-  };
-
-  const parseCSV = (content: string): Record<string, string>[] => {
-    const lines = content.split(/\r?\n/).filter(line => line.trim());
-    if (lines.length < 2) return [];
-
-    const headers = parseCSVLine(lines[0]);
-    const rows: Record<string, string>[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i]);
-      const row: Record<string, string> = {};
-      headers.forEach((header, index) => {
-        row[header.trim()] = (values[index] || '').trim();
-      });
-      rows.push(row);
-    }
-    return rows;
-  };
-
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      const content = await file.text();
-      const rows = parseCSV(content);
+      const rows = await parseSpreadsheetFile(file);
 
       if (rows.length === 0) {
-        toast({ title: 'Error', description: 'CSV ফাইলে কোন ডাটা নেই', variant: 'destructive' });
+        toast({ title: 'Error', description: 'ফাইলে কোন ডাটা নেই', variant: 'destructive' });
         return;
       }
 
@@ -239,19 +173,21 @@ export const PublisherBulkActions = ({ onImportComplete }: PublisherBulkActionsP
   };
 
   const handleDownloadTemplate = () => {
-    const csvContent = CSV_HEADERS.join(',') + '\n' +
-      'অন্যপ্রকাশ,Anyaprokash,anyaprokash,বাংলাদেশের অন্যতম প্রকাশনী,One of the leading publishers in Bangladesh,https://anyaprokash.com,TRUE,অন্যপ্রকাশ - প্রকাশনী,বাংলাদেশের জনপ্রিয় প্রকাশনী';
-
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'publishers_import_template.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
+    downloadXLSX(
+      CSV_HEADERS,
+      [[
+        'অন্যপ্রকাশ',
+        'Anyaprokash',
+        'anyaprokash',
+        'বাংলাদেশের অন্যতম প্রকাশনী',
+        'One of the leading publishers in Bangladesh',
+        'https://anyaprokash.com',
+        'TRUE',
+        'অন্যপ্রকাশ - প্রকাশনী',
+        'বাংলাদেশের জনপ্রিয় প্রকাশনী',
+      ]],
+      'publishers_import_template.xlsx'
+    );
     toast({ title: 'সফল', description: 'টেমপ্লেট ডাউনলোড হয়েছে' });
   };
 
@@ -274,7 +210,7 @@ export const PublisherBulkActions = ({ onImportComplete }: PublisherBulkActionsP
           <Upload className="h-4 w-4 mr-2" />
           ইম্পোর্ট
         </Button>
-        <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileSelect} />
+        <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileSelect} />
       </div>
 
       <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>

@@ -19,6 +19,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Download, Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { downloadXLSX, parseSpreadsheetFile } from '@/lib/xlsxBulk';
 
 interface Category {
   id: string;
@@ -111,19 +112,15 @@ export const ProductBulkActions = ({
 
       if (error) throw error;
 
-      // Build CSV content
-      const csvRows = [CSV_HEADERS.join(',')];
-
-      for (const product of products || []) {
+      const rows = (products || []).map((product: any) => {
         const category = categories.find(c => c.id === product.category_id);
         const writer = writers.find(w => w.id === product.writer_id);
         const publisher = publishers.find(p => p.id === product.publisher_id);
         const brand = brands.find(b => b.id === product.brand_id);
-
-        const row = [
-          escapeCSV(product.title_bn),
-          escapeCSV(product.title_en),
-          escapeCSV(product.slug),
+        return [
+          product.title_bn,
+          product.title_en,
+          product.slug,
           product.price || '',
           product.original_price || '',
           product.discount_percent || 0,
@@ -131,34 +128,21 @@ export const ProductBulkActions = ({
           product.is_active ? 'TRUE' : 'FALSE',
           product.is_preorder ? 'TRUE' : 'FALSE',
           product.is_featured ? 'TRUE' : 'FALSE',
-          escapeCSV(category?.name_bn || ''),
-          escapeCSV(writer?.name_bn || ''),
-          escapeCSV(publisher?.name_bn || ''),
-          escapeCSV(brand?.name_bn || ''),
-          escapeCSV(product.author || ''),
-          escapeCSV(product.publisher || ''),
-          escapeCSV(product.description_bn || ''),
-          escapeCSV(product.description_en || ''),
-          escapeCSV(product.isbn || ''),
-          escapeCSV(product.meta_title || ''),
-          escapeCSV(product.meta_description || ''),
-          escapeCSV((product.tags || []).join(';')),
+          category?.name_bn || '',
+          writer?.name_bn || '',
+          publisher?.name_bn || '',
+          brand?.name_bn || '',
+          product.author || '',
+          product.publisher || '',
+          product.description_bn || '',
+          product.description_en || '',
+          product.isbn || '',
+          product.meta_title || '',
+          product.meta_description || '',
+          (product.tags || []).join(';'),
         ];
-
-        csvRows.push(row.join(','));
-      }
-
-      // Download CSV file
-      const csvContent = csvRows.join('\n');
-      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `products_export_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      });
+      downloadXLSX(CSV_HEADERS, rows, `products_export_${new Date().toISOString().split('T')[0]}.xlsx`);
 
       toast({ title: 'সফল', description: `${products?.length || 0}টি প্রোডাক্ট এক্সপোর্ট হয়েছে` });
     } catch (error: any) {
@@ -169,70 +153,15 @@ export const ProductBulkActions = ({
     }
   };
 
-  const escapeCSV = (value: string) => {
-    if (!value) return '';
-    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-      return `"${value.replace(/"/g, '""')}"`;
-    }
-    return value;
-  };
-
-  const parseCSV = (content: string): Record<string, string>[] => {
-    const lines = content.split(/\r?\n/).filter(line => line.trim());
-    if (lines.length < 2) return [];
-
-    const headers = parseCSVLine(lines[0]);
-    const rows: Record<string, string>[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i]);
-      const row: Record<string, string> = {};
-      headers.forEach((header, index) => {
-        row[header.trim()] = (values[index] || '').trim();
-      });
-      rows.push(row);
-    }
-
-    return rows;
-  };
-
-  const parseCSVLine = (line: string): string[] => {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === ',' && !inQuotes) {
-        result.push(current);
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    result.push(current);
-
-    return result;
-  };
-
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      const content = await file.text();
-      const rows = parseCSV(content);
+      const rows = await parseSpreadsheetFile(file);
 
       if (rows.length === 0) {
-        toast({ title: 'Error', description: 'CSV ফাইলে কোন ডাটা নেই', variant: 'destructive' });
+        toast({ title: 'Error', description: 'ফাইলে কোন ডাটা নেই', variant: 'destructive' });
         return;
       }
 
@@ -394,19 +323,17 @@ export const ProductBulkActions = ({
   };
 
   const handleDownloadTemplate = () => {
-    const csvContent = CSV_HEADERS.join(',') + '\n' +
-      'উদাহরণ বই,Example Book,example-book,500,600,17,100,TRUE,FALSE,FALSE,উপন্যাস,লেখকের নাম,প্রকাশনীর নাম,ব্র্যান্ডের নাম,লেখক,প্রকাশক,বাংলা বিবরণ,English description,978-123456789,SEO Title,SEO Description,tag1;tag2;tag3';
-
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'products_import_template.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
+    downloadXLSX(
+      CSV_HEADERS,
+      [[
+        'উদাহরণ বই', 'Example Book', 'example-book', 500, 600, 17, 100,
+        'TRUE', 'FALSE', 'FALSE',
+        'উপন্যাস', 'লেখকের নাম', 'প্রকাশনীর নাম', 'ব্র্যান্ডের নাম',
+        'লেখক', 'প্রকাশক', 'বাংলা বিবরণ', 'English description',
+        '978-123456789', 'SEO Title', 'SEO Description', 'tag1;tag2;tag3',
+      ]],
+      'products_import_template.xlsx'
+    );
     toast({ title: 'সফল', description: 'টেমপ্লেট ডাউনলোড হয়েছে' });
   };
 
@@ -432,7 +359,7 @@ export const ProductBulkActions = ({
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv"
+          accept=".xlsx,.xls,.csv"
           className="hidden"
           onChange={handleFileSelect}
         />

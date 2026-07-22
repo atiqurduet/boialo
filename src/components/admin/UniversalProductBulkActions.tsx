@@ -19,6 +19,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Download, Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { downloadXLSX, parseSpreadsheetFile } from '@/lib/xlsxBulk';
 
 type ProductType = string;
 
@@ -89,14 +90,6 @@ export const UniversalProductBulkActions = ({
     return title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-').replace(/^-|-$/g, '');
   };
 
-  const escapeCSV = (value: string) => {
-    if (!value) return '';
-    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-      return `"${value.replace(/"/g, '""')}"`;
-    }
-    return value;
-  };
-
   const handleExport = async () => {
     setExporting(true);
     try {
@@ -107,55 +100,40 @@ export const UniversalProductBulkActions = ({
 
       if (error) throw error;
 
-      const csvRows = [CSV_HEADERS.join(',')];
-
-      for (const product of products || []) {
+      const rows = (products || []).map((product: any) => {
         const category = categories.find(c => c.id === product.category_id);
-
-        const row = [
-          escapeCSV(product.product_type),
-          escapeCSV(product.name_bn),
-          escapeCSV(product.name_en),
-          escapeCSV(product.slug),
-          escapeCSV(product.sku || ''),
-          escapeCSV(category?.name_bn || ''),
+        return [
+          product.product_type,
+          product.name_bn,
+          product.name_en,
+          product.slug,
+          product.sku || '',
+          category?.name_bn || '',
           product.price || '',
           product.original_price || '',
           product.discount_percent || 0,
           product.stock_quantity || 0,
           product.is_active ? 'TRUE' : 'FALSE',
           product.is_featured ? 'TRUE' : 'FALSE',
-          escapeCSV(product.brand || ''),
-          escapeCSV(product.manufacturer || ''),
-          escapeCSV(product.weight || ''),
-          escapeCSV(product.dimensions || ''),
-          escapeCSV(product.ingredients || ''),
-          escapeCSV(product.warranty || ''),
-          escapeCSV(product.delivery_time || ''),
-          escapeCSV(product.return_policy || ''),
-          escapeCSV(product.short_description_bn || ''),
-          escapeCSV(product.short_description_en || ''),
-          escapeCSV(product.long_description_bn || ''),
-          escapeCSV(product.long_description_en || ''),
-          escapeCSV(product.video_url || ''),
-          escapeCSV(product.meta_title || ''),
-          escapeCSV(product.meta_description || ''),
-          escapeCSV((product.meta_keywords || []).join(';')),
+          product.brand || '',
+          product.manufacturer || '',
+          product.weight || '',
+          product.dimensions || '',
+          product.ingredients || '',
+          product.warranty || '',
+          product.delivery_time || '',
+          product.return_policy || '',
+          product.short_description_bn || '',
+          product.short_description_en || '',
+          product.long_description_bn || '',
+          product.long_description_en || '',
+          product.video_url || '',
+          product.meta_title || '',
+          product.meta_description || '',
+          (product.meta_keywords || []).join(';'),
         ];
-
-        csvRows.push(row.join(','));
-      }
-
-      const csvContent = csvRows.join('\n');
-      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `universal_products_export_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      });
+      downloadXLSX(CSV_HEADERS, rows, `universal_products_export_${new Date().toISOString().split('T')[0]}.xlsx`);
 
       toast({ title: 'সফল', description: `${products?.length || 0}টি প্রোডাক্ট এক্সপোর্ট হয়েছে` });
     } catch (error: any) {
@@ -166,62 +144,15 @@ export const UniversalProductBulkActions = ({
     }
   };
 
-  const parseCSV = (content: string): Record<string, string>[] => {
-    const lines = content.split(/\r?\n/).filter(line => line.trim());
-    if (lines.length < 2) return [];
-
-    const headers = parseCSVLine(lines[0]);
-    const rows: Record<string, string>[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i]);
-      const row: Record<string, string> = {};
-      headers.forEach((header, index) => {
-        row[header.trim()] = (values[index] || '').trim();
-      });
-      rows.push(row);
-    }
-
-    return rows;
-  };
-
-  const parseCSVLine = (line: string): string[] => {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === ',' && !inQuotes) {
-        result.push(current);
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    result.push(current);
-
-    return result;
-  };
-
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      const content = await file.text();
-      const rows = parseCSV(content);
+      const rows = await parseSpreadsheetFile(file);
 
       if (rows.length === 0) {
-        toast({ title: 'Error', description: 'CSV ফাইলে কোন ডাটা নেই', variant: 'destructive' });
+        toast({ title: 'Error', description: 'ফাইলে কোন ডাটা নেই', variant: 'destructive' });
         return;
       }
 
@@ -357,19 +288,19 @@ export const UniversalProductBulkActions = ({
   };
 
   const handleDownloadTemplate = () => {
-    const csvContent = CSV_HEADERS.join(',') + '\n' +
-      'lifestyle,উদাহরণ প্রোডাক্ট,Example Product,example-product,SKU001,ক্যাটাগরির নাম,500,600,17,100,TRUE,FALSE,ব্র্যান্ড,প্রস্তুতকারক,১কেজি,১০x১০x১০,উপাদান,১ বছর,৩-৫ দিন,৭ দিনে ফেরত,সংক্ষিপ্ত বিবরণ বাংলা,Short description English,বিস্তারিত বিবরণ বাংলা,Long description English,https://youtube.com/example,SEO Title,SEO Description,keyword1;keyword2';
-
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'universal_products_import_template.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
+    downloadXLSX(
+      CSV_HEADERS,
+      [[
+        'lifestyle', 'উদাহরণ প্রোডাক্ট', 'Example Product', 'example-product',
+        'SKU001', 'ক্যাটাগরির নাম', 500, 600, 17, 100,
+        'TRUE', 'FALSE', 'ব্র্যান্ড', 'প্রস্তুতকারক', '১কেজি', '১০x১০x১০',
+        'উপাদান', '১ বছর', '৩-৫ দিন', '৭ দিনে ফেরত',
+        'সংক্ষিপ্ত বিবরণ বাংলা', 'Short description English',
+        'বিস্তারিত বিবরণ বাংলা', 'Long description English',
+        'https://youtube.com/example', 'SEO Title', 'SEO Description', 'keyword1;keyword2',
+      ]],
+      'universal_products_import_template.xlsx'
+    );
     toast({ title: 'সফল', description: 'টেমপ্লেট ডাউনলোড হয়েছে' });
   };
 
@@ -404,7 +335,7 @@ export const UniversalProductBulkActions = ({
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv"
+          accept=".xlsx,.xls,.csv"
           className="hidden"
           onChange={handleFileSelect}
         />
