@@ -235,8 +235,8 @@ export const Header = () => {
 
           {/* Mobile Search Expandable */}
           <div className={cn(
-            "md:hidden overflow-hidden transition-all duration-300",
-            showMobileSearch ? "max-h-16 mt-2.5 opacity-100" : "max-h-0 opacity-0"
+            "md:hidden transition-all duration-300 relative",
+            showMobileSearch ? "mt-2.5 opacity-100 visible" : "h-0 opacity-0 invisible overflow-hidden"
           )}>
             <SearchDropdown
               query={searchQuery}
